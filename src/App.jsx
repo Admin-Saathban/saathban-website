@@ -99,7 +99,7 @@ const BLOGS = [
   { title: "Living to 100 is No Longer a Miracle", 
     date: "May 05, 2026", 
     excerpt: "The most hopeful demographic story of our time.", 
-    link: "/ageing-in-a-young-nation.pdf", 
+    link: "/blog_1.pdf", 
     tag: "Research", 
     color: C.brown },
   { title: "Volunteering Changed My Perspective on Aging", date: "Jan 15, 2026", excerpt: "A young Saath-Buddy shares their transformative experience connecting with a Saath-Icon.", tag: "Stories", color: C.green },
@@ -712,15 +712,23 @@ export default function Saathban() {
                   {FOUNDERS.map((f, i) => (
                     <div key={i} style={{ background: C.bg, borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 20px rgba(6,50,20,0.06)", border: `1px solid ${C.warmGray}50` }}>
                       {/* Photo */}
-                      <div style={{ height: 320, background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)`, position: "relative", overflow: "hidden" }}>
-                        <img src={f.img} alt={f.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(100%)", display: "block" }}
-                          onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
-                        <div style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)` }}>
-                          <div style={{ width: 100, height: 100, borderRadius: "50%", background: i === 0 ? `${C.green}20` : `${C.brown}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: i === 0 ? C.green : C.brown }}>{f.name.split(" ").map(w => w[0]).join("")}</span>
+                      <div style={{ paddingTop: 32, display: "flex", justifyContent: "center", background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)`, }}>
+                        <div style={{ width: 180, height: 180, borderRadius: "50%", overflow: "hidden", border: `3px solid ${i === 0 ? C.green : C.brown}25`, background: i === 0 ? `${C.green}10` : `${C.brown}10`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", }}>
+                          <img
+                            src={f.img}
+                            alt={f.name}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(100%)", display: "block", }}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.nextSibling.style.display = "flex";
+                            }}
+                          />
+                          <div style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, }}>
+                            <span
+                              style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: i === 0 ? C.green : C.brown, }}>
+                              {f.name.split(" ").map((w) => w[0]).join("")}
+                            </span>
                           </div>
-                          <span style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic" }}>Photo coming soon</span>
                         </div>
                       </div>
                       {/* Content */}

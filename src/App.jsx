@@ -17,28 +17,28 @@ const C = {
 // ─── Data ───
 const FOUNDERS = [
   {
-    name: "Maheen Shafiq",
-    role: "Co-Founder",
-    img: "/team-maheen.jpg", // drop B&W photo in /public
-    bio: "bio soon",
-    message: "message soon",
-  },
-  {
     name: "Tahir Sajeel Farooq",
     role: "Co-Founder",
-    img: "/team-sajeel.jpg", // drop B&W photo in /public
-    bio: "bio soon",
-    message: "message soon",
+    img: "/founder2.png",
+    bio: "Sajeel is one of the co-founders of Saathban. After graduating from the Lahore University of Management Sciences with a degree in Economics, he was offered a scholarship at the University of Chicago in one of the leading schools of Public Policy. At the University of Chicago, he is working with the world's leading scientists and Nobel laureates to develop technologies to help people in underdeveloped countries live better lives. He has extensive training in microeconomics, politics, and international finance and has a deep understanding of income traps in the developing world. His vision for Saathban is to create a space where people of all ages can connect and share wisdom with each other to make the world a better place. During his time with Saathban, he has helped build a strong organizational foundation, assemble an extraordinary team, and establish the systems that allow the mission to stand on its own feet and grow. He pays his regards to his father, from whom he learned to be kind.",
+    message: "Saathban is a sincere gift to the elderly around the world. I hope to see it flourish and grow as a place that has no age limit.",
+  },
+  {
+    name: "Maheen Shafiq",
+    role: "Co-Founder",
+    img: "/founder1.png", 
+    bio: "Maheen co-founded Saathban with a simple belief: thriving societies are built not on generational separation, but on intergenerational connection. Her past experience involves dedicated work as a risk and implementation consultant for financial and non-financial institutions to architect systems that withstand systemic shocks. This expertise she is now applying to vanquish the risk and impact of isolation by building a community rooted in sustainable connections. Under her leadership, Saathban has mobilized a growing network of volunteers and is building new models of intergenerational connection that seek to redefine what it means to age in the modern world.",
+    message: "The future of humanity depends not only on how long we live, but on how meaningfully we remain connected across generations. Our mission is to transform aging from an experience of gradual social invisibility into one of continued purpose, community, and human connection. We are working toward a world where elders are not merely cared for, but celebrated as active, connected, and essential members of society.",
   },
 ];
 
 const TEAM = [
-  { name: "Maheen Shafiq", role: "Co-Founder", initials: "MS", color: C.green },
-  { name: "Tahir Sajeel Farooq", role: "Co-Founder", initials: "TSF", color: C.brown },
-  { name: "Research Head", role: "Research Head", initials: "RH", color: C.greenMuted },
-  { name: "Research Assistant", role: "Research Assistant", initials: "RA", color: C.brownLight },
-  { name: "Design Associate", role: "Design Associate", initials: "DA", color: C.olive },
-  { name: "Team Member", role: "Strategy Associate", initials: "SA", color: C.sage },
+  { name: "Tahir Sajeel Farooq", role: "Co-Founder", initials: "TSF", color: C.green, img: "/founder2.png" },
+  { name: "Maheen Shafiq", role: "Co-Founder", initials: "MS", color: C.brown, img: "/founder1.png" },
+  { name: "Hamayoon Shah", role: "Research Head", initials: "RH", color: C.greenMuted, img: null },
+/*{ name: "Research Assistant", role: "Research Assistant", initials: "RA", color: C.olive },
+  { name: "Design Associate", role: "Design Associate", initials: "DA", color: C.sage }, */
+  { name: "Syeda Duaa Batool Naqvi", role: "Strategy Associate", initials: "SA", color: C.brownLight, img: null },
 ];
 //-- Events --
 // to add a new event: copy one object below and fill in the details
@@ -96,7 +96,12 @@ const EVENTS = [
 ];
 
 const BLOGS = [
-  { title: "Why Loneliness is the Silent Epidemic Among Seniors", date: "Feb 28, 2026", excerpt: "Exploring how social isolation deeply impacts elderly health and what communities can do to combat it.", tag: "Research", color: C.brown },
+  { title: "Living to 100 is No Longer a Miracle", 
+    date: "May 05, 2026", 
+    excerpt: "The most hopeful demographic story of our time.", 
+    link: "/ageing-in-a-young-nation.pdf", 
+    tag: "Research", 
+    color: C.brown },
   { title: "Volunteering Changed My Perspective on Aging", date: "Jan 15, 2026", excerpt: "A young Saath-Buddy shares their transformative experience connecting with a Saath-Icon.", tag: "Stories", color: C.green },
   { title: "5 Simple Ways to Support an Elderly Neighbour", date: "Dec 10, 2025", excerpt: "Practical, everyday actions that combat loneliness and build lasting connections with senior citizens.", tag: "Well-being", color: C.olive },
 ];
@@ -707,14 +712,13 @@ export default function Saathban() {
                   {FOUNDERS.map((f, i) => (
                     <div key={i} style={{ background: C.bg, borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 20px rgba(6,50,20,0.06)", border: `1px solid ${C.warmGray}50` }}>
                       {/* Photo */}
-                      <div style={{ height: 240, background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+                      <div style={{ height: 320, background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)`, position: "relative", overflow: "hidden" }}>
                         <img src={f.img} alt={f.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%)", display: "block" }}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(100%)", display: "block" }}
                           onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
-                        {/* Fallback initials if no photo yet */}
-                        <div style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
-                          <div style={{ width: 80, height: 80, borderRadius: "50%", background: i === 0 ? `${C.green}20` : `${C.brown}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: i === 0 ? C.green : C.brown }}>{f.name.split(" ").map(w => w[0]).join("")}</span>
+                        <div style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, background: `linear-gradient(135deg, ${C.green}12, ${C.brown}08)` }}>
+                          <div style={{ width: 100, height: 100, borderRadius: "50%", background: i === 0 ? `${C.green}20` : `${C.brown}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: i === 0 ? C.green : C.brown }}>{f.name.split(" ").map(w => w[0]).join("")}</span>
                           </div>
                           <span style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic" }}>Photo coming soon</span>
                         </div>
@@ -779,8 +783,13 @@ export default function Saathban() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 960, margin: "0 auto" }} className="grid3r">
                 {TEAM.map((m, i) => (
                   <Card key={i} style={{ textAlign: "center", padding: 28 }}>
-                    <div style={{ width: 72, height: 72, borderRadius: "50%", background: `${m.color}12`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", border: `2px solid ${m.color}25` }}>
-                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: m.color }}>{m.initials}</span>
+                    <div style={{ width: 80, height: 80, borderRadius: "50%", margin: "0 auto 16px", overflow: "hidden", border: `2px solid ${m.color}25`, background: `${m.color}12`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {m.img ? (
+                        <img src={m.img} alt={m.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(100%)" }}
+                          onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
+                      ) : null}
+                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: m.color, display: m.img ? "none" : "block" }}>{m.initials}</span>
                     </div>
                     <h4 style={{ fontSize: 16, fontWeight: 700, color: C.green, marginBottom: 4 }}>{m.name}</h4>
                     <p style={{ fontSize: 13, color: C.brown, fontWeight: 600, letterSpacing: "0.02em" }}>{m.role}</p>
@@ -899,7 +908,16 @@ export default function Saathban() {
                 <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, marginBottom: 8 }}>{b.date}</span>
                 <h4 style={{ fontSize: 17, fontWeight: 700, color: C.green, lineHeight: 1.4, marginBottom: 10 }}>{b.title}</h4>
                 <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, flex: 1 }}>{b.excerpt}</p>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 16, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>Read More →</span>
+                {b.link ? (
+                  <a href={b.link} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                    Read More →
+                  </a>
+                ) : (
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 16, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    Read More →
+                  </span>
+                )}
               </div>
             </Card>
           )} />

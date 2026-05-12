@@ -101,7 +101,7 @@ const BLOGS = [
     id: "living-to-100",
     title: "Living to 100 is No Longer a Miracle",
     date: "May 05, 2026",
-    author: "Saathban Research",
+    author: "Hamayoon Shah | Cheif Research Head",
     readTime: "4 min read",
     tag: "Research",
     color: C.brown,
@@ -114,15 +114,15 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "According to the United Nations, there were only 23,000 centenarians worldwide in 1950. By 2024, that number had surged to an estimated 934,776 globally. In the span of a single lifetime, the world has witnessed a fortyfold increase in people aged 100 and older.",
+        text: "According to the United Nations, there were only 23,000 centenarians worldwide in 1950. By 2024, that number had surged to an estimated 934,776 globally. In the span of a single lifetime, the world has witnessed a fortyfold increase in people aged 100 and older."      
       },
       {
         type: "paragraph",
-        text: "This remarkable growth continues to accelerate. According to the Pew Research Center analysis of UN data, the world was home to nearly half a million centenarians in 2015, more than four times as many as in 1990. And the best is yet to come. The United Nations projects that by 2050, there will be an astounding 3.7 million centenarians worldwide — an eightfold increase from 2015 levels.",
+        text: "This remarkable growth continues to accelerate. According to the Pew Research Center analysis of UN data, the world was home to nearly half a million centenarians in 2015, more than four times as many as in 1990. And the best is yet to come. The United Nations projects that by 2050, there will be an astounding 3.7 million centenarians worldwide. That is an eightfold increase from 2015 levels."      
       },
       {
         type: "pullquote",
-        text: "From 153 to over 95,000 in just six decades — this is nothing short of extraordinary.",
+        text: "From 153 to over 95,000 in just six decades, this is nothing short of extraordinary.",
       },
       {
         type: "paragraph",
@@ -130,11 +130,15 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "The United States tells a similar story. According to the U.S. Census Bureau, there were approximately 2,300 centenarians in America in 1950. By 2010, that number had grown to 53,364. And according to recent demographic projections, the United States already has about 100,000 centenarians as of 2022. Looking ahead, the U.S. Census Bureau projects that by 2060, America will be home to 590,000 people aged 100 or older — nearly six times the current number.",
+        text: "The United States tells a similar story. According to the U.S. Census Bureau, there were approximately 2,300 centenarians in America in 1950. By 2010, that number had grown to 53,364. And according to recent demographic projections, the United States already has about 100,000 centenarians as of 2022. Looking ahead, the U.S. Census Bureau projects that by 2060, America will be home to 590,000 people aged 100 or older. That is nearly six times the current number.",
       },
       {
         type: "paragraph",
         text: "Across every data set, one remarkable pattern holds true. According to the U.S. Census Bureau, more than 80 percent of American centenarians in 2010 were women, with only 20.7 men for every 100 women in that age group. Japan reports a similar figure, with women accounting for 88.3 percent of all centenarians in 2024. The oldest living person on Earth, as of 2024, is a 116-year-old Japanese woman named Itooka Tomiko.",
+      },
+      {
+        type: "paragraph",
+        text: "Countries worldwide are witnessing this longevity boom. According to the UN Population Division, France had only 100 centenarians in 1900 but reported 31,269 in 2024. Italy grew from 99 centenarians in 1872 to 23,548 in 2025. Thailand now has 45,561 centenarians as of 2024. Even China, despite its relatively younger population, reported 54,166 centenarians in 2013.",
       },
       {
         type: "pullquote",
@@ -142,23 +146,23 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "Countries worldwide are witnessing this longevity boom. According to the UN Population Division, France had only 100 centenarians in 1900 but reported 31,269 in 2024. Italy grew from 99 centenarians in 1872 to 23,548 in 2025. Thailand now has 45,561 centenarians as of 2024. Even China, despite its relatively younger population, reported 54,166 centenarians in 2013.",
+        text: "Living to 100 was once a headline. The centenarian population is not just growing; it is exploding, and this is perhaps the most hopeful demographic story of our time.",
       },
       {
         type: "paragraph",
-        text: "The arithmetic of longevity is clear, but the human work it demands is only beginning. Societies that will host millions of centenarians by 2050 must prepare now. This means investing in geriatric healthcare, designing age-friendly public spaces, supporting caregivers, and building services that address the emotional and social needs of seniors — not just the medical ones. It also means shifting how we think.",
+        text: "The arithmetic of longevity is clear, but the human work it demands is only beginning. Societies that will host millions of centenarians by 2050 must prepare now. This means investing in geriatric healthcare, designing age-friendly public spaces, supporting caregivers, and building services that address the emotional and social needs of seniors, not just the medical ones. It also means shifting how we think.",
       },
     ],
   },
   {
     id: "invisible-hand-population",
     title: "The Invisible Hand of Population: The Mystery of Our Ebbs and Flows",
-    date: "Apr 20, 2026",
-    author: "Saathban Research",
+    date: "May 12, 2026",
+    author: "Hamayoon Shah | Cheif Research Head",
     readTime: "5 min read",
     tag: "Research",
     color: C.brown,
-    excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau — it's found in the silent, invisible shift of human intentions.",
+    excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
     coverImg: null,
     content: [
       {
@@ -179,15 +183,15 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "The true mystery emerges when we realize that modern humans have largely silenced these ancient environmental alarms. We have marginalized predators, industrialized our food supply, and developed the medicine needed to curb pandemics. By all traditional logic, this removal of 'natural brakes' should have led to an era of infinite compounding. Instead, we see a voluntary retreat in growth that defies the old biological models.",
+        text: "The true mystery emerges when we realize that modern humans have largely silenced these ancient environmental alarms. We have marginalized predators, industrialized our food supply, and developed the medicine needed to curb pandemics. By all traditional logic, this removal of 'natural brakes' should have led to an era of infinite compounding. Instead, we see a voluntary retreat in growth that defies the old biological models. It appears that as we moved from a world of physical scarcity to one of social complexity, the invisible forces changed shape. ",
       },
       {
         type: "paragraph",
-        text: "While the Malthusian doomsday scenario was largely avoided due to the vast growth in food production and improvement in wellbeing, the logic of compounding remains a looming shadow. To put this into perspective, demographers estimate that the world population at the time of Jesus was about 250 to 300 million. For nearly two millennia, that number grew by a glacial average of roughly 0.04 to 0.08 percent annually.",
+        text: "While the Malthusian doomsday scenario was largely avoided due to the vast growth in food production and improvement in wellbeing, the logic of compounding remains a looming shadow. If the current invisible hand did not control our growth, the power of compounding would ultimately lead us back to a Malthusian catastrophe even if we had enormous resources at hand. To put this into perspective, demographers estimate that the world population at the time of Jesus was about 250 to 300 million. For nearly two millennia, that number grew by a glacial average of roughly 0.04 to 0.08 percent annually.",
       },
       {
         type: "pullquote",
-        text: "If a population of 300 million had grown at a steady rate of 0.8 percent since the year 1 AD, the world would have hit our current 8 billion mark by the year 415 AD. By today, the population would have reached a staggering 3.08 quadrillion people.",
+        text: "If a population of 300 million had grown at a steady rate of 0.8 percent since the year 1 AD, the world would have hit our current 8 billion mark by the year 415 AD. By today, the population would have reached a staggering 3.08 quadrillion people. These figures represent a world so crowded that there would be no room left to stand.",
       },
       {
         type: "paragraph",
@@ -199,11 +203,12 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual — ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
+        text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual, ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
       },
     ],
   },
-  {
+
+  /*{
     id: "volunteering-perspective",
     title: "Volunteering Changed My Perspective on Aging",
     date: "Jan 15, 2026",
@@ -244,6 +249,7 @@ const BLOGS = [
       },
     ],
   },
+
   {
     id: "support-elderly-neighbour",
     title: "5 Simple Ways to Support an Elderly Neighbour",
@@ -297,7 +303,7 @@ const BLOGS = [
         text: "The loneliness epidemic will not be solved by governments alone. It will be solved neighbour by neighbour, cup of tea by cup of tea.",
       },
     ],
-  },
+  },*/
 ];
 
 // -- Research Reports --
@@ -1252,7 +1258,7 @@ export default function Saathban() {
               </Card>
             );
           }} />
-          
+
           {/* Newsletter */}
           <FadeIn delay={0.2}>
             <div style={{ marginTop: 64, background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: "48px 40px", textAlign: "center", border: `1px solid ${C.warmGray}50`, maxWidth: 680, marginInline: "auto" }}>

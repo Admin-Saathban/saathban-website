@@ -35,7 +35,7 @@ const FOUNDERS = [
 const TEAM = [
   { name: "Tahir Sajeel Farooq", role: "Co-Founder", initials: "TSF", color: C.green, img: "/founder2.png" },
   { name: "Maheen Shafiq", role: "Co-Founder", initials: "MS", color: C.brown, img: "/founder1.png" },
-  { name: "Hamayoon Shah", role: "Research Head", initials: "RH", color: C.greenMuted, img: null },
+  { name: "Hamayoon Shah", role: "Chief Research Officer", initials: "CRO", color: C.greenMuted, img: "/research.png" },
 /*{ name: "Research Assistant", role: "Research Assistant", initials: "RA", color: C.olive },
   { name: "Design Associate", role: "Design Associate", initials: "DA", color: C.sage }, */
   { name: "Syeda Duaa Batool Naqvi", role: "Strategy Associate", initials: "SA", color: C.brownLight, img: null },
@@ -95,15 +95,209 @@ const EVENTS = [
   },
 ];
 
+// ─── Blog Data ───
 const BLOGS = [
-  { title: "Living to 100 is No Longer a Miracle", 
-    date: "May 05, 2026", 
-    excerpt: "The most hopeful demographic story of our time.", 
-    link: "/blog_1.pdf", 
-    tag: "Research", 
-    color: C.brown },
-  { title: "Volunteering Changed My Perspective on Aging", date: "Jan 15, 2026", excerpt: "A young Saath-Buddy shares their transformative experience connecting with a Saath-Icon.", tag: "Stories", color: C.green },
-  { title: "5 Simple Ways to Support an Elderly Neighbour", date: "Dec 10, 2025", excerpt: "Practical, everyday actions that combat loneliness and build lasting connections with senior citizens.", tag: "Well-being", color: C.olive },
+  {
+    id: "living-to-100",
+    title: "Living to 100 is No Longer a Miracle",
+    date: "May 05, 2026",
+    author: "Saathban Research",
+    readTime: "4 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "The most hopeful demographic story of our time.",
+    coverImg: null,
+    content: [
+      {
+        type: "lead",
+        text: "Have you ever wondered what it truly means to live for a century? A hundred years ago, reaching the age of 100 was a statistical anomaly, a feat so rare that it seemed reserved for a fortunate few. Today, however, living to 100 is no longer a miracle.",
+      },
+      {
+        type: "paragraph",
+        text: "According to the United Nations, there were only 23,000 centenarians worldwide in 1950. By 2024, that number had surged to an estimated 934,776 globally. In the span of a single lifetime, the world has witnessed a fortyfold increase in people aged 100 and older.",
+      },
+      {
+        type: "paragraph",
+        text: "This remarkable growth continues to accelerate. According to the Pew Research Center analysis of UN data, the world was home to nearly half a million centenarians in 2015, more than four times as many as in 1990. And the best is yet to come. The United Nations projects that by 2050, there will be an astounding 3.7 million centenarians worldwide — an eightfold increase from 2015 levels.",
+      },
+      {
+        type: "pullquote",
+        text: "From 153 to over 95,000 in just six decades — this is nothing short of extraordinary.",
+      },
+      {
+        type: "paragraph",
+        text: "One nation stands as the undisputed capital of longevity. According to data published by Japan's Ministry of Health, Labor and Welfare, Japan recorded 95,119 centenarians as of September 2024, marking the 54th consecutive annual rise. To put this in perspective, Japan had only 153 centenarians in 1963 when records began. The number surpassed 1,000 in 1981, topped 10,000 in 1998, and exceeded 90,000 in 2022.",
+      },
+      {
+        type: "paragraph",
+        text: "The United States tells a similar story. According to the U.S. Census Bureau, there were approximately 2,300 centenarians in America in 1950. By 2010, that number had grown to 53,364. And according to recent demographic projections, the United States already has about 100,000 centenarians as of 2022. Looking ahead, the U.S. Census Bureau projects that by 2060, America will be home to 590,000 people aged 100 or older — nearly six times the current number.",
+      },
+      {
+        type: "paragraph",
+        text: "Across every data set, one remarkable pattern holds true. According to the U.S. Census Bureau, more than 80 percent of American centenarians in 2010 were women, with only 20.7 men for every 100 women in that age group. Japan reports a similar figure, with women accounting for 88.3 percent of all centenarians in 2024. The oldest living person on Earth, as of 2024, is a 116-year-old Japanese woman named Itooka Tomiko.",
+      },
+      {
+        type: "pullquote",
+        text: "One third of babies born in the UK in 2013 are expected to live to see their 100th birthday. What was once a miracle has become the new normal.",
+      },
+      {
+        type: "paragraph",
+        text: "Countries worldwide are witnessing this longevity boom. According to the UN Population Division, France had only 100 centenarians in 1900 but reported 31,269 in 2024. Italy grew from 99 centenarians in 1872 to 23,548 in 2025. Thailand now has 45,561 centenarians as of 2024. Even China, despite its relatively younger population, reported 54,166 centenarians in 2013.",
+      },
+      {
+        type: "paragraph",
+        text: "The arithmetic of longevity is clear, but the human work it demands is only beginning. Societies that will host millions of centenarians by 2050 must prepare now. This means investing in geriatric healthcare, designing age-friendly public spaces, supporting caregivers, and building services that address the emotional and social needs of seniors — not just the medical ones. It also means shifting how we think.",
+      },
+    ],
+  },
+  {
+    id: "invisible-hand-population",
+    title: "The Invisible Hand of Population: The Mystery of Our Ebbs and Flows",
+    date: "Apr 20, 2026",
+    author: "Saathban Research",
+    readTime: "5 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau — it's found in the silent, invisible shift of human intentions.",
+    coverImg: null,
+    content: [
+      {
+        type: "lead",
+        text: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
+      },
+      {
+        type: "paragraph",
+        text: "Throughout history, external disasters like droughts and pandemics were the primary 'brakes' on our growth. But today, the brakes are internal. Even with vast resources and relative peace, the momentum has stalled, leaving us to wonder what invisible psychological or cultural forces are now rewriting the rules of human expansion.",
+      },
+      {
+        type: "paragraph",
+        text: "While the basic function of growth is rooted in the biology of birth and death, those numbers were always at the mercy of the environment. For centuries, the 'invisible hand' of nature used famine, drought, and disease to balance the human ledger. We understood these forces because they were visible and physical. However, as modern society has solved the problems of predators and scarcity, a new set of invisible forces has taken over. Our biological drive to multiply is now reacting to a modern environment that we are only beginning to understand.",
+      },
+      {
+        type: "pullquote",
+        text: "We are no longer limited by what the Earth can provide, but perhaps by how our own societies have evolved to prioritize the individual over the collective.",
+      },
+      {
+        type: "paragraph",
+        text: "The true mystery emerges when we realize that modern humans have largely silenced these ancient environmental alarms. We have marginalized predators, industrialized our food supply, and developed the medicine needed to curb pandemics. By all traditional logic, this removal of 'natural brakes' should have led to an era of infinite compounding. Instead, we see a voluntary retreat in growth that defies the old biological models.",
+      },
+      {
+        type: "paragraph",
+        text: "While the Malthusian doomsday scenario was largely avoided due to the vast growth in food production and improvement in wellbeing, the logic of compounding remains a looming shadow. To put this into perspective, demographers estimate that the world population at the time of Jesus was about 250 to 300 million. For nearly two millennia, that number grew by a glacial average of roughly 0.04 to 0.08 percent annually.",
+      },
+      {
+        type: "pullquote",
+        text: "If a population of 300 million had grown at a steady rate of 0.8 percent since the year 1 AD, the world would have hit our current 8 billion mark by the year 415 AD. By today, the population would have reached a staggering 3.08 quadrillion people.",
+      },
+      {
+        type: "paragraph",
+        text: "The fact that we find ourselves at 8 billion today, rather than in the quadrillions, proves that an invisible hand is always at work. In the past, this hand was visible and cruel, manifest in the forms of plague and hunger. Today, it is silent and subtle. We are living through a period where the mystery of the ebb and flow has moved from the forest and the field into the human mind and the structure of our modern lives. Understanding these invisible forces is the key to understanding the future of our species.",
+      },
+      {
+        type: "paragraph",
+        text: "Even as the 'invisible hand' recalibrates our expansion toward a voluntary retreat, the victory of modern medicine has introduced a new variable: longevity. We are no longer a species defined by a rapid turnover of generations, but one characterized by an enduring, aging population. While the threat of a Malthusian explosion has faded, we now face a 'silver' transformation where the collective focus must shift from managing growth to mastering care.",
+      },
+      {
+        type: "paragraph",
+        text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual — ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
+      },
+    ],
+  },
+  {
+    id: "volunteering-perspective",
+    title: "Volunteering Changed My Perspective on Aging",
+    date: "Jan 15, 2026",
+    author: "A Saath-Buddy",
+    readTime: "3 min read",
+    tag: "Stories",
+    color: C.green,
+    excerpt: "A young Saath-Buddy shares their transformative experience connecting with a Saath-Icon.",
+    coverImg: null,
+    content: [
+      {
+        type: "lead",
+        text: "I signed up to volunteer with Saathban expecting to give something. I left having received far more than I brought.",
+      },
+      {
+        type: "paragraph",
+        text: "Before I met my Saath-Icon, I thought of aging as something that happened to other people — a distant, abstract process I could afford to ignore at 22. I was wrong. Sitting across from someone who has lived through Partition, raised a family, built a career, and outlived most of their friends changes something in you.",
+      },
+      {
+        type: "paragraph",
+        text: "We met every Saturday for three months. We talked about everything — her childhood in a village outside Lahore, the smell of monsoon rain on dry earth, what it felt like to watch your children grow up and move away. She talked. I listened. And somewhere in that listening, I began to understand something I had never been taught in school.",
+      },
+      {
+        type: "pullquote",
+        text: "Old age is not a waiting room. It is a life still being lived — fully, quietly, and with extraordinary depth.",
+      },
+      {
+        type: "paragraph",
+        text: "What struck me most was not her sadness — though there was some — but her humour. She was sharp, funny, and had opinions about everything from politics to the best way to make karahi. She was not a charity case. She was a person who happened to be lonely, and who needed someone to notice that.",
+      },
+      {
+        type: "paragraph",
+        text: "I think about her often now. I think about how many people like her exist in this city — in care homes, in quiet apartments, in houses full of family members who are too busy to sit down. And I think about how little it takes to change that. A Saturday morning. A cup of tea. The willingness to listen.",
+      },
+      {
+        type: "paragraph",
+        text: "Volunteering with Saathban did not just change my perspective on aging. It changed my perspective on what it means to be present for another human being. That, I think, is the most valuable thing I have learned so far.",
+      },
+    ],
+  },
+  {
+    id: "support-elderly-neighbour",
+    title: "5 Simple Ways to Support an Elderly Neighbour",
+    date: "Dec 10, 2025",
+    author: "Saathban Team",
+    readTime: "3 min read",
+    tag: "Well-being",
+    color: C.olive,
+    excerpt: "Practical, everyday actions that combat loneliness and build lasting connections with senior citizens.",
+    coverImg: null,
+    content: [
+      {
+        type: "lead",
+        text: "You don't need a programme, a budget, or a plan. You need five minutes and the willingness to show up.",
+      },
+      {
+        type: "paragraph",
+        text: "Social isolation among the elderly is one of the most serious and least visible public health crises of our time. Research consistently shows that chronic loneliness carries health risks comparable to smoking 15 cigarettes a day. And yet, the antidote is often closer than we think — it lives next door.",
+      },
+      {
+        type: "numbered",
+        items: [
+          {
+            title: "Say hello — and mean it.",
+            text: "A brief, genuine greeting on the stairs or at the gate does more than you think. Eye contact, a moment of pause, a real question — these signals tell someone that they are seen. For an elderly person who may go days without meaningful human contact, this matters more than you know.",
+          },
+          {
+            title: "Offer to help with errands — without making it feel like charity.",
+            text: "The key word here is offer, not assume. Ask if there is anything they need when you are heading to the market. Keep it casual. Framing it as a convenience ('I'm already going') rather than a favour ('you look like you need help') preserves their dignity.",
+          },
+          {
+            title: "Share a meal.",
+            text: "Food is one of the oldest forms of human connection. Cooking a little extra and dropping it off, or simply inviting your neighbour for a cup of chai, creates a moment of warmth that lingers long after the meal ends.",
+          },
+          {
+            title: "Check in after bad weather or illness.",
+            text: "Elderly people are disproportionately vulnerable to extreme heat, cold, and illness. A knock on the door after a hot day or a call during a cold snap costs you nothing and could mean everything.",
+          },
+          {
+            title: "Just sit and listen.",
+            text: "Perhaps the most powerful thing you can offer is your time and attention. Not advice, not solutions — just presence. Ask about their life, their memories, their opinions. You will be surprised by what you learn, and they will be grateful beyond what they can express.",
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        text: "None of these actions require a special skill or significant time. They require only the recognition that the person next door has a life full of experience, wisdom, and feeling — and that they deserve to share it with someone who cares enough to listen.",
+      },
+      {
+        type: "pullquote",
+        text: "The loneliness epidemic will not be solved by governments alone. It will be solved neighbour by neighbour, cup of tea by cup of tea.",
+      },
+    ],
+  },
 ];
 
 // -- Research Reports --
@@ -138,6 +332,128 @@ const SOCIAL_LINKS = {
   linkedin: "https://www.linkedin.com/company/saathban/",
   script: "https://script.google.com/macros/s/AKfycbwhsLn3sQDn49QhtyPq5gvMj2cM4FD8e-mOColpr1zeiQN2RJK3j9fEBEh-_GRIZjmPHw/exec",
 };
+
+// ─── Blog Article Page ───
+function BlogArticlePage({ blog, onBack }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const tagColors = { Research: C.brown, Stories: C.green, "Well-being": C.olive };
+  const tc = tagColors[blog.tag] || C.green;
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.white, minHeight: "100vh" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@0,300;0,400;0,500;0,600&display=swap');
+        .article-body p { margin-bottom: 1.6em; }
+      `}</style>
+
+      {/* Back bar */}
+      <div style={{ background: C.green, padding: "14px 24px", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onBack} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "background 0.3s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(250,243,233,0.22)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(250,243,233,0.12)"}>
+            ← Blog
+          </button>
+          <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13 }}>Saathban · Blog & Stories</span>
+        </div>
+      </div>
+
+      {/* Article header */}
+      <div style={{ background: C.bg, padding: "64px 24px 48px", borderBottom: `1px solid ${C.warmGray}40` }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 20 }}>{blog.tag}</span>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>{blog.title}</h1>
+          <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>{blog.excerpt}</p>
+          <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${tc}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: tc }}>S</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.textMain }}>{blog.author}</div>
+                <div style={{ fontSize: 12, color: C.textMuted }}>{blog.date} · {blog.readTime}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Article body */}
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "52px 24px 0" }} className="article-body">
+        {blog.content.map((block, i) => {
+          if (block.type === "lead") return (
+            <p key={i} style={{ fontSize: "clamp(1.1rem,2vw,1.25rem)", lineHeight: 1.8, color: C.textMain, fontWeight: 500, marginBottom: "1.6em", fontFamily: "'Playfair Display', serif" }}>{block.text}</p>
+          );
+          if (block.type === "paragraph") return (
+            <p key={i} style={{ fontSize: 17, lineHeight: 1.85, color: C.textMuted, marginBottom: "1.6em" }}>{block.text}</p>
+          );
+          if (block.type === "pullquote") return (
+            <blockquote key={i} style={{ margin: "2.4em 0", padding: "24px 32px", borderLeft: `4px solid ${tc}`, background: `${tc}06`, borderRadius: "0 12px 12px 0" }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.05rem,2vw,1.2rem)", fontStyle: "italic", color: tc, lineHeight: 1.7, margin: 0 }}>{block.text}</p>
+            </blockquote>
+          );
+          if (block.type === "numbered") return (
+            <div key={i} style={{ margin: "2em 0" }}>
+              {block.items.map((item, j) => (
+                <div key={j} style={{ display: "flex", gap: 20, marginBottom: 28, alignItems: "flex-start" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tc, color: C.cream, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, flexShrink: 0, marginTop: 2 }}>{j + 1}</div>
+                  <div>
+                    <p style={{ fontSize: 17, fontWeight: 700, color: C.green, marginBottom: 6 }}>{item.title}</p>
+                    <p style={{ fontSize: 16, lineHeight: 1.8, color: C.textMuted, margin: 0 }}>{item.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+          return null;
+        })}
+      </div>
+
+      {/* Watermark footer */}
+      <div style={{ maxWidth: 760, margin: "48px auto 0", padding: "24px 24px 48px", borderTop: `1px solid ${C.warmGray}50`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="/logo-small.png" alt="Saathban" style={{ height: 32, width: "auto", opacity: 0.7 }} />
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted }}>Saathban — Timeless Togetherness</div>
+            <div style={{ fontSize: 11, color: C.warmGray }}>saathban.com</div>
+          </div>
+        </div>
+        <span style={{ fontSize: 12, color: C.warmGray, fontStyle: "italic" }}>Where generations flourish together</span>
+      </div>
+
+      {/* More articles */}
+      <div style={{ background: C.bg, padding: "48px 24px" }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.green, marginBottom: 24 }}>More from Saathban</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {BLOGS.filter(b => b.id !== blog.id).slice(0, 3).map(b => (
+              <div key={b.id} onClick={() => { window.scrollTo(0, 0); onBack(b); }}
+                style={{ display: "flex", gap: 16, alignItems: "flex-start", cursor: "pointer", padding: "16px", borderRadius: 12, background: C.white, boxShadow: "0 1px 8px rgba(6,50,20,0.05)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 20px rgba(6,50,20,0.1)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 8px rgba(6,50,20,0.05)"}>
+                <div style={{ width: 48, height: 48, borderRadius: 10, background: `${tagColors[b.tag] || C.green}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: tagColors[b.tag] || C.green }}>{b.tag[0]}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: tagColors[b.tag] || C.green, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag} · {b.readTime}</span>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: C.green, margin: "4px 0 2px", lineHeight: 1.35 }}>{b.title}</p>
+                  <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>{b.date}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 28 }}>
+            <button onClick={() => onBack(null)} style={{ background: "transparent", border: `2px solid ${C.green}`, borderRadius: 40, padding: "10px 28px", color: C.green, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← All Articles</button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: C.green, padding: "24px", textAlign: "center" }}>
+        <span style={{ fontSize: 13, color: "rgba(250,243,233,0.5)" }}>© 2026 Saathban — Timeless Togetherness · saathban.com</span>
+      </div>
+    </div>
+  );
+}
 
 // ─── Carousel Component ───
 function Carousel({ items, renderCard, perPage = 3 }) {
@@ -481,6 +797,7 @@ export default function Saathban() {
   const [sent, setSent] = useState(false);
   const [activeTab, setActiveTab] = useState("about");
   const [activeEvent, setActiveEvent] = useState(null);
+  const [activeBlog, setActiveBlog] = useState(null);
   const [emailError, setEmailError] = useState("");
   const [subEmailError, setSubEmailError] = useState("");
 
@@ -497,6 +814,15 @@ export default function Saathban() {
 
   const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
+// Blog article page
+  if (activeBlog) {
+    return <BlogArticlePage blog={activeBlog} onBack={(nextBlog) => {
+      if (nextBlog) { setActiveBlog(nextBlog); }
+      else { setActiveBlog(null); setTimeout(() => document.getElementById("blog")?.scrollIntoView({ behavior: "smooth" }), 100); }
+    }} />;
+  }
+
+  // Event detail page
   if (activeEvent) {
     return <EventDetailPage event={activeEvent} onBack={() => { setActiveEvent(null); setTimeout(() => document.getElementById("work")?.scrollIntoView({ behavior: "smooth" }), 100); }} />;
   }
@@ -519,6 +845,8 @@ export default function Saathban() {
     { key: "vision", label: "Our Vision" },
     { key: "team", label: "Our Team" },
   ];
+
+  const tagColors = { Research: C.brown, Stories: C.green, "Well-being": C.olive };
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.bg, minHeight: "100vh", overflowX: "hidden" }}>
@@ -906,30 +1234,25 @@ export default function Saathban() {
       <section id="blog" className="section-pad" style={{ padding: "100px 0", background: C.white }}>
         <div style={px}>
           <SecTitle sub="Stories, insights, and reflections on intergenerational connection and well-being.">Blog & Stories</SecTitle>
-          <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => (
-            <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden" }}>
-              <div style={{ height: 140, background: `linear-gradient(135deg, ${b.color}15, ${b.color}05)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${b.color}15`, fontWeight: 700 }}>{b.tag[0]}</span>
-                <span style={{ position: "absolute", top: 16, left: 16, fontSize: 11, fontWeight: 700, color: b.color, background: `${b.color}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag}</span>
-              </div>
-              <div style={{ padding: "24px 28px 28px", flex: 1, display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, marginBottom: 8 }}>{b.date}</span>
-                <h4 style={{ fontSize: 17, fontWeight: 700, color: C.green, lineHeight: 1.4, marginBottom: 10 }}>{b.title}</h4>
-                <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, flex: 1 }}>{b.excerpt}</p>
-                {b.link ? (
-                  <a href={b.link} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                    Read More →
-                  </a>
-                ) : (
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 16, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    Read More →
-                  </span>
-                )}
-              </div>
-            </Card>
-          )} />
-
+          <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => {
+            const tc = tagColors[b.tag] || C.green;
+            return (
+              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)}>
+                <div style={{ height: 140, background: `linear-gradient(135deg, ${tc}15, ${tc}05)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}15`, fontWeight: 700 }}>{b.tag[0]}</span>
+                  <span style={{ position: "absolute", top: 16, left: 16, fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag}</span>
+                  <span style={{ position: "absolute", bottom: 12, right: 16, fontSize: 11, color: tc, fontWeight: 500 }}>{b.readTime}</span>
+                </div>
+                <div style={{ padding: "24px 28px 28px", flex: 1, display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, marginBottom: 8 }}>{b.date}</span>
+                  <h4 style={{ fontSize: 17, fontWeight: 700, color: C.green, lineHeight: 1.4, marginBottom: 10 }}>{b.title}</h4>
+                  <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, flex: 1 }}>{b.excerpt}</p>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: tc, marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6 }}>Read Article →</span>
+                </div>
+              </Card>
+            );
+          }} />
+          
           {/* Newsletter */}
           <FadeIn delay={0.2}>
             <div style={{ marginTop: 64, background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: "48px 40px", textAlign: "center", border: `1px solid ${C.warmGray}50`, maxWidth: 680, marginInline: "auto" }}>

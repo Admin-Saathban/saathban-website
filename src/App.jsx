@@ -101,7 +101,7 @@ const BLOGS = [
     id: "living-to-100",
     title: "Living to 100 is No Longer a Miracle",
     date: "May 05, 2026",
-    author: "Hamayoon Shah | Cheif Research Head",
+    author: "Hamayoon Shah | Chief Research Officer",
     readTime: "4 min read",
     tag: "Research",
     color: C.brown,
@@ -158,7 +158,7 @@ const BLOGS = [
     id: "invisible-hand-population",
     title: "The Invisible Hand of Population: The Mystery of Our Ebbs and Flows",
     date: "May 12, 2026",
-    author: "Hamayoon Shah | Cheif Research Head",
+    author: "Hamayoon Shah | Chief Research Officer",
     readTime: "5 min read",
     tag: "Research",
     color: C.brown,
@@ -355,7 +355,7 @@ function BlogArticlePage({ blog, onBack }) {
       {/* Back bar */}
       <div style={{ background: C.green, padding: "14px 24px", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "background 0.3s" }}
+          <button onClick={() => onBack(null)} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "background 0.3s" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(250,243,233,0.22)"}
             onMouseLeave={e => e.currentTarget.style.background = "rgba(250,243,233,0.12)"}>
             ← Blog
@@ -581,72 +581,35 @@ function Stat({ number, label, delay = 0 }) {
   );
 }
 
-// ─── Hero Illustration: Elderly person and child ───
+// ─── Hero Illustration: Elderly people───
 function HeroIllustration() {
   return (
     <svg viewBox="0 0 400 440" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", maxWidth: 380, height: "auto" }}>
       {/* Background circles */}
       <circle cx="200" cy="220" r="190" fill={C.green} opacity="0.06" />
       <circle cx="200" cy="220" r="140" fill={C.brown} opacity="0.06" />
-      
+
       {/* Ground */}
       <ellipse cx="200" cy="400" rx="160" ry="16" fill={C.green} opacity="0.08" />
-      
-      {/* Tree in background */}
-      <rect x="310" y="200" width="8" height="200" rx="4" fill={C.brown} opacity="0.2" />
-      <circle cx="314" cy="180" r="40" fill={C.green} opacity="0.12" />
-      <circle cx="295" cy="195" r="28" fill={C.sage} opacity="0.12" />
-      <circle cx="330" cy="200" r="24" fill={C.green} opacity="0.08" />
-      
-      {/* Elderly person (Saath-Icon) — left side */}
-      {/* Body */}
-      <path d="M140 250 C140 230, 160 210, 170 210 L180 210 C190 210, 200 230, 200 250 L200 350 C200 360, 195 365, 185 365 L155 365 C145 365, 140 360, 140 350 Z" fill={C.brown} opacity="0.85" />
-      {/* Head */}
-      <circle cx="170" cy="185" r="30" fill="#D4A77A" />
-      {/* Hair (white/silver) */}
-      <path d="M145 175 C145 155, 160 145, 170 145 C180 145, 195 155, 195 175 C195 168, 185 160, 170 160 C155 160, 145 168, 145 175Z" fill="#E8E0D8" />
-      {/* Gentle smile */}
-      <path d="M160 193 Q170 200 180 193" stroke={C.brown} strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* Eyes */}
-      <circle cx="162" cy="183" r="2.5" fill={C.brown} />
-      <circle cx="178" cy="183" r="2.5" fill={C.brown} />
-      {/* Glasses */}
-      <circle cx="162" cy="183" r="8" stroke={C.brown} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <circle cx="178" cy="183" r="8" stroke={C.brown} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <line x1="170" y1="183" x2="170" y2="183" stroke={C.brown} strokeWidth="1.5" opacity="0.5" />
-      {/* Walking stick */}
-      <line x1="130" y1="260" x2="125" y2="400" stroke={C.brown} strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-      {/* Arm reaching toward child */}
-      <path d="M195 260 Q210 250, 220 260" stroke="#D4A77A" strokeWidth="8" fill="none" strokeLinecap="round" />
-      {/* Hand */}
-      <circle cx="222" cy="262" r="6" fill="#D4A77A" />
-      
-      {/* Child (Saath-Buddy) — right side */}
-      {/* Body */}
-      <path d="M230 310 C230 295, 240 285, 248 285 L258 285 C266 285, 276 295, 276 310 L276 370 C276 378, 272 382, 265 382 L241 382 C234 382, 230 378, 230 370 Z" fill={C.green} opacity="0.8" />
-      {/* Head */}
-      <circle cx="253" cy="262" r="26" fill="#E0B68C" />
-      {/* Hair */}
-      <path d="M230 253 C230 237, 242 228, 253 228 C264 228, 276 237, 276 253 C276 247, 268 240, 253 240 C238 240, 230 247, 230 253Z" fill="#3D2B1F" />
-      {/* Smile */}
-      <path d="M244 270 Q253 278 262 270" stroke={C.brown} strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* Eyes */}
-      <circle cx="245" cy="260" r="2.5" fill={C.brown} />
-      <circle cx="261" cy="260" r="2.5" fill={C.brown} />
-      {/* Child's arm reaching toward elder */}
-      <path d="M232 300 Q222 290, 222 270" stroke="#E0B68C" strokeWidth="7" fill="none" strokeLinecap="round" />
-      
-      {/* Connection — hands meeting / heart */}
-      <path d="M218 256 L222 250 L226 256 Q222 262, 218 256Z" fill={C.brown} opacity="0.3" />
-      
+
       {/* Floating leaves */}
       <path d="M80 120 Q90 110, 100 120 Q90 130, 80 120Z" fill={C.green} opacity="0.2" transform="rotate(-30 90 120)" />
       <path d="M300 100 Q310 90, 320 100 Q310 110, 300 100Z" fill={C.sage} opacity="0.2" transform="rotate(20 310 100)" />
       <path d="M60 300 Q70 290, 80 300 Q70 310, 60 300Z" fill={C.green} opacity="0.15" transform="rotate(-15 70 300)" />
-      
+
       {/* Small birds */}
       <path d="M100 80 Q105 70 110 78 Q115 70 120 80" stroke={C.green} strokeWidth="1.5" fill="none" opacity="0.2" />
       <path d="M280 60 Q285 50 290 58 Q295 50 300 60" stroke={C.green} strokeWidth="1.5" fill="none" opacity="0.15" />
+
+      {/* Logo image centered on top of the background */}
+      <image
+        href="/hero.png"
+        x="60"
+        y="80"
+        width="280"
+        height="280"
+        preserveAspectRatio="xMidYMid meet"
+      />
     </svg>
   );
 }

@@ -452,6 +452,7 @@ function BlogArticlePage({ blog, onBack }) {
       {/* Article header */}
       <div style={{ background: C.bg, padding: "64px 24px 48px", borderBottom: `1px solid ${C.warmGray}40` }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          {blog.coverImg && ( <img src={blog.coverImg} alt={blog.title} style={{ width: "100%", maxHeight: 420, objectFit: "cover", borderRadius: 18, marginBottom: 32, }} /> )}
           <span style={{ fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 20 }}>{blog.tag}</span>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>{blog.title}</h1>
           <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>{blog.excerpt}</p>
@@ -1291,7 +1292,7 @@ export default function Saathban() {
           <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => {
             const tc = tagColors[b.tag] || C.green;
             return (
-              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)}>
+              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)} > {b.coverImg && ( <img src={b.coverImg} alt={b.title} style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 14, marginBottom: 18, }} /> )}
                 <div style={{ height: 140, background: `linear-gradient(135deg, ${tc}15, ${tc}05)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                   <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}15`, fontWeight: 700 }}>{b.tag[0]}</span>
                   <span style={{ position: "absolute", top: 16, left: 16, fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag}</span>

@@ -106,7 +106,7 @@ const BLOGS = [
     tag: "Research",
     color: C.brown,
     excerpt: "The most hopeful demographic story of our time.",
-    coverImg: null,
+    coverImg: "blog_1.png",
     content: [
       {
         type: "lead",
@@ -163,7 +163,7 @@ const BLOGS = [
     tag: "Research",
     color: C.brown,
     excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
-    coverImg: null,
+    coverImg: "blog_2.png",
     content: [
       {
         type: "lead",
@@ -205,6 +205,91 @@ const BLOGS = [
         type: "paragraph",
         text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual, ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
       },
+    ],
+  },
+  {
+    id: "twice-as-long-and-now-what",
+    title: "Twice as Long, and Now What?",
+    date: "May 18, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "5 min read",
+    tag: "Longevity",
+    color: C.brown,
+    excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
+    coverImg: null,
+    content: [
+      {
+        type: "lead",
+        text: "Queen Anne was not just the wife of a king. She was a sovereign ruler in her own right, holding full governing power over England, Scotland, and Ireland, and becoming the first monarch of the united Great Britain after the Acts of Union in 1707. She gave birth seventeen times. Not one of those children lived to see adulthood."
+      },
+      {
+        type: "paragraph",
+        text: "The luckiest, Prince William, made it to eleven before he too was gone. Some of this was personal misfortune and medical complication, but a great deal of it was simply the century she lived in. According to historical reconstructions in the Human Mortality Database (2025), life expectancy at birth in early eighteenth-century England hovered around the mid-thirties, and roughly one in four infants did not survive their first year. A queen with the best physicians of her age could not outrun the demography of her era."
+      },
+      {
+        type: "paragraph",
+        text: "Three centuries later, the picture is almost unrecognizable. According to the UN World Population Prospects 2024, global life expectancy at birth reached 73.3 years in 2024, an increase of 8.4 years since 1995."
+      },
+      {
+        type: "paragraph",
+        text: "Pull the lens back further using the historical estimates compiled by James C. Riley (2005) and Zijdeman et al. (2014), and the contrast becomes startling. As Riley's regional estimates show, the world average sat at roughly 28.5 years in 1800, climbed only to 32 by 1900, and then took off, reaching 46 by 1950 and 66 by the year 2000 in the UN data."
+      },
+      {
+        type: "pullquote",
+        text: "The average person alive today can expect to live more than twice as long as their great-great-grandparents."
+      },
+      {
+        type: "paragraph",
+        text: "The COVID-19 pandemic briefly knocked the curve back to 70.9 years in 2021, but the UN's 2024 revision notes that since 2022, life expectancy has returned to pre-COVID-19 levels in nearly all countries and areas."
+      },
+      {
+        type: "paragraph",
+        text: "Europe tells a sharper version of the same story. Drawing on Zijdeman et al. (2014) and the Human Mortality Database, a European newborn in 1800 could expect about 33 years of life. By 1900 that figure was 43, by 1950 it was 62, and by 2023 it had climbed past 79 in the UN's estimates."
+      },
+      {
+        type: "paragraph",
+        text: "According to Eurostat's preliminary release, life expectancy at birth in the EU was 81.7 years in 2024, up 0.3 years from 2023, with Spain, Italy, and Sweden now above 84 years. Queen Anne, born in 1665, would today be considered to have died young at 49."
+      },
+      {
+        type: "paragraph",
+        text: "The same person born in modern Britain would, on average, be a grandmother by then, with three decades still ahead of her. The drivers are not mysterious. Clean water, vaccines, antibiotics, safer childbirth, better nutrition, and falling infant mortality have, together, done what no single medical miracle could."
+      },
+      {
+        type: "pullquote",
+        text: "Living to one hundred may quietly stop being remarkable within two generations."
+      },
+      {
+        type: "paragraph",
+        text: "Now consider the trajectory ahead. According to the UN World Population Prospects 2024, global life expectancy is projected to rise to about 77.4 years by 2054, and Pakistan, which moved from 34 years in 1950 to roughly 68 today, is part of that quiet convergence."
+      },
+      {
+        type: "paragraph",
+        text: "If the pace of the past two centuries holds, a child born in 2050 may routinely expect to live into their late eighties, and a child born in 2100 could plausibly approach a century as the new normal."
+      },
+      {
+        type: "paragraph",
+        text: "That is not a forecast of immortality. It is what extrapolating the same public health gains, the same nutritional improvements, and the same compounding medical advances actually implies."
+      },
+      {
+        type: "paragraph",
+        text: "But longer lives are only a gift if the extra years are worth living. The world is ageing faster than it is preparing for ageing."
+      },
+      {
+        type: "paragraph",
+        text: "The UN projects that by the mid 2030s, people aged 80 and over will outnumber infants globally. Pakistan, despite its young median age, is on the same path, with the elderly share of the population set to double in the coming decades."
+      },
+      {
+        type: "paragraph",
+        text: "Yet most of the social architecture, from health systems to family structures to civic spaces, still assumes that old age is a short epilogue rather than a long chapter."
+      },
+      {
+        type: "pullquote",
+        text: "The next frontier is not just adding years to life. It is adding life, dignity, and companionship to those years."
+      },
+      {
+        type: "paragraph",
+        text: "That is the work that organizations like Saathban are trying to begin, because a society that learns to keep people alive longer must also learn how to keep them flourishing in the meantime."
+      }
     ],
   },
 

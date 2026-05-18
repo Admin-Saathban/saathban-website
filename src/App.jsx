@@ -106,7 +106,7 @@ const BLOGS = [
     tag: "Research",
     color: C.brown,
     excerpt: "The most hopeful demographic story of our time.",
-    coverImg: "blog_1.png",
+    coverImg: "/blog_1.png",
     content: [
       {
         type: "lead",
@@ -163,7 +163,7 @@ const BLOGS = [
     tag: "Research",
     color: C.brown,
     excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
-    coverImg: "blog_2.png",
+    coverImg: "/blog_2.png",
     content: [
       {
         type: "lead",

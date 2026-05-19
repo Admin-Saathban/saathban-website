@@ -739,10 +739,10 @@ function HeroIllustration() {
       {/* Logo image centered on top of the background */}
       <image
         href="/hero.png"
-        x="40"
-        y="80"
-        width="380"
-        height="380"
+        x="15"
+        y="58"
+        width="370"
+        height="370"
         preserveAspectRatio="xMidYMid meet"
       />
     </svg>

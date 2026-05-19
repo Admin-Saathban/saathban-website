@@ -741,8 +741,8 @@ function HeroIllustration() {
         href="/hero.png"
         x="15"
         y="58"
-        width="370"
-        height="370"
+        width="380"
+        height="380"
         preserveAspectRatio="xMidYMid meet"
       />
     </svg>

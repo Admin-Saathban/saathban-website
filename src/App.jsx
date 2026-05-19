@@ -450,24 +450,58 @@ function BlogArticlePage({ blog, onBack }) {
       </div>
 
       {/* Article header */}
-      <div style={{ background: C.bg, padding: "64px 24px 48px", borderBottom: `1px solid ${C.warmGray}40` }}>
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          {blog.coverImg && ( <img src={blog.coverImg} alt={blog.title} style={{ width: "100%", maxHeight: 420, objectFit: "cover", borderRadius: 18, marginBottom: 32, }} /> )}
-          <span style={{ fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 20 }}>{blog.tag}</span>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>{blog.title}</h1>
-          <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>{blog.excerpt}</p>
-          <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${tc}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: tc }}>S</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.textMain }}>{blog.author}</div>
-                <div style={{ fontSize: 12, color: C.textMuted }}>{blog.date} · {blog.readTime}</div>
+      <div style={{ position: "relative" }}>
+        {blog.coverImg ? (
+          // ── With cover image: full-bleed photo with overlaid metadata ──
+          <div style={{ position: "relative", height: "clamp(280px, 45vw, 480px)", overflow: "hidden" }}>
+            <img src={blog.coverImg} alt={blog.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            {/* Dark gradient overlay at bottom */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)" }} />
+            {/* Metadata on top of image */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "32px 24px" }}>
+              <div style={{ maxWidth: 760, margin: "0 auto" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.white, background: tc, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 16 }}>{blog.tag}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${tc}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>H</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.95)" }}>{blog.author}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>{blog.date} · {blog.readTime}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // ── Without cover image: plain cream header ──
+          <div style={{ background: C.bg, padding: "64px 24px 48px", borderBottom: `1px solid ${C.warmGray}40` }}>
+            <div style={{ maxWidth: 760, margin: "0 auto" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 20 }}>{blog.tag}</span>
+              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>{blog.title}</h1>
+              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>{blog.excerpt}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${tc}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: tc }}>S</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.textMain }}>{blog.author}</div>
+                  <div style={{ fontSize: 12, color: C.textMuted }}>{blog.date} · {blog.readTime}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Title + excerpt below image (always shown) */}
+        {blog.coverImg && (
+          <div style={{ background: C.bg, padding: "36px 24px 32px", borderBottom: `1px solid ${C.warmGray}40` }}>
+            <div style={{ maxWidth: 760, margin: "0 auto" }}>
+              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 12 }}>{blog.title}</h1>
+              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>{blog.excerpt}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Article body */}
@@ -1292,13 +1326,23 @@ export default function Saathban() {
           <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => {
             const tc = tagColors[b.tag] || C.green;
             return (
-              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)} > {b.coverImg && ( <img src={b.coverImg} alt={b.title} style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 14, marginBottom: 18, }} /> )}
-                <div style={{ height: 140, background: `linear-gradient(135deg, ${tc}15, ${tc}05)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}15`, fontWeight: 700 }}>{b.tag[0]}</span>
-                  <span style={{ position: "absolute", top: 16, left: 16, fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag}</span>
-                  <span style={{ position: "absolute", bottom: 12, right: 16, fontSize: 11, color: tc, fontWeight: 500 }}>{b.readTime}</span>
+              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)}>
+                {/* Cover image area — with or without photo */}
+                <div style={{ height: 180, position: "relative", overflow: "hidden", flexShrink: 0, background: `linear-gradient(135deg, ${tc}15, ${tc}05)` }}>
+                  {b.coverImg ? (
+                    <img src={b.coverImg} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}20`, fontWeight: 700 }}>{b.tag[0]}</span>
+                    </div>
+                  )}
+                  {/* Tag pill — top left */}
+                  <span style={{ position: "absolute", top: 14, left: 14, fontSize: 11, fontWeight: 700, color: C.white, background: tc, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em", backdropFilter: "blur(4px)" }}>{b.tag}</span>
+                  {/* Read time — top right */}
+                  <span style={{ position: "absolute", top: 14, right: 14, fontSize: 11, fontWeight: 600, color: C.white, background: "rgba(0,0,0,0.35)", padding: "4px 10px", borderRadius: 20, backdropFilter: "blur(4px)" }}>{b.readTime}</span>
                 </div>
-                <div style={{ padding: "24px 28px 28px", flex: 1, display: "flex", flexDirection: "column" }}>
+                {/* Card content */}
+                <div style={{ padding: "20px 24px 24px", flex: 1, display: "flex", flexDirection: "column" }}>
                   <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, marginBottom: 8 }}>{b.date}</span>
                   <h4 style={{ fontSize: 17, fontWeight: 700, color: C.green, lineHeight: 1.4, marginBottom: 10 }}>{b.title}</h4>
                   <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, flex: 1 }}>{b.excerpt}</p>

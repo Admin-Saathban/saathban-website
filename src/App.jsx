@@ -216,7 +216,7 @@ const BLOGS = [
     tag: "Longevity",
     color: C.brown,
     excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
-    coverImg: null,
+    coverImg: "/blog_3.png",
     content: [
       {
         type: "lead",

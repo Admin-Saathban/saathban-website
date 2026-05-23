@@ -292,49 +292,118 @@ const BLOGS = [
       }
     ],
   },
-
-  /*{
-    id: "volunteering-perspective",
-    title: "Volunteering Changed My Perspective on Aging",
-    date: "Jan 15, 2026",
-    author: "A Saath-Buddy",
-    readTime: "3 min read",
-    tag: "Stories",
-    color: C.green,
-    excerpt: "A young Saath-Buddy shares their transformative experience connecting with a Saath-Icon.",
+  
+  {
+    id: "pay-as-you-go",
+    title: "Pay-As-You-Go: A System Under Strain",
+    date: "May 18, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "4 min read",
+    tag: "Policy",
+    color: C.brown,
+    excerpt: "The pension systems that once defined modern welfare states are beginning to crack under the weight of longer lives and shrinking generations.",
     coverImg: null,
     content: [
       {
         type: "lead",
-        text: "I signed up to volunteer with Saathban expecting to give something. I left having received far more than I brought.",
+        text: "Imagine being told to hand over a portion of your income each month to support a retired stranger living hundreds of miles away, on the promise that decades from now, someone you will never meet will do the same for you."
       },
       {
         type: "paragraph",
-        text: "Before I met my Saath-Icon, I thought of aging as something that happened to other people — a distant, abstract process I could afford to ignore at 22. I was wrong. Sitting across from someone who has lived through Partition, raised a family, built a career, and outlived most of their friends changes something in you.",
+        text: "In a world this unpredictable, doesn't the arrangement start to feel a little strange? Yet this intergenerational solidarity scheme has been at play since the late 19th century and is now in place in almost every country."
       },
       {
         type: "paragraph",
-        text: "We met every Saturday for three months. We talked about everything — her childhood in a village outside Lahore, the smell of monsoon rain on dry earth, what it felt like to watch your children grow up and move away. She talked. I listened. And somewhere in that listening, I began to understand something I had never been taught in school.",
+        text: "Herein lies the quiet beauty of the social state. Because today's workers finance today's retirees, the prosperity of the elderly depends directly on the wages, productivity, and sheer number of the young."
+      },
+      {
+        type: "paragraph",
+        text: "Suddenly, the state has every reason to invest generously in schools, in universities, in the health of children, and yes, in a higher birth rate too. A bond is forged across generations, each one quietly indebted to the next, and what emerges, at least in principle, is a virtuous and harmonious society held together not by charity but by mutual self-interest."
       },
       {
         type: "pullquote",
-        text: "Old age is not a waiting room. It is a life still being lived — fully, quietly, and with extraordinary depth.",
+        text: "A bond is forged across generations, each one quietly indebted to the next."
       },
       {
         type: "paragraph",
-        text: "What struck me most was not her sadness — though there was some — but her humour. She was sharp, funny, and had opinions about everything from politics to the best way to make karahi. She was not a charity case. She was a person who happened to be lonely, and who needed someone to notice that.",
+        text: "When it was first introduced, all the conditions for this system were conducive: high demographic growth and high productivity growth, with overall growth rates close to 5% in countries like those of continental Europe."
       },
       {
         type: "paragraph",
-        text: "I think about her often now. I think about how many people like her exist in this city — in care homes, in quiet apartments, in houses full of family members who are too busy to sit down. And I think about how little it takes to change that. A Saturday morning. A cup of tea. The willingness to listen.",
+        text: "The combination of these two is, in fact, precisely the implicit rate of return of a pay-as-you-go system. Workers who paid in were repaid generously when their turn came to receive. Those who contributed during World War 2 were paid in full or, in some cases, are still receiving payments if alive."
       },
       {
         type: "paragraph",
-        text: "Volunteering with Saathban did not just change my perspective on aging. It changed my perspective on what it means to be present for another human being. That, I think, is the most valuable thing I have learned so far.",
+        text: "And here the story turns. The very conditions that once made pay-as-you-go feel like a stroke of social genius are quietly unraveling."
       },
+      {
+        type: "paragraph",
+        text: "Longevity stretches ever upward, with retirees today drawing pensions for twenty, thirty, sometimes nearly forty years, far longer than Bismarck or Beveridge ever dared to imagine. Birth rates, meanwhile, are collapsing across much of the developed world, often well below the replacement threshold, leaving fewer and fewer young shoulders to carry an ever-heavier load."
+      },
+      {
+        type: "paragraph",
+        text: "Productivity growth, once a reliable 4 to 5 percent a year in post-war Europe, has slowed to a crawl. The arithmetic that once made the system feel almost magical now works in reverse: more retirees, fewer workers, and slower wage growth to fund them all."
+      },
+      {
+        type: "pullquote",
+        text: "The promise that the next generation would always be there to pay starts to sound less like a guarantee and more like a hope."
+      },
+      {
+        type: "paragraph",
+        text: "The delicate balance of trust on which this entire edifice was built begins to tremble, if not yet to break."
+      },
+      {
+        type: "paragraph",
+        text: "The story is not very different in developing countries either. In Pakistan, the strain is, if anything, more acute. The federal pension bill has ballooned to nearly Rs 900 billion in 2025, far exceeding the country's development expenditure, and is growing at roughly 25 percent a year, doubling every four years."
+      },
+      {
+        type: "paragraph",
+        text: "The provinces fare little better, with Punjab's pension obligations absorbing a significant portion of provincial revenue and the national railways devoting nearly 70 percent of their income to pensions."
+      },
+      {
+        type: "paragraph",
+        text: "Belatedly, Islamabad has begun to stir: the proposed Pension Fund Bill 2024 aims to replace the old pay-as-you-go model with a contributory system in which new recruits deposit a share of their salaries. But these are first tremors of reform in a system long overdue for reckoning."
+      },
+      {
+        type: "pullquote",
+        text: "There is, in short, no costless way out."
+      },
+      {
+        type: "paragraph",
+        text: "One solution lies in the so-called capitalized system, in which the contributions of today's workers are no longer paid out immediately to current retirees, but invested in financial assets that will fund their own retirement decades later."
+      },
+      {
+        type: "paragraph",
+        text: "In principle, this severs the system's dependence on demographic luck. It no longer matters whether the next generation is large or small, because each cohort, in effect, saves for itself. For a 21st century of falling birth rates and lengthening lives, the appeal is obvious."
+      },
+      {
+        type: "paragraph",
+        text: "Yet the cure carries its own complications. The most formidable is the transition itself: moving from pay-as-you-go to a capitalized system forces one unlucky generation to pay twice, once to honor the pensions of those already retired under the old promise, and once again to build the savings that will finance their own."
+      },
+      {
+        type: "paragraph",
+        text: "Whichever generation is asked to bear that double burden will quite reasonably ask why history has chosen them, and any government attempting the switch must answer that question before the first contribution is ever rerouted."
+      },
+      {
+        type: "paragraph",
+        text: "Perhaps, then, the deeper lesson is that no pension formula, however cleverly designed, can substitute for the older architecture it was built upon: the quiet web of family, neighbors, and community that once carried the old through their final years."
+      },
+      {
+        type: "pullquote",
+        text: "Aging has never been only a fiscal problem. It is, in the end, a question of who shows up."
+      },
+      {
+        type: "paragraph",
+        text: "In Pakistan, where the formal system protects only a fraction of the elderly, that informal architecture is not a relic but a lifeline, and it too is fraying under urbanization, migration, and the steady erosion of joint family life."
+      },
+      {
+        type: "paragraph",
+        text: "This is the space in which initiatives like Saathban matter. They cannot replace pensions, nor pretend to, but they remind us that in a century where the arithmetic of pay-as-you-go is failing and capitalized systems remain politically distant, the simple act of companionship may be the most honest pension of all."
+      }
     ],
   },
 
+  /*
   {
     id: "support-elderly-neighbour",
     title: "5 Simple Ways to Support an Elderly Neighbour",

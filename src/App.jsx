@@ -98,205 +98,9 @@ const EVENTS = [
 // ─── Blog Data ───
 const BLOGS = [
   {
-    id: "living-to-100",
-    title: "Living to 100 is No Longer a Miracle",
-    date: "May 05, 2026",
-    author: "Hamayoon Shah | Chief Research Officer",
-    readTime: "4 min read",
-    tag: "Research",
-    color: C.brown,
-    excerpt: "The most hopeful demographic story of our time.",
-    coverImg: "/blog_1.png",
-    content: [
-      {
-        type: "lead",
-        text: "Have you ever wondered what it truly means to live for a century? A hundred years ago, reaching the age of 100 was a statistical anomaly, a feat so rare that it seemed reserved for a fortunate few. Today, however, living to 100 is no longer a miracle.",
-      },
-      {
-        type: "paragraph",
-        text: "According to the United Nations, there were only 23,000 centenarians worldwide in 1950. By 2024, that number had surged to an estimated 934,776 globally. In the span of a single lifetime, the world has witnessed a fortyfold increase in people aged 100 and older."      
-      },
-      {
-        type: "paragraph",
-        text: "This remarkable growth continues to accelerate. According to the Pew Research Center analysis of UN data, the world was home to nearly half a million centenarians in 2015, more than four times as many as in 1990. And the best is yet to come. The United Nations projects that by 2050, there will be an astounding 3.7 million centenarians worldwide. That is an eightfold increase from 2015 levels."      
-      },
-      {
-        type: "pullquote",
-        text: "From 153 to over 95,000 in just six decades, this is nothing short of extraordinary.",
-      },
-      {
-        type: "paragraph",
-        text: "One nation stands as the undisputed capital of longevity. According to data published by Japan's Ministry of Health, Labor and Welfare, Japan recorded 95,119 centenarians as of September 2024, marking the 54th consecutive annual rise. To put this in perspective, Japan had only 153 centenarians in 1963 when records began. The number surpassed 1,000 in 1981, topped 10,000 in 1998, and exceeded 90,000 in 2022.",
-      },
-      {
-        type: "paragraph",
-        text: "The United States tells a similar story. According to the U.S. Census Bureau, there were approximately 2,300 centenarians in America in 1950. By 2010, that number had grown to 53,364. And according to recent demographic projections, the United States already has about 100,000 centenarians as of 2022. Looking ahead, the U.S. Census Bureau projects that by 2060, America will be home to 590,000 people aged 100 or older. That is nearly six times the current number.",
-      },
-      {
-        type: "paragraph",
-        text: "Across every data set, one remarkable pattern holds true. According to the U.S. Census Bureau, more than 80 percent of American centenarians in 2010 were women, with only 20.7 men for every 100 women in that age group. Japan reports a similar figure, with women accounting for 88.3 percent of all centenarians in 2024. The oldest living person on Earth, as of 2024, is a 116-year-old Japanese woman named Itooka Tomiko.",
-      },
-      {
-        type: "paragraph",
-        text: "Countries worldwide are witnessing this longevity boom. According to the UN Population Division, France had only 100 centenarians in 1900 but reported 31,269 in 2024. Italy grew from 99 centenarians in 1872 to 23,548 in 2025. Thailand now has 45,561 centenarians as of 2024. Even China, despite its relatively younger population, reported 54,166 centenarians in 2013.",
-      },
-      {
-        type: "pullquote",
-        text: "One third of babies born in the UK in 2013 are expected to live to see their 100th birthday. What was once a miracle has become the new normal.",
-      },
-      {
-        type: "paragraph",
-        text: "Living to 100 was once a headline. The centenarian population is not just growing; it is exploding, and this is perhaps the most hopeful demographic story of our time.",
-      },
-      {
-        type: "paragraph",
-        text: "The arithmetic of longevity is clear, but the human work it demands is only beginning. Societies that will host millions of centenarians by 2050 must prepare now. This means investing in geriatric healthcare, designing age-friendly public spaces, supporting caregivers, and building services that address the emotional and social needs of seniors, not just the medical ones. It also means shifting how we think.",
-      },
-    ],
-  },
-  {
-    id: "invisible-hand-population",
-    title: "The Invisible Hand of Population: The Mystery of Our Ebbs and Flows",
-    date: "May 12, 2026",
-    author: "Hamayoon Shah | Chief Research Officer",
-    readTime: "5 min read",
-    tag: "Research",
-    color: C.brown,
-    excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
-    coverImg: "/blog_2.png",
-    content: [
-      {
-        type: "lead",
-        text: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
-      },
-      {
-        type: "paragraph",
-        text: "Throughout history, external disasters like droughts and pandemics were the primary 'brakes' on our growth. But today, the brakes are internal. Even with vast resources and relative peace, the momentum has stalled, leaving us to wonder what invisible psychological or cultural forces are now rewriting the rules of human expansion.",
-      },
-      {
-        type: "paragraph",
-        text: "While the basic function of growth is rooted in the biology of birth and death, those numbers were always at the mercy of the environment. For centuries, the 'invisible hand' of nature used famine, drought, and disease to balance the human ledger. We understood these forces because they were visible and physical. However, as modern society has solved the problems of predators and scarcity, a new set of invisible forces has taken over. Our biological drive to multiply is now reacting to a modern environment that we are only beginning to understand.",
-      },
-      {
-        type: "pullquote",
-        text: "We are no longer limited by what the Earth can provide, but perhaps by how our own societies have evolved to prioritize the individual over the collective.",
-      },
-      {
-        type: "paragraph",
-        text: "The true mystery emerges when we realize that modern humans have largely silenced these ancient environmental alarms. We have marginalized predators, industrialized our food supply, and developed the medicine needed to curb pandemics. By all traditional logic, this removal of 'natural brakes' should have led to an era of infinite compounding. Instead, we see a voluntary retreat in growth that defies the old biological models. It appears that as we moved from a world of physical scarcity to one of social complexity, the invisible forces changed shape. ",
-      },
-      {
-        type: "paragraph",
-        text: "While the Malthusian doomsday scenario was largely avoided due to the vast growth in food production and improvement in wellbeing, the logic of compounding remains a looming shadow. If the current invisible hand did not control our growth, the power of compounding would ultimately lead us back to a Malthusian catastrophe even if we had enormous resources at hand. To put this into perspective, demographers estimate that the world population at the time of Jesus was about 250 to 300 million. For nearly two millennia, that number grew by a glacial average of roughly 0.04 to 0.08 percent annually.",
-      },
-      {
-        type: "pullquote",
-        text: "If a population of 300 million had grown at a steady rate of 0.8 percent since the year 1 AD, the world would have hit our current 8 billion mark by the year 415 AD. By today, the population would have reached a staggering 3.08 quadrillion people. These figures represent a world so crowded that there would be no room left to stand.",
-      },
-      {
-        type: "paragraph",
-        text: "The fact that we find ourselves at 8 billion today, rather than in the quadrillions, proves that an invisible hand is always at work. In the past, this hand was visible and cruel, manifest in the forms of plague and hunger. Today, it is silent and subtle. We are living through a period where the mystery of the ebb and flow has moved from the forest and the field into the human mind and the structure of our modern lives. Understanding these invisible forces is the key to understanding the future of our species.",
-      },
-      {
-        type: "paragraph",
-        text: "Even as the 'invisible hand' recalibrates our expansion toward a voluntary retreat, the victory of modern medicine has introduced a new variable: longevity. We are no longer a species defined by a rapid turnover of generations, but one characterized by an enduring, aging population. While the threat of a Malthusian explosion has faded, we now face a 'silver' transformation where the collective focus must shift from managing growth to mastering care.",
-      },
-      {
-        type: "paragraph",
-        text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual, ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
-      },
-    ],
-  },
-  {
-    id: "twice-as-long-and-now-what",
-    title: "Twice as Long, and Now What?",
-    date: "May 18, 2026",
-    author: "Hamayoon Shah | Chief Research Officer",
-    readTime: "5 min read",
-    tag: "Longevity",
-    color: C.brown,
-    excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
-    coverImg: "/blog_3.png",
-    content: [
-      {
-        type: "lead",
-        text: "Queen Anne was not just the wife of a king. She was a sovereign ruler in her own right, holding full governing power over England, Scotland, and Ireland, and becoming the first monarch of the united Great Britain after the Acts of Union in 1707. She gave birth seventeen times. Not one of those children lived to see adulthood."
-      },
-      {
-        type: "paragraph",
-        text: "The luckiest, Prince William, made it to eleven before he too was gone. Some of this was personal misfortune and medical complication, but a great deal of it was simply the century she lived in. According to historical reconstructions in the Human Mortality Database (2025), life expectancy at birth in early eighteenth-century England hovered around the mid-thirties, and roughly one in four infants did not survive their first year. A queen with the best physicians of her age could not outrun the demography of her era."
-      },
-      {
-        type: "paragraph",
-        text: "Three centuries later, the picture is almost unrecognizable. According to the UN World Population Prospects 2024, global life expectancy at birth reached 73.3 years in 2024, an increase of 8.4 years since 1995."
-      },
-      {
-        type: "paragraph",
-        text: "Pull the lens back further using the historical estimates compiled by James C. Riley (2005) and Zijdeman et al. (2014), and the contrast becomes startling. As Riley's regional estimates show, the world average sat at roughly 28.5 years in 1800, climbed only to 32 by 1900, and then took off, reaching 46 by 1950 and 66 by the year 2000 in the UN data."
-      },
-      {
-        type: "pullquote",
-        text: "The average person alive today can expect to live more than twice as long as their great-great-grandparents."
-      },
-      {
-        type: "paragraph",
-        text: "The COVID-19 pandemic briefly knocked the curve back to 70.9 years in 2021, but the UN's 2024 revision notes that since 2022, life expectancy has returned to pre-COVID-19 levels in nearly all countries and areas."
-      },
-      {
-        type: "paragraph",
-        text: "Europe tells a sharper version of the same story. Drawing on Zijdeman et al. (2014) and the Human Mortality Database, a European newborn in 1800 could expect about 33 years of life. By 1900 that figure was 43, by 1950 it was 62, and by 2023 it had climbed past 79 in the UN's estimates."
-      },
-      {
-        type: "paragraph",
-        text: "According to Eurostat's preliminary release, life expectancy at birth in the EU was 81.7 years in 2024, up 0.3 years from 2023, with Spain, Italy, and Sweden now above 84 years. Queen Anne, born in 1665, would today be considered to have died young at 49."
-      },
-      {
-        type: "paragraph",
-        text: "The same person born in modern Britain would, on average, be a grandmother by then, with three decades still ahead of her. The drivers are not mysterious. Clean water, vaccines, antibiotics, safer childbirth, better nutrition, and falling infant mortality have, together, done what no single medical miracle could."
-      },
-      {
-        type: "pullquote",
-        text: "Living to one hundred may quietly stop being remarkable within two generations."
-      },
-      {
-        type: "paragraph",
-        text: "Now consider the trajectory ahead. According to the UN World Population Prospects 2024, global life expectancy is projected to rise to about 77.4 years by 2054, and Pakistan, which moved from 34 years in 1950 to roughly 68 today, is part of that quiet convergence."
-      },
-      {
-        type: "paragraph",
-        text: "If the pace of the past two centuries holds, a child born in 2050 may routinely expect to live into their late eighties, and a child born in 2100 could plausibly approach a century as the new normal."
-      },
-      {
-        type: "paragraph",
-        text: "That is not a forecast of immortality. It is what extrapolating the same public health gains, the same nutritional improvements, and the same compounding medical advances actually implies."
-      },
-      {
-        type: "paragraph",
-        text: "But longer lives are only a gift if the extra years are worth living. The world is ageing faster than it is preparing for ageing."
-      },
-      {
-        type: "paragraph",
-        text: "The UN projects that by the mid 2030s, people aged 80 and over will outnumber infants globally. Pakistan, despite its young median age, is on the same path, with the elderly share of the population set to double in the coming decades."
-      },
-      {
-        type: "paragraph",
-        text: "Yet most of the social architecture, from health systems to family structures to civic spaces, still assumes that old age is a short epilogue rather than a long chapter."
-      },
-      {
-        type: "pullquote",
-        text: "The next frontier is not just adding years to life. It is adding life, dignity, and companionship to those years."
-      },
-      {
-        type: "paragraph",
-        text: "That is the work that organizations like Saathban are trying to begin, because a society that learns to keep people alive longer must also learn how to keep them flourishing in the meantime."
-      }
-    ],
-  },
-  
-  {
     id: "pay-as-you-go",
     title: "Pay-As-You-Go: A System Under Strain",
-    date: "May 18, 2026",
+    date: "May 23, 2026",
     author: "Hamayoon Shah | Chief Research Officer",
     readTime: "4 min read",
     tag: "Policy",
@@ -400,6 +204,201 @@ const BLOGS = [
         type: "paragraph",
         text: "This is the space in which initiatives like Saathban matter. They cannot replace pensions, nor pretend to, but they remind us that in a century where the arithmetic of pay-as-you-go is failing and capitalized systems remain politically distant, the simple act of companionship may be the most honest pension of all."
       }
+    ],
+  },
+  {
+    id: "twice-as-long-and-now-what",
+    title: "Twice as Long, and Now What?",
+    date: "May 18, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "5 min read",
+    tag: "Longevity",
+    color: C.brown,
+    excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
+    coverImg: "/blog_3.png",
+    content: [
+      {
+        type: "lead",
+        text: "Queen Anne was not just the wife of a king. She was a sovereign ruler in her own right, holding full governing power over England, Scotland, and Ireland, and becoming the first monarch of the united Great Britain after the Acts of Union in 1707. She gave birth seventeen times. Not one of those children lived to see adulthood."
+      },
+      {
+        type: "paragraph",
+        text: "The luckiest, Prince William, made it to eleven before he too was gone. Some of this was personal misfortune and medical complication, but a great deal of it was simply the century she lived in. According to historical reconstructions in the Human Mortality Database (2025), life expectancy at birth in early eighteenth-century England hovered around the mid-thirties, and roughly one in four infants did not survive their first year. A queen with the best physicians of her age could not outrun the demography of her era."
+      },
+      {
+        type: "paragraph",
+        text: "Three centuries later, the picture is almost unrecognizable. According to the UN World Population Prospects 2024, global life expectancy at birth reached 73.3 years in 2024, an increase of 8.4 years since 1995."
+      },
+      {
+        type: "paragraph",
+        text: "Pull the lens back further using the historical estimates compiled by James C. Riley (2005) and Zijdeman et al. (2014), and the contrast becomes startling. As Riley's regional estimates show, the world average sat at roughly 28.5 years in 1800, climbed only to 32 by 1900, and then took off, reaching 46 by 1950 and 66 by the year 2000 in the UN data."
+      },
+      {
+        type: "pullquote",
+        text: "The average person alive today can expect to live more than twice as long as their great-great-grandparents."
+      },
+      {
+        type: "paragraph",
+        text: "The COVID-19 pandemic briefly knocked the curve back to 70.9 years in 2021, but the UN's 2024 revision notes that since 2022, life expectancy has returned to pre-COVID-19 levels in nearly all countries and areas."
+      },
+      {
+        type: "paragraph",
+        text: "Europe tells a sharper version of the same story. Drawing on Zijdeman et al. (2014) and the Human Mortality Database, a European newborn in 1800 could expect about 33 years of life. By 1900 that figure was 43, by 1950 it was 62, and by 2023 it had climbed past 79 in the UN's estimates."
+      },
+      {
+        type: "paragraph",
+        text: "According to Eurostat's preliminary release, life expectancy at birth in the EU was 81.7 years in 2024, up 0.3 years from 2023, with Spain, Italy, and Sweden now above 84 years. Queen Anne, born in 1665, would today be considered to have died young at 49."
+      },
+      {
+        type: "paragraph",
+        text: "The same person born in modern Britain would, on average, be a grandmother by then, with three decades still ahead of her. The drivers are not mysterious. Clean water, vaccines, antibiotics, safer childbirth, better nutrition, and falling infant mortality have, together, done what no single medical miracle could."
+      },
+      {
+        type: "pullquote",
+        text: "Living to one hundred may quietly stop being remarkable within two generations."
+      },
+      {
+        type: "paragraph",
+        text: "Now consider the trajectory ahead. According to the UN World Population Prospects 2024, global life expectancy is projected to rise to about 77.4 years by 2054, and Pakistan, which moved from 34 years in 1950 to roughly 68 today, is part of that quiet convergence."
+      },
+      {
+        type: "paragraph",
+        text: "If the pace of the past two centuries holds, a child born in 2050 may routinely expect to live into their late eighties, and a child born in 2100 could plausibly approach a century as the new normal."
+      },
+      {
+        type: "paragraph",
+        text: "That is not a forecast of immortality. It is what extrapolating the same public health gains, the same nutritional improvements, and the same compounding medical advances actually implies."
+      },
+      {
+        type: "paragraph",
+        text: "But longer lives are only a gift if the extra years are worth living. The world is ageing faster than it is preparing for ageing."
+      },
+      {
+        type: "paragraph",
+        text: "The UN projects that by the mid 2030s, people aged 80 and over will outnumber infants globally. Pakistan, despite its young median age, is on the same path, with the elderly share of the population set to double in the coming decades."
+      },
+      {
+        type: "paragraph",
+        text: "Yet most of the social architecture, from health systems to family structures to civic spaces, still assumes that old age is a short epilogue rather than a long chapter."
+      },
+      {
+        type: "pullquote",
+        text: "The next frontier is not just adding years to life. It is adding life, dignity, and companionship to those years."
+      },
+      {
+        type: "paragraph",
+        text: "That is the work that organizations like Saathban are trying to begin, because a society that learns to keep people alive longer must also learn how to keep them flourishing in the meantime."
+      }
+    ],
+  },
+  {
+    id: "invisible-hand-population",
+    title: "The Invisible Hand of Population: The Mystery of Our Ebbs and Flows",
+    date: "May 12, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "5 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
+    coverImg: "/blog_2.png",
+    content: [
+      {
+        type: "lead",
+        text: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
+      },
+      {
+        type: "paragraph",
+        text: "Throughout history, external disasters like droughts and pandemics were the primary 'brakes' on our growth. But today, the brakes are internal. Even with vast resources and relative peace, the momentum has stalled, leaving us to wonder what invisible psychological or cultural forces are now rewriting the rules of human expansion.",
+      },
+      {
+        type: "paragraph",
+        text: "While the basic function of growth is rooted in the biology of birth and death, those numbers were always at the mercy of the environment. For centuries, the 'invisible hand' of nature used famine, drought, and disease to balance the human ledger. We understood these forces because they were visible and physical. However, as modern society has solved the problems of predators and scarcity, a new set of invisible forces has taken over. Our biological drive to multiply is now reacting to a modern environment that we are only beginning to understand.",
+      },
+      {
+        type: "pullquote",
+        text: "We are no longer limited by what the Earth can provide, but perhaps by how our own societies have evolved to prioritize the individual over the collective.",
+      },
+      {
+        type: "paragraph",
+        text: "The true mystery emerges when we realize that modern humans have largely silenced these ancient environmental alarms. We have marginalized predators, industrialized our food supply, and developed the medicine needed to curb pandemics. By all traditional logic, this removal of 'natural brakes' should have led to an era of infinite compounding. Instead, we see a voluntary retreat in growth that defies the old biological models. It appears that as we moved from a world of physical scarcity to one of social complexity, the invisible forces changed shape. ",
+      },
+      {
+        type: "paragraph",
+        text: "While the Malthusian doomsday scenario was largely avoided due to the vast growth in food production and improvement in wellbeing, the logic of compounding remains a looming shadow. If the current invisible hand did not control our growth, the power of compounding would ultimately lead us back to a Malthusian catastrophe even if we had enormous resources at hand. To put this into perspective, demographers estimate that the world population at the time of Jesus was about 250 to 300 million. For nearly two millennia, that number grew by a glacial average of roughly 0.04 to 0.08 percent annually.",
+      },
+      {
+        type: "pullquote",
+        text: "If a population of 300 million had grown at a steady rate of 0.8 percent since the year 1 AD, the world would have hit our current 8 billion mark by the year 415 AD. By today, the population would have reached a staggering 3.08 quadrillion people. These figures represent a world so crowded that there would be no room left to stand.",
+      },
+      {
+        type: "paragraph",
+        text: "The fact that we find ourselves at 8 billion today, rather than in the quadrillions, proves that an invisible hand is always at work. In the past, this hand was visible and cruel, manifest in the forms of plague and hunger. Today, it is silent and subtle. We are living through a period where the mystery of the ebb and flow has moved from the forest and the field into the human mind and the structure of our modern lives. Understanding these invisible forces is the key to understanding the future of our species.",
+      },
+      {
+        type: "paragraph",
+        text: "Even as the 'invisible hand' recalibrates our expansion toward a voluntary retreat, the victory of modern medicine has introduced a new variable: longevity. We are no longer a species defined by a rapid turnover of generations, but one characterized by an enduring, aging population. While the threat of a Malthusian explosion has faded, we now face a 'silver' transformation where the collective focus must shift from managing growth to mastering care.",
+      },
+      {
+        type: "paragraph",
+        text: "The future of our species may no longer be a race for resources to feed the many, but a profound cultural commitment to support the longevity of the individual, ensuring that the years we have gained are met with the dignity, attention, and infrastructure they require.",
+      },
+    ],
+  },
+  {
+    id: "living-to-100",
+    title: "Living to 100 is No Longer a Miracle",
+    date: "May 05, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "4 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "The most hopeful demographic story of our time.",
+    coverImg: "/blog_1.png",
+    content: [
+      {
+        type: "lead",
+        text: "Have you ever wondered what it truly means to live for a century? A hundred years ago, reaching the age of 100 was a statistical anomaly, a feat so rare that it seemed reserved for a fortunate few. Today, however, living to 100 is no longer a miracle.",
+      },
+      {
+        type: "paragraph",
+        text: "According to the United Nations, there were only 23,000 centenarians worldwide in 1950. By 2024, that number had surged to an estimated 934,776 globally. In the span of a single lifetime, the world has witnessed a fortyfold increase in people aged 100 and older."      
+      },
+      {
+        type: "paragraph",
+        text: "This remarkable growth continues to accelerate. According to the Pew Research Center analysis of UN data, the world was home to nearly half a million centenarians in 2015, more than four times as many as in 1990. And the best is yet to come. The United Nations projects that by 2050, there will be an astounding 3.7 million centenarians worldwide. That is an eightfold increase from 2015 levels."      
+      },
+      {
+        type: "pullquote",
+        text: "From 153 to over 95,000 in just six decades, this is nothing short of extraordinary.",
+      },
+      {
+        type: "paragraph",
+        text: "One nation stands as the undisputed capital of longevity. According to data published by Japan's Ministry of Health, Labor and Welfare, Japan recorded 95,119 centenarians as of September 2024, marking the 54th consecutive annual rise. To put this in perspective, Japan had only 153 centenarians in 1963 when records began. The number surpassed 1,000 in 1981, topped 10,000 in 1998, and exceeded 90,000 in 2022.",
+      },
+      {
+        type: "paragraph",
+        text: "The United States tells a similar story. According to the U.S. Census Bureau, there were approximately 2,300 centenarians in America in 1950. By 2010, that number had grown to 53,364. And according to recent demographic projections, the United States already has about 100,000 centenarians as of 2022. Looking ahead, the U.S. Census Bureau projects that by 2060, America will be home to 590,000 people aged 100 or older. That is nearly six times the current number.",
+      },
+      {
+        type: "paragraph",
+        text: "Across every data set, one remarkable pattern holds true. According to the U.S. Census Bureau, more than 80 percent of American centenarians in 2010 were women, with only 20.7 men for every 100 women in that age group. Japan reports a similar figure, with women accounting for 88.3 percent of all centenarians in 2024. The oldest living person on Earth, as of 2024, is a 116-year-old Japanese woman named Itooka Tomiko.",
+      },
+      {
+        type: "paragraph",
+        text: "Countries worldwide are witnessing this longevity boom. According to the UN Population Division, France had only 100 centenarians in 1900 but reported 31,269 in 2024. Italy grew from 99 centenarians in 1872 to 23,548 in 2025. Thailand now has 45,561 centenarians as of 2024. Even China, despite its relatively younger population, reported 54,166 centenarians in 2013.",
+      },
+      {
+        type: "pullquote",
+        text: "One third of babies born in the UK in 2013 are expected to live to see their 100th birthday. What was once a miracle has become the new normal.",
+      },
+      {
+        type: "paragraph",
+        text: "Living to 100 was once a headline. The centenarian population is not just growing; it is exploding, and this is perhaps the most hopeful demographic story of our time.",
+      },
+      {
+        type: "paragraph",
+        text: "The arithmetic of longevity is clear, but the human work it demands is only beginning. Societies that will host millions of centenarians by 2050 must prepare now. This means investing in geriatric healthcare, designing age-friendly public spaces, supporting caregivers, and building services that address the emotional and social needs of seniors, not just the medical ones. It also means shifting how we think.",
+      },
     ],
   },
 

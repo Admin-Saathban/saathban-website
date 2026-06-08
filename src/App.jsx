@@ -105,32 +105,32 @@ const BLOGS = [
     readTime: "5 min read",
     tag: "Research",
     color: C.olive,
-    excerpt: "A closer look at how modern wealth escapes taxation—and why global coordination may be the missing piece in fixing inequality.",
+    excerpt: "A closer look at how modern wealth escapes taxation and why global coordination may be the missing piece in fixing inequality.",
     coverImg: "/blog_5.png",
     content: [
       {
         type: "lead",
-        text: "Many assume progressive taxation ensures that the wealthy pay their fair share. But a closer look at modern financial systems reveals a different reality: vast fortunes often grow with minimal effective taxation, not through illegality, but through perfectly legal structures embedded in the system."
+        text: "The world has progressive taxation systems, and many assume that the wealthy therefore pay their fair share. But what if I told you the top brass of the richest pay almost no tax at all? You might dismiss that claim as pessimistic, anti-business, or even \"woke.\" Yet this is not a story about tax evasion or hidden money in offshore tax havens. It is about perfectly legal arrangements embedded within modern tax systems."
       },
       {
         type: "paragraph",
-        text: "Consider Liliane Bettencourt, whose wealth was estimated at around €30 billion. Despite this immense fortune, only a tiny fraction ever appeared as taxable income. In some years, less than one-thousandth of her wealth was exposed to income taxation—highlighting a structural gap between accumulated wealth and taxable income."
+        text: "Consider the case of Liliane Bettencourt, whose fortune was estimated at around €30 billion. Despite her immense wealth, only a tiny fraction of that fortune was ever exposed to income taxation. In some years, less than one-thousandth of her wealth appeared in taxable income. To put this into perspective, if someone possessed $1 million in wealth, only about $1,000 of it would be subject to income tax. The result is a striking gap between economic wealth and taxable income, a gap that lies at the heart of today's debate over inequality and taxation."
       },
       {
         type: "paragraph",
-        text: "Investigations such as ProPublica’s analysis of IRS records showed that the 25 richest Americans saw their wealth increase by $401 billion between 2014 and 2018, yet paid an effective federal income tax rate of just 3.4% when measured against wealth growth. Meanwhile, salaried workers often lose 20–25% of their income to combined taxes."
+        text: "ProPublica obtained the actual IRS records of the wealthiest Americans, and the findings detonated the polite fiction that the rich simply pay more. The 25 wealthiest people in America saw their fortunes rise by $401 billion between 2014 and 2018, yet they paid a combined federal income tax rate of just 3.4 percent when measured against that wealth growth. Remember, not the wealth itself, but the wealth growth. For comparison, a salaried nurse or teacher routinely surrenders 20 to 25 percent of their income once federal and payroll taxes are combined."
       },
       {
         type: "paragraph",
-        text: "A key reason lies in how wealth is stored. Figures like Elon Musk, Bill Gates, Jeff Bezos, Mukesh Ambani, and others hold most of their fortunes in capital assets such as stocks and real estate. These assets can grow significantly without triggering taxable events until they are sold or transferred."
+        text: "Elon Musk, Bill Gates, Larry Ellison, Jeff Bezos, Gautam Adani, Mukesh Ambani, and thousands of other wealthy individuals hold most of their wealth in the form of capital assets, primarily stocks and real estate. While real estate is subject to property taxes in some countries, these taxes are often levied at very low rates. The bulk of their wealth remains largely untouched by taxation."
       },
       {
         type: "paragraph",
-        text: "In practice, governments mainly tax wealth at two moments: when assets are sold and capital gains are realized, or when wealth is transferred through inheritance. Until then, large fortunes can compound for decades with limited direct taxation."
+        text: "Governments typically have only two opportunities to tax this wealth meaningfully: when assets are sold and capital gains are realized, or when wealth is transferred upon death through estate or inheritance taxes. Until then, vast fortunes can continue to grow for decades with little direct taxation."
       },
       {
         type: "paragraph",
-        text: "Globalization has further complicated this picture. While it has enabled economic growth and integration, it has also made it easier for capital to move across borders, weakening the ability of individual states to implement effective wealth taxation."
+        text: "Indeed, taxation is both a political and philosophical subject, and not an easy one for politicians who must simultaneously secure the support of the public and the backing of powerful financial interests. This issue is also global in nature. While globalization could, in principle, help improve coordination and fairness in taxation, it has also made it easier for the wealthy to move capital across borders. In the form of capital flight and financial mobility, globalization has weakened the ability of governments to introduce effective capital or wealth taxes, as assets can often be relocated or restructured in response to policy changes.alization has further complicated this picture. While it has enabled economic growth and integration, it has also made it easier for capital to move across borders, weakening the ability of individual states to implement effective wealth taxation."
       },
       {
         type: "pullquote",
@@ -138,21 +138,25 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "Economist Thomas Piketty has argued that a global capital tax could address these structural imbalances. However, such a system would require unprecedented international coordination and transparency, including shared financial registries that make ownership of assets visible across jurisdictions."
+        text: "If we want a more egalitarian world, with governments having enough resources to spend on social issues, then according to Thomas Piketty one solution could be a fair global capital tax. Indeed, a global capital tax would not be an easy step for a world as divided as the one we see today, drenched in wars. But we have experienced immense progress and transformation over the past two centuries, and this could prove to be the case here as well.nomist Thomas Piketty has argued that a global capital tax could address these structural imbalances. However, such a system would require unprecedented international coordination and transparency, including shared financial registries that make ownership of assets visible across jurisdictions."
       },
       {
         type: "paragraph",
-        text: "Critics rightly point out that any unilateral attempt would fail, as capital would simply shift to lower-tax jurisdictions. This is why coordination is central: without it, even well-designed policies lose effectiveness in a globally mobile financial system."
+        text: "To levy even a modest tax on capital, governments would first need to know who owns what and where, which means a shared financial register and an end to the opacity that lets great fortunes slip between jurisdictions. In Piketty's vision the tax is therefore as much a tool of transparency as of revenue. A low rate could begin gently, climbing for the very largest fortunes, so that a teacher's modest savings are barely touched while billion-euro holdings finally contribute theirshare."
       },
       {
         type: "paragraph",
-        text: "Yet history shows that what once seemed impossible—such as international banking standards or automatic tax information exchange—eventually became reality. Global coordination in taxation may follow a similar path."
+        text: "Critics will rightly note that no such tax can work if one country can simply undercut another, which is precisely why coordination matters more than the rate itselfritics rightly point out that any unilateral attempt would fail, as capital would simply shift to lower-tax jurisdictions. This is why coordination is central: without it, even well-designed policies lose effectiveness in a globally mobile financial system."
       },
       {
         type: "paragraph",
-        text: "At Saathban, we believe this conversation extends beyond taxation. Fair and coordinated resource systems are essential if societies are to meet the needs of rapidly aging populations, ensuring dignity and care for people in later life rather than leaving them behind."
+        text: "Yet the same was once said of cross-border banking rules and the automatic exchange of tax information, both once dismissed as utopian and both now a reality. A global capital tax may seem distant today, but history suggests that what looks impossible in one generation can become ordinary in the next.et history shows that what once seemed impossible—such as international banking standards or automatic tax information exchange—eventually became reality. Global coordination in taxation may follow a similar path."
+      },
+      {
+        type: "paragraph",
+        text: "At Saathban, we believe that same conviction holds closer to home: that resources, fairly gathered, are what will allow governments to meet the needs of a rapidly growing aged population, so that no elderly person is left without care in the years when they need it most."
       }
-    ]
+    ],
   },
   {
     id: "pay-as-you-go",

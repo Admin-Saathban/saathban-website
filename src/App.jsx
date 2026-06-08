@@ -98,15 +98,72 @@ const EVENTS = [
 // ─── Blog Data ───
 const BLOGS = [
   {
+    id: "global-capital-tax",
+    title: "The Case for a Global Capital Tax",
+    date: "June 08, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "5 min read",
+    tag: "Research",
+    color: C.olive,
+    excerpt: "A closer look at how modern wealth escapes taxation—and why global coordination may be the missing piece in fixing inequality.",
+    coverImg: "/blog_5.png",
+    content: [
+      {
+        type: "lead",
+        text: "Many assume progressive taxation ensures that the wealthy pay their fair share. But a closer look at modern financial systems reveals a different reality: vast fortunes often grow with minimal effective taxation, not through illegality, but through perfectly legal structures embedded in the system."
+      },
+      {
+        type: "paragraph",
+        text: "Consider Liliane Bettencourt, whose wealth was estimated at around €30 billion. Despite this immense fortune, only a tiny fraction ever appeared as taxable income. In some years, less than one-thousandth of her wealth was exposed to income taxation—highlighting a structural gap between accumulated wealth and taxable income."
+      },
+      {
+        type: "paragraph",
+        text: "Investigations such as ProPublica’s analysis of IRS records showed that the 25 richest Americans saw their wealth increase by $401 billion between 2014 and 2018, yet paid an effective federal income tax rate of just 3.4% when measured against wealth growth. Meanwhile, salaried workers often lose 20–25% of their income to combined taxes."
+      },
+      {
+        type: "paragraph",
+        text: "A key reason lies in how wealth is stored. Figures like Elon Musk, Bill Gates, Jeff Bezos, Mukesh Ambani, and others hold most of their fortunes in capital assets such as stocks and real estate. These assets can grow significantly without triggering taxable events until they are sold or transferred."
+      },
+      {
+        type: "paragraph",
+        text: "In practice, governments mainly tax wealth at two moments: when assets are sold and capital gains are realized, or when wealth is transferred through inheritance. Until then, large fortunes can compound for decades with limited direct taxation."
+      },
+      {
+        type: "paragraph",
+        text: "Globalization has further complicated this picture. While it has enabled economic growth and integration, it has also made it easier for capital to move across borders, weakening the ability of individual states to implement effective wealth taxation."
+      },
+      {
+        type: "pullquote",
+        text: "A rate as low as 0.1 percent on global capital could transform not just revenue systems, but the very idea of fairness in taxation."
+      },
+      {
+        type: "paragraph",
+        text: "Economist Thomas Piketty has argued that a global capital tax could address these structural imbalances. However, such a system would require unprecedented international coordination and transparency, including shared financial registries that make ownership of assets visible across jurisdictions."
+      },
+      {
+        type: "paragraph",
+        text: "Critics rightly point out that any unilateral attempt would fail, as capital would simply shift to lower-tax jurisdictions. This is why coordination is central: without it, even well-designed policies lose effectiveness in a globally mobile financial system."
+      },
+      {
+        type: "paragraph",
+        text: "Yet history shows that what once seemed impossible—such as international banking standards or automatic tax information exchange—eventually became reality. Global coordination in taxation may follow a similar path."
+      },
+      {
+        type: "paragraph",
+        text: "At Saathban, we believe this conversation extends beyond taxation. Fair and coordinated resource systems are essential if societies are to meet the needs of rapidly aging populations, ensuring dignity and care for people in later life rather than leaving them behind."
+      }
+    ]
+  },
+  {
     id: "pay-as-you-go",
     title: "Pay-As-You-Go: A System Under Strain",
     date: "May 23, 2026",
     author: "Hamayoon Shah | Chief Research Officer",
     readTime: "4 min read",
     tag: "Policy",
-    color: C.brown,
+    color: C.green,
     excerpt: "The pension systems that once defined modern welfare states are beginning to crack under the weight of longer lives and shrinking generations.",
-    coverImg: null,
+    coverImg: "/blog_4.png",
     content: [
       {
         type: "lead",
@@ -213,7 +270,7 @@ const BLOGS = [
     author: "Hamayoon Shah | Chief Research Officer",
     readTime: "5 min read",
     tag: "Longevity",
-    color: C.brown,
+    color: C.sage,
     excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
     coverImg: "/blog_3.png",
     content: [
@@ -351,7 +408,7 @@ const BLOGS = [
     author: "Hamayoon Shah | Chief Research Officer",
     readTime: "4 min read",
     tag: "Research",
-    color: C.brown,
+    color: C.cream,
     excerpt: "The most hopeful demographic story of our time.",
     coverImg: "/blog_1.png",
     content: [

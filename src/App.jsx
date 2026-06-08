@@ -142,7 +142,7 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "To levy even a modest tax on capital, governments would first need to know who owns what and where, which means a shared financial register and an end to the opacity that lets great fortunes slip between jurisdictions. In Piketty's vision the tax is therefore as much a tool of transparency as of revenue. A low rate could begin gently, climbing for the very largest fortunes, so that a teacher's modest savings are barely touched while billion-euro holdings finally contribute theirshare."
+        text: "To levy even a modest tax on capital, governments would first need to know who owns what and where, which means a shared financial register and an end to the opacity that lets great fortunes slip between jurisdictions. In Piketty's vision the tax is therefore as much a tool of transparency as of revenue. A low rate could begin gently, climbing for the very largest fortunes, so that a teacher's modest savings are barely touched while billion-euro holdings finally contribute their share."
       },
       {
         type: "paragraph",
@@ -150,7 +150,7 @@ const BLOGS = [
       },
       {
         type: "paragraph",
-        text: "Yet the same was once said of cross-border banking rules and the automatic exchange of tax information, both once dismissed as utopian and both now a reality. A global capital tax may seem distant today, but history suggests that what looks impossible in one generation can become ordinary in the next.et history shows that what once seemed impossible—such as international banking standards or automatic tax information exchange—eventually became reality. Global coordination in taxation may follow a similar path."
+        text: "Yet the same was once said of cross-border banking rules and the automatic exchange of tax information, both once dismissed as utopian and both now a reality. A global capital tax may seem distant today, but history suggests that what looks impossible in one generation can become ordinary in the next."
       },
       {
         type: "paragraph",

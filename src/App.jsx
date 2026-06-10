@@ -97,7 +97,7 @@ const EVENTS = [
 
 // ─── Blog Data ───
 const BLOGS = [
-  {
+  /*{
     id: "global-capital-tax",
     title: "The Case for a Global Capital Tax",
     date: "June 08, 2026",
@@ -157,7 +157,7 @@ const BLOGS = [
         text: "At Saathban, we believe that same conviction holds closer to home: that resources, fairly gathered, are what will allow governments to meet the needs of a rapidly growing aged population, so that no elderly person is left without care in the years when they need it most."
       }
     ],
-  },
+  },*/
   {
     id: "pay-as-you-go",
     title: "Pay-As-You-Go: A System Under Strain",

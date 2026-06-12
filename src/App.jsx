@@ -106,7 +106,7 @@ const BLOGS = [
     tag: "Research",
     color: C.olive,
     excerpt: "A closer look at how modern wealth escapes taxation and why global coordination may be the missing piece in fixing inequality.",
-    coverImg: "/blog_5.png",
+    coverImg: "/blog_images/blog_6.png",
     content: [
       {
         type: "lead",
@@ -159,6 +159,71 @@ const BLOGS = [
     ],
   },*/
   {
+    id: "smartphone-and-birth-rates",
+    title: "The World's Vanishing Births: Is the Smartphone Part of the Answer?",
+    date: "June 12, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "4 min read",
+    tag: "Research",
+    color: C.olive,
+    excerpt: "A new explanation for falling birth rates may be sitting in our pockets.",
+    coverImg: "/blog_images/blog_5.png",
+    content: [
+      {
+        type: "lead",
+        text: "We are curious creatures. We like to think, question, and make sense of the world. But our brain also prefers simple answers. Simple explanations feel clean and satisfying. This may be one reason why conspiracy theories often attract people. They offer easy answers without much effort or complexity. But reality is rarely that simple. When we test ideas carefully and study them in a systematic way, many of our neat stories fall apart. What looked clear at first often turns out to be far more complicated than we imagined."
+      },
+      {
+        type: "paragraph",
+        text: "Population is one of those puzzles. For most of history, we explained it through clear forces. War. Famine. Disease. Even something as small as a mosquito. Then, in the twentieth century, a new idea took hold. As countries grew richer and safer, people would simply choose to have fewer children. Comfort would do what catastrophe once did. But what if that story no longer holds? What if something else is now driving the change, something that cuts across rich and poor alike?"
+      },
+      {
+        type: "pullquote",
+        text: " In more than two-thirds of the world's 195 countries, women now have fewer children than the 2.1 needed to keep a population stable."
+      },
+      {
+        type: "paragraph",
+        text: "A new explanation has emerged in recent research. It points to something many of us carry in our pockets. But first, look at how strange the puzzle has become. In 66 countries, the average is closer to one than to two. We used to think of this as a rich-country worry. Not anymore. In 2023, Mexico's birth rate fell below that of the United States for the first time. Brazil, Tunisia, Iran, and Sri Lanka soon followed. Many poorer countries are now growing old before they grow rich."
+      },
+      {
+        type: "paragraph",
+        text: "What makes this so hard to explain is that the usual answers do not fit. Since the 1980s, wealthy countries have tripled what they spend per person on child benefits, childcare, and parental leave. Birth rates fell anyway, from 1.85 to 1.53 per woman. Housing is part of the story. A Financial Times analysis suggests that up to half the fertility decline in countries like the US and UK since the 1990s comes down to falling home ownership and young adults staying longer with their parents. But that still cannot explain the latest drop. Births have fallen even in the Nordic countries, where housing is stable and young people live on their own."
+      },
+      {
+        type: "paragraph",
+        text: "The deeper change is not that couples are having fewer children. It is that there are fewer couples at all. A study by demographer Stephen Shaw shows something striking. In most rich countries, the number of children mothers have has held steady, or even risen. What has fallen is the share of women who have any children at all. Had marriage and cohabitation rates simply stayed flat in the US over the past decade, the birth rate today would be higher than it was ten years ago."
+      },
+      {
+        type: "paragraph",
+        text: "This is where the smartphone enters the story. Nathan Hudson and Hernan Moscoso-Boedo of the University of Cincinnati studied birth rates against the rollout of 4G networks. Births fell first, and fell fastest, in the places that got high-speed mobile internet earliest. They argue that smartphones changed how young people spend their time. People stopped meeting in person."
+      },
+      {
+        type: "paragraph",
+        text: "The same pattern shows up around the world. Birth rates among young adults in the US, UK, and Australia were flat in the early 2000s, then began falling around 2007. France and Poland followed around 2009. Mexico and Indonesia around 2012. Ghana, Nigeria, and Senegal saw sharp drops between 2013 and 2015. Each turning point lined up with the moment smartphones went mainstream in that country."
+      },
+      {
+        type: "paragraph",
+        text: "The reason seems simple, and very human. People spend less time together. In South Korea, in-person socialising among young adults has halved in twenty years. As demographer Lyman Stone puts it, finding a partner means sorting through a lot of people. If you socialise far less, that search takes much longer. Sometimes it never ends. He makes another sharp point. Spend time with real people, and your expectations stay grounded. Spend your time on Instagram, and your standards drift toward something that does not exist."
+      },
+      {
+        type: "paragraph",
+        text: "The effect is strongest where you might least expect it. Stanford's Alice Evans argues that the more traditional a culture's gender roles, the bigger the impact of smartphones. She calls it 'cultural leapfrogging.' Apps like Instagram and TikTok let young women skip past old expectations and raise their hopes for a relationship faster than the men around them adjust. The data fits. Some of the steepest declines of the past decade are in the Middle East and Latin America. Finnish demographer Anna Rotkirch adds another piece: sexual problems are more common among the young adults who use social media most."
+      },
+      {
+        type: "paragraph",
+        text: "But the smartphone is not a lone villain. That would be exactly the kind of tidy answer we should distrust. Older technology left its mark too. Back in 2001, researchers Robert Hornik and Emile McAnany found a stronger link between falling birth rates and owning a television than between birth rates and income or education. A later study by Eliana La Ferrara and colleagues found that soap operas showing small families led women to have fewer children. And in 2018, Adrienne Lucas and Nicholas Wilson found that owning a TV led couples to have less sex. The smartphone is more personal, more constant, more solitary. It may simply be the same force, only stronger."
+      },
+      {
+        type: "paragraph",
+        text: "So what can be done? As Lyman Stone wryly notes, you cannot uninvent the smartphone. If someone has bad eyes, you do not edit their genes. You give them glasses. Secure, affordable housing does help young couples start families. Generous baby bonuses might slow the decline. But these miss the deeper problem. Helping happy couples have children does little for the growing number of people who have no partner at all."
+      },
+      {
+        type: "paragraph",
+        text: "That is the real shape of the puzzle. Falling birth rates are not just about babies. They point to something larger, a slow drift toward solitude. People connect less, in person, at every age. And this loneliness does not fade as we grow older. Often it grows worse. The young struggle to find each other. The old are left without company. There is no single cause here, and no single cure. But if screens have pulled us apart, then the answer, though hard, may be simple. We have to find our way back to real, human company. That is the work we care about at Saathban, where our focus is on the elderly, the ones too often left alone at the end."
+      }
+    ]
+  },
+  {
     id: "pay-as-you-go",
     title: "Pay-As-You-Go: A System Under Strain",
     date: "May 23, 2026",
@@ -167,7 +232,7 @@ const BLOGS = [
     tag: "Policy",
     color: C.green,
     excerpt: "The pension systems that once defined modern welfare states are beginning to crack under the weight of longer lives and shrinking generations.",
-    coverImg: "/blog_4.png",
+    coverImg: "/blog_images//blog_4.png",
     content: [
       {
         type: "lead",
@@ -276,7 +341,7 @@ const BLOGS = [
     tag: "Longevity",
     color: C.sage,
     excerpt: "We have doubled the human lifespan. The real question now is how we choose to live those extra years.",
-    coverImg: "/blog_3.png",
+    coverImg: "/blog_images//blog_3.png",
     content: [
       {
         type: "lead",
@@ -361,7 +426,7 @@ const BLOGS = [
     tag: "Research",
     color: C.brown,
     excerpt: "The greatest mystery of the demographic transition isn't found in a lab or a census bureau; it's found in the silent, invisible shift of human intentions.",
-    coverImg: "/blog_2.png",
+    coverImg: "/blog_images//blog_2.png",
     content: [
       {
         type: "lead",
@@ -414,7 +479,7 @@ const BLOGS = [
     tag: "Research",
     color: C.cream,
     excerpt: "The most hopeful demographic story of our time.",
-    coverImg: "/blog_1.png",
+    coverImg: "/blog_images//blog_1.png",
     content: [
       {
         type: "lead",

@@ -97,6 +97,43 @@ const EVENTS = [
 
 // ─── Blog Data ───
 const BLOGS = [
+  {
+    id: "kodokushi-silent-experience",
+    title: "Kodokushi: The Silent Experience of Living Unnoticed in Later Years",
+    date: "June 15, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "4 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "What happens when longer lives outpace the systems and relationships needed to support them?",
+    coverImg: "/blog_images/blog_7.png",
+    content: [
+      {
+        type: "lead",
+        text: "Imagine waiting for a food delivery person, not just for food, but so that you get a chance to talk to someone in the world of solitude you are living in. In Japan, Yakult Ladies, a company delivering probiotic drinks, have become an unlikely source of community and companionship. They have expanded their role from not just delivery, but also talking to elderly people living alone. This delivery structure has now become a form of social infrastructure."
+      },
+      {
+        type: "paragraph",
+        text: "Kodokushi, a phenomenon of dying in solitude, has become a growing crisis in Japan, where a large share of the population is elderly, reflected in its median age of 50.2, one of the highest in the world. According to figures issued by the Government of Japan and reported by DW, 76,941 people died alone last year. A further unfortunate and striking fact is that many of these bodies were not discovered for at least a week. The police also use a special term, “koritsushi,” for cases where bodies are found more than eight days after death. Even more concerning reality is that approximately 9% of these cases, around 7,148 people, were discovered only after a month. According to estimates by Japan’s Cabinet Office and reports from Nippon.com, the majority of unattended deaths occur among the elderly. The most affected age group is those aged 85 and above, with 15,079 cases, followed by people aged 75 to 79 with 13,412 cases, and those aged 80 to 84 with 11,366 cases. In total, individuals aged 65 and above account for 58,919 cases, making up nearly 80% of all unattended deaths."
+      },
+      {
+        type: "pullquote",
+        text: "In total, individuals aged 65 and above account for 58,919 cases, making up nearly 80% of all unattended deaths."
+      },
+      {
+        type: "paragraph",
+        text: "According to the BBC report the Yakult launched their barnd in 1971 of probiotic drinks to help the children survive with healthy gut and longer life moto. Who knew back then that the Yakult Ladies would one day be visiting the same people, who were children in the 1960s and are now elderly today, providing not just probiotic drinks but also a few precious minutes of human company in an increasingly lonely world? An 83-year-old woman, Furuta, told the BBC that she has stayed healthy because she has always been drinking Yakult probiotic drinks, but said it is not just the drink anymore, as the visits themselves also make her feel healthier."
+      },
+      {
+        type: "pullquote",
+        text: "The visits themselves also make her feel healthier."
+      },
+      {
+        type: "paragraph",
+        text: "Our enormous leap in pharma, biotechnology, and medicine has made us healthier and helped us live longer, no doubt. But it also feels like we are not fully prepared for what comes after that. Elderly care has not kept pace, and loneliness along with mental health issues among older people has become a deeply disturbing phenomenon in countries with aging populations. Saathban might be a novel idea for many in Pakistan, an overambitious project for some, and a useless endeavor for a few. But Saathban is a necessity of the day. What Yakult Ladies stumbled into by chance, Saathban is doing by design. Every elderly person sitting alone, waiting for anyone at the door, deserves more than a delivery. They deserve a conversation, a presence, a connection. Saathban needs your support so that we can reach every single lonely elder who is still waiting for that knock on the door."
+      }
+    ]
+  },
   /*{
     id: "global-capital-tax",
     title: "The Case for a Global Capital Tax",

@@ -564,62 +564,6 @@ const BLOGS = [
       },
     ],
   },
-
-  /*
-  {
-    id: "support-elderly-neighbour",
-    title: "5 Simple Ways to Support an Elderly Neighbour",
-    date: "Dec 10, 2025",
-    author: "Saathban Team",
-    readTime: "3 min read",
-    tag: "Well-being",
-    color: C.olive,
-    excerpt: "Practical, everyday actions that combat loneliness and build lasting connections with senior citizens.",
-    coverImg: null,
-    content: [
-      {
-        type: "lead",
-        text: "You don't need a programme, a budget, or a plan. You need five minutes and the willingness to show up.",
-      },
-      {
-        type: "paragraph",
-        text: "Social isolation among the elderly is one of the most serious and least visible public health crises of our time. Research consistently shows that chronic loneliness carries health risks comparable to smoking 15 cigarettes a day. And yet, the antidote is often closer than we think — it lives next door.",
-      },
-      {
-        type: "numbered",
-        items: [
-          {
-            title: "Say hello — and mean it.",
-            text: "A brief, genuine greeting on the stairs or at the gate does more than you think. Eye contact, a moment of pause, a real question — these signals tell someone that they are seen. For an elderly person who may go days without meaningful human contact, this matters more than you know.",
-          },
-          {
-            title: "Offer to help with errands — without making it feel like charity.",
-            text: "The key word here is offer, not assume. Ask if there is anything they need when you are heading to the market. Keep it casual. Framing it as a convenience ('I'm already going') rather than a favour ('you look like you need help') preserves their dignity.",
-          },
-          {
-            title: "Share a meal.",
-            text: "Food is one of the oldest forms of human connection. Cooking a little extra and dropping it off, or simply inviting your neighbour for a cup of chai, creates a moment of warmth that lingers long after the meal ends.",
-          },
-          {
-            title: "Check in after bad weather or illness.",
-            text: "Elderly people are disproportionately vulnerable to extreme heat, cold, and illness. A knock on the door after a hot day or a call during a cold snap costs you nothing and could mean everything.",
-          },
-          {
-            title: "Just sit and listen.",
-            text: "Perhaps the most powerful thing you can offer is your time and attention. Not advice, not solutions — just presence. Ask about their life, their memories, their opinions. You will be surprised by what you learn, and they will be grateful beyond what they can express.",
-          },
-        ],
-      },
-      {
-        type: "paragraph",
-        text: "None of these actions require a special skill or significant time. They require only the recognition that the person next door has a life full of experience, wisdom, and feeling — and that they deserve to share it with someone who cares enough to listen.",
-      },
-      {
-        type: "pullquote",
-        text: "The loneliness epidemic will not be solved by governments alone. It will be solved neighbour by neighbour, cup of tea by cup of tea.",
-      },
-    ],
-  },*/
 ];
 
 // -- Research Reports --
@@ -657,7 +601,23 @@ const SOCIAL_LINKS = {
 
 // ─── Blog Article Page ───
 function BlogArticlePage({ blog, onBack }) {
+  const [copied, setCopied] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = `${blog.title} | Saathban Blog`;
+    return () => { document.title = prevTitle; };
+  }, [blog]);
+
+  const shareUrl = `${window.location.origin}${window.location.pathname}?blog=${blog.id}`;
+  const handleShare = () => {
+    navigator.clipboard?.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const tagColors = { Research: C.brown, Stories: C.green, "Well-being": C.olive };
   const tc = tagColors[blog.tag] || C.green;
 
@@ -678,9 +638,23 @@ function BlogArticlePage({ blog, onBack }) {
           >
             ← Blog
           </button>
-          <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13 }}>
+          <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13, flex: 1 }}>
             Saathban · Blog & Stories
           </span>
+          <button
+            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
+            onMouseEnter={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.22)"; }}
+            onMouseLeave={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.12)"; }}
+          >
+            {copied ? (
+              <>✓ Copied</>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.cream} strokeWidth="2"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M8.6 13.5l6.8 3.9M15.4 6.6L8.6 10.5"/></svg>
+                Share
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -984,7 +958,22 @@ function HeroIllustration() {
 function EventDetailPage({ event, onBack }) {
   const d = event.detail;
   const px = { maxWidth: 900, margin: "0 auto", padding: "0 24px" };
+  const [copied, setCopied] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = `${event.title} | Saathban Events`;
+    return () => { document.title = prevTitle; };
+  }, [event]);
+
+  const shareUrl = `${window.location.origin}${window.location.pathname}?event=${event.id}`;
+  const handleShare = () => {
+    navigator.clipboard?.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.bg, minHeight: "100vh" }}>
@@ -1003,7 +992,21 @@ function EventDetailPage({ event, onBack }) {
             onMouseLeave={e => e.currentTarget.style.background = "rgba(250,243,233,0.12)"}>
             ← Back to Events
           </button>
-          <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13 }}>Saathban Events</span>
+          <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13, flex: 1 }}>Saathban Events</span>
+          <button
+            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
+            onMouseEnter={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.22)"; }}
+            onMouseLeave={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.12)"; }}
+          >
+            {copied ? (
+              <>✓ Copied</>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.cream} strokeWidth="2"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M8.6 13.5l6.8 3.9M15.4 6.6L8.6 10.5"/></svg>
+                Share
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -1131,10 +1134,41 @@ export default function Saathban() {
   const [subError, setSubError] = useState(false);
   const [sent, setSent] = useState(false);
   const [activeTab, setActiveTab] = useState("about");
-  const [activeEvent, setActiveEvent] = useState(null);
-  const [activeBlog, setActiveBlog] = useState(null);
   const [emailError, setEmailError] = useState("");
   const [subEmailError, setSubEmailError] = useState("");
+
+  // ─── URL-based routing for blog & event detail pages ───
+  // Reads ?blog=<id> or ?event=<id> from the URL so each post/event has a shareable link.
+  const [params, setParams] = useState(() => new URLSearchParams(window.location.search));
+
+  useEffect(() => {
+    const onPop = () => setParams(new URLSearchParams(window.location.search));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const blogId = params.get("blog");
+  const eventId = params.get("event");
+  const activeBlog = blogId ? BLOGS.find(b => b.id === blogId) || null : null;
+  const activeEvent = eventId ? EVENTS.find(e => e.id === eventId) || null : null;
+
+  const goToBlog = useCallback((id) => {
+    const url = `${window.location.pathname}?blog=${id}`;
+    window.history.pushState({}, "", url);
+    setParams(new URLSearchParams(window.location.search));
+  }, []);
+
+  const goToEvent = useCallback((id) => {
+    const url = `${window.location.pathname}?event=${id}`;
+    window.history.pushState({}, "", url);
+    setParams(new URLSearchParams(window.location.search));
+  }, []);
+
+  const closeDetail = useCallback((anchorId) => {
+    window.history.pushState({}, "", window.location.pathname);
+    setParams(new URLSearchParams());
+    setTimeout(() => document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, []);
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
@@ -1152,14 +1186,14 @@ export default function Saathban() {
 // Blog article page
   if (activeBlog) {
     return <BlogArticlePage blog={activeBlog} onBack={(nextBlog) => {
-      if (nextBlog) { setActiveBlog(nextBlog); }
-      else { setActiveBlog(null); setTimeout(() => document.getElementById("blog")?.scrollIntoView({ behavior: "smooth" }), 100); }
+      if (nextBlog) { goToBlog(nextBlog.id); }
+      else { closeDetail("blog"); }
     }} />;
   }
 
   // Event detail page
   if (activeEvent) {
-    return <EventDetailPage event={activeEvent} onBack={() => { setActiveEvent(null); setTimeout(() => document.getElementById("work")?.scrollIntoView({ behavior: "smooth" }), 100); }} />;
+    return <EventDetailPage event={activeEvent} onBack={() => closeDetail("work")} />;
   }
    
   const px = { maxWidth: 1160, margin: "0 auto", padding: "0 24px" };
@@ -1515,7 +1549,7 @@ export default function Saathban() {
             <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, marginLeft: 48 }}>Click on a past event to view photos, highlights, and full details.</p>
             <Carousel items={EVENTS} perPage={3} renderCard={(ev, i) => (
               <Card key={i} style={{ overflow: "hidden", position: "relative", height: "100%" }}
-                onClick={ev.detail ? () => setActiveEvent(ev) : undefined}>
+                onClick={ev.detail ? () => goToEvent(ev.id) : undefined}>
                 <div style={{ height: 6, background: ev.color, margin: "-32px -32px 20px -32px", borderRadius: "16px 16px 0 0" }} />
                 <span style={{ position: "absolute", top: 22, right: 20, fontSize: 11, fontWeight: 700, color: ev.detail ? C.brown : C.green, background: ev.detail ? `${C.brown}12` : `${C.green}10`, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {ev.detail ? "Past" : "Upcoming"}
@@ -1572,7 +1606,7 @@ export default function Saathban() {
           <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => {
             const tc = tagColors[b.tag] || C.green;
             return (
-              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setActiveBlog(b)}>
+              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => goToBlog(b.id)}>
                 {/* Cover image area — with or without photo */}
                 <div style={{ height: 180, position: "relative", overflow: "hidden", flexShrink: 0, background: `linear-gradient(135deg, ${tc}15, ${tc}05)` }}>
                   {b.coverImg ? (

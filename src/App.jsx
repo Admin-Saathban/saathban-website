@@ -923,9 +923,9 @@ function Stat({ number, label, delay = 0 }) {
 
 // ─── Image Carousel ───
 const CAROUSEL_IMAGES = [
-  { src: "/saathbanimage2.png", caption: "Building bridges between generations", label: "Community" },
-  { src: "/saathbanimage.png", caption: "Every elder deserves to be seen and heard", label: "Connection" },
-  { src: "/saathbanimage3.png", caption: "Wisdom shared is wisdom multiplied", label: "Togetherness" },
+  { src: "/saathbanimage2.jpg", caption: "Building bridges between generations", label: "Community" },
+  { src: "/saathbanimage.jpg", caption: "Every elder deserves to be seen and heard", label: "Connection" },
+  { src: "/saathbanimage3.jpg", caption: "Wisdom shared is wisdom multiplied", label: "Togetherness" },
 ];
 
 function ImageCarousel() {

@@ -961,21 +961,38 @@ function ImageCarousel() {
 
   const img = CAROUSEL_IMAGES[current];
 
+  // Preload all images on mount
+  useEffect(() => {
+    CAROUSEL_IMAGES.forEach(({ src }) => { const i = new Image(); i.src = src; });
+  }, []);
+
   return (
     <section style={{ padding: "32px 0", background: C.bg }}>
       <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 24px" }}>
         <FadeIn>
           <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(6,50,20,0.10)" }}>
             <div style={{ position: "relative", height: "clamp(220px, 36vw, 480px)", overflow: "hidden", background: C.dark }}>
+              {/* Blurred background layer — fills any letterboxed space for portrait images */}
+              <div key={`bg-${current}`} style={{
+                position: "absolute", inset: 0,
+                backgroundImage: `url(${img.src})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                filter: "blur(18px) brightness(0.45) saturate(0.7)",
+                transform: "scale(1.08)",
+                opacity: animating ? 0 : 1,
+                transition: "opacity 0.38s cubic-bezier(.4,0,.2,1)",
+              }} />
               <img
                 key={current}
                 src={img.src}
                 alt={img.caption}
                 style={{
+                  position: "relative", zIndex: 1,
                   width: "100%",
                   height: "100%",
                   display: "block",
-                  objectFit: "cover",
+                  objectFit: "contain",
                   objectPosition: "center",
                   opacity: animating ? 0 : 1,
                   transform: animating
@@ -1597,9 +1614,9 @@ export default function Saathban() {
           {/* Team */}
           {activeTab === "team" && (
             <FadeIn>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 24, maxWidth: 960, margin: "0 auto" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 24, maxWidth: 960, margin: "0 auto", justifyContent: "center" }}>
                 {TEAM.map((m, i) => (
-                  <Card key={i} style={{ textAlign: "center", padding: 28 }}>
+                  <Card key={i} style={{ textAlign: "center", padding: 28, flex: "1 1 200px", maxWidth: 260 }}>
                     <div style={{ width: 80, height: 80, borderRadius: "50%", margin: "0 auto 16px", overflow: "hidden", border: `2px solid ${m.color}25`, background: `${m.color}12`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {m.img ? (
                         <img src={m.img} alt={m.name}

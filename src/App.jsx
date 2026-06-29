@@ -98,6 +98,47 @@ const EVENTS = [
 // ─── Blog Data ───
 const BLOGS = [
   {
+    id: "how-egalitarian-is-pakistan",
+    title: "How Egalitarian is Pakistan in the Inegalitarian World",
+    date: "June 22, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "3 min read",
+    tag: "Research",
+    color: C.brown,
+    excerpt: "Pakistan appears relatively equal on paper, but a closer look reveals a much sharper divide.",
+    coverImg: "/blog_images/blog_8.png",
+    content: [
+      {
+        type: "lead",
+        text: "For the first time on this planet, a man has finally crossed the figure of one trillion dollars in wealth, and that man is Elon Musk. To put this in perspective for a reader in Pakistan, our entire GDP is about 452 billion dollars, meaning this fortune is more than double the size of a nation of around 259 million people. In other terms, of the 195 sovereign recognized nations in the world today, only 21 have a GDP above one trillion dollars. The remaining 174 each have a nominal GDP worth less than the fortune of one man. To add a little more spice to this, eradicating extreme poverty worldwide would cost roughly 70 to 325 billion dollars a year, according to a UNU-WIDER paper. Even at its highest estimate, that is barely a quarter of what this one man is worth."
+      },
+      {
+        type: "paragraph",
+        text: "A fortune like this does not appear out of nowhere. It is the visible result of a pattern economists have studied for years. The clearest explanation comes from Thomas Piketty, whose central idea is simple. When the money already held as wealth grows faster than the wider economy, the people who own that wealth pull ahead of the people who live on wages. Earning a salary can no longer keep pace with owning capital, so over time the richest do not just stay rich, they get richer automatically. Piketty captures this in a short formula, r greater than g, where r is the return on capital and g is the growth of the economy. Across most rich economies, the capital-to-income ratio has climbed back to levels last seen before the First World War, above 600 percent in France and close to 500 percent in Britain and the United States. Money, in other words, is once again outpacing work."
+      },
+      {
+        type: "pullquote",
+        text: "When returns on capital stay higher than economic growth for a long time, trillion-dollar fortunes are what the system eventually produces."
+      },
+      {
+        type: "paragraph",
+        text: "The Gini coefficient is the most common way to measure inequality, but it does not show the full picture. It turns a complex distribution into a single number, which can hide how much wealth is concentrated at the very top. The World Inequality Lab uses a clearer breakdown: the bottom 50 percent, the middle 40 percent, and the top 10 percent. Globally, the top 10 percent receive about 53 percent of all income and hold nearly 75 percent of all wealth. In contrast, the bottom half gets only around 8 percent of income and just about 2 percent of wealth. At the very top, inequality becomes even sharper. The richest 0.001 percent now hold around 6 percent of global wealth, up from less than 4 percent in the mid-1990s, while the bottom half of the world has stayed near the same level of 2%."
+      },
+      {
+        type: "paragraph",
+        text: "Pakistan follows a similar pattern, even though its Gini score of 33.5 makes it seem more equal. However, if we divide the population into centiles and deciles using the World Inequality Lab data, the top 10 percent of earners take about 41.7 percent of national income, while the bottom 50 percent receive only 19.4 percent, which means the richest tenth earn more than the entire bottom half put together. In absolute terms, the average person in the top 1 percent earns around 21.65 million PKR a year, compared with just 260,000 PKR for someone in the bottom half, a gap of roughly 83 times. Wealth is skewed even further. The top 1 percent own close to a quarter of everything, and the average person in that group holds about 119.79 million PKR in wealth against just 235,000 PKR for someone in the bottom half, a difference of more than 500 times."
+      },
+      {
+        type: "pullquote",
+        text: "The richest tenth earn more than the entire bottom half put together."
+      },
+      {
+        type: "paragraph",
+        text: "Which returns us to where we began. Elon Musk is not an exception to the system. He is the outcome of it. When returns on capital stay higher than economic growth for a long time, trillion-dollar fortunes are what the system eventually produces. But this is not a problem that sits apart from everything else. It is bound up with the larger social challenges of our time, from poverty and out-of-school children to the health and support of a rapidly ageing global population. Economists like Piketty have given us the numbers, and those numbers are striking, but the real work lies beyond them. Meeting these challenges depends on strong institutions, public and private, willing to take them on. We believe Saathban is one of those institutions, working to support the elderly who too often end up at the forgotten end of this divide."
+      }
+    ]
+  },
+  {
     id: "kodokushi-silent-experience",
     title: "Kodokushi: The Silent Experience of Living Unnoticed in Later Years",
     date: "June 15, 2026",

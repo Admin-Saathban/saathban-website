@@ -37,8 +37,8 @@ const TEAM = [
   { name: "Maheen Shafiq", role: "Co-Founder", initials: "MS", color: C.brown, img: "/founder1.png" },
   { name: "Hamayoon Shah", role: "Chief Research Officer", initials: "CRO", color: C.greenMuted, img: "/research.png" },
 /*{ name: "Research Assistant", role: "Research Assistant", initials: "RA", color: C.olive },
-  { name: "Design Associate", role: "Design Associate", initials: "DA", color: C.sage }, */
-  { name: "Syeda Duaa Batool Naqvi", role: "Strategy Associate", initials: "SA", color: C.brownLight, img: null },
+  { name: "Design Associate", role: "Design Associate", initials: "DA", color: C.sage }, 
+  { name: "Strategy Associate", role: "Strategy Associate", initials: "SA", color: C.brownLight, img: null }, */
 ];
 //-- Events --
 // to add a new event: copy one object below and fill in the details
@@ -921,6 +921,134 @@ function Stat({ number, label, delay = 0 }) {
   );
 }
 
+// ─── Image Carousel ───
+const CAROUSEL_IMAGES = [
+  { src: "/saathbanimage2.png", caption: "Building bridges between generations", label: "Community" },
+  { src: "/saathbanimage.png", caption: "Every elder deserves to be seen and heard", label: "Connection" },
+  { src: "/saathbanimage3.png", caption: "Wisdom shared is wisdom multiplied", label: "Togetherness" },
+];
+
+function ImageCarousel() {
+  const [current, setCurrent] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
+  const timerRef = useRef(null);
+
+  const go = useCallback((next, dir = 1) => {
+    if (animating) return;
+    setDirection(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent(next);
+      setAnimating(false);
+    }, 420);
+  }, [animating]);
+
+  const prev = () => {
+    const next = (current - 1 + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length;
+    go(next, -1);
+  };
+
+  const next = useCallback(() => {
+    const n = (current + 1) % CAROUSEL_IMAGES.length;
+    go(n, 1);
+  }, [current, go]);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => { next(); }, 5000);
+    return () => clearInterval(timerRef.current);
+  }, [next]);
+
+  const img = CAROUSEL_IMAGES[current];
+
+  return (
+    <section style={{ padding: "32px 0", background: C.bg }}>
+      <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 24px" }}>
+        <FadeIn>
+          <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(6,50,20,0.10)" }}>
+            <div style={{ position: "relative", height: "clamp(220px, 36vw, 480px)", overflow: "hidden", background: C.dark }}>
+              <img
+                key={current}
+                src={img.src}
+                alt={img.caption}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                  objectPosition: "center",
+                  opacity: animating ? 0 : 1,
+                  transform: animating
+                    ? `translateX(${direction * 24}px) scale(0.98)`
+                    : "translateX(0) scale(1)",
+                  transition: "opacity 0.38s cubic-bezier(.4,0,.2,1), transform 0.38s cubic-bezier(.4,0,.2,1)",
+                }}
+              />
+              {/* Gradient overlay */}
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "linear-gradient(to top, rgba(6,18,10,0.60) 0%, rgba(6,18,10,0.05) 55%, transparent 100%)",
+                pointerEvents: "none",
+              }} />
+
+              {/* Bottom bar: caption left, dots right */}
+              <div style={{
+                position: "absolute", bottom: 0, left: 0, right: 0,
+                padding: "20px 24px",
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                opacity: animating ? 0 : 1,
+                transform: animating ? "translateY(6px)" : "translateY(0)",
+                transition: "opacity 0.38s ease 0.06s, transform 0.38s ease 0.06s",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                    color: C.cream, background: `${C.brown}bb`, backdropFilter: "blur(6px)",
+                    padding: "3px 10px", borderRadius: 20, flexShrink: 0,
+                  }}>{img.label}</span>
+                  <p style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: "clamp(0.8rem, 1.4vw, 1rem)",
+                    fontStyle: "italic",
+                    color: "rgba(250,243,233,0.88)",
+                    margin: 0, lineHeight: 1.4,
+                    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
+                  }}>{img.caption}</p>
+                </div>
+                {/* Dots */}
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  {CAROUSEL_IMAGES.map((_, i) => (
+                    <div key={i} onClick={() => go(i, i > current ? 1 : -1)} style={{
+                      width: i === current ? 22 : 6, height: 6, borderRadius: 3,
+                      background: i === current ? C.cream : "rgba(250,243,233,0.3)",
+                      cursor: "pointer", transition: "all 0.3s ease",
+                    }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Arrows */}
+              {[{ label: "←", action: prev, side: { left: 14 } }, { label: "→", action: next, side: { right: 14 } }].map(({ label, action, side }) => (
+                <button key={label} onClick={action} style={{
+                  position: "absolute", top: "50%", transform: "translateY(-50%)", ...side,
+                  width: 36, height: 36, borderRadius: "50%", border: "none",
+                  background: "rgba(250,243,233,0.14)", backdropFilter: "blur(8px)",
+                  color: C.cream, fontSize: 16, fontWeight: 700, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "background 0.2s", zIndex: 10,
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(250,243,233,0.28)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(250,243,233,0.14)"}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 // ─── Hero Illustration: Elderly people───
 function HeroIllustration() {
   return (
@@ -1340,24 +1468,8 @@ export default function Saathban() {
         </div>
       </section>
 
-     {/* ═══════════ IMAGE BANNER ═══════════ */}
-      <section style={{ padding: "60px 0", background: C.bg }}>
-        <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 24px" }}>
-          <FadeIn>
-            <img 
-              src="/saathbanimage.png" 
-              alt="Saathban community" 
-              style={{ 
-                width: "100%", 
-                height: "auto", 
-                borderRadius: 20, 
-                boxShadow: "0 8px 32px rgba(6,50,20,0.12)",
-                display: "block"
-              }} 
-            />
-          </FadeIn>
-        </div>
-      </section>
+     {/* ═══════════ IMAGE CAROUSEL ═══════════ */}
+      <ImageCarousel />
        {/* ═══════════ ABOUT ═══════════ */}
       <section id="about" className="section-pad" style={{ padding: "100px 0", background: C.white }}>
         <div style={px}>
@@ -1485,7 +1597,7 @@ export default function Saathban() {
           {/* Team */}
           {activeTab === "team" && (
             <FadeIn>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 960, margin: "0 auto" }} className="grid3r">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 24, maxWidth: 960, margin: "0 auto" }}>
                 {TEAM.map((m, i) => (
                   <Card key={i} style={{ textAlign: "center", padding: 28 }}>
                     <div style={{ width: 80, height: 80, borderRadius: "50%", margin: "0 auto 16px", overflow: "hidden", border: `2px solid ${m.color}25`, background: `${m.color}12`, display: "flex", alignItems: "center", justifyContent: "center" }}>

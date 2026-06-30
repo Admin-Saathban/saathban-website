@@ -1665,9 +1665,9 @@ export default function Saathban() {
           {/* Team */}
           {activeTab === "team" && (
             <FadeIn>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 24, maxWidth: 960, margin: "0 auto" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 24, maxWidth: 960, margin: "0 auto", justifyContent: "center" }}>
                 {TEAM.map((m, i) => (
-                  <Card key={i} style={{ textAlign: "center", padding: 28 }}>
+                  <Card key={m.name} style={{ textAlign: "center", padding: 28, flex: "1 1 200px", maxWidth: 260 }}>
                     <div style={{ width: 80, height: 80, borderRadius: "50%", margin: "0 auto 16px", overflow: "hidden", border: `2px solid ${m.color}25`, background: `${m.color}12`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {m.img ? (
                         <img src={m.img} alt={m.name}

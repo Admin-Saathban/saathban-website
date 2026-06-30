@@ -1701,7 +1701,7 @@ export default function Saathban() {
             </h3>
             <div style={{ marginBottom: 56 }}>
               <Carousel items={RESEARCH} perPage={2} renderCard={(r, i) => (
-                <Card key={i} style={{ borderLeft: `4px solid ${r.tagColor}`, height: "100%" }}>
+                <Card key={r.title} style={{ borderLeft: `4px solid ${r.tagColor}`, height: "100%" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <h4 style={{ fontSize: 17, fontWeight: 700, color: C.green, flex: 1, lineHeight: 1.4 }}>{r.title}</h4>
                     <span style={{ fontSize: 12, fontWeight: 600, color: r.tagColor, background: `${r.tagColor}10`, padding: "4px 12px", borderRadius: 20, whiteSpace: "nowrap", marginLeft: 12 }}>{r.year}</span>
@@ -1728,7 +1728,7 @@ export default function Saathban() {
             </h3>
             <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, marginLeft: 48 }}>Click on a past event to view photos, highlights, and full details.</p>
             <Carousel items={EVENTS} perPage={3} renderCard={(ev, i) => (
-              <Card key={i} style={{ overflow: "hidden", position: "relative", height: "100%" }}
+              <Card key={ev.id} style={{ overflow: "hidden", position: "relative", height: "100%" }}
                 onClick={ev.detail ? () => goToEvent(ev.id) : undefined}>
                 <div style={{ height: 6, background: ev.color, margin: "-32px -32px 20px -32px", borderRadius: "16px 16px 0 0" }} />
                 <span style={{ position: "absolute", top: 22, right: 20, fontSize: 11, fontWeight: 700, color: ev.detail ? C.brown : C.green, background: ev.detail ? `${C.brown}12` : `${C.green}10`, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -1786,11 +1786,11 @@ export default function Saathban() {
           <Carousel items={BLOGS} perPage={3} renderCard={(b, i) => {
             const tc = tagColors[b.tag] || C.green;
             return (
-              <Card key={i} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => goToBlog(b.id)}>
+              <Card key={b.id} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => goToBlog(b.id)}>
                 {/* Cover image area — with or without photo */}
                 <div style={{ height: 180, position: "relative", overflow: "hidden", flexShrink: 0, background: `linear-gradient(135deg, ${tc}15, ${tc}05)` }}>
                   {b.coverImg ? (
-                    <img src={b.coverImg} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <img key={b.id} src={b.coverImg} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}20`, fontWeight: 700 }}>{b.tag[0]}</span>

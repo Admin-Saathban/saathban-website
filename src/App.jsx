@@ -98,6 +98,55 @@ const EVENTS = [
 // ─── Blog Data ───
 const BLOGS = [
   {
+    id: "loneliness-through-classics",
+    title: "Loneliness Through the Lens of Classics",
+    date: "July 06, 2026",
+    author: "Hamayoon Shah | Chief Research Officer",
+    readTime: "6 min read",
+    tag: "Research",
+    color: C.olive,
+    excerpt: "The greatest novels remind us that the desire to be understood has always been deeply human.",
+    coverImg: "/blog_images/blog_9.png",
+    content: [
+      {
+        type: "lead",
+        text: "\"We are going to die, and that makes us the lucky ones. Most people are never going to die because they are never going to be born.\" Richard Dawkins beautifully described the value of our lives as a possibility almost impossible in the permutations and combinations of the chromosomes. So congratulations, you won the lottery of being chosen out of 70 trillion possibilities. But the prize is a strange one. The same accident that made you singular also made you sealed. You are the only one of your kind that will ever exist, which means there is no one anywhere who can stand exactly where you stand and see what you see."
+      },
+      {
+        type: "paragraph",
+        text: "And yet, knowing this, we do not retreat further into ourselves. We do the opposite. We spend our lives reaching outward, hoping to find someone who might understand us. We fall in love, make friends, seek company, and feel the ache of absence when a room grows empty. The miracle of being unique comes with a need we can never fully satisfy: the need to be known, understood, and not left alone with our thoughts. Among the many human desires and struggles, these are the ones that classical novelists have returned to time and again."
+      },
+      {
+        type: "paragraph",
+        text: "Stefan Zweig explores this idea in Chess Story. The protagonist, Dr. B., discovers that the greatest torment is not physical suffering but isolation. Arrested by the authorities, he is held in complete solitary confinement in a hotel room, deprived of books, conversation, and all human contact. He even reflects that, in one respect, those imprisoned in concentration camps were less tormented than he was, for they could at least see and hear other people. Cut off from all human contact and left alone with nothing but his own mind, he learns how deeply we depend on the presence of others. His experience points to a simple truth: however unique our lives may be, we still long for connection and understanding from other people. Zweig further reiterates this idea in another of his classics, Letter from an Unknown Woman, where a woman devotes her life to a man who never truly recognizes her, suggesting that one of the deepest human longings is not merely to be loved, but to be known."
+      },
+      {
+        type: "pullquote",
+        text: "The greatest torment is not physical suffering but isolation."
+      },
+      {
+        type: "paragraph",
+        text: "In the world of classic literature, few works capture this longing more memorably than Of Mice and Men by John Steinbeck. The whole novel aches with it. Crooks, the stable hand kept apart because he is Black, confesses that a man goes crazy with no one to talk to, that he just needs someone near to know he is not invisible. Curley's wife drifts from man to man on the ranch not out of mischief but because no one will simply listen to her. Even the dream that binds George and Lennie, the little farm they will own one day, is really a dream of not being alone in the world. The same hunger runs through The Grapes of Wrath, though Steinbeck shows us its other face there, a connection forged rather than missed. Ma Joad fights to hold the family together as everything pulls it apart, and Jim Casy, the former preacher, rediscovers his purpose only through his bond with the Joads. Where Of Mice and Men shows us the ache of isolation, The Grapes of Wrath shows us people reaching past it, finding strength in one another when they have nothing else left."
+      },
+      {
+        type: "paragraph",
+        text: "Mary Shelley gave loneliness its most haunting voice in Frankenstein. The creature is not born cruel. He becomes so only after every human being, including his own maker, turns from him in horror. What he wants is achingly simple, a companion, someone who will not flee at the sight of him. His violence is the rage of a being who has been utterly, permanently denied connection, proof that nothing deforms a soul faster than being unloved."
+      },
+      {
+        type: "pullquote",
+        text: "Loneliness is not a single feeling but many, and yet all of them rise from the same root: the need to be understood, and to belong."
+      },
+      {
+        type: "paragraph",
+        text: "Loneliness wears many faces in literature. Sometimes it grows out of separation, as in Wuthering Heights, where Emily Brontë binds Heathcliff and Catherine in a love they can neither live with nor live without. Sometimes it is a simple hunger to be noticed, as in White Nights, where Dostoevsky's dreamer is transformed by a few evenings of company because, for the first time in years, someone truly sees him. Sometimes it arrives in the middle of a crowd: Anna Karenina is surrounded by family, admirers, and society, and grows more isolated with every passing page. And sometimes the distance runs deeper still. Joseph Conrad suggests that each of us is finally alone inside our own experience, and Ralph Ellison shows the particular pain of moving through the world unseen, while Virginia Woolf carries the idea furthest in The Waves, where even love and friendship cannot quite close the space between one mind and another. Taken together, these writers remind us that loneliness is not a single feeling but many, and yet all of them rise from the same root: the need to be understood, and to belong."
+      },
+      {
+        type: "paragraph",
+        text: "These classics from different times and places show that loneliness is as old as our desires and has always been as painful as we see it today, even with our more systematic approach to understanding it. Our marvelous technologies and ease of activities have, no doubt, given us much more leisure time than any of our ancestors ever dreamt of, but paradoxically, they have also made us busier, as now we crave attention every second. It is precisely this paradox that Saathban seeks to address by fostering honest human connection and understanding across generations. In a world where technology has both connected and isolated us, Saathban's mission is to bridge the gap between the elderly and the youth through meaningful interaction and shared experiences."
+      }
+    ]
+  },
+  {
     id: "how-egalitarian-is-pakistan",
     title: "How Egalitarian is Pakistan in the Inegalitarian World",
     date: "June 22, 2026",

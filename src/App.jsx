@@ -1013,9 +1013,12 @@ function Stat({ number, label, delay = 0 }) {
 
 // ─── Image Carousel ───
 const CAROUSEL_IMAGES = [
-  { src: "/saathbanimage2.jpg", caption: "Building bridges between generations", label: "Community" },
+  { src: "/saathbanimage2.jpg", caption: "Building bridges between generations", label: "Reciprocity" },
   { src: "/saathbanimage.jpg", caption: "Every elder deserves to be seen and heard", label: "Connection" },
-  { src: "/saathbanimage3.jpg", caption: "Wisdom shared is wisdom multiplied", label: "Togetherness" },
+  { src: "/saathbanimage3.jpg", caption: "Wisdom shared is wisdom multiplied", label: "Contribution" },
+  { src: "/saathbanimage4.jpg", caption: "Rethinking ageing for a better tomorrow.", label: "Innovation" },
+  { src: "/saathbanimage5.jpg", caption: "Understanding begins by truly listening.", label: "Empathy" },
+  { src: "/saathbanimage6.jpg", caption: "Growing older should never mean growing invisible.", label: "Dignity" },
 ];
 
 function ImageCarousel() {
@@ -1103,19 +1106,20 @@ function ImageCarousel() {
                 transform: animating ? "translateY(6px)" : "translateY(0)",
                 transition: "opacity 0.38s ease 0.06s, transform 0.38s ease 0.06s",
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "rgba(8, 18, 12, 0.52)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,0.12)", padding: "16px 18px", borderRadius: 14, maxWidth: 560,}}>
                   <span style={{
                     fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-                    color: C.cream, background: `${C.brown}bb`, backdropFilter: "blur(6px)",
+                    color: C.cream, background: C.green, color: C.cream, padding: "5px 12px", fontSize: 11, backdropFilter: "blur(6px)",
                     padding: "3px 10px", borderRadius: 20, flexShrink: 0,
                   }}>{img.label}</span>
                   <p style={{
                     fontFamily: "'Playfair Display', serif",
-                    fontSize: "clamp(0.8rem, 1.4vw, 1rem)",
+                    fontSize: "clamp(1rem, 1.7vw, 1.2rem)",
                     fontStyle: "italic",
                     color: "rgba(250,243,233,0.88)",
-                    margin: 0, lineHeight: 1.4,
-                    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
+                    margin: 0, lineHeight: 1.55,
+                    textShadow: "0 2px 12px rgba(0,0,0,.65)",
+                    fontWeight: 500,
                   }}>{img.caption}</p>
                 </div>
                 {/* Dots */}

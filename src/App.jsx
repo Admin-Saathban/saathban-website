@@ -1106,7 +1106,7 @@ function ImageCarousel() {
                 transform: animating ? "translateY(6px)" : "translateY(0)",
                 transition: "opacity 0.38s ease 0.06s, transform 0.38s ease 0.06s",
               }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "rgba(8, 18, 12, 0.52)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,0.12)", padding: "16px 18px", borderRadius: 14, maxWidth: 560,}}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12,}}>
                   <span style={{
                     fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
                     color: C.cream, background: C.green, color: C.cream, padding: "5px 12px", fontSize: 11, backdropFilter: "blur(6px)",

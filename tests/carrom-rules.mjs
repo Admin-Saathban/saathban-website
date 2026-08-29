@@ -287,9 +287,22 @@ async function signIn(email) {
 const host = await signIn(HOST_ACCOUNT);
 const guest = await signIn(GUEST_ACCOUNT);
 /* Clean up through the RPC: game_sessions is SELECT-only under RLS, so a
-   DELETE answers 204 and removes nothing (tests/bot-players.mjs). */
-const drop = (id) => host.rpc("leave_game_session", { p_session: id });
+   DELETE answers 204 and removes nothing (tests/bot-players.mjs).
+
+   BOTH players must leave, and this is not a detail. On an ACTIVE table
+   leave_game_session converts the leaver's seat to a bot and only
+   cancels the session when the humans reach ZERO — so in a two-seat
+   game one leaver takes humans from 2 to 1 and the table stays active
+   with a bot in it. Carrom has no bot player, so that table can never
+   be finished by anyone. An earlier version of this suite dropped as
+   host only and left exactly that behind, seven times. */
 const created = [];
+async function drop(id) {
+  await guest.rpc("leave_game_session", { p_session: id });
+  await host.rpc("leave_game_session", { p_session: id });
+  const [row] = await host.rest(`game_sessions?select=status&id=eq.${id}`);
+  return row?.status;
+}
 
 /* A two-human carrom table, ready to play. */
 async function table({ turnSeconds = 60 } = {}) {
@@ -316,11 +329,20 @@ const playerFor = (seatNo) => (seatNo === 1 ? host : guest);
 /* Build the payload the client would send for a staged outcome. */
 function payloadFrom(state, mover, ids) {
   const r = resolveShot(sink(state, ids), still, mover);
-  return { shot: still, outcome: r.outcome, endState: r.endState, resolved: r };
+  // Exactly what rails.js submitShot() sends — nothing extra.
+  return { shot: still, outcome: r.outcome, endState: r.endState };
+}
+
+async function runCase(name, fn) {
+  try {
+    await fn();
+  } catch (e) {
+    check(`${name}: case ran without throwing`, false, (e?.message || String(e)).slice(0, 70));
+  }
 }
 
 /* ── B1. Pocket-and-continue is the server's decision too ── */
-{
+await runCase("B1", async () => {
   const id = await table();
   if (!id) check("B1: table ready", false);
   else {
@@ -340,10 +362,10 @@ function payloadFrom(state, mover, ids) {
     check("B1: the score is credited server-side", scored === 1, `score=${scored}`);
     await drop(id);
   }
-}
+});
 
 /* ── B2. A foul passes the turn, whatever the client hoped ── */
-{
+await runCase("B2", async () => {
   const id = await table();
   if (!id) check("B2: table ready", false);
   else {
@@ -360,10 +382,10 @@ function payloadFrom(state, mover, ids) {
       `seat ${before.current_seat} → ${after.current_seat}`);
     await drop(id);
   }
-}
+});
 
 /* ── B3. The server refuses a claim it cannot see on the board ── */
-{
+await runCase("B3", async () => {
   const id = await table();
   if (!id) check("B3: table ready", false);
   else {
@@ -388,10 +410,10 @@ function payloadFrom(state, mover, ids) {
     check("B3: the same shot claimed honestly is accepted", ok.ok, JSON.stringify(ok.body).slice(0, 60));
     await drop(id);
   }
-}
+});
 
 /* ── B4. The winning shot ends the game, server-side ── */
-{
+await runCase("B4", async () => {
   const id = await table();
   if (!id) check("B4: table ready", false);
   else {
@@ -399,13 +421,17 @@ function payloadFrom(state, mover, ids) {
     const me = playerFor(before.current_seat);
     const colour = before.current_seat === 1 ? "w" : "b";
     // Stage the end: everything of mine down but one, queen covered.
+    // Everything of mine down except ONE, chosen by colour rather than
+    // by array position: seat 2 plays black, and an index-based guess
+    // pocketed every black coin, leaving nothing to sink.
+    const keepUp = before.state.pieces.find((p) => p.owner === colour)?.id;
     const staged = {
       ...before.state,
       queenCovered: true,
       queenPocketed: true,
-      pieces: before.state.pieces.map((p, i) => {
+      pieces: before.state.pieces.map((p) => {
         if (p.id === "q") return { ...p, pocketed: true };
-        if (p.owner === colour) return { ...p, pocketed: i !== 1 }; // leave one up
+        if (p.owner === colour) return { ...p, pocketed: p.id !== keepUp };
         return p;
       }),
     };
@@ -427,10 +453,10 @@ function payloadFrom(state, mover, ids) {
     check("B4: the session is finished", after.status === "finished", after.status);
     await drop(id);
   }
-}
+});
 
 /* ── B5. A lapsed turn is a MISSED turn — never a bot shot ── */
-{
+await runCase("B5", async () => {
   const id = await table({ turnSeconds: 1 });
   if (!id) check("B5: table ready", false);
   else {
@@ -447,10 +473,10 @@ function payloadFrom(state, mover, ids) {
     check("B5: the table is still live, not finished", after.status === "active", after.status);
     await drop(id);
   }
-}
+});
 
 /* ── B6. And a bot can never be seated here at all (0043) ── */
-{
+await runCase("B6", async () => {
   const c = await host.rpc("create_game_session", { p_game: "carrom", p_seats: 2, p_house_rules: { turn_seconds: 60 } });
   if (!c.ok || !c.body) check("B6: table created", false);
   else {
@@ -461,14 +487,40 @@ function payloadFrom(state, mover, ids) {
     check("B6: no bot seat left behind", !(seats || []).some((s) => s.is_bot));
     await drop(c.body);
   }
+});
+
+/* ── The suite cleans up after itself, and proves it ──
+
+   Scoped to the tables THIS run created: litter from other runs is
+   reported but never failed on, and never cleaned — the seven active
+   carrom tables from an earlier run of this file are evidence for the
+   leave-seats-a-bot defect and are being remediated by a migration,
+   not by me. */
+for (const id of created) {
+  const status = await drop(id).catch(() => "error");
+  if (status === "lobby" || status === "active") {
+    check("cleanup: table ended", false, `${id.slice(0, 8)} still ${status}`);
+  }
 }
 
-/* ── The suite cleans up after itself, and proves it ── */
-const live = await host.rest(
+const mineNow = await host.rest(
   `game_sessions?select=id,status&created_by=eq.${host.id}&status=in.(lobby,active)`
 );
-check("suite leaves no live table behind", (live || []).length === 0,
-  `${(live || []).length} live: ${(live || []).map((m) => m.id.slice(0, 8)).join(", ")}`);
+const stillMine = (mineNow || []).filter((r) => created.includes(r.id));
+check(
+  "suite leaves no live table behind",
+  stillMine.length === 0,
+  `${stillMine.length} of this run's ${created.length} still live`
+);
+
+/* Proof the check above can fail: the same query, unscoped, finds the
+   pre-existing live tables on this account. If this ever prints 0 the
+   query has stopped seeing live tables and the assertion above is
+   worthless. */
+console.log(
+  `\nnote: ${(mineNow || []).length} live table(s) on ${HOST_ACCOUNT} in total ` +
+    `(this run owns ${stillMine.length}; the rest are pre-existing and left alone)`
+);
 
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

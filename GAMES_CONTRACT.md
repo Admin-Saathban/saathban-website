@@ -213,6 +213,84 @@ foul or declare the queen covered. That is a known limitation of the
 friendly two-player game between people who chose each other, and it
 is not acceptable if carrom ever becomes competitive or public.
 
+### Snakes & Ladders — the rules as implemented
+
+Asserted by `tests/snakes-rules.mjs`, one test per rule, against the
+live engine playing real games to completion. Change a rule here and
+change it there in the same commit. (The board MAP — which squares
+carry which jump — is a separate contract, checked by
+`tests/snakes-board.mjs`. A correct map played by a wrong engine is
+still a wrong game, which is why these are two files.)
+
+**The finish is EXACT, and an overshoot STAYS PUT.** This is the one
+rule, chosen over the alternative: a roll that would carry you past 100
+is **not played at all**. You do not move, and you do **not** bounce
+back off 100. The move is recorded with `stuck: true` and `need`, the
+exact number still wanted, which the board says in words — "needs
+exactly 3 to finish".
+
+Bouncing is the more common house rule and it was rejected here. This
+game is for people who may be playing it with a grandchild on a phone,
+and going *backwards* at the very end, after finally getting close, is
+a small cruelty that the rule buys nothing for. Standing still is
+legible: you can see what you need and you try again next turn. Nobody
+can be permanently stuck, either — from any square up to 99 there is
+always exactly one roll that finishes.
+
+**A jump resolves in ONE hop.** Land on a ladder foot or a snake head
+and you move once. `snakes_board_jump` is applied a single time, and
+the board is built so that no jump's destination is itself a jump
+square — so one hop is the whole answer and nothing is being silently
+truncated. Both halves are asserted: the engine applies one hop, and
+the map contains no chain for it to truncate.
+
+**Squares 1 and 100 carry no jump.** You cannot be thrown off the first
+square, and the last square is reached only by landing on it — no
+ladder may carry a piece to 100 (that would bypass the exact finish)
+and no snake may throw one off it (that would make the game
+unwinnable). Both were real violations once, fixed in 0036.
+
+**A six earns NO extra roll.** Deliberate, and different from ludo,
+which does grant one. `game_exec_snakes` returns no `again` key at
+all, so the rails rotate the turn after every roll whatever it showed.
+Asserted structurally as well as by shape: no seat ever moves twice in
+a row.
+
+The reason it differs from ludo: in ludo a six is the only way out of
+the yard, so it carries a cost that the extra roll compensates. Here a
+six is simply the best roll, and repeating it would hand a runaway lead
+to whoever gets lucky — in a game that already has no skill in it at
+all. Turns stay even and the game stays short.
+
+**First to 100 ENDS the game. There are no placements.** The table
+finishes the moment someone lands exactly on 100; nobody plays on for
+second place. The winning move is the last move in the log, and every
+other seat is left wherever it stood.
+
+This is the deliberate choice, not an omission. Playing on for
+placements asks the person who has already lost to keep rolling for a
+ranking, and this app does not rank people — no leaderboards, ever
+(SPEC.md). The person who finishes second in a two-player game of
+chance has not been told anything worth knowing.
+
+**A person and a bot play the identical game.** `game_exec_snakes`
+takes `p_by_bot` and never reads it: the roll, the board and the exact
+finish are the same code either way. Asserted rather than assumed,
+because "the parameter is ignored" is exactly the kind of fact that
+quietly stops being true.
+
+**There is nothing to choose, so "legality" means one thing.** Snakes
+gives a player no decision — the engine rolls and resolves. The only
+move that can be illegal is the overshoot, and the engine declines it:
+the piece stays, the move is logged, and the turn passes. It does not
+move anyway, and it does not stall the table.
+
+**Timeouts.** Snakes is `timeout_style = 'bot_plays'`, and unlike the
+state ludo was in until 0042d, it genuinely has a bot player: the
+executor rolls internally and reads no `auth.uid()`, so a bot seat
+plays exactly as a person does. `tests/bot-players.mjs` holds that to
+account.
+
 ## Per-lane status
 
 - **Ludo (0020, live)**: your data survived 0022 (seats/current_seat

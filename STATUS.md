@@ -69,7 +69,42 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Groups lane (0026) will extend community_reports kinds — add its kinds to ModerationQueue KIND_LABEL/HIDE_TABLE on integration.
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
+## Pre-launch test-data purge list
+
+Everything below is dev fixture data in project `vmtbywzmqyzafbgquzjh`
+and must be purged (or the DB reset wholesale) before real accounts
+arrive. All four test accounts are on the convention password
+`SaathTest!2026` (re-verified 2026-08-29 by the smoke suite's real
+password grants).
+
+| What | Where | Notes |
+|---|---|---|
+| The four test accounts + profiles | auth.users / profiles | test-{icon,buddy,fam,admin}@saathban.dev — cascade takes most below |
+| "Chai Reunion — Model Town" | events | the only event row; demo fixture |
+| "chai and carrom" activity + join | community_posts / post_joins | outdoor demo at Model Town Park |
+| Community posts (4) | community_posts | smoke + lane test posts |
+| DM thread + messages (24) | dm_requests / dm_messages | incl. `smoke-dm-*` / `unify-*` markers |
+| Game sessions (11) | game_sessions + moves/invites | ludo/carrom test games |
+| "Sticker Test Group" | groups + members/posts/chat | sticker-lane fixture |
+| Outing + check-ins | outdoor_outings / park check-ins | |
+| Daily logs (6), reminders, notifications, badges | daily_logs / reminders / notifications / earned badges | smoke runs write these continuously |
+| Buddy application 4269a7c6… + documents | buddy_applications / document requests + storage | CNIC fixtures live in the private bucket — purge storage too |
+| Circle membership test-fam→test-icon | circle_members | re-seeded baseline row |
+
 ## Round log
+- **DM unification round (2026-08-29, `1259a32`):** ONE canonical
+  thread per pair at `/app/people/<id>/chat` (decision + contract in
+  MIGRATIONS.md). ThreadPage now carries the full feature set (carrom
+  inline board, stickers, money warning, per-message report);
+  `/app/community/messages/:id` redirects; inbox links canonical with
+  New badges. Migration 0030 applied: unique pair index,
+  direction-blind send_dm_request (reverse-pending auto-accept),
+  dm_messages→bell trigger (one unread `kind='dm'`/thread, cleared on
+  read). Smoke grew 7 dm checks (26 total) — green locally AND on
+  preview `saathban-website-jz40tx9y8`. Reserved 0029 (8f together),
+  0031 (13 people), 0032 (34 notification parity). Not covered yet:
+  game timeout path (pg_cron tick) — owner: integration, next matrix
+  round.
 - **Fam home + My journey round (2026-08-29):** pushed
   `10522b9..051fea3` — `41049c8` (fam full home: per-person Message →
   people thread, shared-moments strip, care cards above nav cards) and

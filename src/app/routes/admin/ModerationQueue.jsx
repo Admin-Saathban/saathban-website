@@ -1,24 +1,115 @@
 /* ════════════════════════════════════════════════
-   /app/admin/moderation — reports queue skeleton.
+   /app/admin/moderation — the reports queue, wired to the real
+   community_reports table (migration 0014).
 
-   Community, DMs, and park boards land at build steps 11–12, so this
-   queue runs on mock reports (data.js) with no backing table yet. The
-   shape is real, though: SPEC.md commits to a response target measured
-   in HOURS, not days — so age is the loudest column, and anything past
-   24 hours is visibly overdue.
+   SPEC.md commits to a response target measured in HOURS, not days —
+   so age is the loudest column and anything past 24 hours is visibly
+   overdue. Every decision (resolve/dismiss) is audit-logged by the
+   0014 trigger; "Hide content" soft-hides a post or comment in place.
+   Reported DMs are moderated from the snapshot the reporter's client
+   took — admins have NO read path into DM threads (QUESTIONS.md C5).
+
+   Self-contained on purpose: reads and writes go straight through
+   supabase (admin RLS), not the AdminLayout mock context.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 
-export default function ModerationQueue() {
-  const { reports, actions } = useOutletContext();
-  const [resolutionDraft, setResolutionDraft] = useState({}); // id -> text
+const KIND_LABEL = {
+  post: "Community post",
+  comment: "Comment",
+  dm_message: "Direct message",
+};
 
-  const open = reports.filter((r) => r.status === "open");
-  const resolved = reports.filter((r) => r.status === "resolved");
+async function fetchReports() {
+  const { data, error } = await supabase
+    .from("community_reports")
+    .select(
+      "id, reporter_id, target_kind, target_id, target_author_id, target_excerpt, reason, status, resolution_note, resolved_at, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchNames(ids) {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return {};
+  const { data, error } = await supabase
+    .from("safe_profiles")
+    .select("id, full_name")
+    .in("id", unique);
+  if (error) throw error;
+  return Object.fromEntries((data || []).map((p) => [p.id, p.full_name]));
+}
+
+export default function ModerationQueue() {
+  const [reports, setReports] = useState(null); // null = loading
+  const [names, setNames] = useState({});
+  const [resolutionDraft, setResolutionDraft] = useState({}); // id -> text
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const rows = await fetchReports();
+      setReports(rows);
+      setNames(
+        await fetchNames(rows.flatMap((r) => [r.reporter_id, r.target_author_id]))
+      );
+    } catch {
+      setError("The queue didn't load. Please try again in a moment.");
+      setReports([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const decide = async (report, status) => {
+    setError("");
+    try {
+      const { error: err } = await supabase
+        .from("community_reports")
+        .update({
+          status,
+          resolution_note: (resolutionDraft[report.id] || "").trim() || null,
+        })
+        .eq("id", report.id);
+      if (err) throw err;
+      await load();
+    } catch {
+      setError("That decision didn't save. Please try again.");
+    }
+  };
+
+  /* Soft-hide the reported post or comment where it lives. */
+  const hideContent = async (report) => {
+    setError("");
+    const table = report.target_kind === "post" ? "community_posts" : "post_comments";
+    try {
+      const { data: me } = await supabase.auth.getUser();
+      const { error: err } = await supabase
+        .from(table)
+        .update({ hidden_at: new Date().toISOString(), hidden_by: me?.user?.id || null })
+        .eq("id", report.target_id);
+      if (err) throw err;
+      setResolutionDraft((d) => ({
+        ...d,
+        [report.id]: d[report.id] || "Content hidden.",
+      }));
+    } catch {
+      setError("Hiding failed — the content may already be gone.");
+    }
+  };
+
+  const open = (reports || []).filter((r) => r.status === "open");
+  const decided = (reports || []).filter((r) => r.status !== "open").slice(0, 20);
+  const nameOf = (id) => names[id] || "(account gone)";
 
   return (
     <div style={{ maxWidth: 960 }}>
@@ -34,29 +125,37 @@ export default function ModerationQueue() {
         Moderation
       </h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
-        Reports from community posts, DM requests, and park boards. The
-        response target is measured in <strong>hours, not days</strong>.
-        Running on mock data until Community ships (build step 11).
+        Reports from community posts, comments, and direct messages. The
+        response target is measured in <strong>hours, not days</strong>. DM
+        reports show the reporter's snapshot — threads themselves stay
+        private to their participants.
       </p>
+
+      {error && (
+        <p role="alert" style={{ color: C.brown, fontWeight: 700 }}>
+          ⚠ {error}
+        </p>
+      )}
 
       <div style={{ display: "grid", gap: 22 }}>
         <Card
           title="Open reports"
           aside={
             <span style={{ fontWeight: 700, color: open.length ? C.brown : C.green }}>
-              {open.length} waiting
+              {reports === null ? "…" : `${open.length} waiting`}
             </span>
           }
         >
-          {open.length === 0 ? (
-            <p style={{ margin: 0, color: C.textMuted }}>
-              The queue is clear.
-            </p>
+          {reports === null ? (
+            <p style={{ margin: 0, color: C.textMuted }} role="status">Loading…</p>
+          ) : open.length === 0 ? (
+            <p style={{ margin: 0, color: C.textMuted }}>The queue is clear.</p>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {open.map((r) => {
                 const age = hoursAgo(r.created_at);
                 const overdue = age >= 24;
+                const canHide = r.target_kind === "post" || r.target_kind === "comment";
                 return (
                   <div
                     key={r.id}
@@ -85,8 +184,7 @@ export default function ModerationQueue() {
                           fontWeight: 700,
                         }}
                       >
-                        {r.surface}
-                        {r.place && ` · ${r.place}`}
+                        {KIND_LABEL[r.target_kind] || r.target_kind}
                       </span>
                       <span
                         style={{
@@ -105,11 +203,17 @@ export default function ModerationQueue() {
                     </div>
 
                     <p style={{ margin: "0 0 6px", fontStyle: "italic" }}>
-                      {r.content_excerpt}
+                      “{r.target_excerpt || "(no excerpt captured)"}”
                     </p>
                     <p style={{ margin: "0 0 14px", fontSize: 16, color: C.textMuted }}>
-                      Reported by {r.reported_by} · reason:{" "}
-                      <strong style={{ color: C.textMain }}>{r.reason}</strong>
+                      By <strong style={{ color: C.textMain }}>{nameOf(r.target_author_id)}</strong>
+                      {" · "}reported by {nameOf(r.reporter_id)}
+                      {r.reason && (
+                        <>
+                          {" · "}reason:{" "}
+                          <strong style={{ color: C.textMain }}>{r.reason}</strong>
+                        </>
+                      )}
                     </p>
 
                     <div
@@ -122,13 +226,10 @@ export default function ModerationQueue() {
                     >
                       <input
                         type="text"
-                        placeholder="Resolution note"
+                        placeholder="Resolution note (audit-logged)"
                         value={resolutionDraft[r.id] || ""}
                         onChange={(e) =>
-                          setResolutionDraft((d) => ({
-                            ...d,
-                            [r.id]: e.target.value,
-                          }))
+                          setResolutionDraft((d) => ({ ...d, [r.id]: e.target.value }))
                         }
                         style={{
                           flex: 1,
@@ -143,25 +244,20 @@ export default function ModerationQueue() {
                           padding: "0 14px",
                         }}
                       />
+                      {canHide && (
+                        <AdminBtn kind="ghost" onClick={() => hideContent(r)}>
+                          Hide content
+                        </AdminBtn>
+                      )}
                       <AdminBtn
                         kind="primary"
                         disabled={!(resolutionDraft[r.id] || "").trim()}
-                        onClick={() =>
-                          actions.resolveReport(
-                            r.id,
-                            resolutionDraft[r.id].trim()
-                          )
-                        }
+                        onClick={() => decide(r, "resolved")}
                       >
                         Resolve
                       </AdminBtn>
-                      {/* Content/account actions (remove post, pause account,
-                          warn) arrive with the real moderation tooling. */}
-                      <AdminBtn kind="ghost" disabled title="Arrives with build step 11">
-                        Remove content
-                      </AdminBtn>
-                      <AdminBtn kind="ghost" disabled title="Arrives with build step 11">
-                        Pause account
+                      <AdminBtn kind="ghost" onClick={() => decide(r, "dismissed")}>
+                        Dismiss
                       </AdminBtn>
                     </div>
                   </div>
@@ -171,17 +267,26 @@ export default function ModerationQueue() {
           )}
         </Card>
 
-        <Card title="Recently resolved">
-          {resolved.length === 0 ? (
+        <Card title="Recently decided">
+          {decided.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>Nothing yet.</p>
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
-              {resolved.map((r) => (
+              {decided.map((r) => (
                 <div key={r.id} style={{ fontSize: 16 }}>
-                  <span style={{ color: C.green, fontWeight: 700 }}>✓</span>{" "}
-                  <strong>{r.surface}</strong> — {r.reason}
+                  <span
+                    style={{
+                      color: r.status === "resolved" ? C.green : C.textMuted,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {r.status === "resolved" ? "✓ resolved" : "— dismissed"}
+                  </span>{" "}
+                  <strong>{KIND_LABEL[r.target_kind] || r.target_kind}</strong>
+                  {r.reason && <> — {r.reason}</>}
                   <div style={{ color: C.textMuted, fontSize: 15 }}>
-                    {r.resolution}
+                    {r.resolution_note || ""}
+                    {r.resolved_at && ` · ${fmtDateTime(r.resolved_at)}`}
                   </div>
                 </div>
               ))}

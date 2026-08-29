@@ -21,6 +21,7 @@ export const STRINGS = {
     missedLine: (who) => `${who} ran out of time — the turn passes. No hurry; your next go is waiting.`,
     turnPassLine: "A miss — the turn passes.",
     wonLine: (who) => `${who} wins! 🎉`,
+    watching: "Watching — it's their go.",
     playAgain: "Play again",
     // DM chat action
     playCarromCta: "Play carrom",
@@ -39,6 +40,7 @@ export const STRINGS = {
     missedLine: (who) => `${who} کا وقت ختم — باری بدل گئی۔ کوئی جلدی نہیں؛ اگلی باری تیار ہے۔`,
     turnPassLine: "خطا — باری بدل گئی۔",
     wonLine: (who) => `${who} جیت گئے! 🎉`,
+    watching: "دیکھ رہے ہیں — ان کی باری ہے۔",
     playAgain: "دوبارہ کھیلیں",
     playCarromCta: "کیرم کھیلیں",
     startedInChat: "اوپر کیرم کا بورڈ لگ گیا ہے — چند باریاں کھیلیں، گفتگو نیچے جاری رہے گی۔",

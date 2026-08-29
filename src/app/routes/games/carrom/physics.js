@@ -20,6 +20,8 @@
    - Win: all your coins pocketed AND the queen has been covered.
    ════════════════════════════════════════════════ */
 
+export const CARROM_GAME_KEY = "carrom"; // registry key on the games rails
+
 export const BOARD = 1.0;
 export const POCKET_R = 0.052;
 export const COIN_R = 0.028;

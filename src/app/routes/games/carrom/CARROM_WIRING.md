@@ -1,7 +1,43 @@
 # Carrom — status & wiring notes
 
-Turn-based carrom for the games rails. **The rails-independent core is built and
-tested; the rails integration is blocked on the rails lane** (see below).
+Turn-based carrom for the games rails. **The core AND the rails DB integration
+are built and verified live.** One cross-lane piece remains: the inline board
+embed inside a DM thread (needs the community DM lane's hook). Details below.
+
+## ✅ Rails integration landed (0022 rails + 0024_carrom)
+
+- `0024_carrom.sql` (applied): the `games` registry row (`timeout_style='pass_turn'`)
+  + `game_exec_carrom` (validates the submitted outcome, writes state + score,
+  returns `{move, winner, again}` — never advances the turn) + `carrom_init`.
+- `rails.js`: functional — calls the rails RPCs directly (create / invite /
+  respond / play_turn / game_tick / reclaim / carrom_init) with a polling
+  `subscribeSession` (drops to Realtime once `lib/games.js` exposes it).
+- `CarromRailsController.jsx`: drives `CarromBoard` from a live session — the
+  component the DM chat-transform embeds.
+- **Full game verified live** (test-icon vs test-fam, via the rails):
+  create → invite → accept (auto-start) → init → **foul** (icon, striker
+  pocketed → turn passes) → **timed-out miss** (fam's turn lapses → `game_tick`
+  passes it, `missed_turns=1`, NO bot shot) → **win** (icon clears the last coin
+  with the queen covered → `winner=true` → rails finish). Result: `status
+  finished`, `winner_seat 1`, seat scores `1/0`, `missed 0/1`, 3 moves, and the
+  rails emitted invitation / table-ready / your-turn / game-over notifications
+  to both players. Repeat-turn (`again`) is honoured by `0022b`.
+
+## Remaining: the DM chat-transform embed (cross-lane)
+
+`rails.startCarromInThread(opponentId)` creates the session + invites — the
+carrom half is done. Rendering `<CarromRailsController sessionId=…/>` **inline in
+a DM thread** with the conversation continuing beneath needs the community DM
+lane (`routes/community/`) to allow an embedded game view: a message/attachment
+type carrying a `game_session_id` that the thread renders. Filed as ask A4;
+`carromCopy.playCarromCta` / `.startedInChat` are the strings. Also: the games
+shell (`routes/games/`, rails lane's) registers the route that mounts
+`<CarromRailsController/>` at `/app/games/s/<id>` — deep links already point
+there (notification `link`).
+
+---
+
+## (original notes)
 
 ## What's done (rails-independent, tested)
 

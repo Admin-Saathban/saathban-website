@@ -28,12 +28,16 @@ import { BodyText, GhostBtn, PrimaryBtn } from "../circle/ui.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import { MONEY_PATTERN } from "../community/communityCopy.js";
+import { markThreadRead, fileReport } from "../community/communityData.js";
 import {
-  fetchThread,
-  sendMessage,
-  markThreadRead,
-  fileReport,
-} from "../community/communityData.js";
+  fetchThreadDeep,
+  sendDeep,
+  hideMessageForMe,
+  deleteMessageForEveryone,
+  canDeleteForEveryone,
+  uploadChatImage,
+  chatImageUrl,
+} from "./myPeopleStore.js";
 import { announceRead } from "../notifications/data.js";
 import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
 import { startCarromInThread } from "../games/carrom/rails.js";
@@ -74,15 +78,31 @@ export default function ThreadPage() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  // Chat depth (0034): reply quote, per-message action menu, photos.
+  const [replyTo, setReplyTo] = useState(null);      // message being replied to
+  const [menuFor, setMenuFor] = useState(null);      // message id with the ⋯ menu open
+  const [imageUrls, setImageUrls] = useState({});    // image_path -> signed url
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);    // signed url shown large
+  const [flashId, setFlashId] = useState(null);      // briefly highlighted after a jump
+  const msgRefs = useRef({});
+  const cameraRef = useRef(null);
+  const galleryRef = useRef(null);
   const endRef = useRef(null);
   const openedRef = useRef(false);
   const reqRef = useRef(null);
 
   const refresh = useCallback(
     async (reqId) => {
-      const { request: req, messages: msgs } = await fetchThread(reqId);
+      const { request: req, messages: msgs } = await fetchThreadDeep(reqId, myId);
       setStatus(req?.status ?? null);
       setMessages(msgs);
+      // Private bucket: resolve short-lived signed URLs for any photos.
+      const paths = msgs.filter((m) => m.image_path).map((m) => m.image_path);
+      if (paths.length) {
+        const entries = await Promise.all(paths.map(async (p) => [p, await chatImageUrl(p)]));
+        setImageUrls((cur) => ({ ...cur, ...Object.fromEntries(entries.filter(([, u]) => u)) }));
+      }
       if (myId && msgs.some((m) => m.sender_id !== myId && !m.read_at)) {
         markThreadRead(reqId, myId);
         clearDmNotifications(profileId);
@@ -143,8 +163,9 @@ export default function ThreadPage() {
     if ((!text && !gameSessionId) || !requestId) return;
     setError("");
     try {
-      await sendMessage(requestId, myId, text || null, gameSessionId);
+      await sendDeep(requestId, myId, { body: text, replyToId: replyTo?.id || null, gameSessionId });
       setDraft("");
+      setReplyTo(null);
       setPickerOpen(false);
       await refresh(requestId);
     } catch {
@@ -186,7 +207,7 @@ export default function ThreadPage() {
         }
       }
       const sessionId = await startCarromInThread(profileId);
-      await sendMessage(requestId, myId, null, sessionId);
+      await sendDeep(requestId, myId, { gameSessionId: sessionId });
       await refresh(requestId);
     } catch {
       setError(t("community.dm.gameStartFailed"));
@@ -203,6 +224,52 @@ export default function ThreadPage() {
       setError(t("people.thread.sendError"));
     }
   };
+
+  /* Delete for me: a per-person hide. Delete for everyone: sender-only,
+     15 minutes, server-enforced — the row becomes a "removed" stub. */
+  const deleteForMe = async (m) => {
+    setMenuFor(null);
+    try { await hideMessageForMe(m.id, myId); await refresh(requestId); }
+    catch { setError(t("people.thread.sendError")); }
+  };
+  const deleteForEveryone = async (m) => {
+    setMenuFor(null);
+    try { await deleteMessageForEveryone(m.id); await refresh(requestId); }
+    catch { setError(t("people.thread.deleteWindowNote")); }
+  };
+  const startReply = (m) => { setMenuFor(null); setReplyTo(m); };
+  const jumpTo = (id) => {
+    const el = msgRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    setFlashId(id);
+    window.setTimeout(() => setFlashId(null), 1600);
+  };
+  /* Camera or gallery → the thread's private folder → a photo message. */
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !requestId) return;
+    setUploading(true);
+    setError("");
+    try {
+      const path = await uploadChatImage(requestId, file);
+      await sendDeep(requestId, myId, { imagePath: path, replyToId: replyTo?.id || null });
+      setReplyTo(null);
+      await refresh(requestId);
+    } catch (err) {
+      const k = err.message === "too-big" ? "photoTooBig" : err.message === "bad-type" ? "photoBadType" : "photoFailed";
+      setError(t("people.thread." + k));
+    }
+    setUploading(false);
+  };
+  const byId = Object.fromEntries((messages || []).map((m) => [m.id, m]));
+  const quoteText = (m) =>
+    !m ? t("people.thread.removed")
+    : m.deleted_at ? t("people.thread.removed")
+    : m.image_path ? "📷"
+    : m.game_session_id ? "🎯"
+    : (m.body || "").slice(0, 80);
 
   const first = person?.full_name?.split(" ")[0] || "";
   const open = status === "accepted";
@@ -280,6 +347,93 @@ export default function ThreadPage() {
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === myId;
+            const setRef = (el) => { if (el) msgRefs.current[m.id] = el; };
+            const flashStyle = flashId === m.id ? { outline: "3px solid " + C.sage, outlineOffset: 4, borderRadius: 18 } : {};
+
+            /* Delete-for-everyone leaves a quiet stub — never a gap. */
+            if (m.deleted_at) {
+              return (
+                <div key={m.id} ref={setRef} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start", marginBottom: 8, ...flashStyle }}>
+                  <BodyText muted style={{ margin: 0, fontStyle: "italic", fontSize: ts(17) }}>
+                    🚫 {t("people.thread.removed")}
+                  </BodyText>
+                </div>
+              );
+            }
+
+            /* Quoted reply — tap jumps to (and highlights) the original. */
+            const quote = m.reply_to_id ? (
+              <button
+                type="button"
+                onClick={() => jumpTo(m.reply_to_id)}
+                aria-label={t("people.thread.jumpToOriginal")}
+                style={{
+                  display: "block", textAlign: "start", maxWidth: "82%", marginBottom: 4,
+                  padding: "6px 12px", borderInlineStart: "4px solid " + C.sage, borderRadius: 10,
+                  background: "rgba(143,166,126,0.15)", border: "none", color: C.textMuted,
+                  fontSize: ts(16), fontFamily: "inherit", cursor: "pointer", minHeight: A11Y.minTapTargetPx,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                ↩ {quoteText(byId[m.reply_to_id])}
+              </button>
+            ) : null;
+
+            /* The ⋯ menu: Reply / Delete for me / Delete for everyone
+               (sender, 15 min) / Report (incoming). Absent, never disabled. */
+            const menu = (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  aria-expanded={menuFor === m.id}
+                  aria-label={t("people.thread.moreActions")}
+                  onClick={() => setMenuFor(menuFor === m.id ? null : m.id)}
+                  style={{ minHeight: A11Y.minTapTargetPx, minWidth: A11Y.minTapTargetPx, background: "none", border: "none", color: C.textMuted, fontSize: ts(22), cursor: "pointer" }}
+                >
+                  ⋯
+                </button>
+                {menuFor === m.id && (
+                  <div role="menu" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <GhostBtn role="menuitem" onClick={() => startReply(m)}>↩ {t("people.thread.reply")}</GhostBtn>
+                    <GhostBtn role="menuitem" onClick={() => deleteForMe(m)}>{t("people.thread.deleteForMe")}</GhostBtn>
+                    {canDeleteForEveryone(m, myId) && (
+                      <GhostBtn role="menuitem" onClick={() => deleteForEveryone(m)} style={{ color: C.error, borderColor: C.error }}>
+                        {t("people.thread.deleteForEveryone")}
+                      </GhostBtn>
+                    )}
+                    {!mine && (
+                      <GhostBtn role="menuitem" onClick={() => { setMenuFor(null); reportMessage(m); }}>
+                        {t("community.dm.reportMessage")}
+                      </GhostBtn>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+
+            /* A photo: inline, private signed URL, tap to view large. */
+            if (m.image_path) {
+              const url = imageUrls[m.image_path];
+              return (
+                <div key={m.id} ref={setRef} style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", marginBottom: 8, ...flashStyle }}>
+                  {quote}
+                  {url ? (
+                    <button
+                      type="button"
+                      onClick={() => setLightbox(url)}
+                      aria-label={t("people.thread.viewLarge")}
+                      style={{ padding: 0, border: "1.5px solid " + C.warmGray, borderRadius: 16, background: C.white, cursor: "zoom-in", maxWidth: "82%", overflow: "hidden" }}
+                    >
+                      <img src={url} alt={t("people.thread.photoAlt", { name: mine ? t("people.thread.you") : first })} style={{ display: "block", maxWidth: "100%", maxHeight: 320, objectFit: "cover" }} />
+                    </button>
+                  ) : (
+                    <BodyText muted style={{ margin: 0 }}>📷 …</BodyText>
+                  )}
+                  {m.body && <BodyText style={{ margin: "6px 0 0", maxWidth: "82%" }}>{m.body}</BodyText>}
+                  {menu}
+                </div>
+              );
+            }
 
             /* A game attachment renders the live board inline — full
                width, the conversation continuing beneath. */
@@ -308,13 +462,16 @@ export default function ThreadPage() {
             return (
               <div
                 key={m.id}
+                ref={setRef}
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: mine ? "flex-end" : "flex-start",
                   marginBottom: 8,
+                  ...flashStyle,
                 }}
               >
+                {quote}
                 {moneyFlag && (
                   <div
                     role="alert"
@@ -380,6 +537,7 @@ export default function ThreadPage() {
                     {t("community.dm.reportMessage")}
                   </button>
                 )}
+                {menu}
               </div>
             );
           })
@@ -400,6 +558,30 @@ export default function ThreadPage() {
         </div>
       )}
 
+      {/* Reply strip — what you're replying to, one tap to cancel. */}
+      {replyTo && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", borderInlineStart: "4px solid " + C.sage, background: "rgba(143,166,126,0.15)", borderRadius: 10 }}>
+          <BodyText muted style={{ margin: 0, flex: 1, fontSize: ts(16), overflowWrap: "anywhere" }}>
+            ↩ {t("people.thread.replyingTo", { name: replyTo.sender_id === myId ? t("people.thread.you") : first })}: {quoteText(replyTo)}
+          </BodyText>
+          <GhostBtn onClick={() => setReplyTo(null)} aria-label={t("people.thread.cancelReply")} style={{ padding: "0 14px" }}>✕</GhostBtn>
+        </div>
+      )}
+
+      {/* Photo inputs: camera (capture on mobile) and gallery. No filters (v2). */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
+      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
+      {uploading && <BodyText muted role="status" style={{ margin: "0 0 8px" }}>{t("people.thread.uploading")}</BodyText>}
+
+      {lightbox && (
+        <div role="dialog" aria-modal="true" aria-label={t("people.thread.viewLarge")} onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <img src={lightbox} alt="" style={{ maxWidth: "100%", maxHeight: "85vh", borderRadius: 12 }} />
+          <button type="button" onClick={() => setLightbox(null)} style={{ position: "absolute", top: 12, insetInlineEnd: 12, minHeight: A11Y.minTapTargetPx, minWidth: A11Y.minTapTargetPx, borderRadius: 50, border: "none", background: C.cream, color: C.textMain, fontSize: ts(20), fontWeight: 700, cursor: "pointer" }}>
+            ✕ {t("people.thread.closeImage")}
+          </button>
+        </div>
+      )}
+
       {/* Composer */}
       <form
         onSubmit={(e) => {
@@ -416,6 +598,12 @@ export default function ThreadPage() {
           style={{ padding: "0 14px", fontSize: ts(24) }}
         >
           🌸
+        </GhostBtn>
+        <GhostBtn onClick={() => cameraRef.current?.click()} aria-label={t("people.thread.camera")} disabled={!open || uploading} style={{ padding: "0 14px", fontSize: ts(24) }}>
+          📷
+        </GhostBtn>
+        <GhostBtn onClick={() => galleryRef.current?.click()} aria-label={t("people.thread.gallery")} disabled={!open || uploading} style={{ padding: "0 14px", fontSize: ts(24) }}>
+          🖼️
         </GhostBtn>
         <input
           value={draft}

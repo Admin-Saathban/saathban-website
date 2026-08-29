@@ -127,3 +127,81 @@ export async function blockPerson(myId, targetId) {
   });
   if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
 }
+
+/* ════════════════════════════════════════════════
+   Chat depth (0034): reply-to, delete-for-me, delete-for-everyone,
+   private per-thread photos. RLS + the definer RPC are the boundary.
+   ════════════════════════════════════════════════ */
+
+const DM_BUCKET = "dm-images";
+
+/* The thread with everything the deep view needs, minus what I hid. */
+export async function fetchThreadDeep(requestId, myId) {
+  const [{ data: req, error: reqErr }, { data: msgs, error: msgErr }, { data: hides }] =
+    await Promise.all([
+      supabase.from("dm_requests").select("id, requester_id, recipient_id, status").eq("id", requestId).maybeSingle(),
+      supabase
+        .from("dm_messages")
+        .select("id, sender_id, body, game_session_id, reply_to_id, deleted_at, image_path, created_at, read_at")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: true }),
+      supabase.from("dm_message_hides").select("message_id").eq("profile_id", myId),
+    ]);
+  if (reqErr) throw new Error(reqErr.message);
+  if (msgErr) throw new Error(msgErr.message);
+  const hidden = new Set((hides || []).map((h) => h.message_id));
+  return { request: req, messages: (msgs || []).filter((m) => !hidden.has(m.id)) };
+}
+
+export async function sendDeep(requestId, myId, { body = null, replyToId = null, imagePath = null, gameSessionId = null } = {}) {
+  const text = (body || "").trim() || null;
+  if (!text && !imagePath && !gameSessionId) return;
+  const { error } = await supabase.from("dm_messages").insert({
+    request_id: requestId,
+    sender_id: myId,
+    body: text,
+    reply_to_id: replyToId,
+    image_path: imagePath,
+    game_session_id: gameSessionId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/* Delete for me — a per-person hide; nobody else notices. */
+export async function hideMessageForMe(messageId, myId) {
+  const { error } = await supabase.from("dm_message_hides").insert({ message_id: messageId, profile_id: myId });
+  if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
+}
+
+/* Delete for everyone — sender, within 15 minutes; server enforces. */
+export async function deleteMessageForEveryone(messageId) {
+  const { error } = await supabase.rpc("delete_dm_message", { p_message: messageId });
+  if (error) throw new Error(error.message);
+}
+
+export const DELETE_WINDOW_MS = 15 * 60 * 1000;
+export function canDeleteForEveryone(m, myId) {
+  return m.sender_id === myId && !m.deleted_at && Date.now() - new Date(m.created_at).getTime() < DELETE_WINDOW_MS;
+}
+
+/* Upload a photo into this thread's private folder; returns the path. */
+export async function uploadChatImage(requestId, file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("bad-type");
+  if (file.size > 5 * 1024 * 1024) throw new Error("too-big");
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${requestId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from(DM_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+/* Private bucket → short-lived signed URLs, cached per path. */
+const urlCache = new Map();
+export async function chatImageUrl(path) {
+  const hit = urlCache.get(path);
+  if (hit && hit.exp > Date.now()) return hit.url;
+  const { data, error } = await supabase.storage.from(DM_BUCKET).createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return null;
+  urlCache.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60 * 1000 });
+  return data.signedUrl;
+}

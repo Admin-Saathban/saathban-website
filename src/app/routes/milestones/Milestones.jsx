@@ -24,6 +24,7 @@ import {
   markBadgeSeen,
   ARC_TARGET_DAYS,
 } from "../../lib/points.js";
+import { fetchMilestoneProgress } from "./progressStore.js";
 import { Card, SectionLabel, PrimaryBtn, BodyText } from "./ui.jsx";
 
 const css = `
@@ -116,12 +117,37 @@ function Celebration({ badge, earned, onContinue, busy }) {
   );
 }
 
+/* A warm green line: how far along YOU are toward this badge — the same
+   rules that award it, read back. Earned badges read complete. */
+function ProgressLine({ current, target, done, name }) {
+  const { t, ts } = useI18n();
+  const pct = done ? 100 : Math.round((Math.min(current, target) / target) * 100);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <BodyText style={{ margin: "0 0 4px", fontSize: ts(16), color: C.green, fontWeight: 600 }}>
+        {done ? t("milestones.badges.progressDone") : t("milestones.badges.progressLine", { current, target })}
+      </BodyText>
+      <div
+        role="progressbar"
+        aria-valuenow={done ? target : Math.min(current, target)}
+        aria-valuemin={0}
+        aria-valuemax={target}
+        aria-label={t("milestones.badges.progressAria", { name })}
+        style={{ height: 8, borderRadius: 4, background: C.cream, border: `1px solid ${C.warmGray}`, overflow: "hidden" }}
+      >
+        <div style={{ width: `${Math.max(pct, current > 0 || done ? 5 : 0)}%`, height: "100%", background: done ? C.green : C.sage, borderRadius: 4 }} />
+      </div>
+    </div>
+  );
+}
+
 export default function Milestones() {
   const { t, ts, lang, meta } = useI18n();
 
   const [progress, setProgress] = useState(null);
   const [defs, setDefs] = useState([]);
   const [earned, setEarned] = useState([]);
+  const [badgeProgress, setBadgeProgress] = useState({}); // trigger_kind -> {current,target}
   const [queue, setQueue] = useState([]); // unseen earned rows, celebrated one by one
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -131,15 +157,17 @@ export default function Milestones() {
     (async () => {
       try {
         await awardMyBadges().catch(() => []); // catch-up; triggers cover live events
-        const [p, d, e] = await Promise.all([
+        const [p, d, e, bp] = await Promise.all([
           fetchMyProgress(),
           fetchBadgeDefinitions(),
           fetchMyEarnedBadges(),
+          fetchMilestoneProgress().catch(() => ({})),
         ]);
         if (cancelled) return;
         setProgress(p);
         setDefs(d);
         setEarned(e);
+        setBadgeProgress(bp || {});
         setQueue(e.filter((x) => !x.seen_at));
       } catch {
         if (!cancelled) {
@@ -302,6 +330,7 @@ export default function Milestones() {
                           ),
                         })}
                       </BodyText>
+                      <ProgressLine current={1} target={1} done name={badgeName(b, lang)} />
                       {e.message && (
                         <div
                           style={{
@@ -345,6 +374,14 @@ export default function Milestones() {
                 <BodyText lang={lang} muted style={{ margin: "2px 0 0", fontSize: ts(16) }}>
                   {badgeDesc(b, lang)}
                 </BodyText>
+                {badgeProgress[b.trigger_kind] && (
+                  <ProgressLine
+                    current={badgeProgress[b.trigger_kind].current}
+                    target={badgeProgress[b.trigger_kind].target}
+                    done={false}
+                    name={badgeName(b, lang)}
+                  />
+                )}
               </div>
             </div>
           </Card>

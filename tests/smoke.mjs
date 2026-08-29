@@ -11,6 +11,10 @@
      (or the same values in the environment)
    - the four seeded test accounts (password SaathTest!2026):
      test-icon / test-buddy / test-fam / test-admin @saathban.dev
+   - the dedicated smoke pair smoke-icon / smoke-fam @saathban.dev
+     (same password; in each other's circle). Every check that WRITES
+     into a conversation or opens a table uses this pair, so the real
+     test-icon ↔ test-fam thread the team retests in stays clean.
 
    Covers: signed-out guard redirects, signup entry redirect, each
    role's home (+ cross-role bounce), Icon daily-log persistence
@@ -177,8 +181,8 @@ for (const [email, label, home, foreign] of ROLES) {
 //    the reply arrives live over polling, and the old community
 //    thread URL still redirects. Fails = DM regression.
 {
-  const iconSess = await login("test-icon@saathban.dev");
-  const famSess = await login("test-fam@saathban.dev");
+  const iconSess = await login("smoke-icon@saathban.dev");
+  const famSess = await login("smoke-fam@saathban.dev");
   const iconId = iconSess.user.id;
   const famId = famSess.user.id;
 
@@ -190,16 +194,16 @@ for (const [email, label, home, foreign] of ROLES) {
   };
   const unreadDm = async (sess) =>
     (await rest(sess, "notifications?select=id&kind=eq.dm&read_at=is.null")).length;
+  // Icon opens the canonical surface (open_dm_with mints the pair's
+  // one thread on first visit) and sends.
+  const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
+  await goto(iconPage, `/app/people/${famId}/chat`, 2500);
   const reqRows = await rest(
     iconSess,
     `dm_requests?select=id&or=(and(requester_id.eq.${iconId},recipient_id.eq.${famId}),and(requester_id.eq.${famId},recipient_id.eq.${iconId}))`
   );
   const requestId = reqRows[0]?.id;
-  check("dm: one pair thread exists", Boolean(requestId), JSON.stringify(reqRows).slice(0, 60));
-
-  // Icon sends from the canonical surface.
-  const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
-  await goto(iconPage, `/app/people/${famId}/chat`, 2500);
+  check("dm: one pair thread exists", reqRows.length === 1, JSON.stringify(reqRows).slice(0, 60));
   const before = await unreadDm(famSess);
   const marker = `smoke-dm-${Math.floor(Math.random() * 1e9)}`;
   await iconPage.fill("form input", marker);
@@ -248,8 +252,8 @@ for (const [email, label, home, foreign] of ROLES) {
 //    start → a real turn; then an open table joined by spoken code.
 //    Each run creates two throwaway sessions (purge list covers them).
 {
-  const iconSess = await login("test-icon@saathban.dev");
-  const famSess = await login("test-fam@saathban.dev");
+  const iconSess = await login("smoke-icon@saathban.dev");
+  const famSess = await login("smoke-fam@saathban.dev");
   const buddySess = await login("test-buddy@saathban.dev");
 
   const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
@@ -260,7 +264,7 @@ for (const [email, label, home, foreign] of ROLES) {
     "games: create opens people picker",
     (await iconPage.evaluate(() => document.body.innerText)).includes("Who's playing?")
   );
-  await iconPage.locator('button:has-text("Test Fam")').first().click();
+  await iconPage.locator('button:has-text("Smoke Fam")').first().click();
   await iconPage.waitForTimeout(500);
   await iconPage.locator('button:has-text("set the table")').first().click();
   await iconPage.waitForTimeout(3000);

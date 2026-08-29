@@ -35,6 +35,7 @@ import PeoplePicker from "./PeoplePicker.jsx";
 /* Carrom has its own board on the rails; ludo has its own route.
    Everything else is the reference Race to 100 board below. */
 import CarromRailsController from "./carrom/CarromRailsController.jsx";
+import SnakesBoard from "./snakes/SnakesBoard.jsx";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
@@ -207,10 +208,27 @@ export default function SessionPage() {
       </GamesScreen>
     );
   }
-  if (!session) return <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} />;
+  if (!session) {
+    // Loading, or the fetch failed: say so and offer a retry — a page
+    // with nothing but "Back to games" reads as broken.
+    return (
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+        {loadError ? (
+          <>
+            <BodyText role="alert" style={{ fontWeight: 600 }}>{t("games.loadError")}</BodyText>
+            <PrimaryBtn onClick={refresh}>{t("games.board.retryCta")}</PrimaryBtn>
+          </>
+        ) : (
+          <BodyText muted role="status">···</BodyText>
+        )}
+      </GamesScreen>
+    );
+  }
   // After every hook: a ludo table lives on the ludo lane's own screen —
   // never the generic board (which reads as Race to 100).
-  if (session.game_key === "ludo") {
+  // The LOBBY stays on the rails (invite card, picker, spoken code —
+  // ludo's own screen has none of those); the board is ludo's.
+  if (session.game_key === "ludo" && session.status !== "lobby") {
     return <Navigate to={`/app/games/ludo/${session.id}`} replace />;
   }
 
@@ -477,10 +495,11 @@ function Lobby({
   );
 }
 
-/* ── Race to 100 board ─────────────────────────────────────────── */
+/* ── Snakes & Ladders board (the rails' reference turn game) ───── */
 
 function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, onBoast, onPlayAgain, t, ts }) {
   const target = Number(session.house_rules?.target) || 100;
+  const snakes = session.game_key === "snakes";
   const myTurn =
     session.status === "active" && mySeat && session.current_seat === mySeat.seat_no;
   const lastBySeat = useMemo(() => {
@@ -526,8 +545,21 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
 
       <Card>
         <BodyText muted style={{ fontWeight: 600 }}>
-          {t("games.board.target", { target })}
+          {snakes ? t("games.board.targetSnakes") : t("games.board.target", { target })}
         </BodyText>
+
+        {snakes && (
+          <div style={{ margin: "4px 0 16px" }}>
+            <SnakesBoard
+              seats={session.seats}
+              currentSeat={session.status === "active" ? session.current_seat : null}
+              label={t("games.board.boardLabel")}
+            />
+            <BodyText muted style={{ fontSize: ts(15), margin: "8px 0 0" }}>
+              🪜 {t("games.board.legendLadder")} · 🐍 {t("games.board.legendSnake")}
+            </BodyText>
+          </div>
+        )}
 
         {session.seats.map((seat) => {
           const isTurn = session.status === "active" && session.current_seat === seat.seat_no;
@@ -548,13 +580,22 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
                   {seatLabel(seat)}
                 </span>
                 <span style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
-                  {seat.score} / {target}
+                  {snakes ? t("games.board.at", { cell: seat.score }) : `${seat.score} / ${target}`}
                 </span>
                 {last && (
                   <span style={{ fontSize: ts(16), color: C.textMuted }}>
                     {last.move?.pass
                       ? t("games.board.passed")
                       : `${t("games.board.rolled", { roll: last.move?.roll ?? "" })} 🎲`}
+                    {snakes && !last.move?.pass && last.move?.via === "ladder" && (
+                      <> — 🪜 {t("games.board.climbed", { to: last.move.to })}</>
+                    )}
+                    {snakes && !last.move?.pass && last.move?.via === "snake" && (
+                      <> — 🐍 {t("games.board.slid", { to: last.move.to })}</>
+                    )}
+                    {snakes && !last.move?.pass && last.move?.stuck && (
+                      <> — {t("games.board.stuck", { need: last.move.need })}</>
+                    )}
                   </span>
                 )}
                 {seat.presence === "away" && (
@@ -573,6 +614,7 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
                   </span>
                 )}
               </div>
+              {!snakes && (
               <div
                 role="img"
                 aria-label={`${seatLabel(seat)}: ${seat.score} / ${target}`}
@@ -594,6 +636,7 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
                   }}
                 />
               </div>
+              )}
             </div>
           );
         })}

@@ -49,7 +49,15 @@ rejected; non-sender delete rejected; delete-for-everyone → body null +
 intruder upload rejected; participant reads 1 image, non-participant reads 0.
 
 UI (both roles, en + ur): quote renders and jumps; delete-for-me hides for one
-person only (the other still sees the message); photo uploads and renders via a
+person only (the other still sees the message); delete-for-everyone replaces
+the message with exactly one “message removed” stub; photo uploads and renders via a
 signed URL with a working lightbox; a recipient has **no** delete-for-everyone
 on someone else's message (absent, not disabled) while Report stays reachable;
 milestone progress lines and bars render; RTL wrapper and Urdu strings correct.
+
+All checks green. Note for whoever tests this surface next: the project goes
+intermittently unresponsive under concurrent lane load, which shows up as
+assertions flapping with no code change (a seeded message present then absent,
+one assertion failing while another on the same element passes). Run DB-heavy
+suites one lane at a time, and use the smoke-* accounts — never the test-* pair
+the user retests in.

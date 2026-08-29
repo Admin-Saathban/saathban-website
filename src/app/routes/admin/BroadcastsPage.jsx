@@ -20,6 +20,7 @@ import { Card, AdminBtn } from "./ui.jsx";
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
+  minHeight: A11Y.minTapTargetPx,
   fontFamily: FONTS.sans,
   fontSize: 17,
   color: C.textMain,

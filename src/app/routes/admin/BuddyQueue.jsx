@@ -66,6 +66,7 @@ export default function BuddyQueue() {
             <button
               key={t}
               type="button"
+              aria-pressed={selected}
               onClick={() => setTab(t)}
               style={{
                 display: "flex",
@@ -84,6 +85,8 @@ export default function BuddyQueue() {
                 marginLeft: i === PIPELINE.length ? 18 : 0,
               }}
             >
+              {/* Non-colour marker for the selected tab (SPEC: never colour alone) */}
+              {selected && <span aria-hidden="true">✓</span>}
               {STATUS_LABELS[t]}
               <span
                 style={{

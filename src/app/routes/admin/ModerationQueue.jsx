@@ -23,12 +23,16 @@ const KIND_LABEL = {
   comment: "Comment",
   dm_message: "Direct message",
   park_board: "Park board",
+  group: "Friend group",
+  group_post: "Group post",
 };
 
 const HIDE_TABLE = {
   post: "community_posts",
   comment: "post_comments",
   park_board: "park_board_messages",
+  group: "groups",
+  group_post: "group_posts",
 };
 
 async function fetchReports() {

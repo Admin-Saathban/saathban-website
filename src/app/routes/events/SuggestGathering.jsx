@@ -15,13 +15,14 @@ import { useEffect, useState } from "react";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { Screen, Card, BodyText, PrimaryBtn, GhostBtn, inputStyle } from "./ui.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import { fetchPlaces, submitProposal } from "./proposalsStore.js";
 import { STRINGS } from "./proposalsCopy.js";
 
 const BLANK = { title: "", place_id: "", place_text: "", event_date: "", start_time: "", note: "" };
 
 export default function SuggestGathering() {
-  const { lang, ts, meta } = useI18n();
+  const { lang, ts, meta, t } = useI18n();
   const s = STRINGS[lang] || STRINGS.en;
 
   const [places, setPlaces] = useState([]);
@@ -43,14 +44,17 @@ export default function SuggestGathering() {
     if (!form.title.trim()) return setError(s.errTitle);
     if (!form.event_date) return setError(s.errDate);
     if (!form.place_id && !form.place_text.trim()) return setError(s.errPlace);
+    if (status === "sending") return; // one suggestion per tap
     setStatus("sending");
     setError("");
     try {
       await submitProposal(form);
       setStatus("sent");
+      pushToast(t("feedback.eventSuggested"));
     } catch {
       setStatus("editing");
       setError(s.errGeneric);
+      pushToast(s.errGeneric, { tone: "error" });
     }
   };
 

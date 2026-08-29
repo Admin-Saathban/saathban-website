@@ -22,6 +22,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 import { BodyText, GhostBtn, PrimaryBtn } from "../circle/ui.jsx";
@@ -83,6 +84,9 @@ export default function ThreadPage() {
   const [menuFor, setMenuFor] = useState(null);      // message id with the ⋯ menu open
   const [imageUrls, setImageUrls] = useState({});    // image_path -> signed url
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
+  // Bubbles on their way to the server (text/stickers only).
+  const [pendingMsgs, setPendingMsgs] = useState([]);
   const [lightbox, setLightbox] = useState(null);    // signed url shown large
   const [flashId, setFlashId] = useState(null);      // briefly highlighted after a jump
   const msgRefs = useRef({});
@@ -158,18 +162,51 @@ export default function ThreadPage() {
     return () => clearInterval(timer);
   }, [messages?.length]);
 
+  /* Optimistic send: the bubble is on screen before the round trip,
+     marked "sending", and the real row replaces it on confirm. A
+     refusal returns the words to the box with a kind line + Retry —
+     a message a person typed is never silently swallowed.
+     Text and stickers only: a photo keeps the existing uploading
+     state, because a bucket path is not a renderable src until the
+     upload lands. */
   const send = async (body, gameSessionId = null) => {
     const text = (body || "").trim();
-    if ((!text && !gameSessionId) || !requestId) return;
+    if ((!text && !gameSessionId) || !requestId || sending) return;
     setError("");
+    const keptDraft = draft;
+    const keptReply = replyTo;
+    const pending = gameSessionId
+      ? null
+      : {
+          id: `pending-${Date.now()}`,
+          sender_id: myId,
+          body: text,
+          created_at: new Date().toISOString(),
+          reply_to_id: replyTo?.id || null,
+          __pending: true,
+        };
+    if (pending) setPendingMsgs((cur) => [...cur, pending]);
+    setDraft("");
+    setReplyTo(null);
+    setPickerOpen(false);
+    setSending(true);
     try {
-      await sendDeep(requestId, myId, { body: text, replyToId: replyTo?.id || null, gameSessionId });
-      setDraft("");
-      setReplyTo(null);
-      setPickerOpen(false);
+      await sendDeep(requestId, myId, { body: text, replyToId: keptReply?.id || null, gameSessionId });
       await refresh(requestId);
+      if (pending) setPendingMsgs((cur) => cur.filter((m) => m.id !== pending.id));
     } catch {
+      if (pending) setPendingMsgs((cur) => cur.filter((m) => m.id !== pending.id));
+      setDraft(keptDraft || text);
+      setReplyTo(keptReply);
       setError(t("people.thread.sendError"));
+      pushToast(t("feedback.dmFailed"), {
+        tone: "error",
+        actionLabel: t("feedback.retry"),
+        onAction: () => send(text, gameSessionId),
+        key: "dm-send",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -200,8 +237,7 @@ export default function ThreadPage() {
             : Date.now() - new Date(r.created_at).getTime() < 2 * 60 * 60 * 1000
         );
         if (live) {
-          setToast(carrom.alreadySetUp);
-          window.setTimeout(() => setToast(""), 5000);
+          pushToast(carrom.alreadySetUp, { tone: "info" });
           setStarting(false);
           return;
         }
@@ -218,8 +254,7 @@ export default function ThreadPage() {
   const reportMessage = async (m) => {
     try {
       await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
-      setToast(t("community.feed.reportedToast"));
-      window.setTimeout(() => setToast(""), 5000);
+      pushToast(t("feedback.reported"));
     } catch {
       setError(t("people.thread.sendError"));
     }
@@ -545,6 +580,38 @@ export default function ThreadPage() {
         {status && !open && (
           <BodyText muted>{t("people.thread.pendingNote", { name: first })}</BodyText>
         )}
+        {pendingMsgs.map((m) => (
+          <div
+            key={m.id}
+            style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}
+          >
+            <div
+              style={{
+                maxWidth: "78%",
+                background: C.sage,
+                opacity: 0.72,
+                color: C.textMain,
+                borderRadius: 18,
+                padding: "10px 14px",
+                fontSize: ts(A11Y.minBodyPx),
+                lineHeight: 1.5,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {parseStickerRef(m.body) ? (
+                <Sticker id={parseStickerRef(m.body)} size={96} />
+              ) : (
+                m.body
+              )}
+              <span
+                role="status"
+                style={{ display: "block", fontSize: ts(15), color: C.textMuted, marginTop: 4 }}
+              >
+                · {t("feedback.sending")}
+              </span>
+            </div>
+          </div>
+        ))}
         <div ref={endRef} />
       </div>
 
@@ -624,8 +691,8 @@ export default function ThreadPage() {
             color: C.textMain,
           }}
         />
-        <PrimaryBtn type="submit" disabled={!open || !draft.trim()}>
-          {t("people.thread.sendCta")}
+        <PrimaryBtn type="submit" disabled={!open || !draft.trim() || sending}>
+          {sending ? t("feedback.sending") : t("people.thread.sendCta")}
         </PrimaryBtn>
       </form>
     </div>

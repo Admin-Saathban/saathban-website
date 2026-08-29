@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast, useToastThenGo } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import {
   fetchGames,
@@ -38,7 +39,7 @@ import CarromRailsController from "./carrom/CarromRailsController.jsx";
 import SnakesBoard from "./snakes/SnakesBoard.jsx";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
-import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 
@@ -59,8 +60,8 @@ export default function SessionPage() {
   const [inviteNames, setInviteNames] = useState({}); // invitee id → name
   const [loadError, setLoadError] = useState(false);
   const [notMine, setNotMine] = useState(false); // RLS: not a table I'm at
-  const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
+  const toastThenGo = useToastThenGo();
   const [now, setNow] = useState(Date.now());
   const tickedFor = useRef(null);
   const navigate = useNavigate();
@@ -131,13 +132,14 @@ export default function SessionPage() {
   }, [secondsLeft, session, sessionId, refresh]);
 
   const act = async (fn, doneMsg) => {
+    if (busy) return; // the same control can't fire twice
     setBusy(true);
     try {
       await fn();
       await refresh();
-      if (doneMsg) setToast(doneMsg);
+      if (doneMsg) pushToast(doneMsg);
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -152,14 +154,14 @@ export default function SessionPage() {
       if (r.result === "filled") {
         setFilledInfo(r);
       } else if (r.result === "declined") {
-        // Nothing left to do here: say so, then take them home.
-        setToast(t("games.lobby.declinedQuiet"));
-        window.setTimeout(() => navigate("/app/games"), 1400);
+        // Nothing left to do here: say so, then take them home. The
+        // shared host is app-wide, so the line survives the trip.
+        toastThenGo(t("games.lobby.declinedQuiet"), "/app/games", { delay: 1400, tone: "info" });
         return;
       }
       await refresh();
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -187,7 +189,7 @@ export default function SessionPage() {
       }
       navigate(`/app/games/s/${id}`);
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
       setBusy(false);
     }
   };
@@ -322,13 +324,11 @@ export default function SessionPage() {
           profile={profile}
           finished={session.status === "finished"}
           onSent={refresh}
-          onError={() => setToast(t("games.actionError"))}
+          onError={() => pushToast(t("games.actionError"), { tone: "error", key: "games" })}
           t={t}
           ts={ts}
         />
       )}
-
-      <Toast text={toast} />
     </GamesScreen>
   );
 }
@@ -457,7 +457,10 @@ function Lobby({
             maxPick={Math.max(0, openAllocations)}
             pickedCount={0}
             onToggle={(p) =>
-              act(() => inviteToGame(session.id, p.id), t("games.lobby.invited"))
+              act(
+                () => inviteToGame(session.id, p.id),
+                t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] })
+              )
             }
           />
 

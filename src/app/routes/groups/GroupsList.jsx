@@ -12,9 +12,10 @@ import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
 import { fetchMyGroups, fetchMyGroupInvites, respondInvite } from "./groupsStore.js";
+import { useToast, useToastThenGo, useFresh } from "../../lib/feedback.jsx";
 
 export default function GroupsList() {
-  const { lang, ts, meta } = useI18n();
+  const { lang, ts, meta, t } = useI18n();
   const s = (STRINGS[lang] || STRINGS.en).list;
   const { profile } = useSession();
   const navigate = useNavigate();
@@ -23,6 +24,9 @@ export default function GroupsList() {
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
+  const { toast } = useToast();
+  const toastThenGo = useToastThenGo();
+  const fresh = useFresh();
 
   const load = async () => {
     try {
@@ -38,13 +42,20 @@ export default function GroupsList() {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const answer = async (invite, accept) => {
+    if (busy) return; // double-tap guard: one answer per invitation
     setBusy(invite.id);
     try {
       const gid = await respondInvite(invite.id, accept);
-      if (accept) navigate(`/app/groups/${gid}`);
-      else await load();
+      if (accept) {
+        // Say it, then travel — the line survives the route change.
+        toastThenGo(t("feedback.groupJoined", { name: invite.groupName }), `/app/groups/${gid}`);
+      } else {
+        await load();
+        toast(t("feedback.requestDeclined"), { tone: "info" });
+      }
     } catch {
       setError(s.loadError);
+      toast(t("feedback.somethingWrong"), { tone: "error" });
     } finally {
       setBusy(null);
     }
@@ -82,7 +93,7 @@ export default function GroupsList() {
         </Card>
       ) : (
         groups.map((g) => (
-          <Card key={g.id}>
+          <Card key={g.id} {...fresh.props(g.id)}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <Link to={`/app/groups/${g.id}`} style={{ textDecoration: "none" }}>
                 <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(23), fontWeight: 700, color: C.green, margin: 0 }}>{g.name}</h2>

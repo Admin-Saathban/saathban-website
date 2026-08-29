@@ -20,6 +20,7 @@ import {
   localIsoDate,
 } from "./eventsStore.js";
 import { Card, Pill, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 
 const KIND_ICONS = { personal: "📌", birthday: "🎂", custom_reminder: "⏰", event: "🎪" };
 const ENTRY_KINDS = ["personal", "birthday", "custom_reminder"];
@@ -39,7 +40,8 @@ export default function MyCalendar() {
   const [items, setItems] = useState(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
-  const [error, setError] = useState(""); // a locale key; t() at render
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false); // a locale key; t() at render
 
   const load = async () => {
     const [rsvps, entries] = await Promise.all([
@@ -81,8 +83,9 @@ export default function MyCalendar() {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.entry_date) return;
+    if (!form.title.trim() || !form.entry_date || saving) return;
     setError("");
+    setSaving(true);
     try {
       await addCalendarEntry({
         kind: form.kind,
@@ -94,8 +97,12 @@ export default function MyCalendar() {
       setForm(BLANK);
       setAdding(false);
       await load();
+      pushToast(t("feedback.calendarAdded"));
     } catch {
       setError("events.calendar.saveError");
+      pushToast(t("events.calendar.saveError"), { tone: "error" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -105,8 +112,10 @@ export default function MyCalendar() {
     try {
       await deleteCalendarEntry(id);
       await load();
+      pushToast(t("feedback.calendarRemoved"), { tone: "info" });
     } catch {
       setError("events.calendar.saveError");
+      pushToast(t("events.calendar.saveError"), { tone: "error" });
     }
   };
 

@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import {
   fetchPuzzle,
@@ -18,7 +19,7 @@ import {
   boastToPeople,
 } from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
-import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
 export default function PuzzlePage() {
   const { t, ts, lang } = useI18n();
@@ -32,7 +33,6 @@ export default function PuzzlePage() {
   const [showHint, setShowHint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
-  const [toast, setToast] = useState("");
   const [together, setTogether] = useState(null); // riddle_people() view
   const [gated, setGated] = useState(false); // ineligible (e.g. pending buddy)
 
@@ -88,7 +88,7 @@ export default function PuzzlePage() {
       setGuess("");
       if (r.correct) loadTogether(); // the named strip unlocks on solve
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -97,14 +97,14 @@ export default function PuzzlePage() {
     setBusy(true);
     try {
       const r = await riddleTouch(person.id, kind, kind === "cheer" ? "👏" : null, today);
-      setToast(
+      pushToast(
         r.sent
           ? t(kind === "cheer" ? "games.puzzle.together.cheerToast" : "games.puzzle.together.nudgeToast")
           : t("games.puzzle.together.capToast")
       );
       loadTogether();
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -113,9 +113,9 @@ export default function PuzzlePage() {
     setBusy(true);
     try {
       await boastToPeople("riddle", today);
-      setToast(t("games.puzzle.together.boastToast"));
+      pushToast(t("games.puzzle.together.boastToast"));
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -128,9 +128,9 @@ export default function PuzzlePage() {
         guesses: guessCount,
       });
       setShared(true);
-      setToast(t("games.puzzle.shared"));
+      pushToast(t("games.puzzle.shared"));
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
   };
@@ -361,8 +361,6 @@ export default function PuzzlePage() {
           </Card>
         </>
       )}
-
-      <Toast text={toast} />
     </GamesScreen>
   );
 }

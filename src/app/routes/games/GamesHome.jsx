@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast, useFresh } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import {
   fetchGames,
@@ -18,7 +19,7 @@ import {
   puzzleToday,
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
-import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
 function gameName(g, lang) {
   return lang === "ur" ? g.name_ur : g.name_en;
@@ -34,6 +35,7 @@ export default function GamesHome() {
 
   const [games, setGames] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const fresh = useFresh();
   const [solvedToday, setSolvedToday] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
   const [loadError, setLoadError] = useState(false);
@@ -41,7 +43,6 @@ export default function GamesHome() {
   const [picked, setPicked] = useState([]); // chosen people, in tap order
   const [extraSeats, setExtraSeats] = useState(0); // bot/open seats past the people
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState("");
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [codeMsg, setCodeMsg] = useState("");
@@ -58,6 +59,17 @@ export default function GamesHome() {
         if (!alive) return;
         setGames(g);
         setSessions(s);
+        // A table made a moment ago glows once when they come back to
+        // this list (FLOW.md: every created thing presents itself).
+        try {
+          const justMade = sessionStorage.getItem("saathban.app.freshTable");
+          if (justMade && s.some((row) => row.id === justMade)) {
+            sessionStorage.removeItem("saathban.app.freshTable");
+            setTimeout(() => fresh.mark(justMade), 0);
+          }
+        } catch {
+          /* storage off — no glow, no harm */
+        }
         const solved = attempts.filter((a) => a.solved_at);
         setSolvedCount(solved.length);
         setSolvedToday(solved.some((a) => a.puzzle_date === puzzleToday()));
@@ -87,16 +99,22 @@ export default function GamesHome() {
         Math.max(game.min_seats, picked.length + 1 + extraSeats)
       );
       const id = await createSession(game.key, seats);
+      pushToast(t("feedback.tableCreated"));
+      // Remembered so the table glows in My tables when they come back.
+      try { sessionStorage.setItem("saathban.app.freshTable", id); } catch { /* fine */ }
       for (const p of picked.slice(0, seats - 1)) {
         try {
           await inviteToGame(id, p.id);
+          pushToast(t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] }), {
+            key: `invite-${p.id}`,
+          });
         } catch {
           /* one refused invite must not strand the table */
         }
       }
       navigate(`/app/games/s/${id}`);
     } catch {
-      setToast(t("games.actionError"));
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
       setBusy(false);
     }
   };
@@ -145,6 +163,7 @@ export default function GamesHome() {
     return (
       <Link
         key={s.id}
+        {...fresh.props(s.id)}
         to={`/app/games/s/${s.id}`}
         style={{ textDecoration: "none", color: "inherit", display: "block" }}
       >
@@ -364,8 +383,6 @@ export default function GamesHome() {
           {recent.map(renderTable)}
         </>
       )}
-
-      <Toast text={toast} />
     </GamesScreen>
   );
 }

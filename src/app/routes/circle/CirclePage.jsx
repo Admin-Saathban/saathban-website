@@ -16,6 +16,7 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { useCircle } from "./circleStore.js";
+import { useToast, useFresh, pushToast } from "../../lib/feedback.jsx";
 import {
   Card,
   SectionLabel,
@@ -39,7 +40,17 @@ function sosOrderLabel(t, n) {
 
 function MemberCard({ m, sosCount, busy, actions }) {
   const { t, ts, meta } = useI18n();
+  const { toast } = useToast();
   const name = personName(m.person, t);
+  /* Every grant says what it now is, in words — a toggle that only
+     changes colour leaves a person guessing. */
+  const flip = (column, next, labelKey) => {
+    actions.setPermission(m.id, column, next);
+    toast(t(next ? "feedback.permissionOn" : "feedback.permissionOff", { what: t(labelKey) }), {
+      tone: "info",
+      key: `perm-${m.id}-${column}`,
+    });
+  };
 
   return (
     <Card>
@@ -108,7 +119,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
       <Toggle
         checked={m.can_see_mood}
         busy={busy}
-        onChange={() => actions.setPermission(m.id, "can_see_mood", !m.can_see_mood)}
+        onChange={() => flip("can_see_mood", !m.can_see_mood, "circle.perms.mood.label")}
         label={t("circle.perms.mood.label")}
         hint={t("circle.perms.mood.hint")}
       />
@@ -116,7 +127,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
       <Toggle
         checked={m.can_see_health}
         busy={busy}
-        onChange={() => actions.setPermission(m.id, "can_see_health", !m.can_see_health)}
+        onChange={() => flip("can_see_health", !m.can_see_health, "circle.perms.health.label")}
         label={t("circle.perms.health.label")}
         hint={t("circle.perms.health.hint")}
       />
@@ -124,7 +135,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
       <Toggle
         checked={m.can_manage_reminders}
         busy={busy}
-        onChange={() => actions.setPermission(m.id, "can_manage_reminders", !m.can_manage_reminders)}
+        onChange={() => flip("can_manage_reminders", !m.can_manage_reminders, "circle.perms.reminders.label")}
         label={t("circle.perms.reminders.label")}
         hint={t("circle.perms.reminders.hint")}
       />
@@ -134,7 +145,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
       <Toggle
         checked={m.can_configure_daily_log}
         busy={busy}
-        onChange={() => actions.setPermission(m.id, "can_configure_daily_log", !m.can_configure_daily_log)}
+        onChange={() => flip("can_configure_daily_log", !m.can_configure_daily_log, "circle.perms.configure.label")}
         label={t("circle.perms.configure.label")}
         hint={t("circle.perms.configure.hint")}
       />
@@ -155,7 +166,10 @@ function MemberCard({ m, sosCount, busy, actions }) {
         <GhostBtn
           disabled={busy}
           aria-label={t("circle.member.removeLabel", { name })}
-          onClick={() => actions.removeMember(m.id)}
+          onClick={() => {
+            actions.removeMember(m.id);
+            toast(t("feedback.memberRemoved", { name }), { tone: "info" });
+          }}
           style={{ color: C.error, borderColor: C.error }}
         >
           {t("circle.member.remove")}
@@ -194,10 +208,16 @@ function InvitePanel({ createInvite }) {
   const k = (key) => t(`circle.invite.${key}`);
 
   const generate = async () => {
+    if (busy) return; // one code at a time
     setBusy(true);
     const result = await createInvite({});
     setBusy(false);
-    if (result) setCode(result);
+    if (result) {
+      setCode(result);
+      pushToast(t("feedback.inviteCreated"));
+    } else {
+      pushToast(t("feedback.somethingWrong"), { tone: "error" });
+    }
   };
 
   if (!open) {
@@ -268,7 +288,15 @@ export default function CirclePage() {
           <>
             <SectionLabel>{t("circle.requests.heading")}</SectionLabel>
             {requests.map((r) => (
-              <RequestCard key={r.id} r={r} busy={busyIds.has(r.id)} onApprove={actions.approveRequest} />
+              <RequestCard
+                key={r.id}
+                r={r}
+                busy={busyIds.has(r.id)}
+                onApprove={async (inviteId) => {
+                  await actions.approveRequest(inviteId);
+                  pushToast(t("feedback.requestApproved", { name: personName(r.person, t) }));
+                }}
+              />
             ))}
           </>
         )}

@@ -790,6 +790,7 @@ const en = {
       composerImage: "Add a photo",
       composerImageChosen: "Photo attached — tap to change",
       posting: "Sharing…",
+      photoSending: "Photo on its way…",
       postError: "That didn't send. Please try again.",
       announcement: "Announcement",
       messagesCta: "Messages",
@@ -1610,6 +1611,72 @@ const en = {
       empty: "A few more days and a gentle pattern will appear here.",
     },
   },
+
+  /* ─── The feedback layer (lib/feedback.jsx) ───
+     One line per completed action. Warm, short, and always in the
+     person's own language. */
+  feedback: {
+    dismiss: "Dismiss",
+    retry: "Try again",
+    sending: "Sending…",
+    saving: "Saving…",
+    working: "Just a moment…",
+    somethingWrong: "That didn't go through. Please try again.",
+    offlineKept: "Saved on this phone — it will sync when you're back online.",
+    // community
+    postShared: "Shared with the community ✓",
+    postFailed: "Your words are safe here — that share didn't go through.",
+    reactionSent: "Sent ✓",
+    dmSent: "Sent ✓",
+    dmFailed: "That message didn't send.",
+    requestSent: "Request sent to {name}",
+    requestAccepted: "You're connected with {name} ✓",
+    requestDeclined: "Quietly declined.",
+    reported: "Thank you — our team will look at this.",
+    blocked: "Blocked. You won't see them here.",
+    unblocked: "Unblocked.",
+    // circle + reminders
+    inviteSent: "Invitation sent to {name}",
+    inviteCreated: "Invitation ready — share the code",
+    inviteCancelled: "Invitation cancelled.",
+    memberRemoved: "{name} was removed from your circle.",
+    permissionOn: "{what} — on",
+    permissionOff: "{what} — off",
+    requestApproved: "{name} is in your circle ✓",
+    reminderSaved: "Reminder saved",
+    reminderUpdated: "Reminder updated",
+    reminderRemoved: "Reminder removed",
+    // daily log + settings
+    logSaved: "{module} saved ✓",
+    settingsSaved: "Saved ✓",
+    logSetupSaved: "Their log is updated ✓",
+    voiceSaved: "Recording kept ✓",
+    // events + activities + outdoor
+    rsvpDone: "You're going ✓",
+    rsvpCancelled: "Your place is released.",
+    eventSuggested: "Thank you — your suggestion is with our team.",
+    calendarAdded: "Added to your calendar ✓",
+    calendarRemoved: "Removed from your calendar.",
+    checkedIn: "You're checked in ✓",
+    checkedOut: "Checked out — enjoy the rest of your day.",
+    outingPlanned: "Your outing is on the board ✓",
+    outingRemoved: "Outing removed.",
+    activityStarted: "Your invitation is up ✓",
+    activityJoined: "You're in ✓",
+    boardPosted: "Posted to the board ✓",
+    // games + groups
+    tableCreated: "Your table is ready ✓",
+    invitedToGame: "Invitation sent to {name}",
+    joinedTable: "You're at the table ✓",
+    groupCreated: "Group created ✓",
+    groupJoined: "You've joined {name} ✓",
+    groupLeft: "You've left the group.",
+    groupPosted: "Shared with the group ✓",
+    memberInvited: "Invitation sent to {name}",
+    // skills
+    interestNoted: "We'll tell you the moment it opens ✓",
+  },
+
 };
 
 export default en;

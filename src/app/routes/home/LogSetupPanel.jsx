@@ -34,6 +34,7 @@ import {
   removeTracker,
 } from "../../lib/iconPrefs.js";
 import { WATER_UNITS, WEIGHT_UNITS } from "../../lib/units.js";
+import { pushToast } from "../../lib/feedback.jsx";
 
 export const TAG_EMOJI = {
   protein: "🥚",
@@ -266,11 +267,17 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
   const dietOn = prefs.enabledModules.includes("diet");
   const waterOn = prefs.enabledModules.includes("water");
 
+  /* Prefs write straight through to the server row; the line
+     confirms it landed (and, on a helper's screen, that the Icon was
+     told). */
+  const saved = () => pushToast(isOwn ? t("feedback.settingsSaved") : t("feedback.logSetupSaved"), { key: "prefs" });
+
   const submitMeal = () => {
     if (!mealLabel.trim()) return;
     addMealItem(iconId, { label: mealLabel, tags: mealTags });
     setMealLabel("");
     setMealTags([]);
+    saved();
   };
 
   const submitTracker = () => {
@@ -283,6 +290,7 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
     setTrType("yesno");
     setTrDaily(true);
     setTrDays([]);
+    saved();
   };
 
   const scheduleSummary = (tr) =>
@@ -324,7 +332,10 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
           <ChoiceBtn
             key={id}
             active={prefs.enabledModules.includes(id)}
-            onClick={() => toggleModule(iconId, id)}
+            onClick={() => {
+              toggleModule(iconId, id);
+              saved();
+            }}
             style={{ fontSize: ts(A11Y.minBodyPx) }}
           >
             {t(`settings.dailyLog.modules.${id}`)}
@@ -366,6 +377,7 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
                   setMedName("");
                   setMedDose("");
                   setMedTime("");
+                  saved();
                 }}
               >
                 {t("settings.dailyLog.meds.addCta")}
@@ -423,7 +435,7 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
           </p>
           <div role="group" aria-label={t("settings.dailyLog.units.water")} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {WATER_UNITS.map((u) => (
-              <ChoiceBtn key={u} active={prefs.units.water === u} onClick={() => setUnit(iconId, "water", u)} style={{ fontSize: ts(A11Y.minBodyPx) }}>
+              <ChoiceBtn key={u} active={prefs.units.water === u} onClick={() => { setUnit(iconId, "water", u); saved(); }} style={{ fontSize: ts(A11Y.minBodyPx) }}>
                 {t(`settings.dailyLog.units.${u}`)}
               </ChoiceBtn>
             ))}
@@ -435,7 +447,7 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
           </p>
           <div role="group" aria-label={t("settings.dailyLog.units.weight")} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {WEIGHT_UNITS.map((u) => (
-              <ChoiceBtn key={u} active={prefs.units.weight === u} onClick={() => setUnit(iconId, "weight", u)} style={{ fontSize: ts(A11Y.minBodyPx) }}>
+              <ChoiceBtn key={u} active={prefs.units.weight === u} onClick={() => { setUnit(iconId, "weight", u); saved(); }} style={{ fontSize: ts(A11Y.minBodyPx) }}>
                 {t(`settings.dailyLog.units.${u}`)}
               </ChoiceBtn>
             ))}

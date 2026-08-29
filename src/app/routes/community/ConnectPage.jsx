@@ -20,7 +20,8 @@ import {
   fetchMyBlockedIds,
   fetchAuthors,
 } from "./communityData.js";
-import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { useToast } from "../../lib/feedback.jsx";
 
 export default function ConnectPage() {
   const { t, ts, meta } = useI18n();
@@ -32,14 +33,13 @@ export default function ConnectPage() {
   const [overview, setOverview] = useState({ incoming: [], outgoing: [], friends: [] });
   const [people, setPeople] = useState({});
   const [blocked, setBlocked] = useState(new Set());
-  const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState("");
+  // Per-person pending: several people can be asked in a row, so the
+  // flag is keyed by who — never a screen-wide lock.
+  const [busyId, setBusyId] = useState(null);
+  const { toast: raiseToast } = useToast();
   const [error, setError] = useState("");
 
-  const showToast = (text) => {
-    setToast(text);
-    window.setTimeout(() => setToast(""), 5000);
-  };
+  const showToast = (text, opts) => raiseToast(text, opts);
 
   const load = useCallback(async () => {
     try {
@@ -85,31 +85,44 @@ export default function ConnectPage() {
     return "none";
   };
 
+  /* Per-person pending: a row disables only itself, so several people
+     can be asked one after another (FEEDBACK_WIRING.md). */
   const ask = async (id) => {
-    setBusy(true);
+    if (busyId) return;
+    setBusyId(id);
     try {
       await sendFriendRequest(id);
-      showToast(t("community.connect.requestSent"));
+      showToast(t("feedback.requestSent", { name: nameOfPerson(id) }));
       await load();
     } catch {
-      showToast(t("community.connect.requestFailed"));
+      showToast(t("community.connect.requestFailed"), { tone: "error" });
     }
-    setBusy(false);
+    setBusyId(null);
   };
 
-  const respond = async (requestId, accept) => {
-    setBusy(true);
+  const respond = async (requestId, accept, whoId) => {
+    if (busyId) return;
+    setBusyId(requestId);
     try {
       await respondFriendRequest(requestId, accept);
-      showToast(accept ? t("community.connect.acceptedToast") : t("community.connect.declinedToast"));
+      showToast(
+        accept
+          ? t("feedback.requestAccepted", { name: nameOfPerson(whoId) })
+          : t("feedback.requestDeclined"),
+        accept ? undefined : { tone: "info" }
+      );
       await load();
     } catch {
-      showToast(t("community.connect.requestFailed"));
+      showToast(t("community.connect.requestFailed"), { tone: "error" });
     }
-    setBusy(false);
+    setBusyId(null);
   };
 
   const nameOf = (id) => people[id]?.full_name || "…";
+  // Search rows carry their own name; inbox rows resolve through people.
+  const nameOfPerson = (id) =>
+    (results.find((r) => r.id === id)?.full_name || people[id]?.full_name || "").split(" ")[0] ||
+    t("fam.setup.someone");
 
   const badge = (text) => (
     <span
@@ -193,8 +206,8 @@ export default function ConnectPage() {
                   {st === "friend" && badge(t("community.connect.friendBadge"))}
                   {st === "asked" && badge(t("community.connect.pendingBadge"))}
                   {st === "none" && (
-                    <GhostBtn disabled={busy} onClick={() => ask(r.id)}>
-                      {t("community.connect.requestCta")}
+                    <GhostBtn disabled={busyId === r.id} onClick={() => ask(r.id)}>
+                      {busyId === r.id ? t("feedback.sending") : t("community.connect.requestCta")}
                     </GhostBtn>
                   )}
                 </li>
@@ -224,10 +237,10 @@ export default function ConnectPage() {
               <span style={{ flex: 1, fontSize: ts(A11Y.minBodyPx), fontWeight: 700, minWidth: 140 }}>
                 {nameOf(r.requester_id)}
               </span>
-              <PrimaryBtn disabled={busy} onClick={() => respond(r.id, true)}>
-                {t("community.connect.accept")}
+              <PrimaryBtn disabled={busyId === r.id} onClick={() => respond(r.id, true, r.requester_id)}>
+                {busyId === r.id ? t("feedback.working") : t("community.connect.accept")}
               </PrimaryBtn>
-              <GhostBtn disabled={busy} onClick={() => respond(r.id, false)}>
+              <GhostBtn disabled={busyId === r.id} onClick={() => respond(r.id, false, r.requester_id)}>
                 {t("community.connect.decline")}
               </GhostBtn>
             </div>
@@ -254,7 +267,6 @@ export default function ConnectPage() {
         <BodyText muted>{t("community.connect.emptyInbox")}</BodyText>
       )}
 
-      <Toast text={toast} />
     </CommunityScreen>
   );
 }

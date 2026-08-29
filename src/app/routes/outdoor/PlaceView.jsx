@@ -38,7 +38,8 @@ import {
   startActivityHere,
   joinPlacedActivity,
 } from "./outdoorData.js";
-import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { useToast, useAction, useFresh } from "../../lib/feedback.jsx";
 
 function VisibilityChoice({ value, onChange }) {
   const { t, ts } = useI18n();
@@ -106,14 +107,10 @@ export default function PlaceView() {
   const [actNote, setActNote] = useState("");
   const [actLimit, setActLimit] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
-
-  const showToast = (text, actionLabel, onAction) => {
-    window.clearTimeout(toastTimer.current);
-    setToast({ text, actionLabel, onAction });
-    toastTimer.current = window.setTimeout(() => setToast(null), 6000);
-  };
+  // The lane-local Toast is retired: every outcome here goes through
+  // the shared feedback layer (FEEDBACK.md).
+  const { toast } = useToast();
+  const fresh = useFresh();
 
   const load = useCallback(async () => {
     try {
@@ -156,63 +153,77 @@ export default function PlaceView() {
     load();
   }, [load]);
 
-  if (place === null) return <Navigate to="/app/outdoor" replace />;
+  // Latest lists, for spotting the row that appeared after a reload.
+  const outingsRef = useRef(outings);
+  const activitiesRef = useRef(activities);
+  const boardRef = useRef(board);
+  outingsRef.current = outings;
+  activitiesRef.current = activities;
+  boardRef.current = board;
 
-  const doCheckIn = async () => {
-    setError("");
-    try {
+  const [doCheckIn, checkingIn] = useAction(
+    async () => {
       await checkIn(placeId, visibility);
       await load();
-    } catch {
-      setError(t("outdoor.place.checkinFailed"));
-    }
-  };
+    },
+    { success: () => t("feedback.checkedIn"), error: () => t("outdoor.place.checkinFailed"), retry: true }
+  );
 
-  const doLeave = async () => {
-    if (!mine) return;
-    try {
+  const [doLeave, leaving] = useAction(
+    async () => {
+      if (!mine) return;
       await leaveCheckin(mine.id);
       await load();
-    } catch {
-      setError(t("outdoor.place.checkinFailed"));
-    }
-  };
+    },
+    { success: () => t("feedback.checkedOut"), error: () => t("outdoor.place.checkinFailed") }
+  );
 
-  const savePlan = async (e) => {
-    e.preventDefault();
-    if (!planWhen) return;
-    setError("");
-    try {
+  const [savePlan, savingPlan] = useAction(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!planWhen) return;
       await createOuting(placeId, myId, new Date(planWhen).toISOString(), planNote, planVis);
       setPlanOpen(false);
       setPlanWhen("");
       setPlanNote("");
+      const before = new Set(outings.map((o) => o.id));
       await load();
-    } catch {
-      setError(t("outdoor.place.checkinFailed"));
-    }
-  };
+      // The new outing glows in the list it just joined.
+      setTimeout(() => {
+        const added = (outingsRef.current || []).find((o) => !before.has(o.id));
+        if (added) fresh.mark(added.id);
+      }, 0);
+    },
+    { success: () => t("feedback.outingPlanned"), error: () => t("outdoor.place.checkinFailed"), retry: true }
+  );
 
+  /* Joining is per-activity: two invitations can be answered in a row,
+     so the pending flag is keyed by the one being joined. */
+  const [joining, setJoining] = useState(null);
   const doJoin = async (a) => {
+    if (joining) return;
+    setJoining(a.id);
     setError("");
     try {
       const res = await joinPlacedActivity(a.id);
       setJoins((j) => {
-        const mine = new Set(j.mine);
-        if (res.joined) mine.add(a.id);
-        return { counts: { ...j.counts, [a.id]: res.count }, mine };
+        const mineNow = new Set(j.mine);
+        if (res.joined) mineNow.add(a.id);
+        return { counts: { ...j.counts, [a.id]: res.count }, mine: mineNow };
       });
-      if (!res.joined && res.full) showToast(t("outdoor.place.actFullToast"));
+      if (res.joined) toast(t("feedback.activityJoined"));
+      else if (res.full) toast(t("outdoor.place.actFullToast"), { tone: "info" });
     } catch {
-      setError(t("outdoor.place.joinFailed"));
+      toast(t("outdoor.place.joinFailed"), { tone: "error" });
+    } finally {
+      setJoining(null);
     }
   };
 
-  const saveActivity = async (e) => {
-    e.preventDefault();
-    if (!actWhat.trim()) return;
-    setError("");
-    try {
+  const [saveActivity, savingActivity] = useAction(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!actWhat.trim()) return;
       await startActivityHere(myId, {
         activity: actWhat,
         placeId,
@@ -226,31 +237,44 @@ export default function PlaceView() {
       setActWhen("");
       setActNote("");
       setActLimit("");
+      const before = new Set(activities.map((a) => a.id));
       await load();
-    } catch {
-      setError(t("outdoor.place.checkinFailed"));
-    }
-  };
+      setTimeout(() => {
+        const added = (activitiesRef.current || []).find((a) => !before.has(a.id));
+        if (added) fresh.mark(added.id);
+      }, 0);
+    },
+    { success: () => t("feedback.activityStarted"), error: () => t("outdoor.place.checkinFailed"), retry: true }
+  );
 
-  const postBoard = async (e) => {
-    e.preventDefault();
-    if (!boardBody.trim()) return;
-    setError("");
-    try {
-      await postToBoard(placeId, myId, boardBody);
+  const [postBoard, posting] = useAction(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!boardBody.trim()) return;
+      const draft = boardBody;
       setBoardBody("");
+      try {
+        await postToBoard(placeId, myId, draft);
+      } catch (err) {
+        setBoardBody(draft); // the words come back to the box
+        throw err;
+      }
+      const before = new Set(board.map((m) => m.id));
       await load();
-    } catch {
-      setError(t("outdoor.place.checkinFailed"));
-    }
-  };
+      setTimeout(() => {
+        const added = (boardRef.current || []).find((m) => !before.has(m.id));
+        if (added) fresh.mark(added.id);
+      }, 0);
+    },
+    { success: () => t("feedback.boardPosted"), retry: true }
+  );
 
   const report = async (m) => {
     try {
       await reportBoardMessage(myId, m);
-      showToast(t("outdoor.place.reportedToast"));
+      toast(t("feedback.reported"));
     } catch {
-      setError(t("outdoor.home.loadError"));
+      toast(t("feedback.somethingWrong"), { tone: "error" });
     }
   };
 
@@ -258,13 +282,16 @@ export default function PlaceView() {
     try {
       await blockAuthor(myId, m.author_id);
       await load();
-      showToast(t("outdoor.place.blockedToast"), t("outdoor.place.undo"), async () => {
-        await unblockAuthor(myId, m.author_id);
-        setToast(null);
-        await load();
+      toast(t("feedback.blocked"), {
+        actionLabel: t("outdoor.place.undo"),
+        onAction: async () => {
+          await unblockAuthor(myId, m.author_id);
+          toast(t("feedback.unblocked"), { tone: "info" });
+          await load();
+        },
       });
     } catch {
-      setError(t("outdoor.home.loadError"));
+      toast(t("feedback.somethingWrong"), { tone: "error" });
     }
   };
 
@@ -289,6 +316,9 @@ export default function PlaceView() {
       {label}
     </button>
   );
+
+  // Every hook above runs unconditionally; the bounce happens after.
+  if (place === null) return <Navigate to="/app/outdoor" replace />;
 
   return (
     <OutdoorScreen backTo="/app/outdoor" backLabel={t("outdoor.place.backToPlaces")}>
@@ -331,8 +361,8 @@ export default function PlaceView() {
                       }),
                     })}
                   </BodyText>
-                  <GhostBtn onClick={doLeave} style={{ borderColor: C.green, color: C.green }}>
-                    {t("outdoor.place.leaveCta")}
+                  <GhostBtn onClick={doLeave} disabled={leaving} style={{ borderColor: C.green, color: C.green }}>
+                    {leaving ? t("feedback.saving") : t("outdoor.place.leaveCta")}
                   </GhostBtn>
                 </>
               ) : (
@@ -340,7 +370,9 @@ export default function PlaceView() {
                   <BodyText style={{ fontWeight: 700, marginBottom: 8 }}>{t("outdoor.place.visibilityLabel")}</BodyText>
                   <VisibilityChoice value={visibility} onChange={setVisibility} />
                   <div style={{ marginTop: 12 }}>
-                    <PrimaryBtn onClick={doCheckIn}>{t("outdoor.place.checkInCta")}</PrimaryBtn>
+                    <PrimaryBtn onClick={doCheckIn} disabled={checkingIn}>
+                      {checkingIn ? t("feedback.saving") : t("outdoor.place.checkInCta")}
+                    </PrimaryBtn>
                   </div>
                 </>
               )}
@@ -389,7 +421,7 @@ export default function PlaceView() {
             const joined = joins.mine.has(a.id);
             const full = !!a.payload.limit && count >= a.payload.limit;
             return (
-              <Card key={a.id} style={{ padding: 16, border: `1.5px solid ${C.sage}` }}>
+              <Card key={a.id} {...fresh.props(a.id)} style={{ padding: 16, border: `1.5px solid ${C.sage}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <BodyText style={{ margin: 0, flex: "1 1 220px" }}>
                     <strong>{firstNameOf(names[a.author_id])}</strong>
@@ -451,14 +483,16 @@ export default function PlaceView() {
                       {t("outdoor.place.actFull")}
                     </GhostBtn>
                   ) : (
-                    <PrimaryBtn onClick={() => doJoin(a)}>{t("outdoor.place.actJoin")}</PrimaryBtn>
+                    <PrimaryBtn onClick={() => doJoin(a)} disabled={joining === a.id}>
+                      {joining === a.id ? t("feedback.sending") : t("outdoor.place.actJoin")}
+                    </PrimaryBtn>
                   )}
                 </div>
               </Card>
             );
           })}
           {outings.map((o) => (
-            <Card key={o.id} style={{ padding: 16 }}>
+            <Card key={o.id} {...fresh.props(o.id)} style={{ padding: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <BodyText style={{ margin: 0, flex: "1 1 220px" }}>
                   <strong>{firstNameOf(names[o.creator_id])}</strong>
@@ -475,7 +509,14 @@ export default function PlaceView() {
                   )}
                 </BodyText>
                 {o.creator_id === myId && (
-                  <GhostBtn onClick={() => cancelOuting(o.id).then(load)}>
+                  <GhostBtn
+                    onClick={() =>
+                      cancelOuting(o.id)
+                        .then(load)
+                        .then(() => toast(t("feedback.outingRemoved"), { tone: "info" }))
+                        .catch(() => toast(t("feedback.somethingWrong"), { tone: "error" }))
+                    }
+                  >
                     {t("outdoor.place.outingRemove")}
                   </GhostBtn>
                 )}
@@ -506,8 +547,8 @@ export default function PlaceView() {
                   </label>
                   <VisibilityChoice value={planVis} onChange={setPlanVis} />
                   <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-                    <PrimaryBtn type="submit" onClick={savePlan} disabled={!planWhen}>
-                      {t("outdoor.place.outingSave")}
+                    <PrimaryBtn type="submit" onClick={savePlan} disabled={!planWhen || savingPlan}>
+                      {savingPlan ? t("feedback.saving") : t("outdoor.place.outingSave")}
                     </PrimaryBtn>
                     <GhostBtn onClick={() => setPlanOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
                   </div>
@@ -562,8 +603,8 @@ export default function PlaceView() {
                   />
                 </label>
                 <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
-                  <PrimaryBtn type="submit" onClick={saveActivity} disabled={!actWhat.trim()}>
-                    {t("outdoor.place.actSave")}
+                  <PrimaryBtn type="submit" onClick={saveActivity} disabled={!actWhat.trim() || savingActivity}>
+                    {savingActivity ? t("feedback.sending") : t("outdoor.place.actSave")}
                   </PrimaryBtn>
                   <GhostBtn onClick={() => setActOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
                 </div>
@@ -629,9 +670,10 @@ export default function PlaceView() {
               <GhostBtn
                 type="submit"
                 onClick={postBoard}
+                disabled={posting || !boardBody.trim()}
                 style={{ borderColor: C.green, color: C.green }}
               >
-                {t("outdoor.place.boardSend")}
+                {posting ? t("feedback.sending") : t("outdoor.place.boardSend")}
               </GhostBtn>
             </form>
             {board.length === 0 ? (
@@ -640,6 +682,7 @@ export default function PlaceView() {
               board.map((m) => (
                 <div
                   key={m.id}
+                  {...fresh.props(m.id)}
                   style={{ borderTop: `1px solid ${C.warmGray}`, padding: "10px 0 4px" }}
                 >
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
@@ -668,7 +711,6 @@ export default function PlaceView() {
           </Card>
         </>
       )}
-      {toast && <Toast text={toast.text} actionLabel={toast.actionLabel} onAction={toast.onAction} />}
     </OutdoorScreen>
   );
 }

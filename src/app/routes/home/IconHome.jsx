@@ -13,7 +13,7 @@
    older days are settled. Module choices (iconPrefs) are the Icon’s daily_log_prefs row (0033).
    ════════════════════════════════════════════════ */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import {
@@ -31,6 +31,7 @@ import ScoreShare from "./ScoreShare.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs } from "./logStore.js";
+import { pushToast } from "../../lib/feedback.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 
 // Weekday and month names come from Intl for the active language.
@@ -131,8 +132,29 @@ export default function IconHome() {
   });
   const line = t(lineSpec.key, lineSpec.vars);
 
-  const updateLog = (moduleKey, value) =>
-    writeEntry(isoDate(selectedDate), moduleKey, value);
+  /* A log entry announces itself the moment it becomes complete —
+     once per module per day, so editing a note doesn't chatter. */
+  const announced = useRef(new Set());
+  const updateLog = (moduleKey, value) => {
+    const dateIso = isoDate(selectedDate);
+    const entry = todayEntries.find((e) => e.key === moduleKey) || {
+      kind: moduleKey.startsWith("tracker:") ? "tracker" : "module",
+      key: moduleKey,
+      id: moduleKey,
+    };
+    const was = isEntryDone(entry, logFor(selectedOffset));
+    writeEntry(dateIso, moduleKey, value);
+    const now = isEntryDone(entry, { [moduleKey]: value });
+    const stamp = `${dateIso}|${moduleKey}`;
+    if (!was && now && !announced.current.has(stamp)) {
+      announced.current.add(stamp);
+      const name =
+        entry.kind === "tracker"
+          ? entry.name || t("hub.todaysLog")
+          : t(`settings.dailyLog.modules.${moduleKey}`);
+      pushToast(t("feedback.logSaved", { module: name }));
+    }
+  };
 
   return (
     <>

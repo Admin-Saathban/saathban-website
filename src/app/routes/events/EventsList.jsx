@@ -25,13 +25,14 @@ import {
   isUpcoming,
 } from "./eventsStore.js";
 import { Card, SectionLabel, Pill, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
+import { pushToast, useFresh } from "../../lib/feedback.jsx";
 
-function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming }) {
+function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming, freshProps }) {
   const { t, ts, meta } = useI18n();
   const full = ev.capacity != null && count != null && count >= ev.capacity && !going;
 
   return (
-    <Card>
+    <Card {...(freshProps || {})}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10 }}>
         <h2
           style={{
@@ -74,7 +75,7 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
       {ev.source === "app" && upcoming && role === "saath_icon" && (
         going ? (
           <GhostBtn onClick={() => onCancel(ev)} disabled={busy}>
-            {t("events.list.cancelCta")}
+            {busy ? t("feedback.working") : t("events.list.cancelCta")}
           </GhostBtn>
         ) : full ? (
           <BodyText muted style={{ fontWeight: 600, margin: 0 }}>
@@ -82,7 +83,7 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
           </BodyText>
         ) : (
           <PrimaryBtn onClick={() => onRsvp(ev)} disabled={busy}>
-            {t("events.list.rsvpCta")}
+            {busy ? t("feedback.working") : t("events.list.rsvpCta")}
           </PrimaryBtn>
         )
       )}
@@ -113,6 +114,7 @@ export default function EventsList() {
   const [myGoing, setMyGoing] = useState(new Set());
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
+  const fresh = useFresh();
 
   const load = async () => {
     const appEvents = (await fetchAppEvents()).filter((e) => e.is_published);
@@ -139,14 +141,20 @@ export default function EventsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
-  const act = async (fn, ev) => {
+  const act = async (fn, ev, going) => {
+    if (busyId) return; // one RSVP at a time; no double booking
     setBusyId(ev.id);
     setError("");
     try {
       await fn(ev.id);
       await load();
+      pushToast(t(going ? "feedback.rsvpDone" : "feedback.rsvpCancelled"), {
+        tone: going ? "success" : "info",
+      });
+      if (going) fresh.mark(ev.id);
     } catch (err) {
       setError(err.message || "events.list.rsvpError");
+      pushToast(t("events.list.rsvpError"), { tone: "error" });
     } finally {
       setBusyId(null);
     }
@@ -217,10 +225,11 @@ export default function EventsList() {
             role={role}
             upcoming
             going={myGoing.has(ev.id)}
+            freshProps={fresh.props(ev.id)}
             count={counts[ev.id]}
             busy={busyId === ev.id}
-            onRsvp={(e) => act(rsvpToEvent, e)}
-            onCancel={(e) => act(cancelRsvp, e)}
+            onRsvp={(e) => act(rsvpToEvent, e, true)}
+            onCancel={(e) => act(cancelRsvp, e, false)}
           />
         ))
       )}

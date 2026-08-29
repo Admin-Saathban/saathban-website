@@ -13,6 +13,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
+import { pushToast, useFresh } from "../../lib/feedback.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {
@@ -24,7 +25,7 @@ const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", m
 
 export default function GroupPage() {
   const { id } = useParams();
-  const { lang, ts, meta } = useI18n();
+  const { lang, ts, meta, t } = useI18n();
   const s = (STRINGS[lang] || STRINGS.en).group;
   const { profile } = useSession();
   const myId = profile?.id;
@@ -40,6 +41,10 @@ export default function GroupPage() {
   const [chatDraft, setChatDraft] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const [chatting, setChatting] = useState(false);
+  const [invitingId, setInvitingId] = useState(null);
+  const fresh = useFresh();
   const [invitePanel, setInvitePanel] = useState(false);
   const [connections, setConnections] = useState(null);
   const [reportingPost, setReportingPost] = useState(null); // post id
@@ -69,15 +74,44 @@ export default function GroupPage() {
   if (group === undefined) return <Screen backTo="/app/groups" backLabel={s.back}><BodyText muted role="status">···</BodyText></Screen>;
   if (group === null) return <Screen backTo="/app/groups" backLabel={s.back}><BodyText muted>{s.loadError}</BodyText></Screen>;
 
+  /* Optimistic in both directions: the words leave the box at once
+     and return to it if the server refuses. */
   const share = async () => {
-    if (!draft.trim()) return;
-    try { await addPost(id, draft); setDraft(""); setPosts(await fetchPosts(id)); }
-    catch { setError(s.actionError); }
+    if (!draft.trim() || sharing) return;
+    const kept = draft;
+    setDraft("");
+    setSharing(true);
+    try {
+      const before = new Set(posts.map((p) => p.id));
+      await addPost(id, kept);
+      const rows = await fetchPosts(id);
+      setPosts(rows);
+      pushToast(t("feedback.groupPosted"));
+      const added = rows.find((p) => !before.has(p.id));
+      if (added) fresh.mark(added.id);
+    } catch {
+      setDraft(kept);
+      setError(s.actionError);
+      pushToast(t("feedback.somethingWrong"), { tone: "error" });
+    } finally {
+      setSharing(false);
+    }
   };
   const chat = async () => {
-    if (!chatDraft.trim()) return;
-    try { await sendMessage(id, chatDraft); setChatDraft(""); setMessages(await fetchMessages(id)); }
-    catch { setError(s.actionError); }
+    if (!chatDraft.trim() || chatting) return;
+    const kept = chatDraft;
+    setChatDraft("");
+    setChatting(true);
+    try {
+      await sendMessage(id, kept);
+      setMessages(await fetchMessages(id));
+    } catch {
+      setChatDraft(kept);
+      setError(s.actionError);
+      pushToast(t("feedback.dmFailed"), { tone: "error" });
+    } finally {
+      setChatting(false);
+    }
   };
   /* STICKERS_WIRING: a sticker is an ordinary message whose body is
      :sticker/<id>: — no schema change. */
@@ -90,17 +124,34 @@ export default function GroupPage() {
     setInvitePanel(true);
     if (connections === null) setConnections(await fetchConnections().catch(() => []));
   };
+  /* Per-person pending: invite several friends in a row. */
   const invite = async (person) => {
-    try { await inviteToGroup(id, person.id); setNotice(s.invited(person.full_name)); }
-    catch { setError(s.inviteError); }
+    if (invitingId) return;
+    setInvitingId(person.id);
+    try {
+      await inviteToGroup(id, person.id);
+      setNotice(s.invited(person.full_name));
+      pushToast(t("feedback.memberInvited", { name: (person.full_name || "").split(" ")[0] }));
+    } catch {
+      setError(s.inviteError);
+      pushToast(s.inviteError, { tone: "error" });
+    } finally {
+      setInvitingId(null);
+    }
   };
   const kick = async (m) => {
     try { await removeMember(id, m.member_id); setMembers(await fetchMembers(id)); }
     catch { setError(s.actionError); }
   };
   const doLeave = async () => {
-    try { await leaveGroup(id); navigate("/app/groups", { replace: true }); }
-    catch { setError(s.actionError); }
+    try {
+      await leaveGroup(id);
+      pushToast(t("feedback.groupLeft"), { tone: "info" });
+      navigate("/app/groups", { replace: true });
+    } catch {
+      setError(s.actionError);
+      pushToast(t("feedback.somethingWrong"), { tone: "error" });
+    }
   };
   const sendReport = async () => {
     try {

@@ -39,7 +39,8 @@ import {
   joinWalk,
   fetchConnections,
 } from "./communityData.js";
-import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { useToast, useFresh } from "../../lib/feedback.jsx";
 
 function AuthorLine({ author, when, dateLocale }) {
   const { t, ts } = useI18n();
@@ -602,8 +603,11 @@ export default function Feed() {
   const [authors, setAuthors] = useState({});
   const [reactions, setReactions] = useState([]);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState(null); // { text, actionLabel, onAction }
-  const toastTimer = useRef(null);
+  // Lane-local Toast retired — the shared host renders these now.
+  const { toast: raiseToast } = useToast();
+  const fresh = useFresh();
+  // Posts on their way to the server: rendered at once, quietly marked.
+  const [pendingPosts, setPendingPosts] = useState([]);
 
   const [body, setBody] = useState("");
   const [file, setFile] = useState(null);
@@ -628,10 +632,9 @@ export default function Feed() {
   const isIcon = profile?.role === "saath_icon";
 
   const showToast = (text, actionLabel, onAction) => {
-    window.clearTimeout(toastTimer.current);
-    setToast({ text, actionLabel, onAction });
-    toastTimer.current = window.setTimeout(() => setToast(null), 6000);
+    raiseToast(text, actionLabel ? { actionLabel, onAction } : undefined);
   };
+
 
   const openWalkComposer = async () => {
     setWalkOpen(true);
@@ -705,30 +708,64 @@ export default function Feed() {
     load();
   }, [load]);
 
+  // Latest posts, so the highlight can find the row that just landed.
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
+
+  /* Optimistic share: the words appear the instant they are sent,
+     marked "sending", and are replaced by the real row on confirm. A
+     refusal puts the draft back in the box with a kind line + Retry —
+     nothing a person wrote is ever silently lost. */
   const share = async (e) => {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() || posting) return;
+    const draftBody = body;
+    const draftFile = file;
+    const key = `pending-${Date.now()}`;
+    setPendingPosts((cur) => [...cur, { key, body: draftBody, hasPhoto: !!draftFile }]);
+    setBody("");
+    setFile(null);
     setPosting(true);
     setError("");
     try {
-      await createPost(myId, body, file);
-      setBody("");
-      setFile(null);
+      const before = new Set(posts.map((p) => p.id));
+      await createPost(myId, draftBody, draftFile);
       await load();
+      setPendingPosts((cur) => cur.filter((p) => p.key !== key));
+      raiseToast(t("feedback.postShared"));
+      setTimeout(() => {
+        const added = (postsRef.current || []).find((p) => !before.has(p.id));
+        if (added) fresh.mark(added.id);
+      }, 0);
     } catch {
-      setError(t("community.feed.postError"));
+      setPendingPosts((cur) => cur.filter((p) => p.key !== key));
+      setBody(draftBody);
+      setFile(draftFile);
+      raiseToast(t("feedback.postFailed"), {
+        tone: "error",
+        actionLabel: t("feedback.retry"),
+        onAction: () => share({ preventDefault() {} }),
+      });
     } finally {
       setPosting(false);
     }
   };
 
+  /* Reactions land instantly and reconcile: a tap that the server
+     refuses rolls back rather than lying. */
   const toggleReaction = async (postId, emoji, mine) => {
+    const prior = reactions;
+    setReactions((rs) => {
+      const withoutMine = rs.filter((r) => !(r.post_id === postId && r.profile_id === myId));
+      return mine ? withoutMine : [...withoutMine, { post_id: postId, profile_id: myId, emoji }];
+    });
     try {
       if (mine) await clearReaction(postId, myId);
       else await setReaction(postId, myId, emoji);
       setReactions(await fetchReactions(posts.map((p) => p.id)));
     } catch {
-      /* reaction is a nicety; stay quiet */
+      setReactions(prior);
+      raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "reaction" });
     }
   };
 
@@ -1126,6 +1163,20 @@ export default function Feed() {
             </Card>
           )}
 
+          {pendingPosts.map((p) => (
+            <Card key={p.key} style={{ opacity: 0.72, borderStyle: "dashed" }}>
+              <BodyText style={{ margin: 0 }}>{p.body}</BodyText>
+              {p.hasPhoto && (
+                <BodyText muted style={{ margin: "6px 0 0", fontSize: ts(16) }}>
+                  {t("community.feed.photoSending")}
+                </BodyText>
+              )}
+              <BodyText muted role="status" style={{ margin: "8px 0 0", fontSize: ts(16), fontWeight: 600 }}>
+                · {t("feedback.sending")}
+              </BodyText>
+            </Card>
+          ))}
+
           {(() => {
             const visible =
               tab === "friends"
@@ -1143,6 +1194,7 @@ export default function Feed() {
               );
             }
             return visible.map((p) => (
+              <div key={`w-${p.id}`} {...fresh.props(p.id)}>
               <PostCard
                 key={p.id}
                 post={p}
@@ -1157,12 +1209,12 @@ export default function Feed() {
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
               />
+              </div>
             ));
           })()}
         </>
       )}
 
-      {toast && <Toast text={toast.text} actionLabel={toast.actionLabel} onAction={toast.onAction} />}
     </CommunityScreen>
   );
 }

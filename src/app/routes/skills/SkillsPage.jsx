@@ -14,6 +14,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { STRINGS, SKILLS } from "./strings.js";
 import { fetchMyInterests, setInterest } from "./data.js";
+import { pushToast } from "../../lib/feedback.jsx";
 
 function SkillCard({ skill, s, interested, busy, onToggle }) {
   const { ts, meta } = useI18n();
@@ -73,7 +74,7 @@ function SkillCard({ skill, s, interested, busy, onToggle }) {
 }
 
 export default function SkillsPage() {
-  const { lang, ts, meta } = useI18n();
+  const { lang, ts, meta, t } = useI18n();
   const s = STRINGS[lang] || STRINGS.en;
   const { profile } = useSession();
 
@@ -109,6 +110,7 @@ export default function SkillsPage() {
     });
     try {
       await setInterest(profile.id, skill, on);
+      if (on) pushToast(t("feedback.interestNoted"));
     } catch {
       // rollback
       setInterestedSet((prev) => {
@@ -117,6 +119,7 @@ export default function SkillsPage() {
         return next;
       });
       setError(s.saveError);
+      pushToast(s.saveError, { tone: "error" });
     } finally {
       setBusy(null);
     }

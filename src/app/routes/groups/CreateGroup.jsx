@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import { Screen, H1, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
 import { createGroup } from "./groupsStore.js";
@@ -23,15 +24,18 @@ export default function CreateGroup() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (busy) return; // no double-created groups
     if (!name.trim()) return setError(s.errName);
     setBusy(true);
     setError("");
     try {
       const id = await createGroup(name, desc);
+      pushToast(s.createdToast || "✓", { tone: "success" });
       navigate(`/app/groups/${id}`, { replace: true });
     } catch {
       setBusy(false);
       setError(s.errGeneric);
+      pushToast(s.errGeneric, { tone: "error" });
     }
   };
 

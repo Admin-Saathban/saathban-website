@@ -23,6 +23,7 @@ import {
   deleteReminder,
 } from "../../lib/circle.js";
 import { FamScreen, Card, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
+import { useAction, useFresh, useToast } from "../../lib/feedback.jsx";
 
 /* days_label stores the ENGLISH value (it's data, shared with the
    Icon's app); the select and the list display it through fam.days.*
@@ -58,7 +59,10 @@ export default function Reminders() {
   const [editing, setEditing] = useState(null); // null | "new" | reminder id
   const [form, setForm] = useState(BLANK);
   const [savedNote, setSavedNote] = useState(false);
+  const [removing, setRemoving] = useState(null);
   const [error, setError] = useState("");
+  const { toast } = useToast();
+  const fresh = useFresh();
 
   useEffect(() => {
     let cancelled = false;
@@ -115,39 +119,56 @@ export default function Reminders() {
   const removeTime = (i) =>
     setForm((f) => ({ ...f, times: f.times.filter((_, j) => j !== i) }));
 
-  const save = async (e) => {
-    e.preventDefault();
-    if (!form.label.trim() || form.times.length === 0) return;
-    setError("");
-    const times = [...new Set(form.times)].sort();
-    const patch = {
-      label: form.label.trim(),
-      remind_time: times[0],
-      remind_times: times,
-      days_label: form.days,
-    };
-    try {
-      if (editing === "new") {
-        await addReminder(iconId, patch);
-      } else {
-        await updateReminder(editing, patch);
-      }
-      setReminders(await fetchReminders(iconId));
+  const [save, saving] = useAction(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!form.label.trim() || form.times.length === 0) return null;
+      const times = [...new Set(form.times)].sort();
+      const patch = {
+        label: form.label.trim(),
+        remind_time: times[0],
+        remind_times: times,
+        days_label: form.days,
+      };
+      const wasNew = editing === "new";
+      const before = new Set(reminders.map((x) => x.id));
+      if (wasNew) await addReminder(iconId, patch);
+      else await updateReminder(editing, patch);
+      const rows = await fetchReminders(iconId);
+      setReminders(rows);
       setEditing(null);
       setSavedNote(true);
-    } catch {
-      setError("fam.reminders.saveError");
+      // The saved reminder pulses in the list, new or edited.
+      const target = wasNew ? rows.find((x) => !before.has(x.id)) : rows.find((x) => x.id === editing);
+      if (target) fresh.mark(target.id);
+      return wasNew;
+    },
+    {
+      success: (wasNew) =>
+        wasNew === null ? null : wasNew ? t("feedback.reminderSaved") : t("feedback.reminderUpdated"),
+      error: () => t("fam.reminders.saveError"),
+      retry: true,
     }
-  };
+  );
 
-  /* One tap, no confirmation maze — mirrors the circle's removal rule. */
+  /* One tap, no confirmation maze — mirrors the circle's removal rule.
+     Optimistic: the row leaves at once and comes back if the server
+     refuses, so the list never lies about what is gone. */
   const remove = async (id) => {
+    if (removing) return;
+    setRemoving(id);
     setError("");
+    const prior = reminders;
+    setReminders((rs) => rs.filter((x) => x.id !== id));
     try {
       await deleteReminder(id);
       setReminders(await fetchReminders(iconId));
+      toast(t("feedback.reminderRemoved"), { tone: "info" });
     } catch {
-      setError("fam.reminders.saveError");
+      setReminders(prior);
+      toast(t("fam.reminders.saveError"), { tone: "error" });
+    } finally {
+      setRemoving(null);
     }
   };
 
@@ -192,7 +213,7 @@ export default function Reminders() {
 
       {reminders.map((r) =>
         editing === r.id ? null : (
-          <Card key={r.id} style={{ padding: 20 }}>
+          <Card key={r.id} {...fresh.props(r.id)} style={{ padding: 20 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
               <span aria-hidden="true" style={{ fontSize: ts(24) }}>
                 {r.emoji}
@@ -205,7 +226,7 @@ export default function Reminders() {
                 </BodyText>
               </div>
               <GhostBtn onClick={() => startEdit(r)}>{t("fam.reminders.editCta")}</GhostBtn>
-              <GhostBtn onClick={() => remove(r.id)} style={{ color: C.brown, borderColor: C.brown }}>
+              <GhostBtn onClick={() => remove(r.id)} disabled={removing === r.id} style={{ color: C.brown, borderColor: C.brown }}>
                 {t("fam.reminders.deleteCta")}
               </GhostBtn>
             </div>
@@ -257,8 +278,8 @@ export default function Reminders() {
               </select>
             )}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <PrimaryBtn type="submit" style={{ minWidth: 200 }}>
-                {t("fam.reminders.saveCta")}
+              <PrimaryBtn type="submit" disabled={saving} style={{ minWidth: 200 }}>
+                {saving ? t("feedback.saving") : t("fam.reminders.saveCta")}
               </PrimaryBtn>
               <GhostBtn onClick={() => setEditing(null)}>{t("fam.reminders.cancelCta")}</GhostBtn>
             </div>

@@ -14,9 +14,12 @@ import {
   fetchMySessions,
   fetchMyAttempts,
   joinByCode,
+  liveSessionOf,
   puzzleToday,
 } from "../../lib/games.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import BoardThumb from "./BoardThumb.jsx";
+import OneTableGate from "./OneTableGate.jsx";
 
 function gameName(g, lang) {
   return lang === "ur" ? g.name_ur : g.name_en;
@@ -40,6 +43,9 @@ export default function GamesHome() {
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [codeMsg, setCodeMsg] = useState("");
+  // The table standing in the way, when someone tries for a second.
+  const [blockedBy, setBlockedBy] = useState(null);
+  const [pastOpen, setPastOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -83,6 +89,12 @@ export default function GamesHome() {
   const submitCode = async (e) => {
     e.preventDefault();
     if (busy || code.replace(/\D/g, "").length < 6) return;
+    // A code is another way to end up at a second table.
+    const inTheWay = liveSessionOf(sessions);
+    if (inTheWay) {
+      setBlockedBy(inTheWay);
+      return;
+    }
     setBusy(true);
     setCodeMsg("");
     try {
@@ -98,8 +110,14 @@ export default function GamesHome() {
     setBusy(false);
   };
 
-  const live = tables.filter((s) => s.status !== "finished");
-  const recent = tables.filter((s) => s.status === "finished").slice(0, 3);
+  const live = tables.filter((s) => s.status !== "finished" && s.status !== "cancelled");
+  // ONE live table at a time: the first IS the active game. Any others
+  // (seeded before this rule) sit quietly beneath it rather than
+  // vanishing.
+  const activeGame = live[0] ?? null;
+  const otherLive = live.slice(1);
+  const past = tables.filter((s) => s.status === "finished" || s.status === "cancelled");
+  const recent = past.slice(0, 3);
   const nextStep = (s) =>
     s.status === "lobby"
       ? t("games.home.nextLobby")
@@ -172,6 +190,74 @@ export default function GamesHome() {
       <BodyText muted>{t("games.intro")}</BodyText>
       {loadError && <BodyText role="alert">{t("games.loadError")}</BodyText>}
 
+      {blockedBy && (
+        <OneTableGate
+          live={blockedBy}
+          gameName={byKey[blockedBy.game_key] ? gameName(byKey[blockedBy.game_key], lang) : blockedBy.game_key}
+          onCleared={async () => {
+            setBlockedBy(null);
+            setSessions(await fetchMySessions(profile.id).catch(() => []));
+          }}
+          onDismiss={() => setBlockedBy(null)}
+        />
+      )}
+
+      {/* ── ACTIVE GAME: the one table on the go, first and biggest.
+             A board to recognise, whose turn it is in words, and one
+             tap to walk back into it. ── */}
+      {activeGame && (
+        <>
+          <SectionLabel>{t("games.home.activeTitle")}</SectionLabel>
+          <Link
+            {...fresh.props(activeGame.id)}
+            to={`/app/games/s/${activeGame.id}`}
+            style={{ textDecoration: "none", color: "inherit", display: "block" }}
+          >
+            <Card
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                borderColor: C.green,
+                borderWidth: 2.5,
+                borderStyle: "solid",
+              }}
+            >
+              <BoardThumb gameKey={activeGame.game_key} size={64} />
+              {/* The chip sits UNDER the words, not beside them: at
+                  390px a thumbnail and a chip either side squeezed
+                  "Snakes & Ladders" into three broken lines. */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: ts(22), fontWeight: 800, margin: "0 0 4px" }}>
+                  {byKey[activeGame.game_key]
+                    ? gameName(byKey[activeGame.game_key], lang)
+                    : activeGame.game_key}
+                </p>
+                <BodyText muted style={{ margin: "0 0 10px" }}>
+                  {nextStep(activeGame)}
+                </BodyText>
+                <span
+                  style={{
+                    display: "inline-block",
+                    background: C.green,
+                    color: C.cream,
+                    borderRadius: 50,
+                    padding: "10px 20px",
+                    fontSize: ts(A11Y.minBodyPx),
+                    fontWeight: 700,
+                  }}
+                >
+                  {activeGame.status === "active" && activeGame.current_seat === activeGame.my_seat
+                    ? t("games.home.resumeYourTurn")
+                    : t("games.home.resumeCta")}
+                </span>
+              </div>
+            </Card>
+          </Link>
+          {otherLive.map(renderTable)}
+        </>
+      )}
+
       {/* Daily Riddle door */}
       <Card style={{ background: C.creamDark ?? C.bg, borderColor: C.olive }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -239,14 +325,6 @@ export default function GamesHome() {
         )}
       </Card>
 
-      {/* My tables — live ones only; finished games sit below the
-          registry as a short "recent" list, so "Open a table" is
-          never buried under old boards. Every card says its next
-          step in one sentence. */}
-      <SectionLabel>{t("games.home.myTables")}</SectionLabel>
-      {live.length === 0 && <BodyText muted>{t("games.home.empty")}</BodyText>}
-      {live.map(renderTable)}
-
       {/* Registry */}
       <SectionLabel>{t("games.create.title")}</SectionLabel>
       {turnGames.map((g) => (
@@ -261,17 +339,47 @@ export default function GamesHome() {
             </BodyText>
           ) : (
             /* One tap → the compact setup screen (seats, who, Start). */
-            <GhostBtn onClick={() => navigate(`/app/games/new/${g.key}`)}>
+            <GhostBtn
+              onClick={() => {
+                // The refusal belongs where the second table would
+                // begin, not on the way in.
+                const inTheWay = liveSessionOf(sessions);
+                if (inTheWay) {
+                  setBlockedBy(inTheWay);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  return;
+                }
+                navigate(`/app/games/new/${g.key}`);
+              }}
+            >
               {t("games.home.playCta")}
             </GhostBtn>
           )}
         </Card>
       ))}
 
-      {recent.length > 0 && (
+      {/* ── Past games: folded away. Finished tables must never
+             stack up the screen; three at a time, behind a link. ── */}
+      {past.length > 0 && (
         <>
-          <SectionLabel>{t("games.home.recentTitle")}</SectionLabel>
-          {recent.map(renderTable)}
+          <SectionLabel>{t("games.home.pastTitle")}</SectionLabel>
+          {!pastOpen ? (
+            <GhostBtn onClick={() => setPastOpen(true)} aria-expanded={false}>
+              {t("games.home.pastSee", { n: past.length })}
+            </GhostBtn>
+          ) : (
+            <>
+              {recent.map(renderTable)}
+              {past.length > recent.length && (
+                <BodyText muted style={{ margin: "4px 0 0" }}>
+                  {t("games.home.pastMore", { n: past.length - recent.length })}
+                </BodyText>
+              )}
+              <GhostBtn onClick={() => setPastOpen(false)} aria-expanded>
+                {t("games.home.pastHide")}
+              </GhostBtn>
+            </>
+          )}
         </>
       )}
     </GamesScreen>

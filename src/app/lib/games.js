@@ -174,6 +174,32 @@ export async function boastToPeople(kind, refKey, payload = {}) {
   return data; // people notified (0 on a repeat tap)
 }
 
+/* Call off a table that never started (0038). Host-only and lobby-only
+   server-side; the row survives — deleting it would cascade into
+   dm_messages.game_session_id and destroy a message in someone's chat. */
+/* Leave a table you hold a seat at (0040). Returns {result}:
+   cancelled | left | not_seated | over. NOTE for callers: a GUEST who
+   leaves loses read access to that session in the same instant, so
+   navigate away as part of the action and never treat the empty read
+   that follows as an error. */
+export async function leaveSession(sessionId) {
+  const { data, error } = await supabase.rpc("leave_game_session", { p_session: sessionId });
+  if (error) throw error;
+  return data;
+}
+
+/* The ONE table a person may have on the go: any session of theirs
+   that is waiting for players or in play. Waiting counts — a table
+   with empty seats is still a promise to somebody. */
+export function liveSessionOf(sessions) {
+  return (sessions ?? []).find((s) => s.status === "lobby" || s.status === "active") ?? null;
+}
+
+export async function cancelSession(sessionId) {
+  const { error } = await supabase.rpc("cancel_game_session", { p_session: sessionId });
+  if (error) throw new Error(error.message);
+}
+
 export async function claimOpenSeat(sessionId) {
   const { data, error } = await supabase.rpc("claim_open_seat", { p_session: sessionId });
   if (error) throw error;

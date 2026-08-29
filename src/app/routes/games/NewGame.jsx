@@ -17,11 +17,14 @@ import { pushToast } from "../../lib/feedback.jsx";
 import {
   fetchGames,
   createSession,
+  fetchMySessions,
+  liveSessionOf,
   inviteToGame,
   startWithBots,
 } from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
 import PeoplePicker from "./PeoplePicker.jsx";
+import OneTableGate from "./OneTableGate.jsx";
 import { GamesScreen, Card, BodyText, PrimaryBtn } from "./ui.jsx";
 
 /* One big tappable row: emoji, label, and a ✓ when chosen. Selection
@@ -73,10 +76,10 @@ export default function NewGame() {
   const [mode, setMode] = useState(null); // people | bots | open
   const [picked, setPicked] = useState([]);
   const [busy, setBusy] = useState(false);
-
-  // A route change in an SPA keeps the previous scroll position, which
-  // arrives here mid-page with the title under the header.
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  // One live table at a time. The refusal belongs HERE, on Start —
+  // the moment the second table would actually come into being — not
+  // on the way into this screen.
+  const [blockedBy, setBlockedBy] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -106,6 +109,12 @@ export default function NewGame() {
   const canStart = mode === "bots" || mode === "open" || (mode === "people" && picked.length > 0);
 
   const start = async () => {
+    const inTheWay = liveSessionOf(await fetchMySessions(profile.id).catch(() => []));
+    if (inTheWay) {
+      setBlockedBy(inTheWay);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (busy || !game || !canStart) return;
     setBusy(true);
     try {
@@ -148,9 +157,36 @@ export default function NewGame() {
     <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
       {/* Nastaliq hangs far below the baseline: the heading needs the
           language its own line-height or the descenders hit the line under it. */}
-      <h1 style={{ fontSize: ts(28), fontWeight: 800, color: C.brown, margin: "0 0 6px", lineHeight: Math.max(1.25, meta.lineHeight - 0.4) }}>{name}</h1>
+      <h1
+        style={{
+          fontSize: ts(28),
+          fontWeight: 800,
+          color: C.brown,
+          // Nastaliq descends far below the baseline: give the heading the
+          // language's own line-height in RTL (a trimmed one clips into the
+          // line beneath), and room under it either way.
+          lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
+          margin: meta.dir === "rtl" ? "0 0 14px" : "0 0 6px",
+        }}
+      >
+        {name}
+      </h1>
       {/* The single line of copy on this screen. */}
       <BodyText muted style={{ margin: "0 0 16px" }}>{t("games.new.hint")}</BodyText>
+
+      {/* One live table at a time: the choice appears here, where the
+          second table would have begun. */}
+      {blockedBy && (
+        <OneTableGate
+          live={blockedBy}
+          gameName={blockedBy.game_key}
+          onCleared={() => {
+            setBlockedBy(null);
+            start();
+          }}
+          onDismiss={() => setBlockedBy(null)}
+        />
+      )}
 
       {/* Seat chips — only when the game leaves the choice open. */}
       {seatChoices.length > 1 && (

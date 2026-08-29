@@ -309,6 +309,7 @@ export default function LudoSession() {
           </Card>
 
           <LudoBoard
+          mySeat={mySeatRow?.seat ?? null}
             state={{ ...state, turnSeat: game.current_seat }}
             seatsInPlay={game.target_seats}
             legal={legal}

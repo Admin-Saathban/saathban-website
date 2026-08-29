@@ -1,59 +1,92 @@
 /* ════════════════════════════════════════════════
-   Ludo board geometry — pure client-side mapping from the server's
-   progress model (0 yard, 1..51 track, 52..56 column, 57 home) onto
-   the classic 15×15 grid. Must mirror the math in 0020_ludo.sql:
-   absolute square = (seat*13 + progress - 1) % 52; starts at absolute
-   0/13/26/39; stars at 8/21/34/47.
+   Ludo board geometry — the classic 15×15 layout, and the pure
+   mapping from the server's progress model (0 yard, 1..51 track,
+   52..56 home column, 57 home) onto it. Mirrors the math in
+   0020_ludo.sql: absolute square = (seat*13 + progress - 1) % 52,
+   starts at absolute 0/13/26/39, stars at 8/21/34/47.
+
+   THE CLASSIC BOARD, and why the cells are where they are:
+
+   - 15×15 grid. Four 6×6 yards in the corners, each with a 2×2 court
+     of four token spots.
+   - A cross of four arms (3 cells wide, 6 long) between them. Each
+     arm gives the track its two OUTER lines (6 cells each) plus the
+     single cell at its tip: 4 × 13 = 52 track squares.
+   - Each arm's MIDDLE line (5 cells) is one seat's home column,
+     running from the tip inwards to the centre.
+   - The centre 3×3 is the finish. 52 + 4×5 + 9 = 81 cross cells,
+     and 81 + 4×36 yards = 225 = 15². Everything accounted for.
+
+   The ring below is written in MOVEMENT order, so TRACK[0] is seat
+   0's start square. That ordering is what makes the engine's lap
+   land correctly: a token's 51st track step is
+   (seat*13 + 50) % 52, which for every seat is exactly its own arm's
+   TIP cell — the square its home column runs from. Seat 0 finishes
+   its lap at (7,0) and turns down into (7,1)…(7,5); seat 1 at (0,7)
+   and turns right; seat 2 at (7,14) turning up; seat 3 at (14,7)
+   turning left. Get the ring's phase wrong and every token cuts the
+   corner into its home column diagonally, which is what the previous
+   layout did.
    ════════════════════════════════════════════════ */
 
 import { COLORS as C } from "../../../../shared/tokens.js";
 
-/* The 52 track cells, walked clockwise. TRACK[a] = [col, row]. */
+/* The 52 track cells in movement order. TRACK[a] = [col, row]. */
 export const TRACK = (() => {
   const t = [];
-  for (let c = 0; c <= 5; c++) t.push([c, 6]);        // 0-5   left arm, top row →
-  for (let r = 5; r >= 0; r--) t.push([6, r]);        // 6-11  up the left of the top arm
-  t.push([7, 0]);                                     // 12    top middle
-  for (let r = 0; r <= 5; r++) t.push([8, r]);        // 13-18 down the right of the top arm
-  for (let c = 9; c <= 14; c++) t.push([c, 6]);       // 19-24 right arm, top row →
-  t.push([14, 7]);                                    // 25    right middle
-  for (let c = 14; c >= 9; c--) t.push([c, 8]);       // 26-31 right arm, bottom row ←
-  for (let r = 9; r <= 14; r++) t.push([8, r]);       // 32-37 down the right of the bottom arm
-  t.push([7, 14]);                                    // 38    bottom middle
-  for (let r = 14; r >= 9; r--) t.push([6, r]);       // 39-44 up the left of the bottom arm
-  for (let c = 5; c >= 0; c--) t.push([c, 8]);        // 45-50 left arm, bottom row ←
-  t.push([0, 7]);                                     // 51    left middle
+  for (let r = 1; r <= 5; r++) t.push([6, r]);        // 0-4   down the top arm's left line
+  for (let c = 5; c >= 0; c--) t.push([c, 6]);        // 5-10  left along the left arm's top line
+  t.push([0, 7]);                                     // 11    left tip
+  for (let c = 0; c <= 5; c++) t.push([c, 8]);        // 12-17 right along the left arm's lower line
+  for (let r = 9; r <= 14; r++) t.push([6, r]);       // 18-23 down the bottom arm's left line
+  t.push([7, 14]);                                    // 24    bottom tip
+  for (let r = 14; r >= 9; r--) t.push([8, r]);       // 25-30 up the bottom arm's right line
+  for (let c = 9; c <= 14; c++) t.push([c, 8]);       // 31-36 right along the right arm's lower line
+  t.push([14, 7]);                                    // 37    right tip
+  for (let c = 14; c >= 9; c--) t.push([c, 6]);       // 38-43 left along the right arm's top line
+  for (let r = 5; r >= 1; r--) t.push([8, r]);        // 44-48 up the top arm's right line
+  t.push([8, 0]);                                     // 49
+  t.push([7, 0]);                                     // 50    top tip
+  t.push([6, 0]);                                     // 51
   return t;
 })();
 
-/* Home-column cells per seat, progress 52..56 → index 0..4. */
+/* Home column cells per seat, progress 52..56 → index 0..4, ordered
+   from the arm tip inwards to the centre. */
 export const HOME_COLUMNS = [
-  [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],      // seat 0 (enters from the left)
-  [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],      // seat 1 (from the top)
-  [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],  // seat 2 (from the right)
-  [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]],  // seat 3 (from the bottom)
+  [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],      // seat 0 — top arm, entered from (7,0)
+  [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],      // seat 1 — left arm, from (0,7)
+  [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]],  // seat 2 — bottom arm, from (7,14)
+  [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],  // seat 3 — right arm, from (14,7)
 ];
 
-/* Yard blocks (6×6) and the four piece spots inside each. */
+/* Yards: 6×6 blocks, each seat's beside its own start square. */
 export const YARD_ORIGIN = [
-  [0, 0],   // seat 0 top-left
-  [9, 0],   // seat 1 top-right
-  [9, 9],   // seat 2 bottom-right
-  [0, 9],   // seat 3 bottom-left
-];
-export const YARD_SPOTS = [
-  [1.5, 1.5], [3.5, 1.5], [1.5, 3.5], [3.5, 3.5],
+  [0, 0],   // seat 0 top-left     → start (6,1)
+  [0, 9],   // seat 1 bottom-left  → start (1,8)
+  [9, 9],   // seat 2 bottom-right → start (8,13)
+  [9, 0],   // seat 3 top-right    → start (13,6)
 ];
 
-/* Home (finished) display spots: around the centre, per seat. */
+/* The 2×2 court inside a yard: four token spots, in yard-local cells. */
+export const YARD_SPOTS = [
+  [1.5, 1.5], [4.5, 1.5], [1.5, 4.5], [4.5, 4.5],
+];
+
+/* Finished tokens rest in the centre, on their own arm's side. */
 export const HOME_SPOTS = [
-  [6.1, 7], [7, 6.1], [7.9, 7], [7, 7.9],
+  [7.5, 6.85],  // seat 0, from the top
+  [6.85, 7.5],  // seat 1, from the left
+  [7.5, 8.15],  // seat 2, from the bottom
+  [8.15, 7.5],  // seat 3, from the right
 ];
 
 export const START_ABS = [0, 13, 26, 39];
 export const STAR_ABS = [8, 21, 34, 47];
 
-export const SEAT_COLORS = [C.green, C.brown, C.olive, C.sage];
+/* Re-exported so seat chips and the board can never disagree; the
+   palette itself lives one level up, shared with the other boards. */
+export { SEAT_COLORS, SEAT_INK, SEAT_TINTS } from "../seatColors.js";
 
 export function absOf(seat, p) {
   return p >= 1 && p <= 51 ? (seat * 13 + p - 1) % 52 : null;
@@ -75,4 +108,23 @@ export function cellFor(seat, p, pieceIdx) {
     return [c + 0.5, r + 0.5];
   }
   return HOME_SPOTS[seat]; // 57
+}
+
+/* ── Per-player point of view ──────────────────────────────────────
+   Everyone should look at the board the way they'd sit at it: their
+   own yard nearest them, bottom-left. Seat 1 already sits there, so
+   the board turns a quarter for each seat around from it. A watcher
+   with no seat gets the neutral orientation.
+
+   Returns degrees for a CSS/SVG rotation (positive = clockwise, as
+   screen coordinates run y-down). Labels and numerals counter-rotate
+   by the same amount so nothing ever reads upside down. */
+export function povRotation(mySeat) {
+  switch (mySeat) {
+    case 0: return -90; // top-left  → bottom-left
+    case 1: return 0;   // already bottom-left
+    case 2: return 90;  // bottom-right → bottom-left
+    case 3: return 180; // top-right → bottom-left
+    default: return 0;  // spectators: neutral
+  }
 }

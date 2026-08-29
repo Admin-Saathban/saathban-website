@@ -173,6 +173,7 @@ export default function CarromRailsController({ sessionId }) {
       </div>
 
       <CarromBoard
+        mySeat0={view.mySeat0 ?? null}
         state={view.state || initialLayout()}
         seat={view.currentSeat0 ?? 0}
         isYourTurn={!finished && view.isMyTurn}

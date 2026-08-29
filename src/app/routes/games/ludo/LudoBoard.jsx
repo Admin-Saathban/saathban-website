@@ -1,5 +1,14 @@
 /* ════════════════════════════════════════════════
-   The board — warm SVG in the Saathban palette, phone-width first.
+   The board — warm SVG in the Saathban palette, phone-width first,
+   drawn to the classic 15×15 layout in board.js.
+
+   POINT OF VIEW: every seated player looks at the board the way they
+   would sit at it — their own yard nearest them, bottom-left — so the
+   whole board rotates by a quarter turn per seat (povRotation). The
+   rotation is presentation only: geometry, moves and the engine never
+   change, and every numeral counter-rotates so nothing reads upside
+   down. A watcher with no seat gets the neutral orientation.
+
    Pieces carry their seat number (state never by colour alone); when
    it's your move, legal pieces get a dashed halo AND the big piece
    buttons under the board (LudoSession) mirror them, so the true
@@ -11,21 +20,47 @@ import {
   TRACK,
   HOME_COLUMNS,
   YARD_ORIGIN,
+  YARD_SPOTS,
   START_ABS,
   STAR_ABS,
   SEAT_COLORS,
+  SEAT_INK,
+  SEAT_TINTS,
   cellFor,
+  povRotation,
 } from "./board.js";
 
 const CELL = 40; // viewBox units per grid cell
 const SIZE = 15 * CELL;
 
-const YARD_TINTS = ["#e8f0e6", "#f3e9df", "#eef0e2", "#eaf2e7"];
 
-export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onPieceTap }) {
+/* A label that stays upright however the board is turned. */
+function Upright({ x, y, spin, children, ...props }) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      transform={spin ? `rotate(${-spin} ${x} ${y})` : undefined}
+      {...props}
+    >
+      {children}
+    </text>
+  );
+}
+
+export default function LudoBoard({
+  state,
+  seatsInPlay,
+  legal,
+  myTurnToMove,
+  onPieceTap,
+  mySeat = null,
+}) {
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const pieces = state?.pieces || [];
+  const spin = povRotation(mySeat);
 
   return (
     <svg
@@ -41,9 +76,10 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
         background: C.cream,
         borderRadius: 18,
         border: `2px solid ${C.warmGray}`,
+        transform: spin ? `rotate(${spin}deg)` : undefined,
       }}
     >
-      {/* Yards */}
+      {/* ── Yards: a 6×6 block with a 2×2 court of four spots ── */}
       {YARD_ORIGIN.map(([c, r], seat) => (
         <g key={`yard-${seat}`} opacity={seat < seatsInPlay ? 1 : 0.25}>
           <rect
@@ -52,9 +88,8 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
             width={6 * CELL - 8}
             height={6 * CELL - 8}
             rx={16}
-            fill={YARD_TINTS[seat]}
-            stroke={SEAT_COLORS[seat]}
-            strokeWidth={3}
+            fill={SEAT_COLORS[seat]}
+            opacity={0.9}
           />
           <rect
             x={(c + 1) * CELL}
@@ -63,12 +98,24 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
             height={4 * CELL}
             rx={12}
             fill={C.white}
-            stroke={C.warmGray}
+            stroke={SEAT_COLORS[seat]}
+            strokeWidth={2}
           />
+          {YARD_SPOTS.map(([sc, sr], i) => (
+            <circle
+              key={i}
+              cx={(c + sc) * CELL}
+              cy={(r + sr) * CELL}
+              r={CELL * 0.38}
+              fill={SEAT_TINTS[seat]}
+              stroke={SEAT_COLORS[seat]}
+              strokeWidth={1.5}
+            />
+          ))}
         </g>
       ))}
 
-      {/* Track cells */}
+      {/* ── The 52-square track ── */}
       {TRACK.map(([c, r], abs) => {
         const startSeat = START_ABS.indexOf(abs);
         const isStar = STAR_ABS.includes(abs);
@@ -80,40 +127,41 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
               width={CELL - 2}
               height={CELL - 2}
               rx={6}
-              fill={startSeat >= 0 ? YARD_TINTS[startSeat] : C.white}
+              fill={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.white}
               stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
               strokeWidth={startSeat >= 0 ? 2.5 : 1}
+              opacity={startSeat >= 0 && startSeat >= seatsInPlay ? 0.3 : 1}
             />
             {isStar && showStars && (
-              <text
+              <Upright
                 x={c * CELL + CELL / 2}
                 y={r * CELL + CELL / 2 + 7}
-                textAnchor="middle"
+                spin={spin}
                 fontSize={20}
-                fill={C.warmGray}
+                fill={C.olive}
                 aria-hidden="true"
               >
-                ✦
-              </text>
+                ★
+              </Upright>
             )}
             {startSeat >= 0 && (
-              <text
+              <Upright
                 x={c * CELL + CELL / 2}
-                y={r * CELL + CELL / 2 + 6}
-                textAnchor="middle"
-                fontSize={16}
+                y={r * CELL + CELL / 2 + 7}
+                spin={spin}
+                fontSize={19}
                 fontWeight="700"
-                fill={SEAT_COLORS[startSeat]}
+                fill={SEAT_INK[startSeat]}
                 aria-hidden="true"
               >
-                ▸
-              </text>
+                ★
+              </Upright>
             )}
           </g>
         );
       })}
 
-      {/* Home columns */}
+      {/* ── Home columns: each arm's middle line, in the seat's colour ── */}
       {HOME_COLUMNS.map((cells, seat) =>
         cells.map(([c, r], i) => (
           <rect
@@ -123,36 +171,42 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
             width={CELL - 2}
             height={CELL - 2}
             rx={6}
-            fill={YARD_TINTS[seat]}
-            stroke={SEAT_COLORS[seat]}
-            strokeWidth={1.5}
-            opacity={seat < seatsInPlay ? 1 : 0.2}
+            fill={SEAT_COLORS[seat]}
+            opacity={seat < seatsInPlay ? 0.75 : 0.15}
           />
         ))
       )}
 
-      {/* Centre home */}
-      <rect
-        x={6 * CELL + 2}
-        y={6 * CELL + 2}
-        width={3 * CELL - 4}
-        height={3 * CELL - 4}
-        rx={14}
-        fill={C.white}
-        stroke={C.greenMuted}
-        strokeWidth={2.5}
-      />
-      <text
-        x={7.5 * CELL}
-        y={7.5 * CELL + 8}
-        textAnchor="middle"
-        fontSize={26}
-        aria-hidden="true"
-      >
-        🏡
-      </text>
+      {/* ── The centre: four triangles, one per arm, meeting at home ── */}
+      <g>
+        {[
+          [`${6 * CELL},${6 * CELL} ${9 * CELL},${6 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 0],
+          [`${6 * CELL},${6 * CELL} ${6 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 1],
+          [`${6 * CELL},${9 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 2],
+          [`${9 * CELL},${6 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 3],
+        ].map(([points, seat]) => (
+          <polygon
+            key={`c-${seat}`}
+            points={points}
+            fill={SEAT_COLORS[seat]}
+            opacity={seat < seatsInPlay ? 0.9 : 0.15}
+            stroke={C.white}
+            strokeWidth={2}
+          />
+        ))}
+        <rect
+          x={6 * CELL + 2}
+          y={6 * CELL + 2}
+          width={3 * CELL - 4}
+          height={3 * CELL - 4}
+          rx={14}
+          fill="none"
+          stroke={C.brown}
+          strokeWidth={2.5}
+        />
+      </g>
 
-      {/* Pieces */}
+      {/* ── Pieces ── */}
       {pieces.map((seatPieces, seat) =>
         seatPieces.map((p, i) => {
           const [cc, rr] = cellFor(seat, p, i);
@@ -160,6 +214,8 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
           // Stack offset: nudge same-cell pieces apart slightly
           const stackShift =
             seatPieces.filter((q, j) => j < i && q === p && p >= 1 && p <= 56).length * 6;
+          const cx = cc * CELL + stackShift;
+          const cy = rr * CELL - stackShift;
           return (
             <g
               key={`p-${seat}-${i}`}
@@ -168,8 +224,8 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
             >
               {isLegal && (
                 <circle
-                  cx={cc * CELL + stackShift}
-                  cy={rr * CELL - stackShift}
+                  cx={cx}
+                  cy={cy}
                   r={22}
                   fill="none"
                   stroke={C.brown}
@@ -178,32 +234,25 @@ export default function LudoBoard({ state, seatsInPlay, legal, myTurnToMove, onP
                 />
               )}
               <circle
-                cx={cc * CELL + stackShift}
-                cy={rr * CELL - stackShift}
+                cx={cx}
+                cy={cy}
                 r={15}
                 fill={SEAT_COLORS[seat]}
                 stroke={C.white}
                 strokeWidth={2.5}
               />
-              <text
-                x={cc * CELL + stackShift}
-                y={rr * CELL - stackShift + 6}
-                textAnchor="middle"
+              <Upright
+                x={cx}
+                y={cy + 6}
+                spin={spin}
                 fontSize={16}
                 fontWeight="700"
-                fill={C.cream}
+                fill={SEAT_INK[seat]}
                 aria-hidden="true"
               >
                 {seat + 1}
-              </text>
-              {isLegal && (
-                <circle
-                  cx={cc * CELL + stackShift}
-                  cy={rr * CELL - stackShift}
-                  r={26}
-                  fill="transparent"
-                />
-              )}
+              </Upright>
+              {isLegal && <circle cx={cx} cy={cy} r={26} fill="transparent" />}
             </g>
           );
         })

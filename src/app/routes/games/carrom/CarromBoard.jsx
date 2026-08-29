@@ -34,7 +34,14 @@ const STRIKER_FILL = "#f6ead2";
 const BASE_INSET = 0.14; // baseline distance from the edge (normalized)
 const MAX_PULL = 0.34; // pull length (normalized) that maps to full power
 
-export default function CarromBoard({ state, seat = 0, isYourTurn, onShoot, size = 340 }) {
+export default function CarromBoard({
+  state,
+  seat = 0,
+  isYourTurn,
+  onShoot,
+  size = 340,
+  mySeat0 = null,
+}) {
   const canvasRef = useRef(null);
   const wrapRef = useRef(null);
   const [px, setPx] = useState(size); // rendered pixel size (square)
@@ -47,6 +54,11 @@ export default function CarromBoard({ state, seat = 0, isYourTurn, onShoot, size
   rafState.current.state = state;
 
   const baselineY = seat === 0 ? BOARD - BASE_INSET : BASE_INSET;
+  // Point of view: the player on the far side looks at the board the
+  // other way up, so their own baseline is nearest them. Rotating the
+  // rendering alone would send every drag the wrong way, so the
+  // pointer mapping is rotated by exactly the same half turn below.
+  const flip = mySeat0 === 1;
 
   // Fit a square to the container width (phone-first), capped for desktop.
   useEffect(() => {
@@ -77,9 +89,20 @@ export default function CarromBoard({ state, seat = 0, isYourTurn, onShoot, size
       if (ring) { ctx.lineWidth = Math.max(1.5, N(0.006)); ctx.strokeStyle = ring; ctx.stroke(); }
     };
 
+    /* Applied at the start of every frame; undone at the end, so the
+       transform can never accumulate across frames. */
+    const applyPov = () => {
+      if (!flip) return;
+      ctx.translate(N(BOARD / 2), N(BOARD / 2));
+      ctx.rotate(Math.PI);
+      ctx.translate(-N(BOARD / 2), -N(BOARD / 2));
+    };
+
     const frame = () => {
       const st = rafState.current.state;
       ctx.clearRect(0, 0, S, S);
+      ctx.save();
+      applyPov();
       // surface + frame
       ctx.fillStyle = WOOD;
       ctx.fillRect(0, 0, S, S);
@@ -129,18 +152,23 @@ export default function CarromBoard({ state, seat = 0, isYourTurn, onShoot, size
           }
         }
       }
+      ctx.restore();
       raf = requestAnimationFrame(frame);
     };
     frame();
     return () => cancelAnimationFrame(raf);
-  }, [px, isYourTurn, baselineY]);
+  }, [px, isYourTurn, baselineY, flip]);
 
   // ── pointer: reposition on the baseline, or slingshot-aim from the striker ──
   const mode = useRef(null); // 'move' | 'aim'
   const toNorm = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const t = e.touches ? e.touches[0] : e;
-    return { x: (t.clientX - rect.left) / rect.width, y: (t.clientY - rect.top) / rect.height };
+    const x = (t.clientX - rect.left) / rect.width;
+    const y = (t.clientY - rect.top) / rect.height;
+    // Undo the POV rotation so a drag means the same thing on both
+    // sides of the board.
+    return flip ? { x: BOARD - x, y: BOARD - y } : { x, y };
   };
 
   const onDown = (e) => {

@@ -35,7 +35,9 @@ A row here claims the number even before the file lands.
 | 0019 | people/circle-DM lane | `0019_circle_dms.sql` — applied | 2026-08-29 |
 | 0020 | ludo lane | `0020_ludo.sql` — **applied live 2026-08-29 07:40** (tables empty at resolution time) | 2026-08-29 |
 | 0021 | events lane | `0021_event_proposals.sql` — applied (renumbered out of the 0019 collision; applied name `event_proposals`) | 2026-08-29 |
-| 0022 | games-rails lane | `0022_games.sql` — the games platform rails, REBASED over the live 0020_ludo shape (see below) | 2026-08-29 |
+| 0022 | games-rails lane | `0022_games.sql` — **applied** (ALTER-rebase over live 0020_ludo, including data migration of live test rows; registry, moves/invites, engine RPCs, Daily Riddle, pg_cron tick). Contract: `GAMES_CONTRACT.md` | 2026-08-29 |
+| 0023 | ludo lane (saathban-website-34) | ludo follow-up — `game_exec_ludo` contract rewrite onto the 0022 rails dispatch | 2026-08-29 |
+| 0024 | carrom lane (saathban-website-13) | carrom — `games` registry row + `game_exec_carrom` executor on the rails tables | 2026-08-29 |
 
 ### 0020 collision resolution (integration session, 2026-08-29)
 

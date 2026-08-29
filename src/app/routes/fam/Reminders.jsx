@@ -35,7 +35,11 @@ const DAY_OPTIONS = [
   { value: "Mon · Wed · Fri", key: "fam.days.mwf" },
 ];
 const dayKeyFor = (v) => DAY_OPTIONS.find((d) => d.value === v)?.key || null;
-const BLANK = { label: "", time: "18:00", days: DAY_OPTIONS[0].value };
+const BLANK = { label: "", times: ["18:00"], days: DAY_OPTIONS[0].value };
+
+/* remind_times (0015) with the old single remind_time as fallback. */
+const timesOf = (r) =>
+  r.remind_times?.length ? r.remind_times : [r.remind_time];
 
 /* time column "18:30:00" → input value "18:30" / display "6:30 pm" */
 const toInputTime = (t) => (t || "18:00").slice(0, 5);
@@ -98,19 +102,28 @@ export default function Reminders() {
     setError("");
   };
   const startEdit = (r) => {
-    setForm({ label: r.label, time: toInputTime(r.remind_time), days: r.days_label });
+    setForm({ label: r.label, times: timesOf(r).map(toInputTime), days: r.days_label });
     setEditing(r.id);
     setSavedNote(false);
     setError("");
   };
 
+  const setTime = (i, v) =>
+    setForm((f) => ({ ...f, times: f.times.map((x, j) => (j === i ? v : x)) }));
+  const addTime = () =>
+    setForm((f) => ({ ...f, times: [...f.times, "08:00"] }));
+  const removeTime = (i) =>
+    setForm((f) => ({ ...f, times: f.times.filter((_, j) => j !== i) }));
+
   const save = async (e) => {
     e.preventDefault();
-    if (!form.label.trim()) return;
+    if (!form.label.trim() || form.times.length === 0) return;
     setError("");
+    const times = [...new Set(form.times)].sort();
     const patch = {
       label: form.label.trim(),
-      remind_time: form.time,
+      remind_time: times[0],
+      remind_times: times,
       days_label: form.days,
     };
     try {
@@ -187,7 +200,7 @@ export default function Reminders() {
               <div style={{ flex: "1 1 200px" }}>
                 <BodyText style={{ fontWeight: 600, margin: 0 }}>{r.label}</BodyText>
                 <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                  {displayTime(r.remind_time)} ·{" "}
+                  <span dir="ltr">{timesOf(r).map(displayTime).join(" · ")}</span> ·{" "}
                   {dayKeyFor(r.days_label) ? t(dayKeyFor(r.days_label)) : r.days_label}
                 </BodyText>
               </div>
@@ -214,11 +227,24 @@ export default function Reminders() {
             )}
             {field(
               t("fam.reminders.timeField"),
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-              />
+              <div style={{ display: "grid", gap: 8 }}>
+                {form.times.map((tm, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      type="time"
+                      value={tm}
+                      onChange={(e) => setTime(i, e.target.value)}
+                      aria-label={t("fam.reminders.timeField")}
+                    />
+                    {form.times.length > 1 && (
+                      <GhostBtn onClick={() => removeTime(i)} style={{ color: C.brown }}>
+                        {t("common.remove")}
+                      </GhostBtn>
+                    )}
+                  </div>
+                ))}
+                <GhostBtn onClick={addTime}>{t("fam.reminders.addTimeCta")}</GhostBtn>
+              </div>
             )}
             {field(
               t("fam.reminders.daysField"),

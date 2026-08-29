@@ -27,7 +27,7 @@ import BuddyApplication from "./routes/admin/BuddyApplication.jsx";
 import ModerationQueue from "./routes/admin/ModerationQueue.jsx";
 import BroadcastsPage from "./routes/admin/BroadcastsPage.jsx";
 import QuestionsQueue from "./routes/admin/QuestionsQueue.jsx";
-import IconHome from "./routes/home/IconHome.jsx";
+import HomeRoutes from "./routes/home/HomeRoutes.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
 import AppSettings from "./routes/AppSettings.jsx";
@@ -36,6 +36,12 @@ import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
+import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
+import EventsRoutes from "./routes/events/EventsRoutes.jsx";
+import SkillsRoutes from "./routes/skills/SkillsRoutes.jsx";
+import NotificationsRoutes from "./routes/notifications/NotificationsRoutes.jsx";
+import ProfileRoutes from "./routes/profile/ProfileRoutes.jsx";
+import BuddyHome from "./routes/buddy/BuddyHome.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 
 // App-shell offline caching + installability (production only; no-op
@@ -125,14 +131,14 @@ export default function AppRoot() {
 
         <Routes>
           <Route index element={<AppHome />} />
-          {/* Saath-Icon home (build step 9) — UI on mock data until the
-              auth + data layer lands. Icons only; RLS stays the real
-              security boundary, this guard is navigation. */}
+          {/* Saath-Icon home area: hub at /app/home, daily log at
+              /app/home/log. Icons only; RLS stays the real security
+              boundary, this guard is navigation. */}
           <Route
             path="home/*"
             element={
               <RequireAuth roles={["saath_icon"]}>
-                <IconHome />
+                <HomeRoutes />
               </RequireAuth>
             }
           />
@@ -153,6 +159,16 @@ export default function AppRoot() {
             <Route path="broadcasts" element={<BroadcastsPage />} />
             <Route path="moderation" element={<ModerationQueue />} />
           </Route>
+          {/* Saath-Buddy home: live pipeline status, matched-Icons
+              placeholder, documents channel (0015). */}
+          <Route
+            path="buddy"
+            element={
+              <RequireAuth roles={["saath_buddy"]}>
+                <BuddyHome />
+              </RequireAuth>
+            }
+          />
           {/* Saath-Buddy vetting application (build step 8, applicant
               side). The RPC re-checks the role server-side; this guard
               is navigation. */}
@@ -195,6 +211,57 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <CommunityRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Events + calendar (0013): every signed-in role sees
+              published gatherings; the lane gates its own tabs. */}
+          <Route
+            path="events/*"
+            element={
+              <RequireAuth>
+                <EventsRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Skills notify-me cards (0012); counts view self-gates. */}
+          <Route
+            path="skills/*"
+            element={
+              <RequireAuth>
+                <SkillsRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* In-app notifications (0007). */}
+          <Route
+            path="notifications/*"
+            element={
+              <RequireAuth>
+                <NotificationsRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Own profile view/edit (0002; protected columns stay
+              locked at the database). */}
+          <Route
+            path="profile/*"
+            element={
+              <RequireAuth>
+                <ProfileRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Outdoor v1 (migration 0016): places, manual check-ins,
+              outings, park boards. Any signed-in role reaches the
+              route; the 0016 policies decide visibility (icons check
+              in, presence per its chosen audience, buddies once
+              active). */}
+          <Route
+            path="outdoor/*"
+            element={
+              <RequireAuth>
+                <OutdoorRoutes />
               </RequireAuth>
             }
           />

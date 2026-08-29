@@ -42,8 +42,8 @@ export function roleHomePath(role) {
       return "/app/admin";
     case "family_member":
       return "/app/fam";
-    // Saath-Buddy keeps the welcome landing (which links to the
-    // vetting application) until a real Buddy dashboard exists:
+    case "saath_buddy":
+      return "/app/buddy";
     default:
       return "/app/auth/welcome";
   }
@@ -63,9 +63,11 @@ const FROM_KEY = "saathban.auth.from";
 // flow itself never qualifies — returning into it would loop.
 const ROLE_AREAS = [
   ["/app/home", "saath_icon"],
+  ["/app/circle", "saath_icon"],
   ["/app/admin", "admin"],
   ["/app/fam", "family_member"],
   ["/app/vetting", "saath_buddy"],
+  ["/app/buddy", "saath_buddy"],
 ];
 
 export function rememberPostLoginPath(path) {

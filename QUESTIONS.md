@@ -171,3 +171,106 @@ The locales files were out of scope for this lane tonight. The copy file
 follows the famCopy convention (flat keys, ready to lift into en.js/ur.js
 under community.* by the i18n lane).
 
+---
+
+# Milestones (milestones lane, 2026-08-29, migration 0017)
+
+Conservative calls in the points → badges → celebrations loop; each is a
+parameter or a policy, not a schema change.
+
+## M1. Streak forgiveness parameters
+SPEC mandates forgiveness but not numbers. *Taken:* the current streak
+bridges any single missing day (a two-day hole ends it); presence badges
+use windows (7 present days in any 8, 30 in any 33); the 100-day arc is
+**lifetime** presence days and never resets. All tunable in
+`compute_badge_awards()` / `my_progress()`.
+
+## M2. Rest day got its schema home (answers #5 above)
+`rest_day` was added to the `log_module` enum in 0017: one private
+daily_logs row marks the day, and presence, points, and streaks all count
+it (resting IS participation). The Icon home still needs to write it —
+home lane's adoption, one insert where the toggle flips.
+
+## M3. Who has milestones?
+Badges compute for anyone with rows, but the screen renders for Icons
+(admins get the message desk on the same route). Buddy/Fam milestone
+loops would need their own badge set — nothing here assumes one.
+
+## M4. The 100-day video message
+SPEC's "100-day shoutout with optional video message" is deferred with
+SOS-era media questions; 0017's `presence_100` badge is the arc's marker
+and the admin's personalised note is the human moment meanwhile.
+
+## M5. first_outing has no trigger on the outdoor lane's table
+It computes dynamically against `outdoor_checkins` (0016) on any award
+pass, so the badge lands on the next log/post/screen-visit after a
+check-in rather than the instant of it. An AFTER INSERT trigger there is
+a one-liner for whoever owns 0016, if instant matters.
+
+## M6. Urdu badge content pending native review
+Badge names/descriptions ship as data in both languages (0017 seed),
+drafted aap-register like the locales files — same native review queue
+as #4 above.
+
+
+---
+
+# Outdoor v1 (outdoor lane, 2026-08-29)
+
+Conservative readings encoded in migration 0016 and routes/outdoor/.
+
+## O1. "Connections" = circle members
+SPEC's check-in default is "connections only" but the only explicit
+grant system today is My Circle. *Taken:* a connections-visibility
+check-in or outing is visible to the Icon's circle members (who also
+pass the community gate). When a friends/connections system lands,
+`member_of_circle()` in the read policies is the one thing to widen.
+
+## O2. Vetting outranks a circle grant
+An Icon can add a not-yet-active Buddy to their circle; SPEC still says
+no Icon data before `active`. *Taken:* everything outdoors sits behind
+`can_use_community()` first — a pending Buddy in a circle sees nothing.
+
+## O3. No admin bypass on presence
+Check-ins are location-adjacent. *Taken:* admins get no special read
+on outdoor_checkins — they see board-announced presence like any
+community member and circle presence only if they are in the circle.
+(Boards ARE admin-visible: they moderate them.)
+
+## O4. Park boards are open chat for every community member
+"An open chat per place." *Taken:* any community member writes (Icons,
+Fam, active Buddies, org) — unlike the community feed's Icons-post
+rule. Report + block are one tap on every message; board reports land
+in community_reports as target_kind 'park_board'.
+
+## O5. Who checks in and plans outings: Icons only
+Presence and outings are Icon activities ("show first name" of the
+person out and about). *Taken:* outdoor_check_in() and the outings
+insert policy are Icon-only; widening to Buddies-on-visits is a later
+product call.
+
+## O6. Expired presence is history, so it's gone
+"No history of who was where." *Taken:* expired or ended check-ins are
+invisible to everyone but their owner at the database level. The
+owner keeps their own record (their data); nothing aggregates it.
+
+## O7. Moderation queue shows 'park_board' via fallback label
+The admin ModerationQueue's KIND_LABEL map predates this lane and
+renders unknown kinds raw; board reports appear as "park_board" and
+have no Hide-content button (the admin update policy exists — the
+button is a one-line addition for the admin lane).
+
+## O8. Seed coordinates are approximate
+Good enough for a later distance sort; invisible in the v1 list UI.
+An admin place-editor or verified coordinates arrive with the map step.
+
+## O9. New fixture: test-buddy-pending@saathban.dev
+test-buddy's pipeline status is churned by the vetting lane's tests,
+so outdoor's vetting-gate negatives use a dedicated pending account
+(same shared password convention). tests/outdoor.mjs asserts
+test-buddy's behaviour CONSISTENT with whatever standing it currently
+has, instead of pinning it.
+
+## O10. Outdoor strings are in routes/outdoor/outdoorCopy.js
+Same as C8: ready for the i18n lift under outdoor.*.
+

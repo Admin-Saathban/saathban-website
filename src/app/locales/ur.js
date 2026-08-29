@@ -35,6 +35,20 @@ const ur = {
     remove: "ہٹائیں",
   },
 
+  hub: {
+    todaysLog: "آج کا روزنامچہ",
+    logSummary: "{total} میں سے {done} درج — {points} پوائنٹس",
+    logEmpty: "ابھی کچھ درج نہیں — دن ابھی باقی ہے۔",
+    reminders: "آج کی یاد دہانیاں",
+    community: "برادری",
+    events: "تقریبات",
+    skills: "ہنر",
+    circle: "میرا حلقہ",
+    notifications: "اطلاعات",
+    profile: "میری معلومات",
+    settings: "ترتیبات",
+  },
+
   settings: {
     title: "ترتیبات",
 
@@ -165,10 +179,10 @@ const ur = {
     login: {
       title: "خوش آمدید",
       magicTitle: "ای میل لنک سے سائن اِن کریں",
-      magicHint: "{icon} اور {fam} اکاؤنٹس کے لیے — پاس ورڈ کی ضرورت نہیں۔",
+      magicHint: "اگر آپ عموماً ای میل لنک سے سائن اِن کرتے ہیں — پاس ورڈ کی ضرورت نہیں۔",
       magicCta: "مجھے سائن اِن لنک ای میل کریں",
       passwordTitle: "پاس ورڈ سے سائن اِن کریں",
-      passwordHint: "{buddy} رضاکاروں کے لیے۔",
+      passwordHint: "اگر آپ کے پاس پاس ورڈ ہے۔",
       passwordCta: "سائن اِن کریں",
       forgot: "پاس ورڈ بھول گئے؟",
       badCredentials: "یہ ای میل اور پاس ورڈ آپس میں نہیں ملتے۔ براہِ کرم دوبارہ کوشش کریں۔",
@@ -397,6 +411,7 @@ const ur = {
       labelField: "کس چیز کی؟",
       labelPh: "مثلاً: شام کی گولی، ہماری ہفتہ وار کال",
       timeField: "کس وقت؟",
+      addTimeCta: "ایک اور وقت شامل کریں",
       daysField: "کن دنوں؟",
       saveCta: "یاد دہانی محفوظ کریں",
       cancelCta: "منسوخ",

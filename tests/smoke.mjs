@@ -95,7 +95,7 @@ const browser = await chromium.launch({ channel: "msedge", headless: true });
 // 1. Signed-out: guards redirect to login; signup entry reachable.
 {
   const { ctx, page } = await pageFor(browser, null);
-  for (const p of ["/app/home", "/app/admin", "/app/fam", "/app/vetting", "/app/circle"]) {
+  for (const p of ["/app/home", "/app/admin", "/app/fam", "/app/vetting", "/app/circle", "/app/buddy"]) {
     await goto(page, p, 900);
     check(`guard ${p} → login`, pathOf(page) === "/app/auth/login", `landed ${pathOf(page)}`);
   }
@@ -109,7 +109,7 @@ const ROLES = [
   ["test-icon@saathban.dev", "icon", "/app/home", "/app/admin"],
   ["test-admin@saathban.dev", "admin", "/app/admin", "/app/home"],
   ["test-fam@saathban.dev", "fam", "/app/fam", "/app/admin"],
-  ["test-buddy@saathban.dev", "buddy", "/app/vetting", "/app/fam"],
+  ["test-buddy@saathban.dev", "buddy", "/app/buddy", "/app/fam"],
 ];
 for (const [email, label, home, foreign] of ROLES) {
   const session = await login(email);
@@ -131,10 +131,13 @@ for (const [email, label, home, foreign] of ROLES) {
 
 // 3. Icon log persistence: pick a mood, wait for the sync flush,
 //    reload in a FRESH context (no cache) — the server row must feed it.
+//    (The log page moved to /app/home/log when the hub landed.)
 {
   const session = await login("test-icon@saathban.dev");
   const { ctx, page } = await pageFor(browser, session);
-  await goto(page, "/app/home");
+  const hubText = await goto(page, "/app/home");
+  check("icon: hub renders area cards", hubText.includes("Community") && hubText.includes("Events"));
+  await goto(page, "/app/home/log");
   const moodHeader = page
     .locator('button[aria-expanded]')
     .filter({ has: page.locator("text=Mood") })
@@ -147,7 +150,7 @@ for (const [email, label, home, foreign] of ROLES) {
 
   const session2 = await login("test-icon@saathban.dev");
   const { ctx: ctx2, page: page2 } = await pageFor(browser, session2);
-  const body2 = await goto(page2, "/app/home", 2000);
+  const body2 = await goto(page2, "/app/home/log", 2000);
   check("icon: mood persists across fresh session", body2.includes("😄"), "");
   await ctx2.close();
 }

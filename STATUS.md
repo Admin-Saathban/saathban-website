@@ -1,7 +1,21 @@
 # Overnight status — feature/app
 
 Maintained by the overnight integration session. Last update:
-**2026-08-29, integration round 1** (early morning).
+**2026-08-29, morning priority round.**
+
+## Test data baseline (reset this morning — keep it legible)
+
+| Account | State |
+|---|---|
+| test-icon@saathban.dev | Icon; some daily_logs from smoke runs; sees the hub at /app/home |
+| test-fam@saathban.dev | In test-icon's circle with **can_see_mood + can_manage_reminders**; owns the "Morning walk" reminder (08:00 + 17:30, notifies the Icon) |
+| test-buddy@saathban.dev | Application `4269a7c6…` status **active** (a community-lane suite activated it); several document requests incl. one uploaded response |
+| test-admin@saathban.dev | Support-level admin |
+
+Password for all four: `SaathTest!2026`. Circle invites, RSVPs and
+older reminders were wiped this morning; everything above was
+re-seeded deliberately. Don't use these accounts for password-reset
+testing (QUESTIONS.md).
 
 ## TL;DR
 Everything landed and integrated; build clean; the full smoke suite
@@ -51,6 +65,23 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Email onboarding blocked on custom SMTP (QUESTIONS.md #3).
 
 ## Round log
+- **Morning priority round:** all lanes registered in AppRoot
+  (events, skills, notifications + header bell, profile; community,
+  circle, outdoor were already in). New **Icon hub** at /app/home
+  (greeting, log summary, today's reminders, area cards; log at
+  /app/home/log). New **Buddy home** at /app/buddy reflecting live
+  pipeline status — active Buddies never see "start my application";
+  suspended Buddies lose documents + matching (verified). **Documents
+  channel** (migration 0015): buddy uploads to their private folder,
+  request flips to received, requesting admin notified — verified end
+  to end. **Multi-time reminders** (0015): fam-created reminders with
+  several times render on the Icon hub and notify the Icon on create —
+  verified (also fixed circle.js dropping remind_times on insert).
+  Login forms are role-neutral now. Admin login lands on /app/admin in
+  both flows (the reported mis-landing matches the transient profile
+  read the ensureProfile retry now covers; not reproducible).
+  Migration renumbering from between-rounds: bb63c03. Smoke suite:
+  19 checks. Deferred: milestones lane (0017, mid-flight).
 - **Round 1 (early morning):** committed fam/circle/i18n lanes, wired
   circle per CIRCLE_WIRING.md, ensureProfile retry, smoke suite added.
   Later in the round: vetting+fam i18n extraction committed

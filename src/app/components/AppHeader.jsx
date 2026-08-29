@@ -16,6 +16,7 @@ import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
 import supabase from "../lib/supabase.js";
+import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";
 
 export default function AppHeader() {
   const { t, ts } = useI18n();
@@ -82,6 +83,7 @@ export default function AppHeader() {
         </Link>
 
         <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <NotificationsBell />
           <Link to="/app/settings" style={controlStyle}>
             {t("settings.title")}
           </Link>

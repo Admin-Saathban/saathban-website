@@ -199,7 +199,10 @@ export async function fetchReminders(iconId) {
   return data || [];
 }
 
-export async function addReminder(iconId, { label, remind_time, days_label, emoji }) {
+export async function addReminder(
+  iconId,
+  { label, remind_time, remind_times, days_label, emoji }
+) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -210,6 +213,9 @@ export async function addReminder(iconId, { label, remind_time, days_label, emoj
       created_by: user?.id,
       label,
       remind_time,
+      // 0015: a reminder can fire more than once a day; the DB trigger
+      // mirrors remind_time = remind_times[1].
+      remind_times: remind_times?.length ? remind_times : [remind_time],
       days_label,
       emoji: emoji || "⏰",
     })

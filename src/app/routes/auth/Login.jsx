@@ -18,7 +18,6 @@ import {
   ErrorText,
   LinkButton,
 } from "../../components/ui.jsx";
-import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, isValidEmail } from "../../lib/authFlow.js";
 import { rememberPostLoginPath } from "../../lib/session.jsx";
@@ -115,12 +114,7 @@ export default function Login() {
 
       <section style={{ ...sectionStyle, marginTop: 20 }}>
         <h2 style={h2Style}>{t("auth.login.magicTitle")}</h2>
-        <p style={hintStyle}>
-          {t("auth.login.magicHint", {
-            icon: ROLE_DISPLAY.saath_icon,
-            fam: ROLE_DISPLAY.family_member,
-          })}
-        </p>
+        <p style={hintStyle}>{t("auth.login.magicHint")}</p>
         <form onSubmit={submitMagic} noValidate>
           <ErrorText>{magicError}</ErrorText>
           <Field id="login-magic-email" label={t("auth.common.emailLabel")}>
@@ -140,7 +134,7 @@ export default function Login() {
       <section style={sectionStyle}>
         <h2 style={h2Style}>{t("auth.login.passwordTitle")}</h2>
         <p style={hintStyle}>
-          {t("auth.login.passwordHint", { buddy: ROLE_DISPLAY.saath_buddy })}
+          {t("auth.login.passwordHint")}
         </p>
         <form onSubmit={submitPassword} noValidate>
           <ErrorText>{pwError}</ErrorText>

@@ -23,6 +23,20 @@ const en = {
     remove: "Remove",
   },
 
+  hub: {
+    todaysLog: "Today's log",
+    logSummary: "{done} of {total} logged — {points} points",
+    logEmpty: "Nothing logged yet — the day is young.",
+    reminders: "Today's reminders",
+    community: "Community",
+    events: "Events",
+    skills: "Skills",
+    circle: "My Circle",
+    notifications: "Notifications",
+    profile: "My profile",
+    settings: "Settings",
+  },
+
   settings: {
     title: "Settings",
 
@@ -154,10 +168,10 @@ const en = {
     login: {
       title: "Welcome back",
       magicTitle: "Sign in with an email link",
-      magicHint: "For {icon} and {fam} accounts — no password needed.",
+      magicHint: "If you usually sign in by email link — no password needed.",
       magicCta: "Email me a sign-in link",
       passwordTitle: "Sign in with your password",
-      passwordHint: "For {buddy} volunteers.",
+      passwordHint: "If you have a password.",
       passwordCta: "Sign in",
       forgot: "Forgotten your password?",
       badCredentials: "That email and password don't match. Please try again.",
@@ -396,6 +410,7 @@ const en = {
       labelField: "What is it?",
       labelPh: "For example: evening tablet, our weekly call",
       timeField: "At what time?",
+      addTimeCta: "Add another time",
       daysField: "Which days?",
       saveCta: "Save reminder",
       cancelCta: "Cancel",

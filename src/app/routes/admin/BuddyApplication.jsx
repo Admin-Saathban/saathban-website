@@ -649,7 +649,7 @@ export default function BuddyApplication() {
                           fontWeight: 700,
                         }}
                       >
-                        · {d.status}
+                        · {d.response_path ? "uploaded by applicant" : d.status}
                       </span>
                     </span>
                     {d.status === "awaiting" && (
@@ -665,6 +665,12 @@ export default function BuddyApplication() {
                   <div style={{ color: C.textMuted, fontSize: 15 }}>
                     Requested {fmtDate(d.created_at)}
                     {d.note && <> — {d.note}</>}
+                    {d.responded_at && (
+                      <>
+                        {" · "}response {fmtDate(d.responded_at)} —{" "}
+                        <span style={{ wordBreak: "break-all" }}>🔒 {d.response_path}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

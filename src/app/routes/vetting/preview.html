@@ -1,7 +1,9 @@
 <!doctype html>
-<!-- Standalone dev preview for the vetting flow, needed because the
-     /app/vetting route is deliberately NOT registered in AppRoot.jsx
-     yet (see VETTING_WIRING.md).
+<!-- Standalone dev preview for the vetting flow (bypasses AppRoot and
+     its RequireAuth guard, but NOT the backend: reading applications,
+     uploading documents, and submitting all need a signed-in
+     saath_buddy session, which this page shares with /app via
+     localStorage on the same origin — sign in at /app/auth first).
 
      With `npm run dev` running, open:
        http://localhost:5173/src/app/routes/vetting/preview.html

@@ -1,69 +1,65 @@
 # Wiring `/app/vetting`
 
-> **Status: WIRED.** The route is registered in `AppRoot.jsx` behind
-> `RequireAuth roles={["saath_buddy"]}`, and the Buddy welcome screen
-> (`routes/auth/Welcome.jsx`) links here as the entry point. The sections
-> below remain as the data contract for the Supabase swap.
+> **Status: WIRED, live against Supabase.** The route is registered in
+> `AppRoot.jsx` behind `RequireAuth roles={["saath_buddy"]}`, the Buddy
+> welcome screen (`routes/auth/Welcome.jsx`) links here as the entry point,
+> and submission goes through the real `submit_buddy_application()` RPC —
+> `mockSubmit.js` is gone.
 
-## Route registration
+## How the flow talks to Supabase
 
-In `src/app/AppRoot.jsx`:
+All backend access lives in `supabaseVetting.js`:
 
-```jsx
-import VettingForm from "./routes/vetting/VettingForm.jsx";
+- **On mount** the form reads the applicant's own `buddy_applications` rows
+  (RLS scopes the select). A live application (status ≠ `rejected`) renders
+  the pipeline status screen instead of the form; a rejection decided within
+  the last 90 days renders the cooldown screen with the days remaining.
+- **On submit** the CNIC photo and selfie upload to the **private**
+  `buddy-documents` bucket at `<auth uid>/cnic-<ts>.<ext>` and
+  `<auth uid>/selfie-<ts>.<ext>` — migration 0008's policies reject any
+  path whose first folder isn't the caller's own uid, and only
+  jpeg/png/webp are accepted (enforced in the picker and again at upload).
+  The returned object paths go into the payload, then
+  `supabase.rpc("submit_buddy_application", { application, refs })` runs.
+- **RPC rejections** are classified by message substring
+  (`classifySubmitError`) onto kind, full-screen explanations — under-18,
+  90-day cooldown, blocked/not-in-good-standing, duplicate live
+  application (which re-fetches and shows the existing application's
+  status instead). Raw database errors never reach an applicant.
+- **After success** the form re-reads its own row and renders the status
+  screen from the database's truth, not an assumption.
 
-// inside <Routes>:
-<Route path="vetting" element={<VettingForm />} />
-```
+## Status screens
 
-The flow is a single route — steps are internal state, not sub-routes, so a
-half-finished application never produces a shareable deep link into someone's
-identity details. `path="vetting"` (no splat) is enough.
+`screens.jsx` renders the applicant's view of the pipeline
+(`pending → interviewing → probation → active`; `suspended` gets its own
+gentle screen). Rejection is never shown as a pipeline stage — it appears
+only as the cooldown screen with a date. Admin-side status changes are the
+admin lane's queue; this folder only ever *reads* status.
 
-## Entry point
+## Previewing
 
-The natural door is the Saath-Buddy signup: `routes/auth/SignupBuddy.jsx`
-already tells applicants the full application comes after the account exists.
-Once wired, its post-signup landing (or the Buddy placeholder dashboard)
-should link to `/app/vetting`.
-
-Gating that belongs to the auth/data lanes, not this folder:
-
-- Require a signed-in `saath_buddy` account (the real RPC enforces this
-  server-side regardless — `submit_buddy_application` rejects other roles).
-- If the profile already has a live application (any status except
-  `rejected`), show its status instead of a blank form.
-
-## Previewing without wiring
-
-With `npm run dev` running:
-
-    http://localhost:5173/src/app/routes/vetting/preview.html
-
-`preview.html` + `preview.jsx` mount the flow standalone; they're dev-only
-and outside the production entry graph.
+`preview.html` + `preview.jsx` still mount the flow without AppRoot, but
+the backend is real: sign in at `/app/auth` as a `saath_buddy` first (the
+session is shared via localStorage on the same origin). Dev-only; outside
+the production entry graph.
 
 ## Data contract
 
 - Field keys in `vettingData.js` are **exactly** the snake_case columns of
   `supabase/migrations/0004_buddy_vetting.sql`; `buildPayload()` emits the
-  `{ application, refs }` jsonb pair `submit_buddy_application()` expects.
-- `mockSubmit.js` stands in for the RPC and mirrors its rejections (18+,
-  exactly two references, required declarations). Swap its body for
-  `supabase.rpc("submit_buddy_application", payload)` when the data layer
-  lands; nothing else changes.
-- Photo "uploads" store only mock paths under `buddy-documents/pending/…`.
-  Real uploads must target the **private** `buddy-documents` bucket
-  (migration 0008) *before* submission, then pass the returned storage paths
-  as `cnic_photo_path` / `selfie_path`. Never a public bucket.
+  `{ application, refs }` jsonb pair the RPC expects. Photos are in-memory
+  `File`s until submit; their storage paths are passed to `buildPayload()`
+  after upload.
 - Drafts persist to `localStorage` under `saathban.vetting.draft.v1`
-  (cleared on submit). Note for the real data layer: the draft holds CNIC
-  digits on the shared device used to apply — consider clearing it on
-  sign-out as well.
+  (photos excluded — they're re-requested after a reload) and clear on
+  submit or when a live application is found. Note for the session lane:
+  consider clearing this key on sign-out too; a draft holds CNIC digits on
+  a shared device.
 
 ## i18n
 
-Strings are deliberately local to this folder (`vettingData.js` and
-`steps.jsx`) because the locales files belong to another lane. When the
-`ts()`/`useI18n` contract is stable, extraction is contained to those two
-files plus `VettingForm.jsx`.
+Strings are deliberately local to this folder (`vettingData.js`,
+`steps.jsx`, `screens.jsx`) because the locales files belong to another
+lane. When lifting them into `en.js`/`ur.js`, those three files plus
+`VettingForm.jsx` are the whole extraction surface.

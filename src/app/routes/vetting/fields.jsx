@@ -229,9 +229,9 @@ export function YesNo({ id, value, onChange, error, yesLabel, noLabel }) {
   );
 }
 
-/* Photo upload placeholder. Stores only a mock storage path + the chosen
-   file name; real upload to the PRIVATE buddy-documents bucket comes with
-   the data layer. Never a public bucket (SPEC.md, sensitive data). */
+/* Photo picker. Hands the chosen File to the parent; the actual upload to
+   the PRIVATE buddy-documents bucket happens at submit time
+   (supabaseVetting.js). Never a public bucket (SPEC.md, sensitive data). */
 export function UploadBox({ id, label, hint, error, fileName, onFile, capture }) {
   const inputRef = useRef(null);
   return (
@@ -249,7 +249,7 @@ export function UploadBox({ id, label, hint, error, fileName, onFile, capture })
         ref={inputRef}
         id={id}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         capture={capture}
         style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}
         onChange={(e) => {

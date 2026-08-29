@@ -115,16 +115,17 @@ export const CODE_OF_CONDUCT = [
 ];
 
 // ─── Form state ───
-// Keys mirror the buddy_applications columns; the *_name entries are
-// UI-only (chosen file names) and are stripped by buildPayload().
+// Keys mirror the buddy_applications columns. The two photos are NOT
+// part of this state: they live as in-memory File objects (a `files`
+// object with `cnic` and `selfie`) and upload to the private
+// buddy-documents bucket at submit time — the returned storage paths
+// are passed to buildPayload() then. Files can't survive a page
+// reload, so drafts restore without them and the identity step asks
+// again.
 export const INITIAL_APPLICATION = {
   legal_name: "",
   cnic_number: "",
   dob: "",
-  cnic_photo_path: "",
-  cnic_photo_name: "",
-  selfie_path: "",
-  selfie_name: "",
   phone: "",
   occupation: "",
   city: "",
@@ -171,8 +172,10 @@ export function isAtLeast18(dobString) {
 }
 
 // ─── Per-step validation ───
-// Returns { fieldKey: message }. Reference errors use keys like "ref0_name".
-export function validateStep(stepId, application, refs) {
+// Returns { fieldKey: message }. Reference errors use keys like "ref0_name";
+// the photo errors keep the column-named keys so the upload boxes can show
+// them. `files` is { cnic: File|null, selfie: File|null }.
+export function validateStep(stepId, application, refs, files) {
   const e = {};
   if (stepId === "identity") {
     if (!application.legal_name.trim())
@@ -184,9 +187,9 @@ export function validateStep(stepId, application, refs) {
       e.dob = "Saath-Buddies must be at least 18.";
     if (!isValidPhone(application.phone))
       e.phone = "Please enter a phone number we can reach you on.";
-    if (!application.cnic_photo_path)
+    if (!files?.cnic)
       e.cnic_photo_path = "Please add a photo of the front of your CNIC.";
-    if (!application.selfie_path)
+    if (!files?.selfie)
       e.selfie_path = "Please add a clear photo of your face.";
   }
   if (stepId === "profile") {
@@ -222,22 +225,23 @@ export function validateStep(stepId, application, refs) {
   return e;
 }
 
-export function validateAll(application, refs) {
+export function validateAll(application, refs, files) {
   return STEPS.filter((s) => s.id !== "review").reduce(
-    (acc, s) => ({ ...acc, ...validateStep(s.id, application, refs) }),
+    (acc, s) => ({ ...acc, ...validateStep(s.id, application, refs, files) }),
     {}
   );
 }
 
 // ─── Payload builder — the shape submit_buddy_application() receives ───
-export function buildPayload(application, refs) {
+// `paths` carries the storage paths returned by the uploads.
+export function buildPayload(application, refs, paths) {
   return {
     application: {
       legal_name: application.legal_name.trim(),
       cnic_number: application.cnic_number,
       dob: application.dob,
-      cnic_photo_path: application.cnic_photo_path,
-      selfie_path: application.selfie_path,
+      cnic_photo_path: paths.cnic_photo_path,
+      selfie_path: paths.selfie_path,
       phone: application.phone.trim(),
       occupation: application.occupation.trim() || null,
       city: application.city.trim(),

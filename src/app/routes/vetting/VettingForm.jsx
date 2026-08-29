@@ -1,18 +1,24 @@
 /* ════════════════════════════════════════════════
    /app/vetting — the Saath-Buddy application (build step 8, applicant
-   side), on mock submission. Long, deliberately (SPEC.md): volunteers
+   side), wired to Supabase. Long, deliberately (SPEC.md): volunteers
    are matched with isolated seniors, and this form is where the bar
    is set.
 
-   Seven steps: identity → profile (languages emphasised) → motivation
-   → experience → references → declarations → review. Field keys are
-   the buddy_applications columns; submission goes through
-   mockSubmit.js, a stand-in for submit_buddy_application().
+   Lifecycle:
+     mount  → read own applications (RLS-scoped).
+              live one (status ≠ rejected)  → pipeline status screen
+              recent rejection (< 90 days)  → cooldown screen
+              otherwise                     → the seven-step form
+     submit → upload CNIC photo + selfie to the PRIVATE buddy-documents
+              bucket (own-folder paths, migration 0008), then call
+              submit_buddy_application() (migration 0004). The RPC's
+              rejections render as kind error screens, never raw errors.
 
-   Answers auto-save to this device (localStorage) — a form this long
-   must survive a closed tab. The draft clears on submit.
+   Route is registered in AppRoot behind RequireAuth roles=["saath_buddy"];
+   the RPC re-checks role and standing server-side regardless.
 
-   NOT yet registered in AppRoot.jsx — see VETTING_WIRING.md.
+   Answers auto-save to this device (localStorage; photos can't persist,
+   so a restored draft asks for them again). The draft clears on submit.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
@@ -26,7 +32,16 @@ import {
   buildPayload,
   DRAFT_KEY,
 } from "./vettingData.js";
-import { mockSubmitBuddyApplication } from "./mockSubmit.js";
+import {
+  uploadBuddyDocument,
+  submitBuddyApplication,
+  fetchOwnApplications,
+  liveApplication,
+  cooldownDaysLeft,
+  classifySubmitError,
+  currentUserId,
+} from "./supabaseVetting.js";
+import { ApplicationStatus, KindErrorScreen } from "./screens.jsx";
 import {
   StepIdentity,
   StepProfile,
@@ -60,6 +75,14 @@ function loadDraft() {
   }
 }
 
+function clearDraft() {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 const STEP_COMPONENTS = {
   identity: StepIdentity,
   profile: StepProfile,
@@ -74,15 +97,55 @@ export default function VettingForm() {
   const draft = useRef(loadDraft()).current;
   const [app, setAppState] = useState({ ...INITIAL_APPLICATION, ...(draft?.app || {}) });
   const [refs, setRefs] = useState(draft?.refs || INITIAL_REFS);
+  const [files, setFiles] = useState({ cnic: null, selfie: null });
   const [stepIndex, setStepIndex] = useState(draft?.stepIndex || 0);
   const [errors, setErrors] = useState({});
+
+  // What the route shows: resolving | form | status | refused
+  const [phase, setPhase] = useState("resolving");
+  const [application, setApplication] = useState(null); // live row for the status screen
+  const [justSubmitted, setJustSubmitted] = useState(false);
+  const [refusal, setRefusal] = useState(null); // { code, daysLeft }
+
   const [submitting, setSubmitting] = useState(false);
+  const [submitStage, setSubmitStage] = useState(""); // "photos" | "sending"
   const [submitError, setSubmitError] = useState("");
-  const [submittedId, setSubmittedId] = useState(null);
   const headingRef = useRef(null);
 
   const step = STEPS[stepIndex];
   const StepBody = STEP_COMPONENTS[step.id];
+
+  /* On mount: does this account already have an application? */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchOwnApplications();
+        if (cancelled) return;
+        const live = liveApplication(rows);
+        if (live) {
+          clearDraft(); // a live application makes the draft stale
+          setApplication(live);
+          setPhase("status");
+          return;
+        }
+        const daysLeft = cooldownDaysLeft(rows);
+        if (daysLeft > 0) {
+          setRefusal({ code: "cooldown", daysLeft });
+          setPhase("refused");
+          return;
+        }
+        setPhase("form");
+      } catch {
+        // Can't read (offline, expired session mid-page…): show the form —
+        // the RPC re-checks everything server-side at submit anyway.
+        if (!cancelled) setPhase("form");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setApp = (patch) => {
     setAppState((prev) => ({ ...prev, ...patch }));
@@ -93,22 +156,34 @@ export default function VettingForm() {
     });
   };
 
-  // Auto-save the draft; cleared on successful submit.
+  const setFilesAndClear = (next) => {
+    setFiles(next);
+    setErrors((prev) => {
+      const cleared = { ...prev };
+      if (next.cnic) delete cleared.cnic_photo_path;
+      if (next.selfie) delete cleared.selfie_path;
+      return cleared;
+    });
+  };
+
+  // Auto-save the draft (photos can't be persisted; they re-ask on restore).
   useEffect(() => {
+    if (phase !== "form") return;
     try {
-      if (typeof localStorage !== "undefined" && !submittedId) {
+      if (typeof localStorage !== "undefined") {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({ app, refs, stepIndex }));
       }
     } catch {
       /* storage full or blocked — the form still works, just without drafts */
     }
-  }, [app, refs, stepIndex, submittedId]);
+  }, [app, refs, stepIndex, phase]);
 
   // New step: scroll up and move focus to the step heading.
   useEffect(() => {
+    if (phase !== "form") return;
     if (typeof window !== "undefined") window.scrollTo(0, 0);
     headingRef.current?.focus();
-  }, [stepIndex]);
+  }, [stepIndex, phase]);
 
   const goTo = (i) => {
     setErrors({});
@@ -119,7 +194,7 @@ export default function VettingForm() {
 
   const continueOrSubmit = async () => {
     if (step.id !== "review") {
-      const e = validateStep(step.id, app, refs);
+      const e = validateStep(step.id, app, refs, files);
       if (Object.keys(e).length > 0) {
         setErrors(e);
         return;
@@ -129,13 +204,13 @@ export default function VettingForm() {
       return;
     }
 
-    // Review step → full validation, then mock submission.
-    const all = validateAll(app, refs);
+    // Review step → full validation, then the real submission.
+    const all = validateAll(app, refs, files);
     if (Object.keys(all).length > 0) {
       const firstBroken = STEPS.findIndex(
         (s) =>
           s.id !== "review" &&
-          Object.keys(validateStep(s.id, app, refs)).length > 0
+          Object.keys(validateStep(s.id, app, refs, files)).length > 0
       );
       setErrors(all);
       setStepIndex(firstBroken);
@@ -145,64 +220,109 @@ export default function VettingForm() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const { id } = await mockSubmitBuddyApplication(buildPayload(app, refs));
-      try {
-        if (typeof localStorage !== "undefined") localStorage.removeItem(DRAFT_KEY);
-      } catch { /* ignore */ }
-      setSubmittedId(id);
+      // 1. Photos into the private bucket, under the applicant's own folder.
+      setSubmitStage("photos");
+      const uid = await currentUserId();
+      const [cnicPath, selfiePath] = await Promise.all([
+        uploadBuddyDocument(uid, "cnic", files.cnic),
+        uploadBuddyDocument(uid, "selfie", files.selfie),
+      ]);
+
+      // 2. The application itself.
+      setSubmitStage("sending");
+      await submitBuddyApplication(
+        buildPayload(app, refs, {
+          cnic_photo_path: cnicPath,
+          selfie_path: selfiePath,
+        })
+      );
+
+      // 3. Read back our own row — the status screen shows the truth
+      //    from the database, not an assumption.
+      clearDraft();
+      const rows = await fetchOwnApplications();
+      setApplication(liveApplication(rows) || { status: "pending", created_at: new Date().toISOString() });
+      setJustSubmitted(true);
+      setPhase("status");
+      if (typeof window !== "undefined") window.scrollTo(0, 0);
     } catch (err) {
-      setSubmitError(err.message || "Something went wrong — please try again.");
+      const code = classifySubmitError(err.message);
+      if (code === "duplicate") {
+        // Someone submitted from another tab or device — show that one.
+        try {
+          const rows = await fetchOwnApplications();
+          const live = liveApplication(rows);
+          if (live) {
+            clearDraft();
+            setApplication(live);
+            setPhase("status");
+            return;
+          }
+        } catch {
+          /* fall through to the generic banner */
+        }
+        setSubmitError("An application already exists for this account.");
+      } else if (code === "under18" || code === "blocked") {
+        setRefusal({ code });
+        setPhase("refused");
+        if (typeof window !== "undefined") window.scrollTo(0, 0);
+      } else if (code === "cooldown") {
+        let daysLeft = 0;
+        try {
+          daysLeft = cooldownDaysLeft(await fetchOwnApplications());
+        } catch {
+          /* the screen copes with 0 */
+        }
+        setRefusal({ code, daysLeft });
+        setPhase("refused");
+        if (typeof window !== "undefined") window.scrollTo(0, 0);
+      } else {
+        setSubmitError(err.message || "Something went wrong — please try again.");
+      }
     } finally {
       setSubmitting(false);
+      setSubmitStage("");
     }
   };
 
   const errorCount = Object.keys(errors).length;
 
-  /* ─── Submitted: what happens next ─── */
-  if (submittedId) {
+  /* ─── Non-form phases ─── */
+
+  if (phase === "resolving") {
     return (
       <main className="vt-root" style={pageStyle}>
         <style>{css}</style>
         <div style={columnStyle}>
-          <div
-            className="vt-step"
-            style={{
-              background: C.white,
-              border: `2px solid ${C.sage}`,
-              borderRadius: 22,
-              padding: "28px 22px",
-              marginTop: 24,
-            }}
-          >
-            <p aria-hidden="true" style={{ fontSize: 44, margin: "0 0 8px" }}>🌱</p>
-            <h1 style={{ ...h1Style, marginBottom: 12 }}>Application received</h1>
-            <p style={{ fontSize: 19, lineHeight: 1.6, color: C.textMain, margin: "0 0 20px" }}>
-              Thank you — genuinely. What happens next, in order:
-            </p>
-            <ol style={{ margin: "0 0 20px", paddingLeft: 24 }}>
-              {[
-                "A member of our team reads your application — your own words first.",
-                "We call you for a proper conversation.",
-                "We phone both of your references. Please do let them know.",
-                "If everything fits, you begin a probation period alongside an experienced Buddy.",
-                "Then you're an active Saath-Buddy.",
-              ].map((line) => (
-                <li key={line} style={{ fontSize: 18, lineHeight: 1.6, marginBottom: 10 }}>
-                  {line}
-                </li>
-              ))}
-            </ol>
-            <p style={{ fontSize: 18, lineHeight: 1.6, color: C.textMuted, margin: 0 }}>
-              Until your application is fully approved you won't be matched with
-              anyone — that protection is the whole point of the process. We'll
-              reach you by email and phone at every stage.
-            </p>
-            <p style={{ fontSize: 18, color: C.textMuted, marginTop: 16, marginBottom: 0 }}>
-              (Development preview — nothing was actually sent. Reference:{" "}
-              {submittedId.slice(0, 8)})
-            </p>
-          </div>
+          <p role="status" style={{ fontSize: 19, color: C.textMuted, marginTop: 48, textAlign: "center" }}>
+            One moment…
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "status") {
+    return (
+      <main className="vt-root" style={pageStyle}>
+        <style>{css}</style>
+        <div style={columnStyle}>
+          <ApplicationStatus application={application} justSubmitted={justSubmitted} />
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "refused") {
+    return (
+      <main className="vt-root" style={pageStyle}>
+        <style>{css}</style>
+        <div style={columnStyle}>
+          <KindErrorScreen
+            code={refusal.code}
+            daysLeft={refusal.daysLeft || 0}
+            onRetry={() => setPhase("form")}
+          />
         </div>
       </main>
     );
@@ -265,19 +385,7 @@ export default function VettingForm() {
         </h2>
 
         {errorCount > 0 && (
-          <p
-            role="alert"
-            style={{
-              fontSize: 18,
-              lineHeight: 1.5,
-              fontWeight: 700,
-              color: C.cream,
-              background: C.brown,
-              borderRadius: 14,
-              padding: "12px 16px",
-              margin: "0 0 18px",
-            }}
-          >
+          <p role="alert" style={alertStyle}>
             {errorCount === 1
               ? "One thing needs your attention below."
               : `${errorCount} things need your attention below.`}
@@ -285,19 +393,7 @@ export default function VettingForm() {
         )}
 
         {submitError && (
-          <p
-            role="alert"
-            style={{
-              fontSize: 18,
-              lineHeight: 1.5,
-              fontWeight: 700,
-              color: C.cream,
-              background: C.brown,
-              borderRadius: 14,
-              padding: "12px 16px",
-              margin: "0 0 18px",
-            }}
-          >
+          <p role="alert" style={alertStyle}>
             {submitError}
           </p>
         )}
@@ -318,6 +414,8 @@ export default function VettingForm() {
             setRefs={setRefs}
             errors={errors}
             goTo={goTo}
+            files={files}
+            setFiles={setFilesAndClear}
           />
 
           <div style={{ display: "flex", gap: 10, marginTop: 28, flexWrap: "wrap" }}>
@@ -325,6 +423,7 @@ export default function VettingForm() {
               <button
                 type="button"
                 onClick={back}
+                disabled={submitting}
                 style={{
                   flex: "1 1 140px",
                   minHeight: 56,
@@ -360,7 +459,9 @@ export default function VettingForm() {
             >
               {step.id === "review"
                 ? submitting
-                  ? "Sending…"
+                  ? submitStage === "photos"
+                    ? "Saving your photos…"
+                    : "Sending…"
                   : "Send my application"
                 : "Continue"}
             </button>
@@ -369,7 +470,8 @@ export default function VettingForm() {
 
         <p style={{ fontSize: 18, color: C.textMuted, margin: "24px 0 0", lineHeight: 1.5 }}>
           Not ready to finish? Everything you've entered stays saved on this
-          device — come back any time.
+          device — come back any time. Photos are the one thing we'll ask for
+          again.
         </p>
       </div>
     </main>
@@ -397,4 +499,15 @@ const h1Style = {
   color: C.green,
   lineHeight: 1.2,
   margin: 0,
+};
+
+const alertStyle = {
+  fontSize: 18,
+  lineHeight: 1.5,
+  fontWeight: 700,
+  color: C.cream,
+  background: C.brown,
+  borderRadius: 14,
+  padding: "12px 16px",
+  margin: "0 0 18px",
 };

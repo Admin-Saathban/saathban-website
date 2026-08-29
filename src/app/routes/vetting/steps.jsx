@@ -19,6 +19,7 @@ import {
   MOTIVATION_MIN_CHARS,
   formatCnic,
 } from "./vettingData.js";
+import { isAcceptedImage } from "./supabaseVetting.js";
 import {
   TextField,
   TextAreaField,
@@ -41,7 +42,21 @@ const sectionLabel = {
 
 /* ─── 1. Identity ─── */
 
-export function StepIdentity({ app, setApp, errors }) {
+export function StepIdentity({ app, setApp, errors, files, setFiles }) {
+  // Wrong-format picks (e.g. HEIC) are refused here, before upload —
+  // the bucket only accepts jpeg/png/webp (migration 0008).
+  const [typeErrors, setTypeErrors] = useState({});
+  const pick = (kind) => (f) => {
+    if (!isAcceptedImage(f)) {
+      setTypeErrors((t) => ({
+        ...t,
+        [kind]: "Please use a JPG, PNG, or WebP photo.",
+      }));
+      return;
+    }
+    setTypeErrors((t) => ({ ...t, [kind]: "" }));
+    setFiles({ ...files, [kind]: f });
+  };
   return (
     <>
       <StepIntro>
@@ -96,29 +111,19 @@ export function StepIdentity({ app, setApp, errors }) {
         id="cnic_photo"
         label="Photo of your CNIC (front)"
         hint="Clear and readable, all four corners visible."
-        error={errors.cnic_photo_path}
-        fileName={app.cnic_photo_name}
-        onFile={(f) =>
-          setApp({
-            cnic_photo_path: `buddy-documents/pending/cnic-${f.name}`,
-            cnic_photo_name: f.name,
-          })
-        }
+        error={typeErrors.cnic || errors.cnic_photo_path}
+        fileName={files.cnic?.name}
+        onFile={pick("cnic")}
       />
 
       <UploadBox
         id="selfie"
         label="A photo of you"
         hint="Taken now if possible, so we can match it to your CNIC."
-        error={errors.selfie_path}
-        fileName={app.selfie_name}
+        error={typeErrors.selfie || errors.selfie_path}
+        fileName={files.selfie?.name}
         capture="user"
-        onFile={(f) =>
-          setApp({
-            selfie_path: `buddy-documents/pending/selfie-${f.name}`,
-            selfie_name: f.name,
-          })
-        }
+        onFile={pick("selfie")}
       />
     </>
   );
@@ -613,7 +618,7 @@ function ReviewBlock({ title, stepIndex, goTo, rows }) {
   );
 }
 
-export function StepReview({ app, refs, goTo }) {
+export function StepReview({ app, refs, goTo, files }) {
   const hours = WEEKLY_HOURS_OPTIONS.find((o) => o.value === app.weekly_hours);
   const months = COMMITMENT_OPTIONS.find((o) => o.value === app.commitment_months);
   return (
@@ -632,8 +637,8 @@ export function StepReview({ app, refs, goTo }) {
           ["CNIC", app.cnic_number],
           ["Date of birth", app.dob],
           ["Phone", app.phone],
-          ["CNIC photo", app.cnic_photo_name],
-          ["Your photo", app.selfie_name],
+          ["CNIC photo", files.cnic?.name],
+          ["Your photo", files.selfie?.name],
         ]}
       />
       <ReviewBlock

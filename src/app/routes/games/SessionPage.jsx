@@ -31,6 +31,7 @@ import {
   startWithBots,
   claimOpenSeat,
   cancelSession,
+  leaveSession,
   GAME_STICKERS,
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
@@ -66,9 +67,15 @@ export default function SessionPage() {
   const toastThenGo = useToastThenGo();
   const [now, setNow] = useState(Date.now());
   const tickedFor = useRef(null);
+  // Set the instant a leave or a call-off starts. A guest loses read access
+  // to the session the moment the RPC lands, so a poll arriving between that
+  // and the route change would read null and paint "this table is private to
+  // its players" on the way out. This flag — not the navigate — is the fix.
+  const leaving = useRef(false);
   const navigate = useNavigate();
 
   const refresh = useCallback(async () => {
+    if (leaving.current) return;   // on our way out: never read a dead row
     try {
       const [s, m, c] = await Promise.all([
         fetchSession(sessionId),
@@ -144,6 +151,48 @@ export default function SessionPage() {
       pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
     setBusy(false);
+  };
+
+  /* Leaving and calling off both end with this page gone, so neither can use
+     act() — act() refreshes after the call, and by then the row may be unreadable.
+     Set the flag FIRST, then say it and go through the shared toast host, which
+     survives the route change and stays readable on the games home. */
+  const callOff = async () => {
+    if (busy || !session) return;
+    setBusy(true);
+    leaving.current = true;
+    try {
+      await cancelSession(session.id);
+      toastThenGo(t("games.wait.calledOffToast"), "/app/games", { replace: true });
+    } catch {
+      leaving.current = false;    // still here after all
+      setBusy(false);
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
+    }
+  };
+
+  const leaveTable = async () => {
+    if (busy || !session) return;
+    // At a table in play the seat becomes a bot rather than vanishing, so the
+    // others aren't stranded — the honest line differs from a lobby's.
+    const inPlay = session.status === "active";
+    setBusy(true);
+    leaving.current = true;
+    try {
+      const res = await leaveSession(session.id);
+      // left | cancelled | not_seated | over — every one of them means this
+      // page is no longer somewhere to stand. Only a throw keeps us here.
+      const gone = res?.result === "left" && inPlay;
+      toastThenGo(
+        gone ? t("games.wait.leftBotPlays") : t("games.wait.leftToast"),
+        "/app/games",
+        { replace: true }
+      );
+    } catch {
+      leaving.current = false;
+      setBusy(false);
+      pushToast(t("games.actionError"), { tone: "error", key: "games" });
+    }
   };
 
   /* Invitee answers. 'filled' is not an error — it opens the
@@ -296,6 +345,8 @@ export default function SessionPage() {
           busy={busy}
           act={act}
           navigate={navigate}
+          onCallOff={callOff}
+          onLeave={leaveTable}
           t={t}
           ts={ts}
         />
@@ -421,7 +472,8 @@ function SeatChip({ name, state, seatNo, ts }) {
 
 function WaitingRoom({
   session, game, mySeat, isHost, isInvitee,
-  pendingInvites = [], inviteNames = {}, profile, busy, act, navigate, t, ts,
+  pendingInvites = [], inviteNames = {}, profile, busy, act, navigate,
+  onCallOff, onLeave, t, ts,
 }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [posted, setPosted] = useState(false);
@@ -508,14 +560,7 @@ function WaitingRoom({
           </GhostBtn>
           <GhostBtn
             disabled={busy}
-            onClick={() =>
-              isHost
-                ? act(async () => {
-                    await cancelSession(session.id);
-                    navigate("/app/games");
-                  }, t("games.wait.calledOffToast"))
-                : navigate("/app/games")
-            }
+            onClick={() => (isHost ? onCallOff() : onLeave())}
             style={{ padding: "0 16px" }}
           >
             {isHost ? t("games.wait.cancel") : t("games.wait.leave")}

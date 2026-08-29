@@ -290,8 +290,11 @@ export default function AppSettings() {
           </div>
         </Section>
 
-        {/* ── Daily log: modules, medicines, meals, custom trackers ── */}
-        <DailyLogSection t={t} ts={ts} lang={lang} />
+        {/* ── Daily log: modules, medicines, meals, custom trackers.
+            The daily log is the Icon home's centrepiece — showing its
+            settings to Fam/Buddy/admin would promise a page those
+            roles don't have (PARITY.md). ── */}
+        {profile?.role === "saath_icon" && <DailyLogSection t={t} ts={ts} lang={lang} />}
 
         {/* ── Preview ── */}
         <Section title={t("settings.preview.title")} hint={t("settings.preview.hint")} ts={ts}>

@@ -966,6 +966,8 @@ const en = {
       cancelCta: "Change of plans?",
       fullNote: "This one is full — the next gathering will have your name on it.",
       famNote: "Family are welcome alongside — no sign-up needed to accompany someone.",
+      buddyNote:
+        "Volunteers are welcome — seats are counted from Saath-Icon RSVPs, so just come along.",
       siteBadge: "From saathban.com",
       loadError: "That didn't load. Please try again in a moment.",
       rsvpError: "That didn't go through — please try again.",

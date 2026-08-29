@@ -12,6 +12,10 @@ export const STRINGS = {
       title: "Groups",
       intro: "Small circles of friends — a place to share and plan together.",
       empty: "No groups yet. Start one and invite the people you'd like along.",
+      // For roles that can't create: a door, not an instruction they can't follow.
+      emptyOther: (icon) =>
+        `No groups yet. Groups are started by ${icon}s — when a friend starts one, your invitation will appear right here.`,
+      startIconOnly: (icon) => `Groups are started by ${icon}s; joining is by invitation.`,
       createCta: "Start a group",
       invitesLabel: "Invitations",
       inviteLine: (inviter, group) => `${inviter} invited you to ${group}.`,
@@ -74,6 +78,9 @@ export const STRINGS = {
       title: "گروپ",
       intro: "دوستوں کے چھوٹے حلقے — مل کر بانٹنے اور منصوبہ بنانے کی جگہ۔",
       empty: "ابھی کوئی گروپ نہیں۔ ایک شروع کریں اور اپنے پسندیدہ لوگوں کو بلائیں۔",
+      emptyOther: (icon) =>
+        `ابھی کوئی گروپ نہیں۔ گروپ ${icon} شروع کرتے ہیں — جب کوئی دوست شروع کرے گا، آپ کی دعوت یہیں نظر آئے گی۔`,
+      startIconOnly: (icon) => `گروپ ${icon} شروع کرتے ہیں؛ شمولیت دعوت سے ہوتی ہے۔`,
       createCta: "گروپ شروع کریں",
       invitesLabel: "دعوتیں",
       inviteLine: (inviter, group) => `${inviter} نے آپ کو ${group} میں بلایا ہے۔`,

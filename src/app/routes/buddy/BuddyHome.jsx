@@ -309,6 +309,7 @@ export default function BuddyHome() {
                       { to: "/app/community", emoji: "🪷", key: "hub.community" },
                       { to: "/app/games", emoji: "🎲", key: "hub.games" },
                       { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
+                      { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
                     ]
                   : []),
                 { to: "/app/events", emoji: "🎪", key: "hub.events" },

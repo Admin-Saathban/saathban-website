@@ -828,40 +828,47 @@ export default function Feed() {
         >
           {t("community.feed.title")}
         </h1>
-        <Link
-          to="messages"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            padding: "0 18px",
-            borderRadius: 50,
-            border: `2px solid ${C.green}`,
-            color: C.green,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          ✉️ {t("community.feed.messagesCta")}
-        </Link>
-        <Link
-          to="connect"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            padding: "0 18px",
-            borderRadius: 50,
-            border: `2px solid ${C.green}`,
-            color: C.green,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          🤝 {t("community.connect.entryCta")}
-        </Link>
+        {/* Doors only for those the surfaces will actually admit — a
+            suspended Buddy keeps the page's gentle no-access note, not
+            two links that refuse on arrival (PARITY.md). */}
+        {access === true && (
+          <>
+            <Link
+              to="messages"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 18px",
+                borderRadius: 50,
+                border: `2px solid ${C.green}`,
+                color: C.green,
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              ✉️ {t("community.feed.messagesCta")}
+            </Link>
+            <Link
+              to="connect"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 18px",
+                borderRadius: 50,
+                border: `2px solid ${C.green}`,
+                color: C.green,
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              🤝 {t("community.connect.entryCta")}
+            </Link>
+          </>
+        )}
       </div>
       <BodyText muted style={{ marginBottom: 14 }}>{t("community.feed.intro")}</BodyText>
 
@@ -1129,7 +1136,9 @@ export default function Feed() {
                 <BodyText muted>
                   {tab === "friends"
                     ? t("community.shares.friendsEmpty")
-                    : t("community.feed.emptyFeed")}
+                    : isIcon
+                      ? t("community.feed.emptyFeed")
+                      : t("community.feed.emptyFeedReader")}
                 </BodyText>
               );
             }

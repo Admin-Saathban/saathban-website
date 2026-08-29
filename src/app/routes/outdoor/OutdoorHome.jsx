@@ -13,7 +13,8 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { TYPE_ICONS } from "./outdoorCopy.js";
+import { fetchMembershipsAsMember } from "../../lib/circle.js";
+import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
 import {
   canUseCommunity,
   fetchPlaces,
@@ -35,6 +36,7 @@ export default function OutdoorHome() {
   const [liveCounts, setLiveCounts] = useState({});
   const [happeningCounts, setHappeningCounts] = useState({});
   const [city, setCity] = useState("");
+  const [personCities, setPersonCities] = useState({}); // city → person's first name
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -52,8 +54,24 @@ export default function OutdoorHome() {
         for (const ci of live) counts[ci.place_id] = (counts[ci.place_id] || 0) + 1;
         setLiveCounts(counts);
 
+        // A Fam member far away: their person's city gets named on its
+        // chip, one obvious tap. Best-effort — the list stands alone.
+        const persons = {};
+        if (profile?.role === "family_member") {
+          try {
+            for (const m of await fetchMembershipsAsMember()) {
+              const c = m.icon_profile?.city;
+              if (c && !persons[c]) persons[c] = firstNameOf(m.icon_profile.full_name);
+            }
+            if (!cancelled) setPersonCities(persons);
+          } catch {
+            /* chips just go unannotated */
+          }
+        }
+
         // Open on this person's own city: their remembered choice first,
-        // then the city on their profile, then the first city we have.
+        // then the city on their profile, then (for Fam) the city of
+        // someone in their circle, then the first city we have.
         const cities = [...new Set(rows.map((p) => p.city))];
         let remembered = "";
         try {
@@ -61,10 +79,11 @@ export default function OutdoorHome() {
         } catch {
           /* storage unavailable — fall through */
         }
+        const personCity = Object.keys(persons).find((c) => cities.includes(c));
         setCity(
           cities.includes(remembered) ? remembered
             : cities.includes(profile?.city) ? profile.city
-            : cities[0] || ""
+            : personCity || cities[0] || ""
         );
 
         // Happening badges are best-effort — the list stands without them.
@@ -142,6 +161,11 @@ export default function OutdoorHome() {
         </Card>
       ) : (
         <>
+          {profile?.city && !cities.includes(profile.city) && (
+            <BodyText muted style={{ marginBottom: 8 }}>
+              {t("outdoor.home.noPlacesOwnCity", { city: profile.city })}
+            </BodyText>
+          )}
           {cities.length > 1 && (
             <div
               role="group"
@@ -150,6 +174,10 @@ export default function OutdoorHome() {
             >
               {cities.map((c) => {
                 const on = c === city;
+                const person = personCities[c];
+                const label = person
+                  ? `${c} · ${t("outdoor.home.personCity", { name: person })}`
+                  : c;
                 return (
                   <button
                     key={c}
@@ -169,7 +197,7 @@ export default function OutdoorHome() {
                       cursor: "pointer",
                     }}
                   >
-                    {on ? `✓ ${c}` : c}
+                    {on ? `✓ ${label}` : label}
                   </button>
                 );
               })}

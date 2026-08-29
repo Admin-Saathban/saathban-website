@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
 import { fetchMyGroups, fetchMyGroupInvites, respondInvite } from "./groupsStore.js";
@@ -74,7 +75,11 @@ export default function GroupsList() {
       {groups === null ? (
         <BodyText muted role="status">···</BodyText>
       ) : groups.length === 0 ? (
-        <Card><BodyText muted>{s.empty}</BodyText></Card>
+        <Card>
+          <BodyText muted>
+            {profile?.role === "saath_icon" ? s.empty : s.emptyOther(ROLE_DISPLAY.saath_icon)}
+          </BodyText>
+        </Card>
       ) : (
         groups.map((g) => (
           <Card key={g.id}>
@@ -92,10 +97,16 @@ export default function GroupsList() {
         ))
       )}
 
-      {profile?.role === "saath_icon" && (
+      {profile?.role === "saath_icon" ? (
         <div style={{ marginTop: 12 }}>
           <PrimaryBtn onClick={() => navigate("/app/groups/new")}>✨ {s.createCta}</PrimaryBtn>
         </div>
+      ) : (
+        groups?.length > 0 && (
+          <BodyText muted style={{ marginTop: 12 }}>
+            {s.startIconOnly(ROLE_DISPLAY.saath_icon)}
+          </BodyText>
+        )
       )}
     </Screen>
   );

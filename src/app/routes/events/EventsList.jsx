@@ -87,9 +87,15 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
         )
       )}
 
+      {/* Fam and Buddies: welcome said in words, never a missing button. */}
       {ev.source === "app" && upcoming && role === "family_member" && (
         <BodyText muted style={{ fontSize: ts(18), margin: 0 }}>
           {t("events.list.famNote")}
+        </BodyText>
+      )}
+      {ev.source === "app" && upcoming && role === "saath_buddy" && (
+        <BodyText muted style={{ fontSize: ts(18), margin: 0 }}>
+          {t("events.list.buddyNote")}
         </BodyText>
       )}
     </Card>

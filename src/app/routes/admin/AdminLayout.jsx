@@ -8,8 +8,9 @@
    Applications load from Supabase through ./api.js; every action
    awaits its real write and then refetches, so what the reviewer sees
    is always what the database holds (including trigger-stamped fields
-   like decided_at and reviewed_by). Moderation stays a mock skeleton —
-   no reports table exists until build step 11.
+   like decided_at and reviewed_by). Moderation is live too
+   (community_reports — ModerationQueue fetches its own rows; the
+   sidebar just counts the open ones).
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,7 +18,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
-import { MOCK_REPORTS } from "./data.js";
+import supabase from "../../lib/supabase.js";
 import * as api from "./api.js";
 
 export default function AdminLayout() {
@@ -30,7 +31,7 @@ export default function AdminLayout() {
 
   const [applications, setApplications] = useState(null); // null = loading
   const [loadError, setLoadError] = useState(null);
-  const [reports, setReports] = useState(MOCK_REPORTS);
+  const [openReportCount, setOpenReportCount] = useState(0);
   const [openQuestions, setOpenQuestions] = useState(0);
 
   const reload = useCallback(async () => {
@@ -38,6 +39,11 @@ export default function AdminLayout() {
       setLoadError(null);
       setApplications(await api.fetchApplications());
       setOpenQuestions(await api.openQuestionsCount());
+      const { count } = await supabase
+        .from("community_reports")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "open");
+      setOpenReportCount(count || 0);
     } catch (e) {
       setLoadError(e.message || "Could not load applications.");
       setApplications([]);
@@ -81,12 +87,6 @@ export default function AdminLayout() {
         await api.markDocumentReceived(requestId);
         await reload();
       },
-      // Moderation is still the mock skeleton.
-      resolveReport(id, resolution) {
-        setReports((rs) =>
-          rs.map((r) => (r.id === id ? { ...r, status: "resolved", resolution } : r))
-        );
-      },
     }),
     [admin.id, reload]
   );
@@ -95,7 +95,6 @@ export default function AdminLayout() {
   const openBuddyCount = apps.filter((a) =>
     ["pending", "interviewing"].includes(a.status)
   ).length;
-  const openReportCount = reports.filter((r) => r.status === "open").length;
 
   const navItems = [
     { to: "buddies", label: "Buddy review", count: openBuddyCount },
@@ -195,9 +194,47 @@ export default function AdminLayout() {
           </NavLink>
         ))}
 
+        {/* The community as people see it — an admin moderates what
+            they can actually look at. Same routes, admin's own access. */}
+        <div
+          style={{
+            fontSize: 13,
+            letterSpacing: 1.5,
+            textTransform: "uppercase",
+            color: C.sage,
+            padding: "16px 14px 4px",
+          }}
+        >
+          View the spaces
+        </div>
+        {[
+          { to: "/app/community", label: "Community feed" },
+          { to: "/app/outdoor", label: "Outdoor places" },
+          { to: "/app/events", label: "Gatherings" },
+          { to: "/app/groups", label: "Friend groups" },
+        ].map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 14px",
+              borderRadius: 10,
+              textDecoration: "none",
+              fontSize: 16,
+              color: C.cream,
+            }}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+
         {/* Coming later in the build order — visible so the shape of the
-            admin area is legible, disabled so nothing dead-ends. */}
-        {["Accounts & recovery", "Audit log", "Milestone messages"].map(
+            admin area is legible, disabled so nothing dead-ends.
+            (Milestone messages went live — it's in the nav above.) */}
+        {["Accounts & recovery", "Audit log"].map(
           (label) => (
             <div
               key={label}
@@ -221,21 +258,8 @@ export default function AdminLayout() {
           )
         )}
 
-        <div style={{ marginTop: "auto", padding: "18px 10px 0" }}>
-          <a
-            href="/app"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              minHeight: A11Y.minTapTargetPx,
-              color: C.sage,
-              fontSize: 15,
-              textDecoration: "none",
-            }}
-          >
-            ← Back to the app
-          </a>
-        </div>
+        {/* No "back to the app" here: /app IS the admin desk for this
+            role (it bounces straight back — the old link was a loop). */}
       </aside>
 
       {/* ─── Main column ─── */}
@@ -297,7 +321,6 @@ export default function AdminLayout() {
             context={{
               applications: apps,
               loading: applications === null,
-              reports,
               admin,
               actions,
               reload,

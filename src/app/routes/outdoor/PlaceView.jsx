@@ -14,6 +14,7 @@ import { useParams, Navigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
 import {
   fetchPlaces,
@@ -568,6 +569,15 @@ export default function PlaceView() {
                 </div>
               </form>
             </Card>
+          )}
+
+          {/* The ineligible state is a gentle explanation, never a
+              missing button (PARITY.md): everyone else is told plainly
+              who starts things here and that joining is theirs. */}
+          {!isIcon && (
+            <BodyText muted style={{ marginTop: 4 }}>
+              {t("outdoor.place.startIconOnly", { icon: ROLE_DISPLAY.saath_icon })}
+            </BodyText>
           )}
 
           {/* Start something here — an Icon can initiate at any moment. */}

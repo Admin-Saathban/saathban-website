@@ -38,6 +38,7 @@ const CARDS = [
   { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
   { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
   { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
+  { to: "/app/history", emoji: "📖", key: "hub.history" },
   { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
   { to: "/app/circle", emoji: "🤝", key: "hub.circle" },
 ];

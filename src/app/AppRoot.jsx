@@ -38,6 +38,7 @@ import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
+import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
 import EventsRoutes from "./routes/events/EventsRoutes.jsx";
@@ -240,6 +241,17 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <GamesRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* My journey (routes/history): the Icon's own record —
+              logs calendar, presence, badges, private trends. Icon
+              role only; every query is own-rows-only by construction. */}
+          <Route
+            path="history/*"
+            element={
+              <RequireAuth roles={["saath_icon"]}>
+                <HistoryRoutes />
               </RequireAuth>
             }
           />

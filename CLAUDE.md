@@ -73,8 +73,11 @@ site at `/` must not be disturbed.
   where family should be. Empty states are doors, not scoreboards — audit every
   audience-assuming feature (100-day video message, score sharing, streaks) for
   a version that works with nobody watching.
-- **Privacy over convenience.** Everything defaults private. Sharing is opt-in
-  per person, per data type.
+- **Privacy over convenience, with one deliberate exception.** Everything an
+  Icon writes is private by default, and sharing with the world is opt-in per
+  person, per data type. The exception is **their own circle**: a new
+  membership arrives with sharing ON (see My Circle). Location is the one grant
+  that stays closed everywhere until it is asked for.
 - **Accessibility is a hard requirement, not a later pass.** Minimum 18px body
   text, 48px tap targets, high contrast, never colour alone.
 
@@ -128,10 +131,29 @@ approves with one tap) via one underlying token — sent by email/phone, shown a
 a large 6-digit code readable over the phone, or as a QR code. **Tokens are
 single-use and expire in 48 hours.**
 
-Per-member permissions **default OFF except SOS contact**: see mood/daily logs,
-see health entries/appointments, add/edit reminders, see location (never, or
-only during SOS). **Removal is one tap** — no confirmation maze, no notification
-to the removed person.
+Per-member permissions **default ON for a NEW membership** — SOS contact, see
+mood/daily logs, see health entries/appointments, add/edit reminders. **Decision
+of 2026-08-29; it supersedes the earlier "default OFF except SOS" design, which
+is stale — do not build to it.** Two exceptions keep their old defaults: **see
+location stays `never`** (the one grant that must be asked for), and "tell them
+if my days go quiet" is off, offered per member.
+
+The people who join an Icon’s circle are their daughter, their son, the
+neighbour of thirty years; meeting them with five switches set to "no" asked a
+79-year-old to complete a permissions matrix before their family could help.
+What makes open-by-default honest is **required, not optional**: one warm screen
+at the moment of acceptance, one notification to the Icon straight after
+("{Name} can now see your days — tap to review what’s shared") deep-linking to
+that member’s row, the granular editor unchanged and one tap away, and **no
+silent migration, ever** — existing memberships keep exactly the grants they
+have (0037 sets the defaults inside the two acceptance RPCs, on the INSERT;
+there is no UPDATE over `circle_members` in it). The open edge — assisted
+signup means the person tapping "Okay" may be the family member who created the
+account — is recorded in SPEC.md and QUESTIONS.md rather than hidden. Full
+reasoning: SPEC.md, My Circle.
+
+**Removal is one tap** — no confirmation maze, no notification to the removed
+person.
 
 Circle stays out of main navigation until it has a member. The emergency slot may
 be filled by a matched Buddy or by Saathban itself.

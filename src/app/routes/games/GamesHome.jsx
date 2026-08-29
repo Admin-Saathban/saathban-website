@@ -127,7 +127,17 @@ export default function GamesHome() {
       : s.status === "finished"
         ? t("games.home.nextFinished")
         : s.current_seat === s.my_seat
-          ? t("games.home.nextYourTurn")
+          ? t(
+              // Per game: carrom flicks a striker, ludo rolls and moves,
+              // dice games just roll — never "tap to roll" at a carrom board.
+              s.game_key === "carrom"
+                ? "games.home.nextYourTurnCarrom"
+                : s.game_key === "ludo"
+                  ? "games.home.nextYourTurnLudo"
+                  : s.game_key === "snakes" || s.game_key === "race100"
+                    ? "games.home.nextYourTurn"
+                    : "games.home.nextYourTurnOther"
+            )
           : t("games.home.nextTheirTurn");
   const renderTable = (s) => {
     const g = byKey[s.game_key];

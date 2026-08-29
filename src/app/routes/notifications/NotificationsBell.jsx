@@ -37,12 +37,20 @@ export default function NotificationsBell() {
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     window.addEventListener(NOTIFICATIONS_READ_EVENT, refresh);
-    // A notification that arrives while the tab sits open and focused
-    // used to stay invisible until the next blur/refocus — poll gently.
-    const timer = window.setInterval(refresh, 60000);
+    // A message or invite must light the bell within a few seconds
+    // while the app is open — a HEAD count every 6s is cheap, and the
+    // poll pauses while the tab is hidden (refreshing on return).
+    const onVisibility = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 6000);
     return () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener(NOTIFICATIONS_READ_EVENT, refresh);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.clearInterval(timer);
     };
   }, [refresh]);

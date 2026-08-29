@@ -25,6 +25,13 @@ export const STRINGS = {
     playAgain: "Play again",
     // DM chat action
     playCarromCta: "Play carrom",
+    invitedLine: "You're invited to a game of carrom.",
+    takeSeat: "Take my seat",
+    notNow: "Not this time",
+    waitingForThem: "The board is set — waiting for them to take their seat.",
+    tableSetting: "The table is being set…",
+    tableFilled: "That table filled up — ask for a fresh board.",
+    alreadySetUp: "A carrom board is already set up in this conversation — scroll up to it.",
     startedInChat: "A carrom board is set up above — play a few turns, chat carries on below.",
   },
   ur: {
@@ -43,6 +50,13 @@ export const STRINGS = {
     watching: "دیکھ رہے ہیں — ان کی باری ہے۔",
     playAgain: "دوبارہ کھیلیں",
     playCarromCta: "کیرم کھیلیں",
+    invitedLine: "آپ کو کیرم کے کھیل کی دعوت ہے۔",
+    takeSeat: "میری نشست سنبھالیں",
+    notNow: "ابھی نہیں",
+    waitingForThem: "بورڈ تیار ہے — ان کے نشست سنبھالنے کا انتظار ہے۔",
+    tableSetting: "میز لگائی جا رہی ہے…",
+    tableFilled: "وہ میز بھر گئی — نیا بورڈ مانگیں۔",
+    alreadySetUp: "اس گفتگو میں کیرم کا بورڈ پہلے سے لگا ہے — اوپر جائیں۔",
     startedInChat: "اوپر کیرم کا بورڈ لگ گیا ہے — چند باریاں کھیلیں، گفتگو نیچے جاری رہے گی۔",
   },
 };

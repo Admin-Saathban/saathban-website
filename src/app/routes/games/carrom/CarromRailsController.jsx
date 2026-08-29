@@ -20,6 +20,7 @@ import CarromBoard from "./CarromBoard.jsx";
 import { initialLayout } from "./physics.js";
 import { STRINGS } from "./carromCopy.js";
 import { subscribeSession, submitShot, initBoard } from "./rails.js";
+import { fetchMyInvites, respondInvite } from "../../../lib/games.js";
 
 export default function CarromRailsController({ sessionId }) {
   const { lang, ts, meta } = useI18n();
@@ -30,7 +31,40 @@ export default function CarromRailsController({ sessionId }) {
   const [view, setView] = useState(null); // fetchSession() shape, or null while loading
   const [error, setError] = useState("");
   const [left, setLeft] = useState(null);
+  const [myInvite, setMyInvite] = useState(null);
+  const [answering, setAnswering] = useState(false);
   const initTried = useRef(false);
+
+  // In the lobby, an unseated viewer is (almost always) the invitee:
+  // find the invitation so the seat can be taken right here in the
+  // thread — nobody should have to hunt for the table elsewhere.
+  useEffect(() => {
+    if (!view || view.status !== "lobby" || view.mySeat0 != null || !myId) {
+      setMyInvite(null);
+      return;
+    }
+    let alive = true;
+    fetchMyInvites(myId)
+      .then((rows) => alive && setMyInvite(rows.find((r) => r.session_id === sessionId) || null))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view?.status, view?.mySeat0, myId, sessionId]);
+
+  const takeSeat = async (accept) => {
+    if (!myInvite || answering) return;
+    setAnswering(true);
+    setError("");
+    try {
+      const r = await respondInvite(myInvite.id, accept);
+      if (r?.result === "filled") setError(s.tableFilled);
+      setMyInvite(null);
+    } catch (e) {
+      setError(e.message || s.errGeneric || "That didn't send.");
+    }
+    setAnswering(false);
+  };
 
   useEffect(() => {
     if (!sessionId || !myId) return;
@@ -68,6 +102,49 @@ export default function CarromRailsController({ sessionId }) {
 
   if (!view) {
     return <p role="status" style={{ fontSize: ts(18), color: C.textMuted, textAlign: "center" }}>···</p>;
+  }
+
+  /* Lobby: the table is set but not everyone is seated yet. */
+  if (view.status === "lobby") {
+    const lobbyBox = {
+      maxWidth: 460, margin: "0 auto", background: C.white,
+      border: `1.5px solid ${C.warmGray}`, borderRadius: 16, padding: "14px 16px",
+    };
+    if (view.mySeat0 == null && myInvite) {
+      return (
+        <div style={lobbyBox}>
+          <p style={{ fontFamily: meta.fonts.heading, fontSize: ts(20), fontWeight: 700, color: C.green, margin: "0 0 10px" }}>
+            🎯 {s.invitedLine}
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              disabled={answering}
+              onClick={() => takeSeat(true)}
+              style={{ minHeight: 48, padding: "0 22px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(18), fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+            >
+              {s.takeSeat}
+            </button>
+            <button
+              type="button"
+              disabled={answering}
+              onClick={() => takeSeat(false)}
+              style={{ minHeight: 48, padding: "0 18px", borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white, color: C.textMain, fontSize: ts(18), fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}
+            >
+              {s.notNow}
+            </button>
+          </div>
+          {error && <p role="alert" style={{ fontSize: ts(16), color: C.error, marginTop: 10 }}>⚠ {error}</p>}
+        </div>
+      );
+    }
+    return (
+      <div style={lobbyBox}>
+        <p role="status" style={{ fontSize: ts(18), color: C.textMuted, margin: 0 }}>
+          ⏳ {view.mySeat0 != null ? s.waitingForThem : s.tableSetting}
+        </p>
+      </div>
+    );
   }
 
   const finished = view.status === "finished";

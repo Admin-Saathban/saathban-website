@@ -160,6 +160,31 @@ export default function ThreadPage() {
     setStarting(true);
     setError("");
     try {
+      // One live board per conversation: if a table from this thread
+      // is still in the lobby or being played, point at it instead of
+      // setting another (each tap used to mint a fresh session).
+      const embedded = (messages || []).filter((m) => m.game_session_id).map((m) => m.game_session_id);
+      if (embedded.length) {
+        const { data: rows } = await supabase
+          .from("game_sessions")
+          .select("id, status, created_at, game_seats(profile_id)")
+          .in("id", embedded)
+          .in("status", ["lobby", "active"]);
+        // "Live" means shared: an active table with THEM seated, or a
+        // lobby still fresh enough that their seat is worth waiting for.
+        // A bot-filled table or a two-hour-old unanswered lobby is not.
+        const live = (rows || []).some((r) =>
+          r.status === "active"
+            ? (r.game_seats || []).some((seat) => seat.profile_id === profileId)
+            : Date.now() - new Date(r.created_at).getTime() < 2 * 60 * 60 * 1000
+        );
+        if (live) {
+          setToast(carrom.alreadySetUp);
+          window.setTimeout(() => setToast(""), 5000);
+          setStarting(false);
+          return;
+        }
+      }
       const sessionId = await startCarromInThread(profileId);
       await sendMessage(requestId, myId, null, sessionId);
       await refresh(requestId);

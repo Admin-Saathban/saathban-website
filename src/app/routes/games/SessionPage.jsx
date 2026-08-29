@@ -31,6 +31,10 @@ import {
   GAME_STICKERS,
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
+/* Carrom has its own board on the rails; ludo has its own route.
+   Everything else is the reference Race to 100 board below. */
+import CarromRailsController from "./carrom/CarromRailsController.jsx";
+import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
@@ -183,6 +187,11 @@ export default function SessionPage() {
     );
   }
   if (!session) return <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} />;
+  // After every hook: a ludo table lives on the ludo lane's own screen —
+  // never the generic board (which reads as Race to 100).
+  if (session.game_key === "ludo") {
+    return <Navigate to={`/app/games/ludo/${session.id}`} replace />;
+  }
 
   return (
     <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
@@ -235,7 +244,11 @@ export default function SessionPage() {
         />
       )}
 
-      {session.status !== "lobby" && (
+      {session.status !== "lobby" && session.game_key === "carrom" && (
+        <CarromRailsController sessionId={session.id} />
+      )}
+
+      {session.status !== "lobby" && session.game_key !== "carrom" && (
         <Board
           session={session}
           mySeat={mySeat}
@@ -411,9 +424,13 @@ function Lobby({
                 {t("games.lobby.openPostCta")}
               </GhostBtn>
             )}
-            <GhostBtn disabled={busy} onClick={() => act(() => startWithBots(session.id))}>
-              {t("games.lobby.botsCta")}
-            </GhostBtn>
+            {/* Carrom passes turns on timeout and has no bot player —
+                a bot seat would be an empty chair with a clock. */}
+            {game?.timeout_style !== "pass_turn" && (
+              <GhostBtn disabled={busy} onClick={() => act(() => startWithBots(session.id))}>
+                {t("games.lobby.botsCta")}
+              </GhostBtn>
+            )}
           </div>
         </Card>
       )}

@@ -79,31 +79,32 @@ function profileRow(userId, src) {
 const isDuplicate = (error) => error && error.code === "23505";
 
 /* Called by the Complete screen once a session exists.
-   Returns "ok" (profile present or created), "needs-details" (no
+   Returns { status, role }: status "ok" (profile present or created,
+   role set so the caller can route by it), "needs-details" (no
    profile and nothing stashed — send them to the finish-mode forms),
    or "no-session". */
 export async function ensureProfile(session) {
   const user = session?.user;
-  if (!user) return "no-session";
+  if (!user) return { status: "no-session" };
 
   const { data: existing, error } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, role")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw error;
-  if (existing) return "ok";
+  if (existing) return { status: "ok", role: existing.role };
 
   const m = user.user_metadata || {};
   const role = SIGNUP_ROLES.includes(m.pending_role) ? m.pending_role : null;
   const fullName = (m.full_name || "").trim();
-  if (!role || !fullName) return "needs-details";
+  if (!role || !fullName) return { status: "needs-details" };
 
   const { error: insErr } = await supabase
     .from("profiles")
     .insert(profileRow(user.id, { ...m, role, full_name: fullName }));
   if (insErr && !isDuplicate(insErr)) throw insErr;
-  return "ok";
+  return { status: "ok", role };
 }
 
 /* Finish mode: a session exists but no profile row and no stashed
@@ -113,11 +114,11 @@ export async function finishProfile(role, fields) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) return "no-session";
+  if (!session) return { status: "no-session" };
 
   const { error } = await supabase
     .from("profiles")
     .insert(profileRow(session.user.id, { ...fields, role }));
   if (error && !isDuplicate(error)) throw error;
-  return "ok";
+  return { status: "ok", role };
 }

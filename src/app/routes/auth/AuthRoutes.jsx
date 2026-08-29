@@ -14,6 +14,7 @@ import Login from "./Login.jsx";
 import CheckEmail from "./CheckEmail.jsx";
 import Complete from "./Complete.jsx";
 import ResetPassword from "./ResetPassword.jsx";
+import Welcome from "./Welcome.jsx";
 
 export default function AuthRoutes() {
   return (
@@ -26,6 +27,9 @@ export default function AuthRoutes() {
       <Route path="check-email" element={<CheckEmail />} />
       <Route path="complete" element={<Complete />} />
       <Route path="reset" element={<ResetPassword />} />
+      {/* After-login landing for Saath-Fam and Saath-Buddy until their
+          dashboards land — see roleHomePath() in lib/session.jsx. */}
+      <Route path="welcome" element={<Welcome />} />
       <Route path="*" element={<Navigate to="/app/auth" replace />} />
     </Routes>
   );

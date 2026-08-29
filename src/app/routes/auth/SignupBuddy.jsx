@@ -24,6 +24,7 @@ import {
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { signUpWithPassword, finishProfile, isValidEmail } from "../../lib/authFlow.js";
+import { roleHomePath } from "../../lib/session.jsx";
 import useFinishMode from "./useFinishMode.js";
 
 export default function SignupBuddy() {
@@ -50,7 +51,7 @@ export default function SignupBuddy() {
     try {
       if (finish) {
         const r = await finishProfile("saath_buddy", { full_name: fullName });
-        navigate(r === "ok" ? "/app" : "/app/auth", { replace: true });
+        navigate(r.status === "ok" ? roleHomePath(r.role) : "/app/auth", { replace: true });
       } else {
         const { data, error: err } = await signUpWithPassword(email, password, {
           pending_role: "saath_buddy",

@@ -21,6 +21,7 @@ import {
 } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, finishProfile, isValidEmail } from "../../lib/authFlow.js";
+import { roleHomePath } from "../../lib/session.jsx";
 import useFinishMode from "./useFinishMode.js";
 
 export default function SignupFam() {
@@ -57,7 +58,7 @@ export default function SignupFam() {
     try {
       if (finish) {
         const r = await finishProfile("family_member", fields);
-        navigate(r === "ok" ? "/app" : "/app/auth", { replace: true });
+        navigate(r.status === "ok" ? roleHomePath(r.role) : "/app/auth", { replace: true });
       } else {
         const { error: err } = await sendMagicLink(email, {
           pending_role: "family_member",

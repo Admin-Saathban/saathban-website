@@ -34,6 +34,7 @@ import AppSettings from "./routes/AppSettings.jsx";
 import { AuthProvider, RequireAuth } from "./lib/session.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
+import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 
 // App-shell offline caching + installability (production only; no-op
@@ -159,6 +160,19 @@ export default function AppRoot() {
             element={
               <RequireAuth roles={["saath_buddy"]}>
                 <VettingForm />
+              </RequireAuth>
+            }
+          />
+          {/* Icon-side My Circle: members, permissions, invites
+              (routes/circle — CircleRoutes carries its own AppHeader).
+              Linked from Settings, not main nav — SPEC.md: circle
+              stays out of navigation until it has a member; Settings
+              is its permanent home either way. */}
+          <Route
+            path="circle/*"
+            element={
+              <RequireAuth roles={["saath_icon"]}>
+                <CircleRoutes />
               </RequireAuth>
             }
           />

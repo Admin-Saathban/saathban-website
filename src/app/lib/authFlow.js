@@ -78,6 +78,34 @@ function profileRow(userId, src) {
 // two tabs) — that is success, not failure.
 const isDuplicate = (error) => error && error.code === "23505";
 
+/* Read the profile row with retries. A transient failure here must
+   never bounce an existing account into the finish-mode forms (it
+   happened once on the first preview deploy): errors are retried with
+   a short backoff, and even a clean empty is re-read once or twice —
+   the only cost is ~1s of extra patience for genuinely-new assisted
+   signups, which beats greeting an old friend like a stranger. */
+async function readProfileWithRetry(userId) {
+  const delaysMs = [0, 300, 900];
+  let lastError = null;
+  for (const delay of delaysMs) {
+    if (delay) await new Promise((r) => setTimeout(r, delay));
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, role")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      lastError = null;
+      if (data) return data;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  if (lastError) throw lastError;
+  return null;
+}
+
 /* Called by the Complete screen once a session exists.
    Returns { status, role }: status "ok" (profile present or created,
    role set so the caller can route by it), "needs-details" (no
@@ -87,12 +115,7 @@ export async function ensureProfile(session) {
   const user = session?.user;
   if (!user) return { status: "no-session" };
 
-  const { data: existing, error } = await supabase
-    .from("profiles")
-    .select("id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (error) throw error;
+  const existing = await readProfileWithRetry(user.id);
   if (existing) return { status: "ok", role: existing.role };
 
   const m = user.user_metadata || {};

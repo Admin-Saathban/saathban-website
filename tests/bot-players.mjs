@@ -76,8 +76,16 @@ const rpc = async (fn, args) => {
   return { ok: r.ok, body: await r.json().catch(() => null) };
 };
 const rest = async (path) => (await fetch(`${SUPA}/rest/v1/${path}`, { headers: H })).json();
-const drop = (id) =>
-  fetch(`${SUPA}/rest/v1/game_sessions?id=eq.${id}`, { method: "DELETE", headers: H });
+/* Clean up through the RPC, not a DELETE. game_sessions has exactly ONE
+   policy — `sessions: viewers read`, SELECT only — so a DELETE matches
+   zero rows and PostgREST answers 204: success-shaped, nothing removed.
+   This suite quietly left a live table per game per run on the shared
+   smoke account, which then counts against the one-live-table rule and
+   shows as somebody's ACTIVE GAME card. leave_game_session handles both
+   shapes we create: host-in-lobby routes to cancel_game_session, and on
+   an active bot table the only human leaving takes humans to zero, which
+   cancels it. Neither shape is lobby or active afterwards. */
+const drop = (id) => rpc("leave_game_session", { p_session: id });
 
 // The registry decides what gets tested — not a list maintained here.
 const games = await rest("games?select=key,name_en,kind,min_seats,timeout_style&enabled=eq.true");
@@ -123,6 +131,18 @@ for (const g of turnGames) {
   }
   await drop(id);
 }
+
+/* A cleanup that is not verified is not a cleanup. Prove the suite left
+   nothing live behind on the account it borrows — the exact failure this
+   file shipped with. */
+const mine = await rest(
+  `game_sessions?select=id,status&created_by=eq.${session.user.id}&status=in.(lobby,active)`
+);
+check(
+  "suite leaves no live table behind",
+  (mine || []).length === 0,
+  `${(mine || []).length} still live: ${(mine || []).map((m) => m.id.slice(0, 8)).join(", ")}`
+);
 
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

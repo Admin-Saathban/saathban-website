@@ -207,6 +207,17 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**10. A cleanup that is not verified is not a cleanup.** A suite
+deleted its fixtures with `DELETE /game_sessions?id=eq.<id>` and
+checked the response was ok. That table has ONE policy — SELECT only —
+so the delete matched zero rows and PostgREST answered **204**:
+success-shaped, nothing removed. It silently left a live table per
+game per run on the SHARED smoke account, where each one counts
+against the one-live-table rule and surfaces as somebody's active
+game. A borrowed account is not yours to leave dirty. Delete through
+an RPC that RLS actually permits, and end the suite by asserting the
+account is clean — the count, not the status code.
+
 **9. A declaration is not a capability — test the capability.** Two
 sibling defects, hours apart: ludo declared `bot_plays` while its
 executor raised at every bot (tables froze, the exception swallowed);

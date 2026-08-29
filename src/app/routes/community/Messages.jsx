@@ -12,7 +12,12 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { fetchDmOverview, fetchAuthors, respondToRequest } from "./communityData.js";
+import {
+  fetchDmOverview,
+  fetchAuthors,
+  respondToRequest,
+  fetchUnreadThreadIds,
+} from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
 export default function Messages() {
@@ -22,12 +27,14 @@ export default function Messages() {
 
   const [overview, setOverview] = useState(null);
   const [people, setPeople] = useState({});
+  const [unread, setUnread] = useState(new Set());
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
       const o = await fetchDmOverview(myId);
       setOverview(o);
+      setUnread(await fetchUnreadThreadIds(myId));
       const ids = [...o.incoming, ...o.outgoing, ...o.threads].flatMap((r) => [
         r.requester_id,
         r.recipient_id,
@@ -114,31 +121,73 @@ export default function Messages() {
 
           {sectionLabel(t("community.dm.threadsLabel"))}
           {overview.threads.length === 0 ? (
-            <BodyText muted>{t("community.dm.emptyThreads")}</BodyText>
-          ) : (
-            overview.threads.map((r) => (
+            <>
+              <BodyText muted>{t("community.dm.emptyThreads")}</BodyText>
+              {/* An empty inbox is a door: the Connect page is where
+                  conversations begin. */}
               <Link
-                key={r.id}
-                to={r.id}
+                to="/app/community/connect"
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  gap: 12,
-                  minHeight: A11Y.minTapTargetPx + 16,
+                  minHeight: 48,
+                  padding: "0 22px",
+                  borderRadius: 50,
+                  border: `2px solid ${C.green}`,
+                  color: C.green,
                   background: C.white,
-                  border: `1px solid ${C.warmGray}`,
-                  borderRadius: 16,
-                  padding: "12px 18px",
-                  marginBottom: 10,
+                  fontSize: ts(A11Y.minBodyPx),
+                  fontWeight: 600,
                   textDecoration: "none",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: ts(24) }}>💬</span>
-                <span style={{ fontSize: ts(19), fontWeight: 700, color: C.green }}>
-                  {nameOf(otherOf(r))}
-                </span>
+                {t("community.dm.emptyThreadsCta")}
               </Link>
-            ))
+            </>
+          ) : (
+            overview.threads.map((r) => {
+              const isNew = unread.has(r.id);
+              return (
+                /* Canonical DM surface — person-keyed, one thread per
+                   pair (MIGRATIONS.md). This inbox lists, /app/people
+                   talks. */
+                <Link
+                  key={r.id}
+                  to={`/app/people/${otherOf(r)}/chat`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    minHeight: A11Y.minTapTargetPx + 16,
+                    background: C.white,
+                    border: isNew ? `2px solid ${C.green}` : `1px solid ${C.warmGray}`,
+                    borderRadius: 16,
+                    padding: "12px 18px",
+                    marginBottom: 10,
+                    textDecoration: "none",
+                  }}
+                >
+                  <span aria-hidden="true" style={{ fontSize: ts(24) }}>💬</span>
+                  <span style={{ fontSize: ts(19), fontWeight: 700, color: C.green, flex: 1 }}>
+                    {nameOf(otherOf(r))}
+                  </span>
+                  {isNew && (
+                    <span
+                      style={{
+                        fontSize: ts(16),
+                        fontWeight: 700,
+                        color: C.cream,
+                        background: C.green,
+                        borderRadius: 50,
+                        padding: "4px 14px",
+                      }}
+                    >
+                      {t("community.dm.unreadBadge")}
+                    </span>
+                  )}
+                </Link>
+              );
+            })
           )}
 
           {overview.outgoing.length > 0 && (

@@ -1,74 +1,69 @@
 /* ════════════════════════════════════════════════
-   The DM thread with one person — reuses the community DM tables
-   through open_dm_with() (0019). Circle pairs land here already
-   accepted; a non-circle pair sees the request-pending note until the
-   other side says yes (and the database refuses sends until then).
+   THE DM thread — /app/people/<profileId>/chat is the one canonical
+   conversation surface with a person (MIGRATIONS.md, "Canonical DM
+   surface"). Community's /app/community/messages/<requestId> redirects
+   here; every "Message" action in the app links here.
 
-   Stickers are ordinary messages whose body is one warm emoji from a
-   fixed set, rendered large — nothing new at the database, so every
-   0014 rule (blocks, freeze triggers, participants-only) applies to
-   them unchanged.
+   One pair, one thread: open_dm_with() (0019) + the 0030 unique pair
+   index guarantee it at the database. Circle pairs land accepted; a
+   non-circle pair sees the request-pending note until the other side
+   says yes (and the database refuses sends until then).
+
+   Carried over from the community surface so nothing was lost in the
+   unification: the carrom inline board (a message may carry a
+   game_session_id — the board renders in-thread, conversation
+   continuing beneath), the brand sticker picker, the money-talk
+   warning banner on incoming messages, and one-tap report. Unread
+   state is the 0030 'dm' bell notification; opening this thread clears
+   the messages' read_at AND that notification, so the bell agrees.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
+import supabase from "../../lib/supabase.js";
 import { BodyText, GhostBtn, PrimaryBtn } from "../circle/ui.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
+import { MONEY_PATTERN } from "../community/communityCopy.js";
 import {
-  isStickerBody,
-  fetchPerson,
-  openDmWith,
-  fetchDmRequest,
-  fetchMessages,
-  sendDm,
+  fetchThread,
+  sendMessage,
   markThreadRead,
-} from "./peopleStore.js";
+  fileReport,
+} from "../community/communityData.js";
+import { announceRead } from "../notifications/data.js";
+import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
+import { startCarromInThread } from "../games/carrom/rails.js";
+import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
+import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 
-const POLL_MS = 5000;
+const POLL_MS = 4000;
 
-function Bubble({ msg, mine, ts }) {
-  const svgSticker = parseStickerRef(msg.body);
-  const sticker = !svgSticker && isStickerBody(msg.body);
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: mine ? "flex-end" : "flex-start",
-        marginBottom: 8,
-      }}
-    >
-      {svgSticker ? (
-        <Sticker id={svgSticker} size={104} style={{ maxWidth: "100%" }} />
-      ) : (
-        <div
-          style={{
-            maxWidth: "82%",
-            padding: sticker ? "6px 10px" : "10px 16px",
-            borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-            background: sticker ? "transparent" : mine ? C.green : C.white,
-            border: sticker ? "none" : mine ? "none" : `1.5px solid ${C.warmGray}`,
-            color: mine ? C.cream : C.textMain,
-            fontSize: sticker ? ts(56) : ts(A11Y.minBodyPx),
-            lineHeight: sticker ? 1.1 : 1.5,
-            overflowWrap: "anywhere",
-          }}
-        >
-          {msg.body}
-        </div>
-      )}
-    </div>
-  );
+/* Reading the thread clears its 0030 bell notification too — the
+   badge and the thread must never disagree. Best-effort. */
+async function clearDmNotifications(otherId) {
+  try {
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("kind", "dm")
+      .eq("link", `/app/people/${otherId}/chat`)
+      .is("read_at", null);
+    announceRead();
+  } catch {
+    /* the bell catches up on its own next poll */
+  }
 }
 
 export default function ThreadPage() {
   const { profileId } = useParams();
-  const { t, ts, meta } = useI18n();
+  const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
+  const carrom = CARROM[lang] || CARROM.en;
 
   const [person, setPerson] = useState(null);
   const [requestId, setRequestId] = useState(null);
@@ -76,19 +71,25 @@ export default function ThreadPage() {
   const [messages, setMessages] = useState(null);
   const [draft, setDraft] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
   const endRef = useRef(null);
   const openedRef = useRef(false);
   const reqRef = useRef(null);
 
-  const refresh = async (reqId) => {
-    const [req, msgs] = await Promise.all([fetchDmRequest(reqId), fetchMessages(reqId)]);
-    setStatus(req?.status ?? null);
-    setMessages(msgs);
-    if (myId && msgs.some((m) => m.sender_id !== myId && !m.read_at)) {
-      markThreadRead(reqId, myId).catch(() => {});
-    }
-  };
+  const refresh = useCallback(
+    async (reqId) => {
+      const { request: req, messages: msgs } = await fetchThread(reqId);
+      setStatus(req?.status ?? null);
+      setMessages(msgs);
+      if (myId && msgs.some((m) => m.sender_id !== myId && !m.read_at)) {
+        markThreadRead(reqId, myId);
+        clearDmNotifications(profileId);
+      }
+    },
+    [myId, profileId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -101,11 +102,14 @@ export default function ThreadPage() {
         setRequestId(reqId);
         reqRef.current = reqId;
         await refresh(reqId);
+        // Arriving from the bell with everything already read still
+        // has to clear the notification that brought us here.
+        clearDmNotifications(profileId);
         timer = setInterval(() => {
           if (reqRef.current) refresh(reqRef.current).catch(() => {});
         }, POLL_MS);
       } catch (err) {
-        if (!cancelled) setError(err.message || "people.thread.sendError");
+        if (!cancelled) setError(err.message || t("people.thread.sendError"));
       }
     })();
     return () => {
@@ -116,10 +120,11 @@ export default function ThreadPage() {
   }, [profileId, myId]);
 
   useEffect(() => {
-    // Repeat the jump briefly until layout settles (stickers/fonts
-    // load late and a single scroll under-shoots); after the first
-    // open only follow when already near the bottom — never yank a
-    // reader who scrolled up. Same fix as the community thread.
+    // Open at the LATEST message and follow growth. A single post-
+    // render scroll under-shoots when stickers/fonts settle late, so
+    // the jump repeats briefly until layout is stable. After the first
+    // open, only follow when already near the bottom — never yank a
+    // reader who scrolled up to reread.
     if (!messages?.length) return undefined;
     const nearBottom =
       window.scrollY + window.innerHeight >= document.body.scrollHeight - 200;
@@ -133,17 +138,44 @@ export default function ThreadPage() {
     return () => clearInterval(timer);
   }, [messages?.length]);
 
-  const send = async (body) => {
-    const text = body.trim();
-    if (!text || !requestId) return;
+  const send = async (body, gameSessionId = null) => {
+    const text = (body || "").trim();
+    if ((!text && !gameSessionId) || !requestId) return;
     setError("");
     try {
-      await sendDm(requestId, text);
+      await sendMessage(requestId, myId, text || null, gameSessionId);
       setDraft("");
       setPickerOpen(false);
       await refresh(requestId);
     } catch {
-      setError("people.thread.sendError");
+      setError(t("people.thread.sendError"));
+    }
+  };
+
+  /* "Play carrom": create the session + invite this person (their bell
+     gets the rails invitation with a deep link), then drop the board
+     into the thread as a game-attachment message. */
+  const playCarrom = async () => {
+    if (!profileId || starting || !requestId) return;
+    setStarting(true);
+    setError("");
+    try {
+      const sessionId = await startCarromInThread(profileId);
+      await sendMessage(requestId, myId, null, sessionId);
+      await refresh(requestId);
+    } catch {
+      setError(t("community.dm.gameStartFailed"));
+    }
+    setStarting(false);
+  };
+
+  const reportMessage = async (m) => {
+    try {
+      await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
+      setToast(t("community.feed.reportedToast"));
+      window.setTimeout(() => setToast(""), 5000);
+    } catch {
+      setError(t("people.thread.sendError"));
     }
   };
 
@@ -165,6 +197,11 @@ export default function ThreadPage() {
         >
           💬 {person?.full_name || "…"}
         </h1>
+        {open && (
+          <GhostBtn disabled={starting} onClick={playCarrom}>
+            🎯 {carrom.playCarromCta}
+          </GhostBtn>
+        )}
         <Link
           to=".."
           style={{
@@ -184,7 +221,12 @@ export default function ThreadPage() {
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {t(error)}
+          ⚠ {error}
+        </BodyText>
+      )}
+      {toast && (
+        <BodyText role="status" style={{ fontWeight: 700, color: C.green }}>
+          ✓ {toast}
         </BodyText>
       )}
 
@@ -207,7 +249,111 @@ export default function ThreadPage() {
         ) : messages.length === 0 ? (
           <BodyText muted>{open ? t("people.thread.empty") : ""}</BodyText>
         ) : (
-          messages.map((m) => <Bubble key={m.id} msg={m} mine={m.sender_id === myId} ts={ts} />)
+          messages.map((m) => {
+            const mine = m.sender_id === myId;
+
+            /* A game attachment renders the live board inline — full
+               width, the conversation continuing beneath. */
+            if (m.game_session_id) {
+              return (
+                <div key={m.id} style={{ marginBottom: 10 }}>
+                  <CarromRailsController sessionId={m.game_session_id} />
+                  <BodyText muted style={{ margin: "8px 0 0", fontSize: ts(16) }}>
+                    {carrom.startedInChat}{" "}
+                    <Link
+                      to={`/app/games/s/${m.game_session_id}`}
+                      style={{ color: C.green, fontWeight: 600 }}
+                    >
+                      {t("community.dm.gameOpenBoard")}
+                    </Link>
+                  </BodyText>
+                  {m.body && <BodyText style={{ margin: "6px 0 0" }}>{m.body}</BodyText>}
+                </div>
+              );
+            }
+
+            const svgSticker = parseStickerRef(m.body);
+            const emojiSticker = !svgSticker && isStickerBody(m.body);
+            const moneyFlag =
+              !mine && !svgSticker && !emojiSticker && m.body && MONEY_PATTERN.test(m.body);
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: mine ? "flex-end" : "flex-start",
+                  marginBottom: 8,
+                }}
+              >
+                {moneyFlag && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: "#f3e9df",
+                      border: `2px solid ${C.brown}`,
+                      borderRadius: 14,
+                      padding: "10px 14px",
+                      marginBottom: 6,
+                      /* Safety banner: never below the 18px floor. */
+                      fontSize: ts(18),
+                      lineHeight: 1.5,
+                      color: C.brown,
+                      fontWeight: 600,
+                      maxWidth: "82%",
+                    }}
+                  >
+                    ⚠ {t("community.dm.moneyWarning")}
+                  </div>
+                )}
+                {svgSticker ? (
+                  <Sticker id={svgSticker} size={104} style={{ maxWidth: "100%" }} />
+                ) : (
+                  <div
+                    style={{
+                      maxWidth: "82%",
+                      padding: emojiSticker ? "6px 10px" : "10px 16px",
+                      borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      background: emojiSticker ? "transparent" : mine ? C.green : C.white,
+                      border: emojiSticker
+                        ? "none"
+                        : mine
+                          ? "none"
+                          : `1.5px solid ${C.warmGray}`,
+                      color: mine ? C.cream : C.textMain,
+                      fontSize: emojiSticker ? ts(56) : ts(A11Y.minBodyPx),
+                      lineHeight: emojiSticker ? 1.1 : 1.5,
+                      overflowWrap: "anywhere",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {m.body}
+                  </div>
+                )}
+                {/* Report is a safety affordance: full tap target,
+                    full-size text, on every incoming message. */}
+                {!mine && !svgSticker && (
+                  <button
+                    type="button"
+                    onClick={() => reportMessage(m)}
+                    style={{
+                      minHeight: A11Y.minTapTargetPx,
+                      background: "none",
+                      border: "none",
+                      color: C.textMuted,
+                      fontSize: ts(18),
+                      fontFamily: "inherit",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      padding: "2px 8px",
+                    }}
+                  >
+                    {t("community.dm.reportMessage")}
+                  </button>
+                )}
+              </div>
+            );
+          })
         )}
         {status && !open && (
           <BodyText muted>{t("people.thread.pendingNote", { name: first })}</BodyText>
@@ -240,7 +386,7 @@ export default function ThreadPage() {
           disabled={!open}
           style={{ padding: "0 14px", fontSize: ts(24) }}
         >
-          😊
+          🌸
         </GhostBtn>
         <input
           value={draft}
@@ -248,6 +394,7 @@ export default function ThreadPage() {
           placeholder={t("people.thread.placeholder")}
           aria-label={t("people.thread.placeholder")}
           disabled={!open}
+          maxLength={2000}
           style={{
             flex: "1 1 180px",
             minHeight: 56,

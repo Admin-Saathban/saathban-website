@@ -171,6 +171,79 @@ for (const [email, label, home, foreign] of ROLES) {
   await ctx.close();
 }
 
+// 5. Canonical DM thread (/app/people/<id>/chat): send lands, the
+//    0030 bell notification fires for the recipient, opening the
+//    thread shows the message scrolled-to-latest and clears the bell,
+//    the reply arrives live over polling, and the old community
+//    thread URL still redirects. Fails = DM regression.
+{
+  const iconSess = await login("test-icon@saathban.dev");
+  const famSess = await login("test-fam@saathban.dev");
+  const iconId = iconSess.user.id;
+  const famId = famSess.user.id;
+
+  const rest = async (sess, path) => {
+    const r = await fetch(`${SUPA}/rest/v1/${path}`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${sess.access_token}` },
+    });
+    return await r.json();
+  };
+  const unreadDm = async (sess) =>
+    (await rest(sess, "notifications?select=id&kind=eq.dm&read_at=is.null")).length;
+  const reqRows = await rest(
+    iconSess,
+    `dm_requests?select=id&or=(and(requester_id.eq.${iconId},recipient_id.eq.${famId}),and(requester_id.eq.${famId},recipient_id.eq.${iconId}))`
+  );
+  const requestId = reqRows[0]?.id;
+  check("dm: one pair thread exists", Boolean(requestId), JSON.stringify(reqRows).slice(0, 60));
+
+  // Icon sends from the canonical surface.
+  const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
+  await goto(iconPage, `/app/people/${famId}/chat`, 2500);
+  const before = await unreadDm(famSess);
+  const marker = `smoke-dm-${Math.floor(Math.random() * 1e9)}`;
+  await iconPage.fill("form input", marker);
+  await iconPage.click('form button[type="submit"]');
+  await iconPage.waitForTimeout(2500);
+  const after = await unreadDm(famSess);
+  check("dm: send reaches recipient's bell (0030)", after > before || before > 0, `${before} → ${after}`);
+
+  // Fam opens the thread: message there, scrolled to latest, bell clears.
+  const { ctx: famCtx, page: famPage } = await pageFor(browser, famSess);
+  const famBody = await goto(famPage, `/app/people/${iconId}/chat`, 3000);
+  check("dm: recipient sees message in canonical thread", famBody.includes(marker));
+  const scrolled = await famPage.evaluate(() => {
+    const box = [...document.querySelectorAll("div")].find((d) => d.style.overflowY === "auto");
+    return box ? box.scrollTop + box.clientHeight >= box.scrollHeight - 60 : null;
+  });
+  check("dm: thread opens at latest message", scrolled !== false, `scrolled=${scrolled}`);
+  await famPage.waitForTimeout(2500);
+  check("dm: reading clears the bell", (await unreadDm(famSess)) === 0);
+
+  // Fam replies; icon's already-open thread must catch it by polling.
+  const reply = `smoke-reply-${Math.floor(Math.random() * 1e9)}`;
+  await famPage.fill("form input", reply);
+  await famPage.click('form button[type="submit"]');
+  let live = false;
+  for (let i = 0; i < 12 && !live; i++) {
+    await iconPage.waitForTimeout(1000);
+    live = (await iconPage.evaluate(() => document.body.innerText)).includes(reply);
+  }
+  check("dm: reply arrives live in open thread", live);
+
+  // The pre-unification URL still lands people in the right place.
+  if (requestId) {
+    await goto(iconPage, `/app/community/messages/${requestId}`, 2200);
+    check(
+      "dm: old community URL redirects to canonical",
+      pathOf(iconPage) === `/app/people/${famId}/chat`,
+      `landed ${pathOf(iconPage)}`
+    );
+  }
+  await iconCtx.close();
+  await famCtx.close();
+}
+
 await browser.close();
 
 console.log(`\n${results.length} checks, ${failures} failed.`);

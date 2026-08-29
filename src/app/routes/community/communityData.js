@@ -447,6 +447,18 @@ export async function sendMessage(requestId, userId, body, gameSessionId = null)
   if (error) throw error;
 }
 
+/* Thread ids holding messages I haven't read — powers the inbox's
+   "new" badges. RLS already scopes dm_messages to my threads. */
+export async function fetchUnreadThreadIds(userId) {
+  const { data, error } = await supabase
+    .from("dm_messages")
+    .select("request_id")
+    .is("read_at", null)
+    .neq("sender_id", userId);
+  if (error) return new Set();
+  return new Set((data || []).map((r) => r.request_id));
+}
+
 export async function markThreadRead(requestId, userId) {
   // Best-effort; unread state is a nicety, not a guarantee.
   await supabase

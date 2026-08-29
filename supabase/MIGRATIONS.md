@@ -42,6 +42,21 @@ A row here claims the number even before the file lands.
 | 0026 | groups lane (saathban-website-13) | `0026_groups.sql` — **applied** (groups, members, invites, posts, chat; reports kinds extended keeping park_board) | 2026-08-29 |
 | 0027 | games/community lane (saathban-website-8f) | `0027_community_social.sql` — **applied** (activity posts + joins, friendships widening game_connected(), DM game embeds) | 2026-08-29 |
 | 0028 | games/community lane (saathban-website-8f) | `0028_activity_rsvp.sql` — join_activity RSVP wording + announce_activity() | 2026-08-29 |
+| 0029 | games/community lane (saathban-website-8f) | `0029_together.sql` — together layer: game_people() picker, join_by_code() (server-side rate limit), invite/respond v2 (replaces invite_to_game/respond_game_invite, preserving 0025's eligibility + connection gates — 0025's shape is unchanged since it applied), riddle_touches (once-per-day cap) + riddle_people(), person_warmth(), boast_to_people() | 2026-08-29 |
+| 0030 | integration | `0030_dm_unify.sql` — **applied**: unique DM pair index, direction-blind send_dm_request() (a reverse-pending request is accepted by the caller's ask), dm_messages → bell trigger (one unread `kind='dm'` notification per thread, link `/app/people/<sender>/chat`, no content leak) | 2026-08-29 |
+| 0031 | people lane (saathban-website-13) | `people` — my_people() RPC (deduped connections + away flag). Riddle nudges belong to 0029's riddle_touches — call 8f's, don't ship a second table | 2026-08-29 |
+| 0032 | parity lane (saathban-website-34) | notification parity — deep-link backfills on existing notification writers (milestone/document/reminder/event-proposal, from live pg_get_functiondef, link value only) + circle notifications (approve notifies member, accept-invite notifies icon). No table changes. NOTE: dm notifications are 0030's trigger — don't touch kind='dm' | 2026-08-29 |
+
+## Canonical DM surface (integration decision, 2026-08-29)
+
+**One thread per pair, one route: `/app/people/<profileId>/chat`** (the
+0014 tables via `open_dm_with`, upgraded ThreadPage with carrom embed,
+stickers, money warning, report). `/app/community/messages/:requestId`
+is a redirect to it; the community Messages inbox lists threads but
+links to the canonical route. Every "Message" action anywhere in the
+app targets `/app/people/<id>/chat`. DM unread = the `kind='dm'`
+notification (0030); opening the thread clears both the messages'
+`read_at` and the notification.
 
 ### 0020 collision resolution (integration session, 2026-08-29)
 

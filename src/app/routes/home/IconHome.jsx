@@ -30,6 +30,7 @@ import ScoreShare from "./ScoreShare.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs } from "./logStore.js";
+import AppHeader from "../../components/AppHeader.jsx";
 
 const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = [
@@ -130,16 +131,18 @@ export default function IconHome() {
     writeEntry(isoDate(selectedDate), moduleKey, value);
 
   return (
-    <main
-      className="ih-root"
-      style={{
-        minHeight: "100vh",
-        background: C.bg,
-        fontFamily: FONTS.sans,
-        color: C.textMain,
-        fontSize: 18,
-      }}
-    >
+    <>
+      <AppHeader />
+      <main
+        className="ih-root"
+        style={{
+          minHeight: "100vh",
+          background: C.bg,
+          fontFamily: FONTS.sans,
+          color: C.textMain,
+          fontSize: 18,
+        }}
+      >
       <style>{css}</style>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px" }}>
@@ -240,6 +243,7 @@ export default function IconHome() {
           />
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

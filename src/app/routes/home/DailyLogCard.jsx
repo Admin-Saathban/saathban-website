@@ -645,7 +645,7 @@ function summaryFor(entry, log, prefs) {
     }
     case "water": {
       const n = v.glasses || 0;
-      return n > 0 ? `${n} glasses` : null;
+      return n > 0 ? `${n} ${n === 1 ? "glass" : "glasses"}` : null;
     }
     default:
       return null;

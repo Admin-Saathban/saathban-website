@@ -42,6 +42,7 @@ import {
   currentUserId,
 } from "./supabaseVetting.js";
 import { ApplicationStatus, KindErrorScreen } from "./screens.jsx";
+import AppHeader from "../../components/AppHeader.jsx";
 import {
   StepIdentity,
   StepProfile,
@@ -93,7 +94,18 @@ const STEP_COMPONENTS = {
   review: StepReview,
 };
 
+/* AppHeader wraps every state this form renders (loading, status
+   screens, refusals, the form itself) — see HEADER_WIRING.md. */
 export default function VettingForm() {
+  return (
+    <>
+      <AppHeader />
+      <VettingFormInner />
+    </>
+  );
+}
+
+function VettingFormInner() {
   const draft = useRef(loadDraft()).current;
   const [app, setAppState] = useState({ ...INITIAL_APPLICATION, ...(draft?.app || {}) });
   const [refs, setRefs] = useState(draft?.refs || INITIAL_REFS);

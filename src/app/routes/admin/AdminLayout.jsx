@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
+import AppHeader from "../../components/AppHeader.jsx";
 import { MOCK_REPORTS } from "./data.js";
 import * as api from "./api.js";
 
@@ -104,6 +105,8 @@ export default function AdminLayout() {
   ];
 
   return (
+    <>
+    <AppHeader />
     <div
       style={{
         minHeight: "100vh",
@@ -293,5 +296,6 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+    </>
   );
 }

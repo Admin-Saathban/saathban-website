@@ -69,9 +69,12 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
   );
 }
 
-export function Card({ children, style }) {
+/* Extra props (className, ref, data-*) pass through so the feedback
+   layer can mark a freshly created card; a component that swallows
+   them makes the highlight silently do nothing. */
+export function Card({ children, style, ...rest }) {
   return (
-    <section
+    <section {...rest}
       style={{
         background: C.white,
         border: `1px solid ${C.warmGray}`,

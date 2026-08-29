@@ -85,6 +85,36 @@ and survive a route change:
 The now-unused `Toast` components are left in place for their owning
 lanes to delete — removing them is a one-line change with no callers.
 
+## Corrections found by later testing (circle round, same day)
+
+The highlight was listed as covered above before it was true
+everywhere. Two defects made it a silent no-op; both are fixed, and
+the table now reflects reality:
+
+1. **The glow had no keyframes unless a toast happened to be on
+   screen.** The `.sb-fresh` animation lived inside the toast host,
+   which renders `null` when the store is empty — so a highlight
+   raised on its own (a deep link, a saved reminder) applied a class
+   with nothing behind it. The stylesheet moved to the always-mounted
+   provider.
+2. **The target was a `ref` passed through a lane `<Card>`.** React
+   drops a ref given to a function component, so it never reached the
+   DOM — and those Card components accepted only `children` +
+   `style`, swallowing `className` and `data-*` too. `useFresh` now
+   marks with a `data-fresh` attribute, which survives any number of
+   component boundaries, and all six lane Cards forward their extra
+   props.
+
+Affected surfaces: reminders, events, groups, outdoor
+outings/activities, and circle members — every highlight that went
+through a Card. The ones that already worked (community posts, the
+park board) spread onto a plain `<div>`. The scroll also retries
+briefly now, because marking re-renders the list and re-registers its
+targets in the same pass.
+
+The lesson for the ledger: "the class is applied" is not the same as
+"the person sees it", and only the second one counts.
+
 ## Notes for other lanes
 
 - The games lane's decline-then-navigate timing is now structural

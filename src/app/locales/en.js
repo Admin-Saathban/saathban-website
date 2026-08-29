@@ -1083,6 +1083,15 @@ const en = {
 
   // ─── My Circle, Icon side (lifted from routes/circle/copy.js) ───
   circle: {
+    /* The single screen an Icon sees when someone joins. Plain words,
+       large type, one button — the review door is the notification
+       that follows and Settings for ever after (SPEC §My Circle). */
+    welcome: {
+      title: "{name} joins your circle",
+      body: "They'll be able to see your days, your health notes, and be there for you.",
+      later: "You can change any of this later in Settings.",
+      okay: "Theek hai · Okay",
+    },
     title: "My Circle",
     intro: "The people you've chosen to keep close — and exactly what each of them can see.",
     empty: {
@@ -1132,6 +1141,10 @@ const en = {
       configure: {
         label: "Help set up my daily log",
         hint: "Choose my log modules, medicines and meals for me. Every change is marked with their name, and I can undo any of it.",
+      },
+      quietDays: {
+        label: "Tell them if my days go quiet",
+        hint: "If nothing is logged for a few days, they get a gentle note — never what I logged, only that it has been quiet. Off unless you switch it on.",
       },
       location: {
         label: "See where I am",

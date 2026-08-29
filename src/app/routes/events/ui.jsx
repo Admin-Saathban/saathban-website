@@ -45,9 +45,12 @@ export function Screen({ children, backTo, backLabel, width = 680 }) {
   );
 }
 
-export function Card({ children, style }) {
+/* Extra props (className, ref, data-*) pass through so the feedback
+   layer can mark a freshly created card. */
+export function Card({ children, style, ...rest }) {
   return (
     <div
+      {...rest}
       style={{
         background: C.white,
         border: `1.5px solid ${C.warmGray}`,

@@ -178,7 +178,6 @@ export function useToastThenGo() {
 
 export function useFresh({ ms = 2600 } = {}) {
   const [freshId, setFreshId] = useState(null);
-  const nodes = useRef(new Map());
   const timer = useRef(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -189,27 +188,46 @@ export function useFresh({ ms = 2600 } = {}) {
       setFreshId(id);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setFreshId(null), ms);
-      // Scroll after paint, once the node exists.
-      requestAnimationFrame(() => {
-        const node = nodes.current.get(id);
-        if (!node?.scrollIntoView) return;
+    },
+    [ms]
+  );
+
+  /* Scroll when the node actually exists. Marking re-renders the list,
+     which re-registers every ref (null, then the node) — a single
+     rAF can land in that gap and silently scroll nothing, so this
+     retries briefly instead. */
+  useEffect(() => {
+    if (freshId == null) return undefined;
+    let tries = 0;
+    let handle = null;
+    const tick = () => {
+      // NB: CSS.escape is unavailable here — this module declares its
+      // own `CSS` stylesheet constant, which shadows the global.
+      const node = document.querySelector(`[data-fresh=${JSON.stringify(String(freshId))}]`);
+      if (node?.scrollIntoView) {
         const still = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
         try {
           node.scrollIntoView({ behavior: still ? "smooth" : "auto", block: "center" });
         } catch {
           node.scrollIntoView();
         }
-      });
-    },
-    [ms]
-  );
+        return;
+      }
+      if (++tries < 12) handle = setTimeout(tick, 100);
+    };
+    tick();
+    return () => clearTimeout(handle);
+  }, [freshId]);
 
+  /* A data attribute, deliberately — not a ref. These props are
+     spread through lane Card components, and React drops a ref passed
+     to a function component, so the highlight would silently do
+     nothing (found in testing). An attribute survives any number of
+     component boundaries, as long as the component spreads its extra
+     props onto a DOM node. */
   const props = useCallback(
     (id) => ({
-      ref: (node) => {
-        if (node) nodes.current.set(id, node);
-        else nodes.current.delete(id);
-      },
+      "data-fresh": String(id),
       className: freshId === id ? "sb-fresh" : undefined,
     }),
     [freshId]
@@ -247,7 +265,6 @@ export function ToastHost() {
   if (items.length === 0) return null;
   return (
     <>
-      <style>{CSS}</style>
       <div
         aria-live="polite"
         style={{
@@ -345,6 +362,10 @@ export function ToastHost() {
 export default function FeedbackProvider({ children }) {
   return (
     <>
+      {/* Always mounted: the .sb-fresh keyframes are needed whenever a
+          created thing glows, which happens with no toast on screen
+          (found in testing — the highlight silently did nothing). */}
+      <style>{CSS}</style>
       {children}
       <ToastHost />
     </>

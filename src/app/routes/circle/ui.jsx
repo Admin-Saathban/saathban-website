@@ -9,9 +9,13 @@
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
-export function Card({ children, style }) {
+/* Extra props (className, ref, data-*) pass through: the feedback
+   layer marks a freshly created or deep-linked card by class + ref,
+   and a component that swallows them silently does nothing. */
+export function Card({ children, style, ...rest }) {
   return (
     <section
+      {...rest}
       style={{
         background: C.white,
         border: `1px solid ${C.warmGray}`,

@@ -9,6 +9,7 @@ Maintained by the overnight integration session. Last update:
 |---|---|
 | test-icon@saathban.dev | Icon; some daily_logs from smoke runs; sees the hub at /app/home |
 | test-fam@saathban.dev | In test-icon's circle with **can_see_mood + can_manage_reminders + can_configure_daily_log** (the last added with 0033, deliberately ON so the "set up with help from Test" path is exercised; flip it to false to check the ungranted state); owns the "Morning walk" reminder (08:00 + 17:30, notifies the Icon) |
+| smoke-fam@saathban.dev | **The open-defaults fixture (0037).** In test-icon's circle, created through the real request → approve path: mood + health + reminders + SOS all ON, `quiet_days_notice` false. Kept deliberately — the only membership in the database showing post-0037 behaviour, while test-fam above stays the pre-0037 membership with its deliberately mixed grants, so old and new sit side by side |
 | smoke-icon@saathban.dev / smoke-fam@saathban.dev | **Dedicated suite accounts** — in each other's circle, same password. Every check that WRITES a message or opens a table uses this pair so the test-icon ↔ test-fam thread stays clean for retesting |
 | test-buddy@saathban.dev | Application `4269a7c6…` status **active** (a community-lane suite activated it); several document requests incl. one uploaded response |
 | test-admin@saathban.dev | Support-level admin |

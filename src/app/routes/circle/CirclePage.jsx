@@ -2,16 +2,21 @@
    My Circle — the Icon-facing screen (SPEC.md, My Circle).
 
    Real data via useCircle(iconId): members with per-member permission
-   toggles (all default OFF), one-tap removal (no confirmation maze),
-   SOS designation with ordering, incoming join-request approval (one
-   tap), and an empty state written as a door, never a scoreboard.
+   toggles, one-tap removal (no confirmation maze), SOS designation
+   with ordering, incoming join-request approval (one tap), and an
+   empty state written as a door, never a scoreboard.
 
-   The grant is the Icon's alone — nothing here is on by default, and
-   turning a permission off is always one tap away.
+   Since 0037 a NEW membership arrives with sharing ON — the people
+   who join an Icon's circle are their daughter, their son, the
+   neighbour of thirty years, and meeting them with five switches set
+   to "no" served nobody (SPEC.md §My Circle). The Icon is told in
+   plain words what that means, at the moment it happens, and every
+   switch below is theirs to turn off. Existing memberships were never
+   touched: whatever was granted before stays exactly as it was.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -38,7 +43,7 @@ function sosOrderLabel(t, n) {
   return t("circle.member.sosNth", { n });
 }
 
-function MemberCard({ m, sosCount, busy, actions }) {
+function MemberCard({ m, sosCount, busy, actions, freshProps }) {
   const { t, ts, meta } = useI18n();
   const { toast } = useToast();
   const name = personName(m.person, t);
@@ -53,7 +58,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
   };
 
   return (
-    <Card>
+    <Card {...(freshProps || {})}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10 }}>
         {/* The member is tappable: name → their profile page (people lane),
             with the connection, granted permissions, and the Message door. */}
@@ -148,6 +153,17 @@ function MemberCard({ m, sosCount, busy, actions }) {
         onChange={() => flip("can_configure_daily_log", !m.can_configure_daily_log, "circle.perms.configure.label")}
         label={t("circle.perms.configure.label")}
         hint={t("circle.perms.configure.hint")}
+      />
+      <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
+      {/* 0037: off by default even in the open model — being told that
+          someone has gone quiet is a different thing from seeing their
+          day, and it is the Icon's to offer. */}
+      <Toggle
+        checked={m.quiet_days_notice}
+        busy={busy}
+        onChange={() => flip("quiet_days_notice", !m.quiet_days_notice, "circle.perms.quietDays.label")}
+        label={t("circle.perms.quietDays.label")}
+        hint={t("circle.perms.quietDays.hint")}
       />
       <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
       <Segmented
@@ -262,15 +278,110 @@ function InvitePanel({ createInvite }) {
   );
 }
 
+/* The whole of what acceptance means, in one screen and one button.
+   No checklist, no toggles, no second step — the review door is in the
+   notification that follows and in Settings for ever after. */
+function WelcomeSheet({ name, onClose }) {
+  const { t, ts, meta } = useI18n();
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("circle.welcome.title", { name })}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 80,
+        background: "rgba(45, 36, 24, 0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          background: C.white,
+          borderRadius: 24,
+          maxWidth: 520,
+          width: "100%",
+          padding: "30px 26px",
+          boxShadow: "0 10px 40px rgba(45, 36, 24, 0.35)",
+        }}
+      >
+        <p aria-hidden="true" style={{ fontSize: ts(46), margin: "0 0 6px", textAlign: "center" }}>
+          🤝
+        </p>
+        <h2
+          style={{
+            fontFamily: meta.fonts.heading,
+            fontSize: ts(30),
+            lineHeight: 1.25,
+            fontWeight: 700,
+            color: C.green,
+            margin: "0 0 14px",
+            textAlign: "center",
+          }}
+        >
+          {t("circle.welcome.title", { name })}
+        </h2>
+        <p style={{ fontSize: ts(22), lineHeight: 1.6, color: C.textMain, margin: "0 0 12px" }}>
+          {t("circle.welcome.body")}
+        </p>
+        <p style={{ fontSize: ts(20), lineHeight: 1.6, color: C.textMuted, margin: "0 0 22px" }}>
+          {t("circle.welcome.later")}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          autoFocus
+          style={{
+            width: "100%",
+            minHeight: 68,
+            borderRadius: 50,
+            border: "none",
+            background: C.green,
+            color: C.cream,
+            fontSize: ts(24),
+            fontWeight: 700,
+            fontFamily: "inherit",
+            cursor: "pointer",
+          }}
+        >
+          {t("circle.welcome.okay")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function CirclePage() {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const iconId = profile?.id ?? null;
   const { members, requests, loading, error, busyIds, actions } = useCircle(iconId);
   const sosCount = members.filter((m) => m.is_sos_contact).length;
+  const [welcomeName, setWelcomeName] = useState(null);
+  const fresh = useFresh();
+
+  /* The notification's deep link (/app/circle?member=<id>) lands here:
+     the member it names is scrolled to and glows, so "review what's
+     shared" opens on the right card rather than a wall of them. */
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("member");
+  useEffect(() => {
+    if (!wanted || loading) return;
+    if (!members.some((m) => m.id === wanted)) return;
+    fresh.mark(wanted);
+    const next = new URLSearchParams(params);
+    next.delete("member");
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted, loading, members]);
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
+      {welcomeName && <WelcomeSheet name={welcomeName} onClose={() => setWelcomeName(null)} />}
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 8px" }}>
           {t("circle.title")}
@@ -294,7 +405,9 @@ export default function CirclePage() {
                 busy={busyIds.has(r.id)}
                 onApprove={async (inviteId) => {
                   await actions.approveRequest(inviteId);
-                  pushToast(t("feedback.requestApproved", { name: personName(r.person, t) }));
+                  // One screen says what just happened; the toast would
+                  // be a second, smaller voice saying the same thing.
+                  setWelcomeName(personName(r.person, t).split(" ")[0]);
                 }}
               />
             ))}
@@ -321,6 +434,7 @@ export default function CirclePage() {
             {members.map((m) => (
               <MemberCard
                 key={m.id}
+                freshProps={fresh.props(m.id)}
                 m={m}
                 sosCount={sosCount}
                 busy={busyIds.has(m.id)}

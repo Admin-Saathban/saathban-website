@@ -32,8 +32,11 @@ export function H1({ children }) {
   return <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "8px 0 6px" }}>{children}</h1>;
 }
 
-export function Card({ children, style }) {
-  return <section style={{ background: C.white, border: `1px solid ${C.warmGray}`, borderRadius: 18, padding: 20, marginBottom: 16, ...style }}>{children}</section>;
+/* Extra props (className, ref, data-*) pass through so the feedback
+   layer can mark a freshly created card; a component that swallows
+   them makes the highlight silently do nothing. */
+export function Card({ children, style, ...rest }) {
+  return <section {...rest} style={{ background: C.white, border: `1px solid ${C.warmGray}`, borderRadius: 18, padding: 20, marginBottom: 16, ...style }}>{children}</section>;
 }
 
 export function BodyText({ children, muted, style, ...rest }) {

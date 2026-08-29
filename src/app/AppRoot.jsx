@@ -46,6 +46,7 @@ import NotificationsRoutes from "./routes/notifications/NotificationsRoutes.jsx"
 import ProfileRoutes from "./routes/profile/ProfileRoutes.jsx";
 import BuddyHome from "./routes/buddy/BuddyHome.jsx";
 import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
+import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 
 // App-shell offline caching + installability (production only; no-op
@@ -260,6 +261,17 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <CommunityRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Friend groups (0026): any signed-in role can be a member;
+              create_group is Icons-only server-side. Notification deep
+              links already target /app/groups/<id>. */}
+          <Route
+            path="groups/*"
+            element={
+              <RequireAuth>
+                <GroupsRoutes />
               </RequireAuth>
             }
           />

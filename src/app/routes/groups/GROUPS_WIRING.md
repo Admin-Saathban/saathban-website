@@ -1,5 +1,9 @@
 # Friend groups — wiring notes
 
+> **Status: WIRED.** groups/* registered in AppRoot behind RequireAuth
+> (any signed-in role; create_group stays Icons-only server-side).
+> Sticker picker adopted in the group chat (STICKERS_WIRING recipe).
+
 Self-contained under `src/app/routes/groups/`: real Supabase reads/writes against
 the group tables (migration **0026**, applied). One small edit outside the folder
 (admin ModerationQueue — see below).

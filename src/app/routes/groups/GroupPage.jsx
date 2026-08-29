@@ -13,6 +13,8 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
+import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {
   fetchGroup, fetchMembers, fetchPosts, addPost, fetchMessages, sendMessage,
   fetchConnections, inviteToGroup, removeMember, leaveGroup, reportTarget,
@@ -30,6 +32,7 @@ export default function GroupPage() {
 
   const [group, setGroup] = useState(undefined); // undefined loading, null gone
   const [tab, setTab] = useState("feed");
+  const [stickersOpen, setStickersOpen] = useState(false);
   const [members, setMembers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -74,6 +77,13 @@ export default function GroupPage() {
   const chat = async () => {
     if (!chatDraft.trim()) return;
     try { await sendMessage(id, chatDraft); setChatDraft(""); setMessages(await fetchMessages(id)); }
+    catch { setError(s.actionError); }
+  };
+  /* STICKERS_WIRING: a sticker is an ordinary message whose body is
+     :sticker/<id>: — no schema change. */
+  const sendSticker = async (stickerId) => {
+    setStickersOpen(false);
+    try { await sendMessage(id, stickerRef(stickerId)); setMessages(await fetchMessages(id)); }
     catch { setError(s.actionError); }
   };
   const openInvite = async () => {
@@ -167,11 +177,28 @@ export default function GroupPage() {
             {messages.length === 0 ? <BodyText muted>{s.chatEmpty}</BodyText> : messages.map((m) => (
               <div key={m.id} style={{ background: m.sender_id === myId ? "#e8f0e6" : C.cream, borderRadius: 14, padding: "10px 14px", alignSelf: m.sender_id === myId ? "flex-end" : "flex-start", maxWidth: "85%" }}>
                 <div style={{ fontSize: ts(15), color: C.textMuted, fontWeight: 600 }}>{m.sender_id === myId ? s.you : m.senderName} · {clock(m.created_at)}</div>
-                <div style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                {parseStickerRef(m.body) ? (
+                  <Sticker id={parseStickerRef(m.body)} size={96} />
+                ) : (
+                  <div style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                )}
               </div>
             ))}
           </div>
+          {stickersOpen && (
+            <div style={{ marginBottom: 10 }}>
+              <StickerPicker label={s.stickers} onPick={sendSticker} />
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+            <GhostBtn
+              aria-expanded={stickersOpen}
+              aria-label={s.stickers}
+              onClick={() => setStickersOpen((o) => !o)}
+              style={{ paddingInline: 12 }}
+            >
+              🌸
+            </GhostBtn>
             <textarea value={chatDraft} onChange={(e) => setChatDraft(e.target.value)} placeholder={s.chatPh} rows={2} maxLength={2000} style={{ resize: "vertical" }} />
             <GhostBtn onClick={chat} disabled={!chatDraft.trim()} style={{ borderColor: C.green, color: C.green }}>{s.send}</GhostBtn>
           </div>

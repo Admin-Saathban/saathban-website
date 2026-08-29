@@ -27,6 +27,8 @@ import {
 } from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 
 const POLL_MS = 2500;
 
@@ -469,6 +471,7 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, t
 function ChatPanel({ sessionId, chat, seats, profile, finished, onSent, onError, t, ts }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [stickersOpen, setStickersOpen] = useState(false);
   const nameOf = (id) =>
     id === profile.id
       ? t("games.board.you")
@@ -494,12 +497,30 @@ function ChatPanel({ sessionId, chat, seats, profile, finished, onSent, onError,
           <li key={m.id} style={{ padding: "6px 0", fontSize: ts(A11Y.minBodyPx), lineHeight: 1.5 }}>
             <strong>{nameOf(m.sender_id)}: </strong>
             {m.sticker && <span style={{ fontSize: ts(26) }}>{m.sticker}</span>}
-            {m.body && <span style={{ overflowWrap: "anywhere" }}> {m.body}</span>}
+            {/* STICKERS_WIRING: :sticker/<id>: bodies render as the
+                brand SVG; ordinary text unchanged. */}
+            {m.body &&
+              (parseStickerRef(m.body) ? (
+                <Sticker id={parseStickerRef(m.body)} size={96} />
+              ) : (
+                <span style={{ overflowWrap: "anywhere" }}> {m.body}</span>
+              ))}
           </li>
         ))}
       </ul>
       {!finished && (
         <>
+          {stickersOpen && (
+            <div style={{ marginBottom: 10 }}>
+              <StickerPicker
+                label={t("games.chat.stickers")}
+                onPick={(id) => {
+                  setStickersOpen(false);
+                  send({ body: stickerRef(id) });
+                }}
+              />
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -507,6 +528,14 @@ function ChatPanel({ sessionId, chat, seats, profile, finished, onSent, onError,
             }}
             style={{ display: "flex", gap: 10 }}
           >
+            <GhostBtn
+              aria-expanded={stickersOpen}
+              aria-label={t("games.chat.stickers")}
+              onClick={() => setStickersOpen((o) => !o)}
+              style={{ paddingInline: 12 }}
+            >
+              🌸
+            </GhostBtn>
             <input
               type="text"
               value={text}

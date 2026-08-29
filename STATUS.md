@@ -70,6 +70,13 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
 ## Round log
+- **Groups + stickers wiring:** groups/* registered in AppRoot per
+  GROUPS_WIRING (the lane had shipped routes + moderation but no
+  registration); sticker picker adopted in the rails session chat and
+  group chat per STICKERS_WIRING (send/render via :sticker/<id>:
+  bodies — no migration). Verified end to end with real sends in a
+  real group and a real race100 session. Community DMs remain the
+  last unadopted sticker surface (community lane's call).
 - **Games wiring + nav round:** GAMES_WIRING one-liners wired (bell
   rows with a link deep-link and mark read on tap; YourTurnChips on
   the hub) and the doc deleted per its instruction. AppHeader is now

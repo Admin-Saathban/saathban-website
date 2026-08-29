@@ -18,7 +18,8 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import { GOOGLE_FONTS_URL } from "../shared/tokens.js";
+import { COLORS as C, FONTS, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
+import { supabaseConfigError } from "./lib/supabase.js";
 import AppHome from "./routes/AppHome.jsx";
 import AdminLayout from "./routes/admin/AdminLayout.jsx";
 import BuddyQueue from "./routes/admin/BuddyQueue.jsx";
@@ -39,7 +40,80 @@ import { registerAppServiceWorker } from "./lib/pwa.js";
 // in dev). Module level so it runs once, and only for /app visitors.
 registerAppServiceWorker();
 
+/* The /app boundary for a missing backend configuration. Rendered
+   instead of the app when the Supabase env vars weren't baked into
+   the build — a deploy-time mistake, so the audience is whoever set
+   up the deployment, never a signed-in person. The marketing site at
+   / is unaffected either way (the client is lazy; see lib/supabase.js). */
+function AppConfigError() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background: C.bg,
+        color: C.textMain,
+        fontFamily: FONTS.sans,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div style={{ maxWidth: 620 }}>
+        <h1
+          style={{
+            fontFamily: FONTS.serif,
+            fontSize: 30,
+            fontWeight: 700,
+            color: C.green,
+            marginBottom: 12,
+          }}
+        >
+          The app isn't available right now
+        </h1>
+        <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.7, marginBottom: 18 }}>
+          This build is missing its connection settings, so signing in won't
+          work until it's redeployed. The main site is unaffected.
+        </p>
+        <p
+          style={{
+            fontSize: 15,
+            lineHeight: 1.6,
+            color: C.textMuted,
+            background: C.white,
+            border: `1px solid ${C.warmGray}`,
+            borderRadius: 12,
+            padding: "12px 16px",
+            marginBottom: 24,
+            fontFamily: "monospace",
+          }}
+        >
+          {supabaseConfigError}
+        </p>
+        <a
+          href="/"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: A11Y.minTapTargetPx,
+            padding: "0 28px",
+            borderRadius: 50,
+            background: C.green,
+            color: C.cream,
+            fontSize: A11Y.minBodyPx,
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          Back to saathban.com
+        </a>
+      </div>
+    </main>
+  );
+}
+
 export default function AppRoot() {
+  if (supabaseConfigError) return <AppConfigError />;
   return (
     <LanguageProvider>
       <AuthProvider>

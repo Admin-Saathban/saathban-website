@@ -33,3 +33,5 @@ A row here claims the number even before the file lands.
 | 0017 | milestones lane | `0017_milestones.sql` — badges, earned_badges, awarding trigger/RPCs, rest_day log module | 2026-08-29 |
 | 0018 | community shares lane | `0018_community_shares.sql` — post_type/ref_id/payload on community_posts for badge, score, walk, and event shares | 2026-08-29 |
 | 0019 | people/circle-DM lane | `0019_circle_dms.sql` — open_dm_with() RPC; circle members' DM requests auto-accept | 2026-08-29 |
+| 0020 | games lane | `0020_games.sql` — games registry, sessions/seats/moves/invites/chat, turn timing + bot play (pg_cron tick), daily puzzles (+30 seed), notifications.link, game_open/puzzle_result post types | 2026-08-29 |
+| NOTE | — | two 0019 files exist (`circle_dms`, `event_proposals`) — same collision as 0012; the integration session should renumber per applied order | 2026-08-29 |

@@ -1,0 +1,167 @@
+/* ════════════════════════════════════════════════
+   Ludo ↔ backend, in ONE file on purpose — and it earned its keep:
+   when the games rails landed mid-lane (0022 + 0022b, see
+   GAMES_CONTRACT.md), this file was the entire adaptation surface.
+
+   Contract mapping done here so the components never learn it:
+     status  'active'      → 'playing'
+     seats   seat_no 1..4  → seat 0..3
+     current_seat 1-based  → 0-based
+     seats_total           → target_seats
+     deadline              = turn_started_at + house_rules.turn_seconds
+     winner_seat 1-based   → 0-based
+
+   Rails RPCs: create_game_session / start_with_bots / play_turn /
+   game_tick. Ludo-owned RPCs: ludo_roll (two-phase roll),
+   ludo_join (by code), ludo_rematch (0023).
+   ════════════════════════════════════════════════ */
+
+import supabase from "../../../lib/supabase.js";
+
+export const DEFAULT_RULES = {
+  extra_roll_on_six: true,
+  capture_before_home: false,
+  exact_home: true,
+  safe_squares: "standard",
+};
+
+export async function createSession(targetSeats, houseRules) {
+  const { data, error } = await supabase.rpc("create_game_session", {
+    p_game: "ludo",
+    p_seats: targetSeats,
+    p_house_rules: houseRules,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function joinByCode(code) {
+  const { data, error } = await supabase.rpc("ludo_join", {
+    p_code: code.replace(/\D/g, ""),
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function startSession(sessionId) {
+  const { error } = await supabase.rpc("start_with_bots", { p_session: sessionId });
+  if (error) throw new Error(error.message);
+}
+
+export async function roll(sessionId) {
+  const { data, error } = await supabase.rpc("ludo_roll", { p_session: sessionId });
+  if (error) throw new Error(error.message);
+  return data; // { dice, legal, skipped }
+}
+
+export async function move(sessionId, piece) {
+  const { error } = await supabase.rpc("play_turn", {
+    p_session: sessionId,
+    p_payload: { piece },
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function tick(sessionId) {
+  const { data, error } = await supabase.rpc("game_tick", { p_session: sessionId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function rematch(sessionId) {
+  const { data, error } = await supabase.rpc("ludo_rematch", { p_session: sessionId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/* Session + seats + public names, normalized to Ludo's 0-based world. */
+export async function fetchSession(sessionId) {
+  const [{ data: session, error: sErr }, { data: seats, error: tErr }] = await Promise.all([
+    supabase.from("game_sessions").select("*").eq("id", sessionId).maybeSingle(),
+    supabase
+      .from("game_seats")
+      .select("seat_no, profile_id, is_bot, presence")
+      .eq("session_id", sessionId)
+      .order("seat_no"),
+  ]);
+  if (sErr) throw new Error(sErr.message);
+  if (tErr) throw new Error(tErr.message);
+  if (!session) return null;
+
+  const ids = (seats || []).map((s) => s.profile_id).filter(Boolean);
+  let names = new Map();
+  if (ids.length) {
+    const { data: profiles, error: pErr } = await supabase
+      .from("safe_profiles")
+      .select("id, full_name")
+      .in("id", ids);
+    if (pErr) throw new Error(pErr.message);
+    names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+  }
+
+  const turnSeconds = Number(session.house_rules?.turn_seconds) || 60;
+  const status = session.status === "active" ? "playing" : session.status;
+
+  // The rails can't know Ludo's state shape; before the first action the
+  // board still deserves its pieces — mirror ludo_state_init locally.
+  let state = session.state || {};
+  if (status !== "lobby" && !state.pieces) {
+    state = {
+      ...state,
+      pieces: Array.from({ length: session.seats_total }, () => [0, 0, 0, 0]),
+      captured_by: Array.from({ length: session.seats_total }, () => false),
+      rules: state.rules || session.house_rules,
+    };
+  }
+
+  return {
+    id: session.id,
+    status,
+    join_code: session.join_code,
+    house_rules: session.house_rules,
+    created_by: session.created_by,
+    rematch_id: session.rematch_id,
+    target_seats: session.seats_total,
+    current_seat: session.current_seat != null ? session.current_seat - 1 : null,
+    winner_seat: session.winner_seat != null ? session.winner_seat - 1 : null,
+    turn_deadline:
+      status === "playing" && session.turn_started_at
+        ? new Date(new Date(session.turn_started_at).getTime() + turnSeconds * 1000).toISOString()
+        : null,
+    state,
+    seats: (seats || []).map((s) => ({
+      seat: s.seat_no - 1,
+      profile_id: s.profile_id,
+      is_bot: s.is_bot,
+      presence: s.presence,
+      name: s.is_bot ? null : names.get(s.profile_id) || null,
+    })),
+  };
+}
+
+/* ─── In-game chat: body text plus the rails' fixed sticker column.
+   Ludo's wider warm set travels as emoji-only bodies (rendered large
+   client-side); either way the same participants-only RLS applies. ─── */
+
+export async function fetchChat(sessionId) {
+  const { data, error } = await supabase
+    .from("game_messages")
+    .select("id, sender_id, body, sticker, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data || []).map((m) => ({ ...m, body: m.body ?? m.sticker }));
+}
+
+export async function sendChat(sessionId, body) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("game_messages").insert({
+    session_id: sessionId,
+    sender_id: user?.id,
+    body,
+  });
+  if (error) throw new Error(error.message);
+}

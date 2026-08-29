@@ -66,9 +66,8 @@ export default function BuddyApplication() {
   const [rejectNote, setRejectNote] = useState("");
   const [notesDraft, setNotesDraft] = useState(null); // null = not editing
   const [callDraft, setCallDraft] = useState({}); // refId -> notes text
-  const [docType, setDocType] = useState(DOCUMENT_TYPES[0]);
+  const [docType, setDocType] = useState(""); // free text, suggestions via datalist
   const [docNote, setDocNote] = useState("");
-  const [docsSent, setDocsSent] = useState([]); // this session's sends
   const [audit, setAudit] = useState(null); // null = not loaded
 
   const isSuper = admin.level === "super";
@@ -614,34 +613,75 @@ export default function BuddyApplication() {
             </div>
           </Card>
 
-          {/* ─── Document requests (real, audited admin contact) ─── */}
+          {/* ─── Document requests (buddy_document_requests, 0010) ─── */}
           <Card title="Documents">
             <p style={{ margin: "0 0 12px", fontSize: 15, color: C.textMuted }}>
               A request reaches the applicant as an in-app notification and is
-              audit-logged. There is no documents table yet, so past requests
-              live in the audit trail.
+              audit-logged automatically.
             </p>
-            {docsSent.length > 0 && (
-              <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
-                {docsSent.map((d, i) => (
-                  <p key={i} style={{ margin: 0, fontSize: 16, color: C.green, fontWeight: 600 }}>
-                    ✓ Requested: {d}
-                  </p>
-                ))}
-              </div>
-            )}
+            {(app.document_requests || [])
+              .slice()
+              .sort((a, b) => a.created_at.localeCompare(b.created_at))
+              .map((d) => (
+                <div
+                  key={d.id}
+                  style={{
+                    border: `1px solid ${C.warmGray}`,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>
+                      <strong>{d.doc_type}</strong>{" "}
+                      <span
+                        style={{
+                          color: d.status === "received" ? C.green : C.brown,
+                          fontWeight: 700,
+                        }}
+                      >
+                        · {d.status}
+                      </span>
+                    </span>
+                    {d.status === "awaiting" && (
+                      <AdminBtn
+                        kind="ghost"
+                        disabled={busy}
+                        onClick={() => run(() => actions.markDocumentReceived(d.id))}
+                      >
+                        Mark received
+                      </AdminBtn>
+                    )}
+                  </div>
+                  <div style={{ color: C.textMuted, fontSize: 15 }}>
+                    Requested {fmtDate(d.created_at)}
+                    {d.note && <> — {d.note}</>}
+                  </div>
+                </div>
+              ))}
             <div style={{ display: "grid", gap: 10 }}>
-              <select
+              <input
+                type="text"
+                list="doc-type-suggestions"
+                placeholder="What document is needed?"
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
-                style={{ ...inputStyle, minHeight: A11Y.minTapTargetPx }}
-              >
+                style={inputStyle}
+              />
+              <datalist id="doc-type-suggestions">
                 {DOCUMENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
+                  <option key={t} value={t} />
                 ))}
-              </select>
+              </datalist>
               <input
                 type="text"
                 placeholder="Note to the applicant (optional)"
@@ -651,13 +691,13 @@ export default function BuddyApplication() {
               />
               <AdminBtn
                 kind="outline"
-                disabled={busy}
+                disabled={busy || docType.trim().length < 2}
                 onClick={async () => {
                   const ok = await run(() =>
-                    actions.requestDocument(app.applicant_id, docType, docNote.trim())
+                    actions.requestDocument(app.id, docType.trim(), docNote.trim())
                   );
                   if (ok) {
-                    setDocsSent((d) => [...d, docType]);
+                    setDocType("");
                     setDocNote("");
                   }
                 }}

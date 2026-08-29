@@ -30,11 +30,13 @@ export default function AdminLayout() {
   const [applications, setApplications] = useState(null); // null = loading
   const [loadError, setLoadError] = useState(null);
   const [reports, setReports] = useState(MOCK_REPORTS);
+  const [openQuestions, setOpenQuestions] = useState(0);
 
   const reload = useCallback(async () => {
     try {
       setLoadError(null);
       setApplications(await api.fetchApplications());
+      setOpenQuestions(await api.openQuestionsCount());
     } catch (e) {
       setLoadError(e.message || "Could not load applications.");
       setApplications([]);
@@ -68,9 +70,15 @@ export default function AdminLayout() {
         await api.recordReferenceCall(refId, admin.id, callNotes);
         await reload();
       },
-      // Real, audited write via admin_contact_icon (see api.js).
-      async requestDocument(applicantId, type, note) {
-        await api.requestDocument(applicantId, type, note);
+      // buddy_document_requests (0010) — the insert trigger notifies
+      // the applicant and audit-logs.
+      async requestDocument(applicationId, type, note) {
+        await api.createDocumentRequest(applicationId, type, note);
+        await reload();
+      },
+      async markDocumentReceived(requestId) {
+        await api.markDocumentReceived(requestId);
+        await reload();
       },
       // Moderation is still the mock skeleton.
       resolveReport(id, resolution) {
@@ -90,6 +98,8 @@ export default function AdminLayout() {
 
   const navItems = [
     { to: "buddies", label: "Buddy review", count: openBuddyCount },
+    { to: "questions", label: "Questions", count: openQuestions },
+    { to: "broadcasts", label: "Broadcasts", count: 0 },
     { to: "moderation", label: "Moderation", count: openReportCount },
   ];
 
@@ -277,6 +287,7 @@ export default function AdminLayout() {
               reports,
               admin,
               actions,
+              reload,
             }}
           />
         </main>

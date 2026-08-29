@@ -26,7 +26,9 @@ import supabase from "../../lib/supabase.js";
 export async function fetchApplications() {
   const { data, error } = await supabase
     .from("buddy_applications")
-    .select("*, references:buddy_references(*)")
+    .select(
+      "*, references:buddy_references(*), document_requests:buddy_document_requests(*)"
+    )
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -70,18 +72,65 @@ export async function recordReferenceCall(refId, adminId, callNotes) {
   if (error) throw error;
 }
 
-/* Document request = an audited admin contact. The applicant receives
-   an in-app notification; the audit log records who asked, whom, and
-   why. p_reason is the audit reason, distinct from the message body. */
-export async function requestDocument(applicantId, type, note) {
-  const { error } = await supabase.rpc("admin_contact_icon", {
-    p_profile: applicantId,
-    p_title: `Document needed: ${type}`,
-    p_body:
-      (note ? `${note}\n\n` : "") +
-      "Please add this document to your volunteer application. " +
-      "Reply from your application page or at your next interview.",
-    p_reason: `Buddy vetting: requested ${type}`,
+/* Document requests live in buddy_document_requests (migration 0010).
+   The insert trigger notifies the applicant and writes the audit entry
+   atomically — the client only inserts the row. */
+export async function createDocumentRequest(applicationId, docType, note) {
+  const { error } = await supabase.from("buddy_document_requests").insert({
+    application_id: applicationId,
+    doc_type: docType,
+    note: note || null,
+  });
+  if (error) throw error;
+}
+
+export async function markDocumentReceived(requestId) {
+  const { error } = await supabase
+    .from("buddy_document_requests")
+    .update({ status: "received" })
+    .eq("id", requestId);
+  if (error) throw error;
+}
+
+/* ─── Broadcasts (migration 0010) ───
+   One notification to every active profile, optionally one role.
+   Audited server-side with the recipient count; returns that count. */
+export async function sendBroadcast({ title, body, reason, role }) {
+  const { data, error } = await supabase.rpc("admin_broadcast", {
+    p_title: title,
+    p_body: body,
+    p_reason: reason,
+    p_role: role || null,
+  });
+  if (error) throw error;
+  return data; // recipient count
+}
+
+/* ─── Questions (migration 0010) ─── */
+export async function fetchQuestions() {
+  const { data, error } = await supabase
+    .from("questions")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function openQuestionsCount() {
+  const { count, error } = await supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open");
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/* Stores the reply, flips status, notifies the asker, audit-logs —
+   one definer RPC, so the pieces can never drift apart. */
+export async function answerQuestion(questionId, reply) {
+  const { error } = await supabase.rpc("admin_answer_question", {
+    p_question: questionId,
+    p_reply: reply,
   });
   if (error) throw error;
 }

@@ -24,6 +24,8 @@ import AdminLayout from "./routes/admin/AdminLayout.jsx";
 import BuddyQueue from "./routes/admin/BuddyQueue.jsx";
 import BuddyApplication from "./routes/admin/BuddyApplication.jsx";
 import ModerationQueue from "./routes/admin/ModerationQueue.jsx";
+import BroadcastsPage from "./routes/admin/BroadcastsPage.jsx";
+import QuestionsQueue from "./routes/admin/QuestionsQueue.jsx";
 import IconHome from "./routes/home/IconHome.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
@@ -71,6 +73,8 @@ export default function AppRoot() {
             <Route index element={<Navigate to="buddies" replace />} />
             <Route path="buddies" element={<BuddyQueue />} />
             <Route path="buddies/:id" element={<BuddyApplication />} />
+            <Route path="questions" element={<QuestionsQueue />} />
+            <Route path="broadcasts" element={<BroadcastsPage />} />
             <Route path="moderation" element={<ModerationQueue />} />
           </Route>
           {/* Saath-Buddy vetting application (build step 8, applicant

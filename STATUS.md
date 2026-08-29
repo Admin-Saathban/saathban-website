@@ -263,6 +263,13 @@ the suite and its cleanup with it. Two failures stacked here — a
 cleanup convention that did not clean, and a crash that hid it — and
 either alone would have been visible.
 
+The sharper form: the early exit skipped not just the cleanup but the
+REPORT of it. The run printed fewer PASS lines and looked SHORTER
+rather than broken. **A suite that can end early without saying so is
+a suite whose green is conditional.** So make truncation visible: end
+with an explicit completion line, or assert the number of checks that
+ran, so a short run cannot be mistaken for a clean one.
+
 **10. A cleanup that is not verified is not a cleanup.** A suite
 deleted its fixtures with `DELETE /game_sessions?id=eq.<id>` and
 checked the response was ok. That table has ONE policy — SELECT only —

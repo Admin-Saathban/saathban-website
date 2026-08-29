@@ -207,6 +207,18 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**8. Prove the check can FAIL before you trust it passing.** A
+sweep of 120 locale keys first reported all 120 missing — the regex
+was wrong, not the branch. The same bug in the other direction (a
+check that silently matches nothing and reports everything present)
+looks exactly like success and is how you ship believing you
+verified. Run every new check once against something you KNOW is
+absent, and only trust it after it has failed on cue. Prefer the
+dumbest matcher that can work: plain `indexOf(leafName + ":")` beat
+a regex here — no escaping, no CRLF sensitivity, re-runnable by
+anyone in one line, and a false "present" is the only dangerous
+answer.
+
 **7. Test the row, not the return value.** A function that reports
 success while changing nothing passes a return-value assertion. Check
 the seat is gone, the flag is set, the write was refused BY THE

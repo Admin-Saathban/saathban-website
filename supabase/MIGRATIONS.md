@@ -32,3 +32,4 @@ A row here claims the number even before the file lands.
 | 0016 | outdoor lane | `0016_outdoor.sql` — places, check-ins, outings, park boards | 2026-08-29 |
 | 0017 | milestones lane | `0017_milestones.sql` — badges, earned_badges, awarding trigger/RPCs, rest_day log module | 2026-08-29 |
 | 0018 | community shares lane | `0018_community_shares.sql` — post_type/ref_id/payload on community_posts for badge, score, walk, and event shares | 2026-08-29 |
+| 0019 | people/circle-DM lane | `0019_circle_dms.sql` — open_dm_with() RPC; circle members' DM requests auto-accept | 2026-08-29 |

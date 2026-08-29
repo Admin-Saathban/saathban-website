@@ -49,6 +49,7 @@ const ur = {
     settings: "ترتیبات",
     milestones: "سنگِ میل",
     celebrate: "کچھ منانے کی بات ہے!",
+    outdoor: "باہر کی دنیا",
   },
 
   settings: {
@@ -914,6 +915,7 @@ const ur = {
       remove: "ہٹائیں",
       removeLabel: "{name} کو اپنے حلقے سے ہٹائیں",
       permissionsLabel: "یہ کیا دیکھ سکتے ہیں",
+      viewProfile: "{name} کا صفحہ کھولیں",
       unknownFallback: "ایک رکن",
       onePerson: "ایک فرد",
       manyPeople: "{n} لوگ",
@@ -1003,6 +1005,38 @@ const ur = {
       error: "بھیجا نہ جا سکا — دوبارہ کوشش کیجیے۔",
     },
     loadError: "یہ کھل نہ سکا۔ ذرا دیر میں دوبارہ کوشش کیجیے۔",
+  },
+
+  // ─── لوگ (people): پروفائل + پیغام — draft, pending native review ───
+  people: {
+    perms: {
+      mood: "موڈ اور روز کے اندراج",
+      health: "صحت کے اندراج اور ملاقاتیں",
+      reminders: "یاد دہانیاں",
+      sos: "ہنگامی (SOS) رابطہ",
+      location: "مقام",
+    },
+    profile: {
+      connectedSince: "{date} سے جڑے ہوئے",
+      noCircle:
+        "ابھی آپ کسی حلقے میں جڑے نہیں — آپ کا پیغام درخواست بن کر پہنچے گا، جسے وہ قبول کر سکتے ہیں۔",
+      messageCta: "پیغام",
+      manageCta: "میرے حلقے میں دیکھیں",
+      canSeeTitleIcon: "{name} آپ کے دن کا کیا دیکھ سکتے ہیں",
+      canSeeTitleMember: "آپ {name} کے دن کا کیا دیکھ سکتے ہیں",
+      loadError: "یہ کھل نہ سکا۔ ذرا دیر میں دوبارہ کوشش کیجیے۔",
+    },
+    thread: {
+      placeholder: "پیغام لکھیں…",
+      sendCta: "بھیجیں",
+      stickersCta: "اسٹیکر",
+      stickersLabel: "اسٹیکر بھیجیں",
+      empty: "ابھی کوئی پیغام نہیں — سلام کہیے!",
+      pendingNote:
+        "آپ کی درخواست {name} کے پاس ہے۔ جیسے ہی وہ ہاں کہیں، آپ یہاں بات کر سکیں گے۔",
+      sendError: "بھیجا نہ جا سکا — دوبارہ کوشش کیجیے۔",
+      backToProfile: "{name} کی طرف واپس",
+    },
   },
 };
 

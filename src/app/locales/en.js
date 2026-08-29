@@ -37,6 +37,7 @@ const en = {
     settings: "Settings",
     milestones: "Milestones",
     celebrate: "Something to celebrate!",
+    outdoor: "Out & about",
   },
 
   settings: {
@@ -929,6 +930,7 @@ const en = {
       remove: "Remove",
       removeLabel: "Remove {name} from your circle",
       permissionsLabel: "What they can see",
+      viewProfile: "Open {name}'s page",
       unknownFallback: "A member",
       onePerson: "1 person",
       manyPeople: "{n} people",
@@ -1018,6 +1020,38 @@ const en = {
       error: "That didn't send — please try again.",
     },
     loadError: "That didn't load. Please try again in a moment.",
+  },
+
+  // ─── People: profile view + DM thread (routes/people/) ───
+  people: {
+    perms: {
+      mood: "Mood & daily logs",
+      health: "Health entries & appointments",
+      reminders: "Reminders",
+      sos: "Emergency (SOS) contact",
+      location: "Location",
+    },
+    profile: {
+      connectedSince: "Connected since {date}",
+      noCircle:
+        "You're not connected in a circle yet — a message will reach them as a request they can accept.",
+      messageCta: "Message",
+      manageCta: "Manage in My Circle",
+      canSeeTitleIcon: "What {name} can see of your day",
+      canSeeTitleMember: "What you can see of {name}'s day",
+      loadError: "That didn't load. Please try again in a moment.",
+    },
+    thread: {
+      placeholder: "Write a message…",
+      sendCta: "Send",
+      stickersCta: "Stickers",
+      stickersLabel: "Send a sticker",
+      empty: "No messages yet — say salaam!",
+      pendingNote:
+        "Your request is with {name}. Once they say yes, you can chat here.",
+      sendError: "That didn't send — please try again.",
+      backToProfile: "Back to {name}",
+    },
   },
 };
 

@@ -274,3 +274,27 @@ has, instead of pinning it.
 ## O10. Outdoor strings are in routes/outdoor/outdoorCopy.js
 Same as C8: ready for the i18n lift under outdoor.*.
 
+
+---
+
+# People / circle DMs (people lane, 2026-08-29, migration 0019)
+
+## P1. Circle membership revives a declined DM request
+open_dm_with() auto-accepts any existing pending OR declined request
+between circle-linked accounts, reading the circle grant (the Icon
+added this person by hand) as newer and stronger consent than an old
+decline. Blocks are unaffected - dm_open() refuses blocked pairs
+regardless of status. If a decline should survive circling up, the
+auto-accept needs a status guard.
+
+## P2. Leaving a circle does not close the thread
+Removal from a circle (one tap, no notification) leaves the accepted
+DM thread open - relationships outlive the grant, and closing it
+would broadcast the removal. The door that closes a thread is a
+block, which either side can do from the community surfaces.
+
+## P3. Circle DMs skip the community gate
+send_dm_request() requires can_use_community(); open_dm_with() for a
+circle pair deliberately does not, so an Icon-Fam pair can message
+even where community access rules would say no. Trust granted by hand
+outranks the community gate - flag if that reading is wrong.

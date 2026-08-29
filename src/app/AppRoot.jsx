@@ -35,6 +35,7 @@ import { AuthProvider, RequireAuth } from "./lib/session.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
+import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
 import EventsRoutes from "./routes/events/EventsRoutes.jsx";
@@ -202,6 +203,17 @@ export default function AppRoot() {
             element={
               <RequireAuth roles={["saath_icon"]}>
                 <CircleRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Person profiles + their DM thread (routes/people): any
+              signed-in role; RLS decides what each viewer sees. Circle
+              members' threads auto-accept (migration 0019). */}
+          <Route
+            path="people/*"
+            element={
+              <RequireAuth>
+                <PeopleRoutes />
               </RequireAuth>
             }
           />

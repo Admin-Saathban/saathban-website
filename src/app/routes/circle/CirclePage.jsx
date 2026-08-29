@@ -11,6 +11,7 @@
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -43,8 +44,26 @@ function MemberCard({ m, sosCount, busy, actions }) {
   return (
     <Card>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10 }}>
-        <h3 style={{ fontFamily: meta.fonts.heading, fontSize: ts(23), fontWeight: 700, color: C.green, margin: 0 }}>
-          {name}
+        {/* The member is tappable: name → their profile page (people lane),
+            with the connection, granted permissions, and the Message door. */}
+        <h3 style={{ fontFamily: meta.fonts.heading, fontSize: ts(23), fontWeight: 700, margin: 0 }}>
+          <Link
+            to={`/app/people/${m.member_id}`}
+            aria-label={t("circle.member.viewProfile", { name })}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              minHeight: A11Y.minTapTargetPx,
+              color: C.green,
+              textDecoration: "none",
+            }}
+          >
+            {name}
+            <span aria-hidden="true" style={{ fontSize: ts(18), color: C.greenMuted }}>
+              {meta.dir === "rtl" ? "‹" : "›"}
+            </span>
+          </Link>
         </h3>
         {m.person?.city && <BodyText muted style={{ margin: 0 }}>{m.person.city}</BodyText>}
         {m.is_sos_contact && (

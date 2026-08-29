@@ -43,6 +43,10 @@ a one-file edit.
 **Tier is separate from role.** An Icon may be `free` or `subscribed`. Never
 conflate the two fields.
 
+**One role per account (v1 limitation).** An account holds exactly one role.
+Someone who is both a family member and a volunteer needs two accounts with
+two email addresses for now. Revisit after v1.
+
 ---
 
 ## Auth

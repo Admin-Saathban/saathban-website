@@ -45,6 +45,16 @@ first outing), which is a different currency entirely.
 5. **The 48-hour backfill does not multiply anything.** Backfilled rows land
    on the day they belong to, and that day is capped like any other.
 
+## The cap is never shown
+
+The daily cap is a ceiling, not a target. Screens render `points_today` and
+simply let it stop rising at 60; they must **never** display "60 of 60" or the
+cap itself. A visible ceiling invites someone to chase it, and the entire point
+of this scoring is that it cannot be maximised into meaning something about a
+person. `daily_cap` is in the `my_progress()` payload for logic only — for
+example to suppress a "+10" flourish once a day is capped, so the screen never
+promises points it will not add.
+
 ## Badges do not come from points
 
 `compute_badge_awards()` reads **presence days** and firsts, never a points

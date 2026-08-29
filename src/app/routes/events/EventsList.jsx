@@ -23,11 +23,9 @@ import {
   isUpcoming,
 } from "./eventsStore.js";
 import { Card, SectionLabel, Pill, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
-import { COPY } from "./eventsCopy.js";
 
 function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming }) {
-  const { ts, meta } = useI18n();
-  const c = COPY.list;
+  const { t, ts, meta } = useI18n();
   const full = ev.capacity != null && count != null && count >= ev.capacity && !going;
 
   return (
@@ -45,8 +43,8 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
         >
           {ev.title}
         </h2>
-        {ev.source === "site" && <Pill>{c.siteBadge}</Pill>}
-        {going && <Pill tone="green">✓ {c.goingBadge}</Pill>}
+        {ev.source === "site" && <Pill>{t("events.list.siteBadge")}</Pill>}
+        {going && <Pill tone="green">✓ {t("events.list.goingBadge")}</Pill>}
       </div>
 
       <BodyText muted style={{ margin: "6px 0 10px" }}>
@@ -59,12 +57,14 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
 
       {/* Capacity said in words, app events only */}
       {ev.source === "app" && upcoming && (
-        <BodyText muted style={{ fontSize: ts(16) }}>
+        <BodyText muted style={{ fontSize: ts(18) }}>
           {ev.capacity != null
-            ? c.capacity(count ?? "…", ev.capacity)
+            ? t("events.list.capacity", { going: count ?? "…", cap: ev.capacity })
+            : count === 1
+            ? t("events.list.goingOne")
             : count > 0
-            ? c.goingCount(count)
-            : c.openToAll}
+            ? t("events.list.goingMany", { n: count })
+            : t("events.list.openToAll")}
         </BodyText>
       )}
 
@@ -72,22 +72,22 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
       {ev.source === "app" && upcoming && role === "saath_icon" && (
         going ? (
           <GhostBtn onClick={() => onCancel(ev)} disabled={busy}>
-            {c.cancelCta}
+            {t("events.list.cancelCta")}
           </GhostBtn>
         ) : full ? (
           <BodyText muted style={{ fontWeight: 600, margin: 0 }}>
-            {c.fullNote}
+            {t("events.list.fullNote")}
           </BodyText>
         ) : (
           <PrimaryBtn onClick={() => onRsvp(ev)} disabled={busy}>
-            {c.rsvpCta}
+            {t("events.list.rsvpCta")}
           </PrimaryBtn>
         )
       )}
 
       {ev.source === "app" && upcoming && role === "family_member" && (
-        <BodyText muted style={{ fontSize: ts(16), margin: 0 }}>
-          {c.famNote}
+        <BodyText muted style={{ fontSize: ts(18), margin: 0 }}>
+          {t("events.list.famNote")}
         </BodyText>
       )}
     </Card>
@@ -95,10 +95,9 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
 }
 
 export default function EventsList() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const role = profile?.role;
-  const c = COPY.list;
 
   const [events, setEvents] = useState(null); // null = loading
   const [counts, setCounts] = useState({});
@@ -122,8 +121,10 @@ export default function EventsList() {
   };
 
   useEffect(() => {
+    // Errors are stored as locale keys (or raw server messages, which
+    // t() passes through) so they re-render right on a language switch.
     load().catch(() => {
-      setError(c.loadError);
+      setError("events.list.loadError");
       setEvents([]);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,7 +137,7 @@ export default function EventsList() {
       await fn(ev.id);
       await load();
     } catch (err) {
-      setError(err.message || c.rsvpError);
+      setError(err.message || "events.list.rsvpError");
     } finally {
       setBusyId(null);
     }
@@ -160,21 +161,21 @@ export default function EventsList() {
           margin: "12px 0 8px",
         }}
       >
-        {c.title}
+        {t("events.list.title")}
       </h1>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{t("events.list.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
-      <SectionLabel>{c.upcomingLabel}</SectionLabel>
+      <SectionLabel>{t("events.list.upcomingLabel")}</SectionLabel>
       {events === null ? (
         <BodyText muted role="status">…</BodyText>
       ) : upcoming.length === 0 ? (
-        <BodyText muted>{c.noUpcoming}</BodyText>
+        <BodyText muted>{t("events.list.noUpcoming")}</BodyText>
       ) : (
         upcoming.map((ev) => (
           <EventCard
@@ -193,7 +194,7 @@ export default function EventsList() {
 
       {past.length > 0 && (
         <>
-          <SectionLabel>{c.pastLabel}</SectionLabel>
+          <SectionLabel>{t("events.list.pastLabel")}</SectionLabel>
           {past.map((ev) => (
             <EventCard key={ev.id} ev={ev} role={role} upcoming={false} going={false} />
           ))}

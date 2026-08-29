@@ -18,7 +18,6 @@ import {
   adminSetCheckedIn,
 } from "./eventsStore.js";
 import { Card, Pill, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
-import { COPY } from "./eventsCopy.js";
 
 const BLANK = {
   title: "",
@@ -62,8 +61,7 @@ function toFields(form) {
 }
 
 function DoorList({ eventId }) {
-  const { ts } = useI18n();
-  const c = COPY.admin;
+  const { t } = useI18n();
   const [rows, setRows] = useState(null);
 
   const load = async () => setRows(await adminFetchAttendees(eventId));
@@ -73,7 +71,7 @@ function DoorList({ eventId }) {
   }, [eventId]);
 
   if (rows === null) return <BodyText muted role="status">…</BodyText>;
-  if (rows.length === 0) return <BodyText muted>{c.noAttendees}</BodyText>;
+  if (rows.length === 0) return <BodyText muted>{t("events.admin.noAttendees")}</BodyText>;
 
   return rows.map((r) => (
     <div
@@ -95,7 +93,7 @@ function DoorList({ eventId }) {
       </BodyText>
       {r.checked_in_at ? (
         <>
-          <Pill tone="green">✓ {c.checkedinBadge}</Pill>
+          <Pill tone="green">✓ {t("events.admin.checkedinBadge")}</Pill>
           <GhostBtn
             onClick={async () => {
               await adminSetCheckedIn(r.id, false);
@@ -103,7 +101,7 @@ function DoorList({ eventId }) {
             }}
             style={{ minHeight: A11Y.minTapTargetPx }}
           >
-            {c.undoCta}
+            {t("events.admin.undoCta")}
           </GhostBtn>
         </>
       ) : (
@@ -113,7 +111,7 @@ function DoorList({ eventId }) {
             await load();
           }}
         >
-          ✓ {c.checkinCta}
+          ✓ {t("events.admin.checkinCta")}
         </GhostBtn>
       )}
     </div>
@@ -121,8 +119,7 @@ function DoorList({ eventId }) {
 }
 
 export default function AdminEvents() {
-  const { ts, meta } = useI18n();
-  const c = COPY.admin;
+  const { t, ts, meta } = useI18n();
 
   const [events, setEvents] = useState(null);
   const [counts, setCounts] = useState({});
@@ -143,7 +140,7 @@ export default function AdminEvents() {
 
   useEffect(() => {
     load().catch(() => {
-      setError(c.saveError);
+      setError("events.admin.saveError");
       setEvents([]);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +157,7 @@ export default function AdminEvents() {
       setForm(BLANK);
       await load();
     } catch (err) {
-      setError(err.message || c.saveError);
+      setError(err.message || "events.admin.saveError");
     } finally {
       setBusy(false);
     }
@@ -186,13 +183,13 @@ export default function AdminEvents() {
           margin: "12px 0 8px",
         }}
       >
-        {c.title}
+        {t("events.admin.title")}
       </h1>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{t("events.admin.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
@@ -207,13 +204,17 @@ export default function AdminEvents() {
                   {ev.title}
                 </BodyText>
                 {ev.is_published ? (
-                  <Pill tone="green">✓ {c.publishedPill}</Pill>
+                  <Pill tone="green">✓ {t("events.admin.publishedPill")}</Pill>
                 ) : (
-                  <Pill tone="brown">✎ {c.draftPill}</Pill>
+                  <Pill tone="brown">✎ {t("events.admin.draftPill")}</Pill>
                 )}
-                <Pill>{c.attendeesLabel(counts[ev.id] ?? 0)}</Pill>
+                <Pill>
+                  {(counts[ev.id] ?? 0) === 1
+                    ? t("events.admin.goingOne")
+                    : t("events.admin.goingMany", { n: counts[ev.id] ?? 0 })}
+                </Pill>
               </div>
-              <BodyText muted style={{ margin: "6px 0 12px", fontSize: ts(16) }}>
+              <BodyText muted style={{ margin: "6px 0 12px", fontSize: ts(18) }}>
                 📅 {ev.dateLabel}
                 {ev.timeLabel ? ` · ${ev.timeLabel}` : ""}
                 {ev.venue ? ` · ${ev.venue}` : ""}
@@ -227,10 +228,10 @@ export default function AdminEvents() {
                     setDoorFor(null);
                   }}
                 >
-                  {c.editCta}
+                  {t("events.admin.editCta")}
                 </GhostBtn>
                 <GhostBtn onClick={() => setDoorFor(doorFor === ev.id ? null : ev.id)}>
-                  {c.attendeesCta}
+                  {t("events.admin.attendeesCta")}
                 </GhostBtn>
               </div>
               {doorFor === ev.id && (
@@ -247,80 +248,80 @@ export default function AdminEvents() {
         <Card>
           <form onSubmit={save}>
             {field(
-              c.fields.title,
+              t("events.admin.fields.title"),
               <input
                 autoFocus
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {field(
-              c.fields.description,
+              t("events.admin.fields.description"),
               <textarea
                 rows={4}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                style={{ ...inputStyle, resize: "vertical" }}
+                style={{ ...inputStyle(ts), resize: "vertical" }}
               />
             )}
             {field(
-              c.fields.venue,
+              t("events.admin.fields.venue"),
               <input
                 value={form.venue}
                 onChange={(e) => setForm({ ...form, venue: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {field(
-              c.fields.city,
+              t("events.admin.fields.city"),
               <input
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {field(
-              c.fields.date,
+              t("events.admin.fields.date"),
               <input
                 type="date"
                 value={form.event_date}
                 onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 160px" }}>
                 {field(
-                  c.fields.start,
+                  t("events.admin.fields.start"),
                   <input
                     type="time"
                     value={form.start_time}
                     onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                    style={inputStyle}
+                    style={inputStyle(ts)}
                   />
                 )}
               </div>
               <div style={{ flex: "1 1 160px" }}>
                 {field(
-                  c.fields.end,
+                  t("events.admin.fields.end"),
                   <input
                     type="time"
                     value={form.end_time}
                     onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                    style={inputStyle}
+                    style={inputStyle(ts)}
                   />
                 )}
               </div>
             </div>
             {field(
-              c.fields.capacity,
+              t("events.admin.fields.capacity"),
               <input
                 type="number"
                 min="1"
                 value={form.capacity}
                 onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             <button
@@ -350,13 +351,13 @@ export default function AdminEvents() {
               <span aria-hidden="true" style={{ color: form.is_published ? C.green : C.textMuted, fontWeight: 700 }}>
                 {form.is_published ? "✓" : "○"}
               </span>
-              {c.fields.published}
+              {t("events.admin.fields.published")}
             </button>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <PrimaryBtn type="submit" disabled={busy}>
-                {c.saveCta}
+                {t("events.admin.saveCta")}
               </PrimaryBtn>
-              <GhostBtn onClick={() => setEditing(null)}>{c.cancelCta}</GhostBtn>
+              <GhostBtn onClick={() => setEditing(null)}>{t("events.admin.cancelCta")}</GhostBtn>
             </div>
           </form>
         </Card>
@@ -368,7 +369,7 @@ export default function AdminEvents() {
           }}
           style={{ marginTop: 8 }}
         >
-          {c.newCta}
+          {t("events.admin.newCta")}
         </PrimaryBtn>
       )}
     </>

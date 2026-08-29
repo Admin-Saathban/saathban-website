@@ -20,9 +20,9 @@ import {
   localIsoDate,
 } from "./eventsStore.js";
 import { Card, Pill, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
-import { COPY } from "./eventsCopy.js";
 
 const KIND_ICONS = { personal: "📌", birthday: "🎂", custom_reminder: "⏰", event: "🎪" };
+const ENTRY_KINDS = ["personal", "birthday", "custom_reminder"];
 const BLANK = { kind: "personal", title: "", entry_date: "", entry_time: "" };
 
 function dayLabel(d, lang) {
@@ -34,13 +34,12 @@ function dayLabel(d, lang) {
 }
 
 export default function MyCalendar() {
-  const { ts, meta, lang } = useI18n();
-  const c = COPY.calendar;
+  const { t, ts, meta, lang } = useI18n();
 
   const [items, setItems] = useState(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(BLANK);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // a locale key; t() at render
 
   const load = async () => {
     const [rsvps, entries] = await Promise.all([
@@ -76,7 +75,7 @@ export default function MyCalendar() {
   };
 
   useEffect(() => {
-    load().catch(() => setError(c.saveError));
+    load().catch(() => setError("events.calendar.saveError"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -96,7 +95,7 @@ export default function MyCalendar() {
       setAdding(false);
       await load();
     } catch {
-      setError(c.saveError);
+      setError("events.calendar.saveError");
     }
   };
 
@@ -107,7 +106,7 @@ export default function MyCalendar() {
       await deleteCalendarEntry(id);
       await load();
     } catch {
-      setError(c.saveError);
+      setError("events.calendar.saveError");
     }
   };
 
@@ -136,20 +135,20 @@ export default function MyCalendar() {
           margin: "12px 0 8px",
         }}
       >
-        {c.title}
+        {t("events.calendar.title")}
       </h1>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{t("events.calendar.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
       {items === null ? (
         <BodyText muted role="status">…</BodyText>
       ) : items.length === 0 && !adding ? (
-        <BodyText muted>{c.empty}</BodyText>
+        <BodyText muted>{t("events.calendar.empty")}</BodyText>
       ) : (
         items.map((item) => (
           <Card key={item.id} style={{ padding: 18 }}>
@@ -159,19 +158,19 @@ export default function MyCalendar() {
               </span>
               <div style={{ flex: "1 1 220px" }}>
                 <BodyText style={{ fontWeight: 700, margin: 0 }}>{item.title}</BodyText>
-                <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
+                <BodyText muted style={{ margin: 0, fontSize: ts(18) }}>
                   {dayLabel(item.when, lang)}
                   {item.timeLabel ? ` · ${item.timeLabel}` : ""}
                   {item.venue ? ` · ${item.venue}` : ""}
                 </BodyText>
               </div>
-              {item.kind === "event" && <Pill tone="green">{c.eventTag}</Pill>}
+              {item.kind === "event" && <Pill tone="green">{t("events.calendar.eventTag")}</Pill>}
               {item.deletable && (
                 <GhostBtn
                   onClick={() => remove(item.id)}
                   style={{ color: C.brown, borderColor: C.brown }}
                 >
-                  {c.deleteCta}
+                  {t("events.calendar.deleteCta")}
                 </GhostBtn>
               )}
             </div>
@@ -183,10 +182,10 @@ export default function MyCalendar() {
         <Card>
           <form onSubmit={save}>
             <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, margin: "0 0 8px" }}>
-              {c.kindLabel}
+              {t("events.calendar.kindLabel")}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-              {Object.entries(c.kinds).map(([kind, label]) => (
+              {ENTRY_KINDS.map((kind) => (
                 <button
                   key={kind}
                   type="button"
@@ -206,53 +205,53 @@ export default function MyCalendar() {
                   }}
                 >
                   {form.kind === kind ? "✓ " : ""}
-                  {KIND_ICONS[kind]} {label}
+                  {KIND_ICONS[kind]} {t(`events.calendar.kinds.${kind}`)}
                 </button>
               ))}
             </div>
 
             {field(
-              c.titleField,
+              t("events.calendar.titleField"),
               <input
                 autoFocus
                 value={form.title}
-                placeholder={c.titlePlaceholder}
+                placeholder={t("events.calendar.titlePlaceholder")}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {field(
-              c.dateField,
+              t("events.calendar.dateField"),
               <input
                 type="date"
                 value={form.entry_date}
                 onChange={(e) => setForm({ ...form, entry_date: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {field(
-              c.timeField,
+              t("events.calendar.timeField"),
               <input
                 type="time"
                 value={form.entry_time}
                 onChange={(e) => setForm({ ...form, entry_time: e.target.value })}
-                style={inputStyle}
+                style={inputStyle(ts)}
               />
             )}
             {form.kind === "birthday" && (
-              <BodyText muted style={{ fontSize: ts(16) }}>
-                🎂 {c.yearlyNote}
+              <BodyText muted style={{ fontSize: ts(18) }}>
+                🎂 {t("events.calendar.yearlyNote")}
               </BodyText>
             )}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <PrimaryBtn type="submit">{c.saveCta}</PrimaryBtn>
-              <GhostBtn onClick={() => setAdding(false)}>{c.cancelCta}</GhostBtn>
+              <PrimaryBtn type="submit">{t("events.calendar.saveCta")}</PrimaryBtn>
+              <GhostBtn onClick={() => setAdding(false)}>{t("events.calendar.cancelCta")}</GhostBtn>
             </div>
           </form>
         </Card>
       ) : (
         <PrimaryBtn onClick={() => setAdding(true)} style={{ marginTop: 8 }}>
-          {c.addCta}
+          {t("events.calendar.addCta")}
         </PrimaryBtn>
       )}
     </>

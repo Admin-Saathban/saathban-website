@@ -15,7 +15,6 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 import { Screen } from "./ui.jsx";
-import { COPY } from "./eventsCopy.js";
 import EventsList from "./EventsList.jsx";
 import MyCalendar from "./MyCalendar.jsx";
 import AdminEvents from "./AdminEvents.jsx";
@@ -53,10 +52,10 @@ function Tab({ to, active, children }) {
 }
 
 export default function EventsRoutes() {
+  const { t } = useI18n();
   const { profile } = useSession();
   const { pathname } = useLocation();
   const role = profile?.role;
-  const c = COPY.nav;
 
   const onCalendar = /\/calendar\/?$/.test(pathname);
   const onManage = /\/manage\/?$/.test(pathname);
@@ -67,20 +66,20 @@ export default function EventsRoutes() {
       <AppHeader />
       <Screen>
         <nav
-          aria-label={c.events}
+          aria-label={t("events.nav.events")}
           style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}
         >
           <Tab to={base || "/"} active={!onCalendar && !onManage}>
-            {c.events}
+            {t("events.nav.events")}
           </Tab>
           {role === "saath_icon" && (
             <Tab to={`${base}/calendar`} active={onCalendar}>
-              {c.calendar}
+              {t("events.nav.calendar")}
             </Tab>
           )}
           {role === "admin" && (
             <Tab to={`${base}/manage`} active={onManage}>
-              {c.manage}
+              {t("events.nav.manage")}
             </Tab>
           )}
         </nav>

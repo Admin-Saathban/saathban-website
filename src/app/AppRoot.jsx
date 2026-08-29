@@ -17,7 +17,8 @@
    See SPEC.md for the full specification and build order.
    ════════════════════════════════════════════════ */
 
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { COLORS as C, FONTS, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
 import { supabaseConfigError } from "./lib/supabase.js";
 import AppHome from "./routes/AppHome.jsx";
@@ -127,6 +128,22 @@ function AppConfigError() {
   );
 }
 
+/* A new screen starts at its beginning. Without this a route change
+   keeps the previous page's scroll offset, so a screen reached from
+   halfway down a list opens with its heading hidden behind the
+   header — reported on the game setup screens, but it was every
+   route. Only pathname changes reset; ?query and #hash navigation on
+   the same screen leave the reader where they are, and a screen that
+   places itself (the DM thread jumping to the latest message) still
+   wins, because it scrolls after mount and keeps correcting. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 export default function AppRoot() {
   if (supabaseConfigError) return <AppConfigError />;
   return (
@@ -136,6 +153,7 @@ export default function AppRoot() {
             inside Auth + Language + the router (FEEDBACK_WIRING.md).
             Inert until a surface pushes — an empty store renders null. */}
         <FeedbackProvider>
+          <ScrollToTop />
         {/* The marketing site loads its own fonts inside its own components,
             so /app has to ask for them itself. */}
         <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>

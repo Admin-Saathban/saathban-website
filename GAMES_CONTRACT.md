@@ -128,6 +128,91 @@ community lane's feed.
   lists by points, no side-by-side counts, no "ahead of you".
 - 0029d: `dm_messages.game_session_id` now ON DELETE CASCADE.
 
+## Rules of record
+
+The rules each game actually plays by, in words, so they cannot be
+silently re-decided. Where the implementation differs from what a
+comment or a name implies, this says so rather than tidying it away —
+a contract that describes intentions is how ludo came to declare a bot
+player it did not have.
+
+### Carrom — the rules as implemented
+
+Asserted by `tests/carrom-rules.mjs`. Change a rule here and there in
+the same commit.
+
+**Sides.** Seat 1 plays white, seat 2 plays black; `q` is the queen.
+
+**The turn.** Pocket at least one of your own coins with no foul and
+you shoot again; anything else passes the turn. The server decides
+this independently of the client: `again = scored > 0 AND NOT foul AND
+NOT winner` — a winning shot ends the game rather than granting
+another.
+
+**Fouls — there are exactly two, both simplified:**
+- the striker goes down a pocket;
+- you pocket an opponent's coin.
+
+Pocketing nothing is not a foul. Failing to cover the queen is not a
+foul either.
+
+**An opponent's coin stays down.** No return, no restitution; the
+board simply keeps it.
+
+**The striker-foul penalty, exactly.** One of the mover's own pocketed
+coins comes back to the centre band at (0.5, 0.42). Which coin:
+
+1. a coin pocketed on an **earlier** shot, if the mover has one;
+2. otherwise the coin sunk on **this** shot — and then it is **not
+   scored**, so the foul pays its own penalty;
+3. if the mover has no pocketed coins at all, no penalty is owed and
+   the board is unchanged for their colour.
+
+The preference in (1) is load-bearing, not taste. `game_exec_carrom`
+refuses any coin claimed as scored that is not pocketed in the end
+state it is handed, so returning the very coin being claimed makes a
+**legal shot fail outright** — the player taps, and nothing happens.
+
+**The queen, covered (simplified).** Pocket the queen and one of your
+own coins in the **same shot** and she is covered: she stays down and
+`queenCovered` becomes true. Otherwise she returns to the centre
+(0.5, 0.5) and is fair game again for either player.
+
+One exception, and it exists to prevent a deadlock: **a mover with no
+coins left on the board covers her by pocketing her at all.** Covering
+normally costs a coin, and a player who has none could otherwise never
+satisfy the condition — they could only ever win if their opponent
+happened to cover her for them. Nothing errors in that state, which is
+what makes it the worst kind of stuck.
+
+`queenCovered` is a property of the **board**, not of a player:
+whoever covers her, the condition is satisfied for both.
+
+**Winning.** All of the mover's coins pocketed **and** the queen
+covered. Evaluated server-side on every shot, from the end state:
+`winner = (my coins left = 0) AND queenCovered`.
+
+**Last coin while the queen is uncovered.** Not a win, and not an
+error: the game continues, and that player may still cover her on a
+later shot under the no-coins clause above.
+
+**Timeouts.** Carrom is `timeout_style = 'pass_turn'`. A lapsed turn
+is a **missed** turn: the seat advances, no move is recorded, and no
+shot is played on the absent player's behalf. Carrom has **no bot
+player at all** — since 0043 `start_with_bots` refuses to seat one
+here, because a bot seat made the table unfinishable.
+
+**The trust boundary, stated plainly.** The server validates; it does
+not re-simulate. It checks that every coin claimed as scored is
+pocketed in the end state and belongs to the mover, and it derives the
+score, `again` and `winner` itself. But `foul` and `queenCovered`
+arrive from the client and are taken at their word, and the end state
+is stored as given. A modified client could therefore under-report a
+foul or declare the queen covered. That is a known limitation of the
+0024 design, recorded here rather than implied: it is acceptable for a
+friendly two-player game between people who chose each other, and it
+is not acceptable if carrom ever becomes competitive or public.
+
 ## Per-lane status
 
 - **Ludo (0020, live)**: your data survived 0022 (seats/current_seat

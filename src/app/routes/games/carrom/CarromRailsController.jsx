@@ -61,7 +61,13 @@ export default function CarromRailsController({ sessionId }) {
       if (r?.result === "filled") setError(s.tableFilled);
       setMyInvite(null);
     } catch (e) {
-      setError(e.message || s.errGeneric || "That didn't send.");
+      /* A refused shot must SAY so — but in the app's own words. The
+         server's sentences ("Claimed a coin that is not yours or not
+         pocketed: w0") are diagnostics, not something to hand a
+         person mid-game. */
+      const raw = e?.message || "";
+      const serverShaped = /claimed|pocketed|payload|malformed|carrom needs|not at this table|jwt|violates/i.test(raw);
+      setError(!raw || serverShaped ? s.shotRefused : raw);
     }
     setAnswering(false);
   };

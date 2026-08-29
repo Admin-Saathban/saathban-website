@@ -11,12 +11,19 @@
    scales to pixels. All pieces are circles. Two players own a colour each
    in 1v1: player 0 = 'w' (white), player 1 = 'b' (black); 'q' is the queen.
 
-   Simplified rules (SPEC: "simplified queen rules"):
+   Simplified rules (SPEC: "simplified queen rules"). Written out in
+   full, with the reasoning, under "Rules of record" in
+   GAMES_CONTRACT.md, and asserted by tests/carrom-rules.mjs:
    - Pocket one of YOUR coins with no foul → you shoot again.
-   - Pocket the striker → foul (turn passes; a pocketed coin returns).
+   - Pocket the striker → foul (turn passes) and one of your pocketed
+     coins returns to the centre band: a coin from an EARLIER shot by
+     preference; failing that, this shot's coin goes back and does not
+     score. Never a coin claimed as scored, because the server refuses
+     a claim it cannot see on the board.
    - Pocket an OPPONENT coin → foul (it stays down; turn passes).
-   - Queen: counts only if "covered" — you pocket one of your own coins in
-     the SAME shot. Otherwise the queen returns to centre.
+   - Queen: counts only if "covered" — you pocket one of your own coins
+     in the SAME shot, or you have no coins left to cover her with.
+     Otherwise the queen returns to centre.
    - Win: all your coins pocketed AND the queen has been covered.
    ════════════════════════════════════════════════ */
 
@@ -183,8 +190,18 @@ export function resolveShot(state, shot, mover, opts = {}) {
   let queenPocketed = state.queenPocketed;
   let queen = "none"; // none | pocketed_covered | pocketed_uncovered
 
+  /* Coins of mine still on the board after this shot — the number the
+     cover rule and the win condition both turn on. */
+  const myLeftAfterShot = nextPieces.filter((p) => p.owner === myColour && !p.pocketed).length;
+
   if (queenPocketedThisShot) {
-    if (scored.length > 0) {
+    /* Covering means pocketing one of your own in the same shot — or,
+       if you have none left, pocketing her at all. Without that second
+       clause a player whose coins are all down can never cover her:
+       covering needs a coin they do not have, so the queen returns to
+       centre for ever and they can only win if the OPPONENT covers her.
+       A soft deadlock, which is the worst kind — nothing errors. */
+    if (scored.length > 0 || myLeftAfterShot === 0) {
       queen = "pocketed_covered";
       queenCovered = true;
       queenPocketed = true;
@@ -203,21 +220,33 @@ export function resolveShot(state, shot, mover, opts = {}) {
   if (strikerPocketed) { foul = true; foulReason = "striker_pocketed"; }
   else if (oppScored.length > 0) { foul = true; foulReason = "opponent_coin"; }
 
-  // Striker-pocketed penalty: return one of the mover's pocketed coins to
-  // the centre band, if any exist (keeps the simplified rule tangible).
+  /* Striker-pocketed penalty: one of the mover's pocketed coins comes
+     back to the centre band. A coin sunk on THIS shot is the last
+     resort, because game_exec_carrom validates that every coin claimed
+     as scored is pocketed in the end state — returning the very coin
+     being claimed makes the server refuse the whole shot, and a legal
+     shot then fails as though the tap did nothing. So: prefer a coin
+     from an earlier shot; if this shot's coin is the only one there is,
+     it goes back AND is not scored. A foul that pays its own penalty. */
+  let scoredFinal = scored;
   if (strikerPocketed) {
-    const owned = nextPieces.find((p) => p.owner === myColour && p.pocketed);
+    const justScored = new Set(scored);
+    const earlier = nextPieces.find(
+      (p) => p.owner === myColour && p.pocketed && !justScored.has(p.id)
+    );
+    const owned = earlier || nextPieces.find((p) => p.owner === myColour && p.pocketed);
     if (owned) {
       nextPieces = nextPieces.map((p) =>
         p.id === owned.id ? { ...p, pocketed: false, x: 0.5, y: 0.42, vx: 0, vy: 0 } : p
       );
+      if (justScored.has(owned.id)) scoredFinal = scored.filter((id) => id !== owned.id);
     }
   }
 
   const endState = { pieces: nextPieces, queenCovered, queenPocketed };
 
   // You shoot again only if you legally pocketed one of your own and fouled not.
-  const continues = scored.length > 0 && !foul;
+  const continues = scoredFinal.length > 0 && !foul;
 
   // Win: all your coins down AND the queen covered.
   const myLeft = endState.pieces.filter((p) => p.owner === myColour && !p.pocketed).length;
@@ -229,7 +258,7 @@ export function resolveShot(state, shot, mover, opts = {}) {
     winner,
     frames,
     outcome: {
-      scored,
+      scored: scoredFinal,
       oppScored,
       strikerPocketed,
       pocketed: pocketedCoins,

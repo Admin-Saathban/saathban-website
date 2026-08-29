@@ -35,6 +35,7 @@ import { AuthProvider, RequireAuth } from "./lib/session.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
+import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 
 // App-shell offline caching + installability (production only; no-op
@@ -182,6 +183,18 @@ export default function AppRoot() {
             element={
               <RequireAuth roles={["family_member"]}>
                 <FamRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Community v1 (migration 0014): feed, request-gated DMs.
+              Any signed-in role reaches the route; the 0014 policies
+              decide who sees or writes anything (icons + org post,
+              buddies only once active). */}
+          <Route
+            path="community/*"
+            element={
+              <RequireAuth>
+                <CommunityRoutes />
               </RequireAuth>
             }
           />

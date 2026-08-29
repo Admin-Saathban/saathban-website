@@ -1,0 +1,197 @@
+/* ════════════════════════════════════════════════
+   One DM thread — /app/community/messages/:requestId.
+
+   Participants only, at the database level. A message from the other
+   side that mentions money renders under a warning banner to the
+   RECIPIENT (SPEC.md) — advisory, client-side, nothing blocked —
+   with a one-tap report that snapshots the message text so admins
+   can act without ever reading the thread (QUESTIONS.md C5).
+   ════════════════════════════════════════════════ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, Navigate } from "react-router-dom";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
+import { useSession } from "../../lib/session.jsx";
+import { COPY, MONEY_PATTERN } from "./communityCopy.js";
+import {
+  fetchThread,
+  fetchAuthors,
+  sendMessage,
+  markThreadRead,
+  fileReport,
+} from "./communityData.js";
+import { CommunityScreen, BodyText, PrimaryBtn, Toast } from "./ui.jsx";
+
+const c = COPY.dm;
+
+export default function Thread() {
+  const { requestId } = useParams();
+  const { ts } = useI18n();
+  const { profile } = useSession();
+  const myId = profile?.id;
+
+  const [request, setRequest] = useState(undefined); // undefined loading, null missing
+  const [messages, setMessages] = useState([]);
+  const [people, setPeople] = useState({});
+  const [body, setBody] = useState("");
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const endRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const { request: req, messages: msgs } = await fetchThread(requestId);
+      setRequest(req || null);
+      setMessages(msgs);
+      if (req) {
+        setPeople(await fetchAuthors([req.requester_id, req.recipient_id]));
+        markThreadRead(requestId, myId);
+      }
+    } catch {
+      setError(c.loadError);
+      setRequest(null);
+    }
+  }, [requestId, myId]);
+
+  useEffect(() => {
+    if (myId) load();
+  }, [myId, load]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  if (request === null) return <Navigate to="/app/community/messages" replace />;
+
+  const otherId =
+    request && (request.requester_id === myId ? request.recipient_id : request.requester_id);
+  const otherName = people[otherId]?.full_name || "…";
+
+  const send = async (e) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setError("");
+    try {
+      await sendMessage(requestId, myId, body);
+      setBody("");
+      await load();
+    } catch {
+      setError(c.sendError);
+    }
+  };
+
+  const reportMessage = async (m) => {
+    try {
+      await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
+      setToast(COPY.feed.reportedToast);
+      window.setTimeout(() => setToast(""), 5000);
+    } catch {
+      setError(c.loadError);
+    }
+  };
+
+  return (
+    <CommunityScreen backTo="/app/community/messages" backLabel={c.title} width={560}>
+      <h1
+        style={{
+          fontSize: ts(24),
+          fontWeight: 700,
+          color: C.green,
+          margin: "0 0 16px",
+        }}
+      >
+        {otherName}
+      </h1>
+
+      {error && (
+        <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
+          ⚠ {error}
+        </BodyText>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+        {request === undefined ? (
+          <BodyText muted role="status">…</BodyText>
+        ) : (
+          messages.map((m) => {
+            const mine = m.sender_id === myId;
+            const moneyFlag = !mine && MONEY_PATTERN.test(m.body);
+            return (
+              <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "85%" }}>
+                {moneyFlag && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: "#f3e9df",
+                      border: `2px solid ${C.brown}`,
+                      borderRadius: 14,
+                      padding: "10px 14px",
+                      marginBottom: 6,
+                      fontSize: ts(16),
+                      lineHeight: 1.5,
+                      color: C.brown,
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠ {c.moneyWarning}
+                  </div>
+                )}
+                <div
+                  style={{
+                    background: mine ? C.green : C.white,
+                    color: mine ? C.cream : C.textMain,
+                    border: mine ? "none" : `1.5px solid ${C.warmGray}`,
+                    borderRadius: 16,
+                    padding: "10px 16px",
+                    fontSize: ts(A11Y.minBodyPx),
+                    lineHeight: 1.5,
+                    overflowWrap: "anywhere",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {m.body}
+                </div>
+                {!mine && (
+                  <button
+                    type="button"
+                    onClick={() => reportMessage(m)}
+                    style={{
+                      minHeight: 36,
+                      background: "none",
+                      border: "none",
+                      color: C.textMuted,
+                      fontSize: ts(14),
+                      fontFamily: "inherit",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      padding: "2px 4px",
+                    }}
+                  >
+                    {c.reportMessage}
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <form onSubmit={send} style={{ display: "flex", gap: 10 }}>
+        <input
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder={c.threadPlaceholder}
+          maxLength={2000}
+          style={{ flex: 1 }}
+        />
+        <PrimaryBtn type="submit" onClick={send} disabled={!body.trim()}>
+          {c.threadSend}
+        </PrimaryBtn>
+      </form>
+
+      <Toast text={toast} />
+    </CommunityScreen>
+  );
+}

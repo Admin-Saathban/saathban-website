@@ -70,6 +70,17 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
 ## Round log
+- **Live-preview bug round (user testing):** (a) /app/games WAS
+  reachable but undiscoverable — the Games/Groups cards existed only
+  locally (uncommitted new-file pathspec miss); now committed for all
+  three role homes. (b) DM "non-delivery" was real-but-read-side: the
+  community thread never polled, so an open thread never showed new
+  messages (writes were all stored; RLS fine; both DM surfaces share
+  tables). Added 4s polling. (c) Threads opened at the oldest message
+  — a single post-render scroll under-shot once sticker SVGs settled;
+  replaced with a brief settle-loop that never yanks a reader who
+  scrolled up (both DM surfaces). (d) stickers + (e) DM carrom were
+  fine, just not yet deployed. All verified live two-account.
 - **Role-home navigation round (user testing):** new rule adopted —
   every role's home surfaces everything that role can reach, via the
   shared AreaCards component (hub card style). Fam dashboard gains

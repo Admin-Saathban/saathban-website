@@ -41,6 +41,7 @@ A row here claims the number even before the file lands.
 | 0025 | integration | `0025_game_invite_eligibility.sql` — **applied**: mixed-role invitees (connected Icon/Fam/ACTIVE Buddy), connection + standing checks on invite and accept | 2026-08-29 |
 | 0026 | groups lane (saathban-website-13) | `0026_groups.sql` — **applied** (groups, members, invites, posts, chat; reports kinds extended keeping park_board) | 2026-08-29 |
 | 0027 | games/community lane (saathban-website-8f) | `0027_community_social.sql` — **applied** (activity posts + joins, friendships widening game_connected(), DM game embeds) | 2026-08-29 |
+| 0028 | games/community lane (saathban-website-8f) | `0028_activity_rsvp.sql` — join_activity RSVP wording + announce_activity() | 2026-08-29 |
 
 ### 0020 collision resolution (integration session, 2026-08-29)
 
@@ -57,3 +58,7 @@ turn_started_at + house_rules.turn_seconds) plus new tables and the
 exec_game_move() registry folding the ludo_* RPCs in. Do NOT create
 those three tables again, and do NOT apply anything named 0020.
 GAMES_CONTRACT.md (games lane) carries the field mapping.
+
+## Contract dependencies
+
+- **Outdoor → 0027/0028 activity shape** (saathban-website-34): outdoor reads community_posts post_type in (walk, activity) relying on payload keys activity/place_id/place_name/starts_at/limit + ref_id dedupe against outdoor_outings, and reads post_joins / join_activity(); it writes only through communityData.shareActivity/joinActivity re-exports. Any change to shareActivity's signature or payload keys needs a ping to the outdoor lane.

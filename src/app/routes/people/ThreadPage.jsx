@@ -78,6 +78,7 @@ export default function ThreadPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState("");
   const endRef = useRef(null);
+  const openedRef = useRef(false);
   const reqRef = useRef(null);
 
   const refresh = async (reqId) => {
@@ -115,7 +116,21 @@ export default function ThreadPage() {
   }, [profileId, myId]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
+    // Repeat the jump briefly until layout settles (stickers/fonts
+    // load late and a single scroll under-shoots); after the first
+    // open only follow when already near the bottom — never yank a
+    // reader who scrolled up. Same fix as the community thread.
+    if (!messages?.length) return undefined;
+    const nearBottom =
+      window.scrollY + window.innerHeight >= document.body.scrollHeight - 200;
+    if (openedRef.current && !nearBottom) return undefined;
+    openedRef.current = true;
+    let tries = 0;
+    const timer = setInterval(() => {
+      endRef.current?.scrollIntoView({ block: "end" });
+      if (++tries >= 6) clearInterval(timer);
+    }, 150);
+    return () => clearInterval(timer);
   }, [messages?.length]);
 
   const send = async (body) => {

@@ -69,8 +69,34 @@ export default function Thread() {
     if (myId) load();
   }, [myId, load]);
 
+  /* The other person's messages must arrive while the thread is open —
+     without this, a recipient sitting in the thread never saw new
+     texts and delivery looked broken (user report). Same cadence as
+     the people/ludo threads. */
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
+    if (!myId) return undefined;
+    const timer = setInterval(load, 4000);
+    return () => clearInterval(timer);
+  }, [myId, load]);
+
+  /* Open at the LATEST message and follow growth. A single post-
+     render scroll under-shoots when stickers/fonts settle late, so
+     the jump repeats briefly until the layout is stable. After the
+     first open, only follow if the reader is already near the bottom
+     — never yank someone who scrolled up to reread. */
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (!messages.length) return undefined;
+    const nearBottom =
+      window.scrollY + window.innerHeight >= document.body.scrollHeight - 200;
+    if (openedRef.current && !nearBottom) return undefined;
+    openedRef.current = true;
+    let tries = 0;
+    const timer = setInterval(() => {
+      endRef.current?.scrollIntoView({ block: "end" });
+      if (++tries >= 6) clearInterval(timer);
+    }, 150);
+    return () => clearInterval(timer);
   }, [messages.length]);
 
   if (request === null) return <Navigate to="/app/community/messages" replace />;

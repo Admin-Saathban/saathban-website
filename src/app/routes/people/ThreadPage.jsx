@@ -247,7 +247,11 @@ export default function ThreadPage() {
         {messages === null ? (
           <BodyText muted role="status">···</BodyText>
         ) : messages.length === 0 ? (
-          <BodyText muted>{open ? t("people.thread.empty") : ""}</BodyText>
+          /* Every empty state is a door: a not-yet-open thread says the
+             request is waiting, never a blank pane (PARITY.md). */
+          <BodyText muted>
+            {open ? t("people.thread.empty") : t("people.thread.pendingNote", { name: first })}
+          </BodyText>
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === myId;

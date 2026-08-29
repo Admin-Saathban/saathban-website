@@ -1,18 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { COLORS as C, FONTS } from "./shared/tokens.js";
 
 /* ════════════════════════════════════════════════
    SAATHBAN — Timeless Togetherness
    Where Generations Flourish Together
    ════════════════════════════════════════════════ */
 
-// ─── Color Tokens (new brand palette) ───
-const C = {
-  cream: "#FAF3E9", brown: "#573425", green: "#063214",
-  greenLight: "#0a4a1e", greenMuted: "#2a5e3a", brownLight: "#7a5443",
-  olive: "#6b7c5e", sage: "#8fa67e", warmGray: "#d4cdc4",
-  bg: "#FAF3E9", white: "#FFFFFF", dark: "#1a1a1a",
-  textMain: "#2d2418", textMuted: "#6b5e52", accent: "#573425",
-};
+// ─── Brand tokens (colour + type) live in src/shared/tokens.js, shared with the app ───
 
 // ─── Data ───
 const FOUNDERS = [
@@ -712,7 +706,7 @@ function BlogArticlePage({ blog, onBack }) {
   const tc = tagColors[blog.tag] || C.green;
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.white, minHeight: "100vh" }}>
+    <div style={{ fontFamily: FONTS.sans, color: C.textMain, background: C.white, minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@0,300;0,400;0,500;0,600&display=swap');
         .article-body p { margin-bottom: 1.6em; }
@@ -722,7 +716,7 @@ function BlogArticlePage({ blog, onBack }) {
       <div style={{ background: C.green, padding: "14px 24px", position: "sticky", top: 0, zIndex: 100, height: 64, display: "flex", alignItems: "center" }} >
         <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", alignItems: "center", gap: 12, width: "100%" }} >
           <button
-            onClick={() => onBack(null)} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "background 0.3s" }}
+            onClick={() => onBack(null)} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: FONTS.sans, fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "background 0.3s" }}
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(250,243,233,0.22)")}
             onMouseLeave={e => (e.currentTarget.style.background = "rgba(250,243,233,0.12)")}
           >
@@ -732,7 +726,7 @@ function BlogArticlePage({ blog, onBack }) {
             Saathban · Blog & Stories
           </span>
           <button
-            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
+            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: FONTS.sans, fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
             onMouseEnter={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.22)"; }}
             onMouseLeave={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.12)"; }}
           >
@@ -787,8 +781,8 @@ function BlogArticlePage({ blog, onBack }) {
                 style={{ fontSize: 11, fontWeight: 700, color: tc, background: `${tc}12`, padding: "5px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.08em", display: "inline-block", marginBottom: 20 }} >
                 {blog.tag}
               </span>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }} > {blog.title} </h1>
-              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }} > {blog.excerpt} </p>
+              <h1 style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }} > {blog.title} </h1>
+              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, marginBottom: 28, fontStyle: "italic", fontFamily: FONTS.serif }} > {blog.excerpt} </p>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div
                   style={{ width: 36, height: 36, borderRadius: "50%", background: `${tc}15`, display: "flex", alignItems: "center", justifyContent: "center" }} >
@@ -807,8 +801,8 @@ function BlogArticlePage({ blog, onBack }) {
         {blog.coverImg && (
           <div style={{ background: C.bg, padding: "36px 24px 32px", borderBottom: `1px solid ${C.warmGray}40` }}  >
             <div style={{ maxWidth: 760, margin: "0 auto" }}>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 12 }} > {blog.title} </h1>
-              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }} > {blog.excerpt} </p>
+              <h1 style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.8rem,4vw,2.8rem)", color: C.green, fontWeight: 700, lineHeight: 1.2, marginBottom: 12 }} > {blog.title} </h1>
+              <p style={{ fontSize: 18, color: C.textMuted, lineHeight: 1.6, fontStyle: "italic", fontFamily: FONTS.serif }} > {blog.excerpt} </p>
             </div>
           </div>
         )}
@@ -818,14 +812,14 @@ function BlogArticlePage({ blog, onBack }) {
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "52px 24px 0" }} className="article-body">
         {blog.content.map((block, i) => {
           if (block.type === "lead") return (
-            <p key={i} style={{ fontSize: "clamp(1.1rem,2vw,1.25rem)", lineHeight: 1.8, color: C.textMain, fontWeight: 500, marginBottom: "1.6em", fontFamily: "'Playfair Display', serif" }}>{block.text}</p>
+            <p key={i} style={{ fontSize: "clamp(1.1rem,2vw,1.25rem)", lineHeight: 1.8, color: C.textMain, fontWeight: 500, marginBottom: "1.6em", fontFamily: FONTS.serif }}>{block.text}</p>
           );
           if (block.type === "paragraph") return (
             <p key={i} style={{ fontSize: 17, lineHeight: 1.85, color: C.textMuted, marginBottom: "1.6em" }}>{block.text}</p>
           );
           if (block.type === "pullquote") return (
             <blockquote key={i} style={{ margin: "2.4em 0", padding: "24px 32px", borderLeft: `4px solid ${tc}`, background: `${tc}06`, borderRadius: "0 12px 12px 0" }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.05rem,2vw,1.2rem)", fontStyle: "italic", color: tc, lineHeight: 1.7, margin: 0 }}>{block.text}</p>
+              <p style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.05rem,2vw,1.2rem)", fontStyle: "italic", color: tc, lineHeight: 1.7, margin: 0 }}>{block.text}</p>
             </blockquote>
           );
           if (block.type === "numbered") return (
@@ -860,7 +854,7 @@ function BlogArticlePage({ blog, onBack }) {
       {/* More articles */}
       <div style={{ background: C.bg, padding: "48px 24px" }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.green, marginBottom: 24 }}>More from Saathban</h3>
+          <h3 style={{ fontFamily: FONTS.serif, fontSize: 20, color: C.green, marginBottom: 24 }}>More from Saathban</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {BLOGS.filter(b => b.id !== blog.id).slice(0, 3).map(b => (
               <div key={b.id} onClick={() => { window.scrollTo(0, 0); onBack(b); }}
@@ -868,7 +862,7 @@ function BlogArticlePage({ blog, onBack }) {
                 onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 20px rgba(6,50,20,0.1)"}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 8px rgba(6,50,20,0.05)"}>
                 <div style={{ width: 48, height: 48, borderRadius: 10, background: `${tagColors[b.tag] || C.green}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: tagColors[b.tag] || C.green }}>{b.tag[0]}</span>
+                  <span style={{ fontFamily: FONTS.serif, fontSize: 20, fontWeight: 700, color: tagColors[b.tag] || C.green }}>{b.tag[0]}</span>
                 </div>
                 <div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: tagColors[b.tag] || C.green, textTransform: "uppercase", letterSpacing: "0.06em" }}>{b.tag} · {b.readTime}</span>
@@ -879,7 +873,7 @@ function BlogArticlePage({ blog, onBack }) {
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 28 }}>
-            <button onClick={() => onBack(null)} style={{ background: "transparent", border: `2px solid ${C.green}`, borderRadius: 40, padding: "10px 28px", color: C.green, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← All Articles</button>
+            <button onClick={() => onBack(null)} style={{ background: "transparent", border: `2px solid ${C.green}`, borderRadius: 40, padding: "10px 28px", color: C.green, fontFamily: FONTS.sans, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← All Articles</button>
           </div>
         </div>
       </div>
@@ -966,7 +960,7 @@ function FadeIn({ children, className = "", delay = 0, style: extra = {} }) {
 function SecTitle({ children, sub, light }) {
   return (
     <div style={{ marginBottom: 52, textAlign: "center" }}>
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.9rem,4vw,2.8rem)", color: light ? C.cream : C.green, margin: 0, fontWeight: 700, letterSpacing: "-0.01em" }}>{children}</h2>
+      <h2 style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.9rem,4vw,2.8rem)", color: light ? C.cream : C.green, margin: 0, fontWeight: 700, letterSpacing: "-0.01em" }}>{children}</h2>
       {sub && <p style={{ fontSize: 16, color: light ? "rgba(250,243,233,0.75)" : C.textMuted, marginTop: 14, maxWidth: 540, marginInline: "auto", lineHeight: 1.65 }}>{sub}</p>}
       <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 20 }}>
         <div style={{ width: 32, height: 3, borderRadius: 2, background: C.brown }} />
@@ -979,7 +973,7 @@ function SecTitle({ children, sub, light }) {
 
 // ─── Button ───
 function Btn({ children, onClick, variant = "primary", style: s = {}, href }) {
-  const base = { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 15, border: "none", borderRadius: 50, cursor: "pointer", padding: "14px 36px", letterSpacing: "0.02em", transition: "all 0.35s ease", display: "inline-block", textDecoration: "none" };
+  const base = { fontFamily: FONTS.sans, fontWeight: 600, fontSize: 15, border: "none", borderRadius: 50, cursor: "pointer", padding: "14px 36px", letterSpacing: "0.02em", transition: "all 0.35s ease", display: "inline-block", textDecoration: "none" };
   const styles = variant === "primary"
     ? { ...base, background: C.green, color: C.cream, boxShadow: "0 4px 24px rgba(6,50,20,0.25)", ...s }
     : variant === "brown"
@@ -1005,7 +999,7 @@ function Card({ children, style: s = {}, hover = true, onClick }) {
 function Stat({ number, label, delay = 0 }) {
   return (
     <FadeIn delay={delay} style={{ textAlign: "center", flex: "1 1 140px" }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 700, color: C.brown }}>{number}</div>
+      <div style={{ fontFamily: FONTS.serif, fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 700, color: C.brown }}>{number}</div>
       <div style={{ fontSize: 14, color: C.textMuted, marginTop: 6, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
     </FadeIn>
   );
@@ -1113,7 +1107,7 @@ function ImageCarousel() {
                     padding: "3px 10px", borderRadius: 20, flexShrink: 0,
                   }}>{img.label}</span>
                   <p style={{
-                    fontFamily: "'Playfair Display', serif",
+                    fontFamily: FONTS.serif,
                     fontSize: "clamp(1rem, 1.7vw, 1.2rem)",
                     fontStyle: "italic",
                     color: "rgba(250,243,233,0.88)",
@@ -1211,7 +1205,7 @@ function EventDetailPage({ event, onBack }) {
   };
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.bg, minHeight: "100vh" }}>
+    <div style={{ fontFamily: FONTS.sans, color: C.textMain, background: C.bg, minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@0,300;0,400;0,500;0,600;0,700&display=swap');
         @media(max-width:640px) {
@@ -1222,14 +1216,14 @@ function EventDetailPage({ event, onBack }) {
       {/* Back bar */}
       <div style={{ background: C.green, padding: "14px 24px", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "background 0.3s" }}
+          <button onClick={onBack} style={{ background: "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 20px", color: C.cream, fontFamily: FONTS.sans, fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "background 0.3s" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(250,243,233,0.22)"}
             onMouseLeave={e => e.currentTarget.style.background = "rgba(250,243,233,0.12)"}>
             ← Back to Events
           </button>
           <span style={{ color: "rgba(250,243,233,0.5)", fontSize: 13, flex: 1 }}>Saathban Events</span>
           <button
-            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
+            onClick={handleShare} style={{ background: copied ? "rgba(250,243,233,0.28)" : "rgba(250,243,233,0.12)", border: "none", borderRadius: 40, padding: "8px 18px", color: C.cream, fontFamily: FONTS.sans, fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "background 0.3s", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
             onMouseEnter={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.22)"; }}
             onMouseLeave={e => { if (!copied) e.currentTarget.style.background = "rgba(250,243,233,0.12)"; }}
           >
@@ -1251,7 +1245,7 @@ function EventDetailPage({ event, onBack }) {
         <div style={{ position: "absolute", bottom: -40, left: -40, width: 180, height: 180, borderRadius: "50%", background: `${C.brown}15` }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto" }}>
           <span style={{ display: "inline-block", background: `${C.brown}`, borderRadius: 40, padding: "6px 18px", marginBottom: 20, fontSize: 12, fontWeight: 700, color: C.cream, letterSpacing: "0.08em", textTransform: "uppercase" }}>Past Event</span>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.8rem,4vw,3rem)", color: C.cream, fontWeight: 700, lineHeight: 1.2, marginBottom: 16 }}>{event.title}</h1>
+          <h1 style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.8rem,4vw,3rem)", color: C.cream, fontWeight: 700, lineHeight: 1.2, marginBottom: 16 }}>{event.title}</h1>
           <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap", marginTop: 20 }}>
             <span style={{ color: "rgba(250,243,233,0.8)", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
               📅 {d.fullDate}
@@ -1271,7 +1265,7 @@ function EventDetailPage({ event, onBack }) {
         {/* About the event */}
         <FadeIn>
           <div style={{ marginBottom: 56 }}>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: C.green, marginBottom: 20 }}>About the Event</h2>
+            <h2 style={{ fontFamily: FONTS.serif, fontSize: 26, color: C.green, marginBottom: 20 }}>About the Event</h2>
             {d.about.split("\n\n").map((para, i) => (
               <p key={i} style={{ fontSize: 16, lineHeight: 1.85, color: C.textMuted, marginBottom: 16 }}>{para}</p>
             ))}
@@ -1282,7 +1276,7 @@ function EventDetailPage({ event, onBack }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 56 }} className="event-detail-grid">
           <FadeIn delay={0.1}>
             <div style={{ background: C.white, borderRadius: 16, padding: 32, boxShadow: "0 2px 20px rgba(6,50,20,0.06)" }}>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.green, marginBottom: 20 }}>Event Highlights</h3>
+              <h3 style={{ fontFamily: FONTS.serif, fontSize: 20, color: C.green, marginBottom: 20 }}>Event Highlights</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {d.highlights.map((h, i) => (
                   <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -1298,7 +1292,7 @@ function EventDetailPage({ event, onBack }) {
 
           <FadeIn delay={0.15}>
             <div style={{ background: C.white, borderRadius: 16, padding: 32, boxShadow: "0 2px 20px rgba(6,50,20,0.06)" }}>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.green, marginBottom: 20 }}>Event Agenda</h3>
+              <h3 style={{ fontFamily: FONTS.serif, fontSize: 20, color: C.green, marginBottom: 20 }}>Event Agenda</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {d.agenda.map((a, i) => (
                   <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start", paddingBottom: i < d.agenda.length - 1 ? 16 : 0, borderBottom: i < d.agenda.length - 1 ? `1px solid ${C.warmGray}50` : "none", marginBottom: i < d.agenda.length - 1 ? 16 : 0 }}>
@@ -1314,7 +1308,7 @@ function EventDetailPage({ event, onBack }) {
         {/* Photo gallery (placeholder) */}
         <FadeIn delay={0.2}>
           <div style={{ marginBottom: 56 }}>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: C.green, marginBottom: 8 }}>Gallery</h2>
+            <h2 style={{ fontFamily: FONTS.serif, fontSize: 26, color: C.green, marginBottom: 8 }}>Gallery</h2>
             <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24, fontStyle: "italic" }}>Photos from the event.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
               {d.gallery.map((g, i) => (
@@ -1331,8 +1325,8 @@ function EventDetailPage({ event, onBack }) {
         {/* Quote */}
         <FadeIn delay={0.25}>
           <div style={{ background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: "44px 48px", textAlign: "center", border: `1px solid ${C.warmGray}50`, marginBottom: 56 }}>
-            <div style={{ fontSize: 48, color: C.brown, opacity: 0.2, fontFamily: "Georgia, serif", lineHeight: 1, marginBottom: 8 }}>"</div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.1rem,2.5vw,1.4rem)", fontStyle: "italic", color: C.green, lineHeight: 1.7, maxWidth: 620, margin: "0 auto 16px" }}>
+            <div style={{ fontSize: 48, color: C.brown, opacity: 0.2, fontFamily: FONTS.quote, lineHeight: 1, marginBottom: 8 }}>"</div>
+            <p style={{ fontFamily: FONTS.serif, fontSize: "clamp(1.1rem,2.5vw,1.4rem)", fontStyle: "italic", color: C.green, lineHeight: 1.7, maxWidth: 620, margin: "0 auto 16px" }}>
               {d.quote.text}
             </p>
             <span style={{ fontSize: 14, color: C.textMuted, fontWeight: 600 }}>— {d.quote.author}</span>
@@ -1467,7 +1461,7 @@ export default function Saathban() {
   const tagColors = { Research: C.brown, Stories: C.green, "Well-being": C.olive };
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textMain, background: C.bg, minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ fontFamily: FONTS.sans, color: C.textMain, background: C.bg, minHeight: "100vh", overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1557,7 +1551,7 @@ export default function Saathban() {
               <div style={{ display: "inline-block", background: `${C.green}10`, borderRadius: 40, padding: "8px 20px", marginBottom: 24 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase" }}>Where Generations Flourish Together</span>
               </div>
-              <h1 className="hero-text" style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.6rem,5.5vw,4.2rem)", color: C.green, lineHeight: 1.12, fontWeight: 700, marginBottom: 10 }}>
+              <h1 className="hero-text" style={{ fontFamily: FONTS.serif, fontSize: "clamp(2.6rem,5.5vw,4.2rem)", color: C.green, lineHeight: 1.12, fontWeight: 700, marginBottom: 10 }}>
                 Timeless{" "}
                 <span style={{ position: "relative", display: "inline-block" }}>
                   <span style={{ position: "relative", zIndex: 1 }}>Togetherness</span>
@@ -1598,7 +1592,7 @@ export default function Saathban() {
           <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 44, flexWrap: "wrap" }}>
             {ABOUT_TABS.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-                fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, padding: "10px 28px", borderRadius: 40, border: "none", cursor: "pointer",
+                fontFamily: FONTS.sans, fontSize: 14, fontWeight: 600, padding: "10px 28px", borderRadius: 40, border: "none", cursor: "pointer",
                 background: activeTab === t.key ? C.green : `${C.warmGray}60`,
                 color: activeTab === t.key ? C.cream : C.brown, transition: "all 0.3s ease",
               }}>{t.label}</button>
@@ -1610,21 +1604,21 @@ export default function Saathban() {
             <FadeIn>
               <div style={{ maxWidth: 860, margin: "0 auto" }}>
                 <div style={{ marginBottom: 48 }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                  <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.green}10`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 18 }}>🌿</span></span>
                     The Gap We Bridge
                   </h3>
                   <p style={{ fontSize: 16, lineHeight: 1.8, color: C.textMuted, paddingLeft: 48 }}>For too long, society has moved in separate circles. We've placed our experience on the sidelines and our energy at the core. At Saathban, we believe that a community is only as strong as its connections. We are the bridge between the keepers of our legacy and the leaders of our future.</p>
                 </div>
                 <div style={{ marginBottom: 48 }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                  <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.brown}10`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 18 }}>🤝</span></span>
                     Beyond Care, Toward Contribution
                   </h3>
                   <p style={{ fontSize: 16, lineHeight: 1.8, color: C.textMuted, paddingLeft: 48 }}>We are a platform that celebrates age as it tends to bring about contentment, wisdom and peace. By creating a space for <strong style={{ color: C.green }}>Saath-Icons</strong> (our elders) and <strong style={{ color: C.brown }}>Saath-Buddies</strong> (our youth) to interact, we transform quiet moments into shared milestones.</p>
                 </div>
                 <div style={{ background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: "36px 40px", border: `1px solid ${C.warmGray}50` }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                  <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.sage}20`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 18 }}>🌳</span></span>
                     A Timeless Society
                   </h3>
@@ -1655,7 +1649,7 @@ export default function Saathban() {
                           />
                           <div style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, }}>
                             <span
-                              style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: i === 0 ? C.green : C.brown, }}>
+                              style={{ fontFamily: FONTS.serif, fontSize: 32, fontWeight: 700, color: i === 0 ? C.green : C.brown, }}>
                               {f.name.split(" ").map((w) => w[0]).join("")}
                             </span>
                           </div>
@@ -1663,13 +1657,13 @@ export default function Saathban() {
                       </div>
                       {/* Content */}
                       <div style={{ padding: 32 }}>
-                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: C.green, marginBottom: 4 }}>{f.name}</h3>
+                        <h3 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.green, marginBottom: 4 }}>{f.name}</h3>
                         <span style={{ fontSize: 12, fontWeight: 700, color: i === 0 ? C.green : C.brown, background: i === 0 ? `${C.green}10` : `${C.brown}10`, padding: "4px 14px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em", display: "inline-block", marginBottom: 16 }}>{f.role}</span>
                         <p style={{ fontSize: 15, lineHeight: 1.75, color: C.textMuted, marginBottom: 20 }}>{f.bio}</p>
                         {/* Message */}
                         <div style={{ background: i === 0 ? `${C.green}06` : `${C.brown}06`, borderLeft: `3px solid ${i === 0 ? C.green : C.brown}`, borderRadius: "0 12px 12px 0", padding: "16px 20px" }}>
-                          <div style={{ fontSize: 28, color: i === 0 ? C.green : C.brown, opacity: 0.25, fontFamily: "Georgia, serif", lineHeight: 1, marginBottom: 6 }}>"</div>
-                          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontStyle: "italic", color: i === 0 ? C.green : C.brown, lineHeight: 1.7 }}>{f.message}</p>
+                          <div style={{ fontSize: 28, color: i === 0 ? C.green : C.brown, opacity: 0.25, fontFamily: FONTS.quote, lineHeight: 1, marginBottom: 6 }}>"</div>
+                          <p style={{ fontFamily: FONTS.serif, fontSize: 15, fontStyle: "italic", color: i === 0 ? C.green : C.brown, lineHeight: 1.7 }}>{f.message}</p>
                         </div>
                       </div>
                     </div>
@@ -1684,7 +1678,7 @@ export default function Saathban() {
             <FadeIn>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }} className="mission-grid">
                 <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: C.green, marginBottom: 18 }}>Our Mission</h3>
+                  <h3 style={{ fontFamily: FONTS.serif, fontSize: 26, color: C.green, marginBottom: 18 }}>Our Mission</h3>
                   <p style={{ fontSize: 16, lineHeight: 1.8, color: C.textMuted }}>We are working toward dismantling the barriers of age by facilitating purposeful interactions between generations. By creating structured opportunities for mentorship and shared experiences, we ensure that every individual remains an active contributor to the social, emotional, and cultural wealth of our society.</p>
                 </div>
                 <div style={{ background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: 40, display: "flex", flexDirection: "column", gap: 20, border: `1px solid ${C.warmGray}50` }}>
@@ -1706,10 +1700,10 @@ export default function Saathban() {
             <FadeIn>
               <div style={{ maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
                 <div style={{ fontSize: 60, marginBottom: 20, opacity: 0.15 }}>✦</div>
-                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: C.green, marginBottom: 20 }}>Our Vision</h3>
+                <h3 style={{ fontFamily: FONTS.serif, fontSize: 26, color: C.green, marginBottom: 20 }}>Our Vision</h3>
                 <p style={{ fontSize: 18, lineHeight: 1.8, color: C.textMuted, marginBottom: 24 }}>To redefine aging as a period of renewed status and social vitality. We imagine a future where the artificial divide between young and old is gone, replaced by a seamless society that treasures experience as much as energy and views togetherness as our greatest strength.</p>
                 <div style={{ background: `linear-gradient(135deg, ${C.green}10, ${C.sage}15)`, borderRadius: 16, padding: "28px 36px", display: "inline-block", marginTop: 12 }}>
-                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontStyle: "italic", color: C.green, lineHeight: 1.6 }}>"Age is a badge of honor, and togetherness is our natural state."</p>
+                  <p style={{ fontFamily: FONTS.serif, fontSize: 20, fontStyle: "italic", color: C.green, lineHeight: 1.6 }}>"Age is a badge of honor, and togetherness is our natural state."</p>
                 </div>
               </div>
             </FadeIn>
@@ -1727,7 +1721,7 @@ export default function Saathban() {
                           style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(100%)" }}
                           onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                       ) : null}
-                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: m.color, display: m.img ? "none" : "block" }}>{m.initials}</span>
+                      <span style={{ fontFamily: FONTS.serif, fontSize: 22, fontWeight: 700, color: m.color, display: m.img ? "none" : "block" }}>{m.initials}</span>
                     </div>
                     <h4 style={{ fontSize: 16, fontWeight: 700, color: C.green, marginBottom: 4 }}>{m.name}</h4>
                     <p style={{ fontSize: 13, color: C.brown, fontWeight: 600, letterSpacing: "0.02em" }}>{m.role}</p>
@@ -1746,7 +1740,7 @@ export default function Saathban() {
 
           {/* Reports Carousel */}
           <FadeIn>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: C.green, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+            <h3 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.green, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ width: 36, height: 36, borderRadius: 10, background: `${C.green}10`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
               </span>
@@ -1773,7 +1767,7 @@ export default function Saathban() {
 
           {/* Events Carousel */}
           <FadeIn delay={0.1}>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: C.green, marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+            <h3 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.green, marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ width: 36, height: 36, borderRadius: 10, background: `${C.brown}10`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.brown} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </span>
@@ -1813,7 +1807,7 @@ export default function Saathban() {
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: `${C.cream}15`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.cream} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
-                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.cream, marginBottom: 14 }}>Become a Saath-Buddy</h3>
+                <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.cream, marginBottom: 14 }}>Become a Saath-Buddy</h3>
                 <p style={{ fontSize: 15, color: "rgba(250,243,233,0.72)", lineHeight: 1.7, marginBottom: 24 }}>Spend time with Saath-Icons, help organise events, or contribute your skills remotely. Volunteering with Saathban means making a direct impact on elderly well-being in your community.</p>
                 <Btn variant="brown" onClick={() => { setContact(c => ({ ...c, contactType: "Volunteer", message: "Hi, I'm interested in volunteering with Saathban." })); scrollTo("contact"); }}>Volunteer Now →</Btn>
               </div>
@@ -1823,7 +1817,7 @@ export default function Saathban() {
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: `${C.cream}15`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.cream} strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.cream, marginBottom: 14 }}>Partner With Us</h3>
+                <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.cream, marginBottom: 14 }}>Partner With Us</h3>
                 <p style={{ fontSize: 15, color: "rgba(250,243,233,0.72)", lineHeight: 1.7, marginBottom: 24 }}>Are you an organisation, old age home, or senior living community? Let's collaborate to create intergenerational programmes, co-host events, or support our research.</p>
                 <Btn variant="brown" onClick={() => { setContact(c => ({ ...c, contactType: "Partner", message: "Hi, I'd like to explore partnering with Saathban." })); scrollTo("contact"); }}>Partner With Us →</Btn>
               </div>
@@ -1846,7 +1840,7 @@ export default function Saathban() {
                     <img key={b.id} src={b.coverImg} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, color: `${tc}20`, fontWeight: 700 }}>{b.tag[0]}</span>
+                      <span style={{ fontFamily: FONTS.serif, fontSize: 48, color: `${tc}20`, fontWeight: 700 }}>{b.tag[0]}</span>
                     </div>
                   )}
                   {/* Tag pill — top left */}
@@ -1868,7 +1862,7 @@ export default function Saathban() {
           {/* Newsletter */}
           <FadeIn delay={0.2}>
             <div style={{ marginTop: 64, background: `linear-gradient(135deg, ${C.green}08, ${C.brown}06)`, borderRadius: 20, padding: "48px 40px", textAlign: "center", border: `1px solid ${C.warmGray}50`, maxWidth: 680, marginInline: "auto" }}>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.green, marginBottom: 10 }}>Stay Connected</h3>
+              <h3 style={{ fontFamily: FONTS.serif, fontSize: 24, color: C.green, marginBottom: 10 }}>Stay Connected</h3>
               <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 28, lineHeight: 1.6 }}>Subscribe to our newsletter for updates on research, events, and stories from the Saathban community.</p>
               {subbed ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: C.green, fontWeight: 600, fontSize: 16 }}>
@@ -1879,7 +1873,7 @@ export default function Saathban() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
                   <div style={{ display: "flex", gap: 12, maxWidth: 440, width: "100%", flexWrap: "wrap", justifyContent: "center" }}>
                     <input type="email" placeholder="Your email address" value={email} onChange={e => setEmail(e.target.value)}
-                      style={{ flex: "1 1 240px", padding: "14px 20px", borderRadius: 50, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: "'DM Sans', sans-serif", background: C.white, color: C.textMain, minWidth: 200 }} />
+                      style={{ flex: "1 1 240px", padding: "14px 20px", borderRadius: 50, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: FONTS.sans, background: C.white, color: C.textMain, minWidth: 200 }} />
                     <Btn onClick={async () => {
                       setSubEmailError("");
                       if (!isValidEmail(email)) { setSubEmailError("Please enter a valid email address."); return; }
@@ -1905,7 +1899,7 @@ export default function Saathban() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, maxWidth: 920, margin: "0 auto", alignItems: "start" }} className="mission-grid">
             <FadeIn>
               <div>
-                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: C.green, marginBottom: 24 }}>Reach Out</h3>
+                <h3 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.green, marginBottom: 24 }}>Reach Out</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   {[
                     { href: `mailto:${SOCIAL_LINKS.email}`, label: "Email", value: SOCIAL_LINKS.email, color: C.green, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg> },
@@ -1948,12 +1942,12 @@ export default function Saathban() {
                       </div>
                     </div>
                     <input placeholder="Your Name" value={contact.name} onChange={e => setContact({ ...contact, name: e.target.value })}
-                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: "'DM Sans', sans-serif", background: C.bg }} />
+                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: FONTS.sans, background: C.bg }} />
                     <input type="email" placeholder="Your Email" value={contact.email} onChange={e => setContact({ ...contact, email: e.target.value })}
-                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${emailError ? C.brown : C.warmGray}`, fontSize: 15, fontFamily: "'DM Sans', sans-serif", background: C.bg }} />
+                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${emailError ? C.brown : C.warmGray}`, fontSize: 15, fontFamily: FONTS.sans, background: C.bg }} />
                     {emailError && <p style={{ fontSize: 12, color: C.brown, marginTop: -10, marginBottom: -4 }}>{emailError}</p>}
                     <textarea placeholder="Your Message" rows={4} value={contact.message} onChange={e => setContact({ ...contact, message: e.target.value })}
-                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: "'DM Sans', sans-serif", background: C.bg, resize: "vertical" }} />
+                      style={{ padding: "13px 18px", borderRadius: 12, border: `1.5px solid ${C.warmGray}`, fontSize: 15, fontFamily: FONTS.sans, background: C.bg, resize: "vertical" }} />
                     <Btn onClick={async () => {
                       setEmailError("");
                       if (!contact.name || !contact.email || !contact.message) return;

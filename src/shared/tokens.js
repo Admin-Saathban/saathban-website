@@ -13,7 +13,7 @@
 export const COLORS = {
   cream: "#FAF3E9", brown: "#573425", green: "#063214",
   greenLight: "#0a4a1e", greenMuted: "#2a5e3a", brownLight: "#7a5443",
-  olive: "#6b7c5e", sage: "#8fa67e", warmGray: "#d4cdc4",
+  olive: "#637354", sage: "#8fa67e", warmGray: "#d4cdc4",
   bg: "#FAF3E9", white: "#FFFFFF", dark: "#1a1a1a",
   textMain: "#2d2418", textMuted: "#6b5e52", accent: "#573425",
   // Form validation only. Never the only signal — always pair the colour

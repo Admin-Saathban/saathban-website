@@ -31,6 +31,10 @@ import {
   unblock,
   sendDmRequest,
   imageUrl,
+  fetchPlacesLite,
+  shareWalk,
+  joinWalk,
+  fetchConnections,
 } from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
@@ -83,10 +87,127 @@ function ReportForm({ onSend, onCancel }) {
   );
 }
 
+/* The typed share block inside a post card (migration 0018). Renders
+   entirely from the payload snapshot, localized at view time. */
+function ShareBlock({ post, isIcon, own, dateLocale, onAction }) {
+  const { t, ts, lang } = useI18n();
+  const p = post.payload || {};
+  const box = {
+    background: "#f4f7f1",
+    border: `2px solid ${C.sage}`,
+    borderRadius: 14,
+    padding: "14px 16px",
+    marginBottom: 12,
+  };
+  const line = { fontSize: ts(A11Y.minBodyPx), lineHeight: 1.55, color: C.textMain, margin: 0 };
+
+  if (post.post_type === "badge") {
+    const name = (lang === "ur" ? p.name_ur : p.name_en) || p.name_en || "";
+    return (
+      <div style={box}>
+        <p style={line}>
+          <span aria-hidden="true" style={{ fontSize: ts(26), marginInlineEnd: 8 }}>
+            {p.emoji || "🏅"}
+          </span>
+          <strong>{t("community.shares.badgeLine", { badge: name })}</strong>
+        </p>
+      </div>
+    );
+  }
+
+  if (post.post_type === "score") {
+    return (
+      <div style={box}>
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+          🌱 {t("community.shares.scoreTitle")}
+        </p>
+        <p style={line}>
+          {t("community.shares.scoreLine", { points: p.points, n: p.done, total: p.total })}
+        </p>
+      </div>
+    );
+  }
+
+  if (post.post_type === "walk") {
+    const when = p.starts_at ? new Date(p.starts_at) : null;
+    const past = when && when.getTime() < Date.now();
+    return (
+      <div style={box}>
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+          🚶 {t("community.shares.walkTitle")}
+        </p>
+        <p style={line}>
+          {p.place_name}
+          {when && (
+            <>
+              {" · "}
+              {when.toLocaleString(dateLocale, {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </>
+          )}
+        </p>
+        {p.note && <p style={{ ...line, color: C.textMuted }}>{p.note}</p>}
+        {past ? (
+          <p style={{ ...line, color: C.textMuted, marginTop: 8 }}>
+            {t("community.shares.walkPast")}
+          </p>
+        ) : (
+          isIcon &&
+          !own && (
+            <div style={{ marginTop: 10 }}>
+              <PrimaryBtn onClick={() => onAction("joinWalk", post)}>
+                {t("community.shares.walkJoin")}
+              </PrimaryBtn>
+            </div>
+          )
+        )}
+      </div>
+    );
+  }
+
+  if (post.post_type === "event") {
+    return (
+      <div style={box}>
+        <p style={line}>
+          🗓️ {t("community.shares.eventLine")} <strong>{p.title}</strong>
+          {p.event_date && ` · ${p.event_date}`}
+        </p>
+        <div style={{ marginTop: 10 }}>
+          <Link
+            to="/app/events"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 20px",
+              borderRadius: 50,
+              border: `2px solid ${C.green}`,
+              color: C.green,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            {t("community.shares.eventCta")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function PostCard({
   post,
   author,
   myId,
+  isIcon,
   myReaction,
   counts,
   canWrite,
@@ -197,7 +318,20 @@ function PostCard({
         </div>
       </div>
 
-      <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
+      {post.body && (
+        <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
+      )}
+      {post.post_type && post.post_type !== "text" && (
+        <div style={{ marginTop: post.body ? 0 : 10 }}>
+          <ShareBlock
+            post={post}
+            isIcon={isIcon}
+            own={own}
+            dateLocale={dateLocale}
+            onAction={onAction}
+          />
+        </div>
+      )}
       {post.image_path && (
         <img
           src={imageUrl(post.image_path)}
@@ -341,10 +475,49 @@ export default function Feed() {
   const [posting, setPosting] = useState(false);
   const fileRef = useRef(null);
 
+  // Friends tab (circle connections) + the walk share composer.
+  const [tab, setTab] = useState("all"); // "all" | "friends"
+  const [connections, setConnections] = useState(null); // Set | null
+  const [walkOpen, setWalkOpen] = useState(false);
+  const [walkPlaces, setWalkPlaces] = useState([]);
+  const [walkPlaceId, setWalkPlaceId] = useState("");
+  const [walkWhen, setWalkWhen] = useState("");
+  const [walkNote, setWalkNote] = useState("");
+  const isIcon = profile?.role === "saath_icon";
+
   const showToast = (text, actionLabel, onAction) => {
     window.clearTimeout(toastTimer.current);
     setToast({ text, actionLabel, onAction });
     toastTimer.current = window.setTimeout(() => setToast(null), 6000);
+  };
+
+  const openWalkComposer = async () => {
+    setWalkOpen(true);
+    if (walkPlaces.length === 0) {
+      try {
+        setWalkPlaces(await fetchPlacesLite());
+      } catch {
+        /* the select just stays empty; the share button disables */
+      }
+    }
+  };
+
+  const submitWalk = async (e) => {
+    e.preventDefault();
+    const place = walkPlaces.find((p) => p.id === walkPlaceId);
+    if (!place || !walkWhen) return;
+    setError("");
+    try {
+      await shareWalk(myId, place, new Date(walkWhen).toISOString(), walkNote);
+      setWalkOpen(false);
+      setWalkPlaceId("");
+      setWalkWhen("");
+      setWalkNote("");
+      showToast(t("community.shares.walkShared"));
+      await load();
+    } catch {
+      setError(t("community.feed.postError"));
+    }
   };
 
   const load = useCallback(async () => {
@@ -361,6 +534,11 @@ export default function Feed() {
       ]);
       setAuthors(a);
       setReactions(r);
+      // Connections power the Friends tab; a failure just leaves the
+      // tab empty-with-a-door rather than erroring the feed.
+      fetchConnections(myId)
+        .then(setConnections)
+        .catch(() => setConnections(new Set()));
     } catch {
       setError(t("community.feed.loadError"));
       setAccess(true);
@@ -424,6 +602,13 @@ export default function Feed() {
         } catch {
           showToast(t("community.feed.dmRequestFailed"));
         }
+      } else if (kind === "joinWalk") {
+        try {
+          await joinWalk(myId, target);
+          showToast(t("community.shares.walkJoined"));
+        } catch {
+          showToast(t("community.shares.walkJoinFailed"));
+        }
       }
     } catch {
       setError(t("community.feed.loadError"));
@@ -471,7 +656,44 @@ export default function Feed() {
           ✉️ {t("community.feed.messagesCta")}
         </Link>
       </div>
-      <BodyText muted style={{ marginBottom: 18 }}>{t("community.feed.intro")}</BodyText>
+      <BodyText muted style={{ marginBottom: 14 }}>{t("community.feed.intro")}</BodyText>
+
+      {/* Everyone | Friends — same feed, the second filtered to the
+          viewer's circle connections. */}
+      <div role="tablist" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        {[
+          ["all", t("community.shares.allTab")],
+          ["friends", t("community.shares.friendsTab")],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 20px",
+              borderRadius: 50,
+              border: tab === id ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
+              background: tab === id ? C.white : "transparent",
+              color: C.textMain,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: 600,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            <span aria-hidden="true" style={{ color: C.green, visibility: tab === id ? "visible" : "hidden" }}>
+              ✓
+            </span>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -508,23 +730,90 @@ export default function Feed() {
                   <GhostBtn onClick={() => fileRef.current?.click()}>
                     📷 {file ? t("community.feed.composerImageChosen") : t("community.feed.composerImage")}
                   </GhostBtn>
+                  {isIcon && (
+                    <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
+                      🚶 {t("community.shares.walkCta")}
+                    </GhostBtn>
+                  )}
                   <PrimaryBtn type="submit" onClick={share} disabled={posting || !body.trim()}>
                     {posting ? t("community.feed.posting") : t("community.feed.composerCta")}
                   </PrimaryBtn>
                 </div>
               </form>
+
+              {walkOpen && (
+                <form
+                  onSubmit={submitWalk}
+                  style={{ borderTop: `1.5px solid ${C.warmGray}`, marginTop: 14, paddingTop: 14 }}
+                >
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                    {t("community.shares.walkPlace")}
+                    <select
+                      value={walkPlaceId}
+                      onChange={(e) => setWalkPlaceId(e.target.value)}
+                      style={{ marginTop: 6 }}
+                    >
+                      <option value="">…</option>
+                      {walkPlaces.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} · {p.city}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                    {t("outdoor.place.outingWhen")}
+                    <input
+                      type="datetime-local"
+                      value={walkWhen}
+                      onChange={(e) => setWalkWhen(e.target.value)}
+                      style={{ marginTop: 6 }}
+                    />
+                  </label>
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                    {t("outdoor.place.outingNote")}
+                    <input
+                      value={walkNote}
+                      onChange={(e) => setWalkNote(e.target.value)}
+                      placeholder={t("outdoor.place.outingNotePh")}
+                      maxLength={300}
+                      style={{ marginTop: 6 }}
+                    />
+                  </label>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <PrimaryBtn type="submit" onClick={submitWalk} disabled={!walkPlaceId || !walkWhen}>
+                      {t("community.feed.composerCta")}
+                    </PrimaryBtn>
+                    <GhostBtn onClick={() => setWalkOpen(false)}>
+                      {t("outdoor.place.formCancel")}
+                    </GhostBtn>
+                  </div>
+                </form>
+              )}
             </Card>
           )}
 
-          {posts.length === 0 ? (
-            <BodyText muted>{t("community.feed.emptyFeed")}</BodyText>
-          ) : (
-            posts.map((p) => (
+          {(() => {
+            const visible =
+              tab === "friends"
+                ? posts.filter((p) => connections?.has(p.author_id))
+                : posts;
+            if (visible.length === 0) {
+              return (
+                <BodyText muted>
+                  {tab === "friends"
+                    ? t("community.shares.friendsEmpty")
+                    : t("community.feed.emptyFeed")}
+                </BodyText>
+              );
+            }
+            return visible.map((p) => (
               <PostCard
                 key={p.id}
                 post={p}
                 author={authors[p.author_id]}
                 myId={myId}
+                isIcon={isIcon}
                 myReaction={mineByPost[p.id] || null}
                 counts={countsByPost[p.id] || {}}
                 canWrite={canWrite}
@@ -532,8 +821,8 @@ export default function Feed() {
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
               />
-            ))
-          )}
+            ));
+          })()}
         </>
       )}
 

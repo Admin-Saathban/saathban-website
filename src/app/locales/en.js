@@ -756,6 +756,25 @@ const en = {
       reportMessage: "Report this message",
       loadError: "That didn't load. Please try again in a moment.",
     },
+    shares: {
+      allTab: "Everyone",
+      friendsTab: "Friends",
+      friendsEmpty:
+        "Posts from the people you're connected with appear here first. When someone in your circle shares, this is where you'll find it.",
+      walkCta: "Who's up for a walk?",
+      walkTitle: "Who's up for a walk?",
+      walkPlace: "Where?",
+      walkShared: "Shared — neighbours can join your walk now.",
+      walkJoin: "Count me in",
+      walkJoined: "Lovely — your outing is noted. It shows on the park's page too.",
+      walkJoinFailed: "That didn't work — please try again.",
+      walkPast: "This walk has already happened.",
+      badgeLine: "A new badge — {badge}",
+      scoreTitle: "Today went well",
+      scoreLine: "{points} points — {n} of {total} logged. Every one counts the same.",
+      eventLine: "I'm going to this gathering:",
+      eventCta: "See it & RSVP",
+    },
   },
 
   outdoor: {

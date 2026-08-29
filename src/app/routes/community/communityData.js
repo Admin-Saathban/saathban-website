@@ -43,7 +43,7 @@ export async function fetchAuthors(ids) {
 export async function fetchFeed(limit = 50) {
   const { data, error } = await supabase
     .from("community_posts")
-    .select("id, author_id, body, image_path, created_at")
+    .select("id, author_id, body, image_path, post_type, ref_id, payload, created_at")
     .is("hidden_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -160,6 +160,83 @@ export async function unblock(userId, targetId, kind) {
     .eq("blocked_id", targetId)
     .eq("kind", kind);
   if (error) throw error;
+}
+
+/* ─── Shares (migration 0018) ───
+   A share is a post with a type and a payload SNAPSHOT taken at share
+   time — the card renders from the snapshot (localized at view time),
+   so it stays visible even when the referenced row isn't. */
+
+export async function createShare(userId, type, refId, payload, body = "") {
+  const { error } = await supabase.from("community_posts").insert({
+    author_id: userId,
+    body,
+    post_type: type,
+    ref_id: refId,
+    payload,
+  });
+  if (error) throw error;
+}
+
+export async function fetchPlacesLite() {
+  const { data, error } = await supabase
+    .from("outdoor_places")
+    .select("id, name, city")
+    .order("city")
+    .order("name");
+  if (error) throw error;
+  return data || [];
+}
+
+/* "Who's up for a walk?": one action creates BOTH the planned outing
+   (announced to the park board — a walk you're inviting neighbours to
+   is public by intent) and the community post that points at it. */
+export async function shareWalk(userId, place, startsAtIso, note) {
+  const { data, error } = await supabase
+    .from("outdoor_outings")
+    .insert({
+      place_id: place.id,
+      creator_id: userId,
+      starts_at: startsAtIso,
+      note: (note || "").trim() || null,
+      visibility: "board",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  await createShare(userId, "walk", data.id, {
+    place_id: place.id,
+    place_name: place.name,
+    starts_at: startsAtIso,
+    note: (note || "").trim() || null,
+  });
+}
+
+/* Join = the viewer's OWN outing row for the same place and time,
+   through the ordinary 0016 policies (Icons only — RLS refuses the
+   rest, so the button is only shown to Icons). */
+export async function joinWalk(userId, post) {
+  const { error } = await supabase.from("outdoor_outings").insert({
+    place_id: post.payload.place_id,
+    creator_id: userId,
+    starts_at: post.payload.starts_at,
+    visibility: "board",
+  });
+  if (error) throw error;
+}
+
+/* The viewer's circle connections, both directions — the Friends tab
+   filter. RLS on circle_members already scopes rows to memberships
+   the caller is part of. */
+export async function fetchConnections(userId) {
+  const { data, error } = await supabase
+    .from("circle_members")
+    .select("icon_id, member_id")
+    .or(`icon_id.eq.${userId},member_id.eq.${userId}`);
+  if (error) throw error;
+  return new Set(
+    (data || []).map((r) => (r.icon_id === userId ? r.member_id : r.icon_id))
+  );
 }
 
 /* ─── DMs ─── */

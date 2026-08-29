@@ -20,10 +20,52 @@ const en = {
   common: {
     appName: "Saathban",
     backToHome: "Back to home",
+    remove: "Remove",
   },
 
   settings: {
     title: "Settings",
+
+    dailyLog: {
+      title: "Your daily log",
+      hint: "Choose what appears on your home page each day. Everything here is yours to switch on or off — nothing is required.",
+      moodAlways: "Mood is always part of your log — it's how your companion knows what kind of day to keep you company through.",
+      modules: {
+        mood: "Mood",
+        sleep: "Sleep",
+        medication: "Medicines",
+        exercise: "Movement",
+        diet: "Meals",
+        water: "Water",
+      },
+      meds: {
+        title: "Your medicines",
+        hint: "List each medicine with its dose and when you take it. They become a simple tick-off list on your log — a record with reminders, never an alarm to depend on.",
+        namePlaceholder: "Medicine name",
+        dosePlaceholder: "Dose",
+        timePlaceholder: "When",
+        addCta: "Add medicine",
+      },
+      diet: {
+        title: "Your meals list",
+        hint: "These are the meals and foods you like to keep track of. Add your own, remove any — it's your list.",
+        addPlaceholder: "Add a meal or food",
+        addCta: "Add",
+      },
+      trackers: {
+        title: "Your own trackers",
+        hint: "Anything else you'd like to keep an eye on — watering the plants, a phone call, an evening walk. It appears on your log like everything else.",
+        namePlaceholder: "What would you like to track?",
+        types: {
+          yesno: "Done / not done",
+          count: "A count",
+          note: "A note",
+        },
+        everyDay: "Every day",
+        someDays: "Some days",
+        addCta: "Add tracker",
+      },
+    },
 
     language: {
       title: "Language",

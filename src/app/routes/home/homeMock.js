@@ -15,11 +15,11 @@
    ════════════════════════════════════════════════ */
 
 // ─── Who is home ───
+// Which modules are enabled, the medication list, diet items, and custom
+// trackers all live in lib/iconPrefs.js now — Settings writes them, this
+// screen reads them. Everything defaults OFF except mood.
 export const MOCK_ICON = {
   firstName: "Zubaida",
-  // Which log modules the Icon switched on in Settings (opt-in, per module).
-  // Mood is always first when enabled — the character's tone depends on it.
-  enabledModules: ["mood", "sleep", "medication", "exercise", "diet", "water"],
   // Circle is intentionally empty in this mock: the share sheet must read
   // as a door, never as a gap (SPEC.md, "The empty circle").
   circleMembers: [],
@@ -53,13 +53,6 @@ export const SLEEP_QUALITY = [
   { id: "restless", face: "🙁", label: "Restless" },
 ];
 
-// Set up by the Icon or a permitted Fam member; here, mocked.
-export const MOCK_MEDS = [
-  { id: "bp", name: "Blood pressure tablet", dose: "5 mg", time: "Morning" },
-  { id: "vitd", name: "Vitamin D", dose: "1 capsule", time: "With lunch" },
-  { id: "calc", name: "Calcium", dose: "1 tablet", time: "Evening" },
-];
-
 export const EXERCISE_TYPES = [
   { id: "walk", icon: "🚶", label: "A walk" },
   { id: "stretch", icon: "🙆", label: "Stretching" },
@@ -69,13 +62,6 @@ export const EXERCISE_TYPES = [
 ];
 
 export const EXERCISE_MINUTES = ["10", "20", "30", "45+"];
-
-export const MEALS = [
-  { id: "breakfast", icon: "🍳", label: "Breakfast" },
-  { id: "lunch", icon: "🍛", label: "Lunch" },
-  { id: "dinner", icon: "🍲", label: "Dinner" },
-  { id: "chai", icon: "☕", label: "Chai & a bite" },
-];
 
 export const WATER_GOAL_GLASSES = 8;
 

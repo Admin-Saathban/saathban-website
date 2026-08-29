@@ -24,8 +24,9 @@ import {
 } from "./homeMock.js";
 import CalendarStrip from "./CalendarStrip.jsx";
 import GreetingCharacter from "./GreetingCharacter.jsx";
-import DailyLogCard, { isModuleDone } from "./DailyLogCard.jsx";
+import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import ScoreShare from "./ScoreShare.jsx";
+import { useIconPrefs } from "../../lib/iconPrefs.js";
 
 const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = [
@@ -58,40 +59,47 @@ export default function IconHome() {
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [restToday, setRestToday] = useState(false);
 
-  const enabled = MOCK_ICON.enabledModules;
+  const prefs = useIconPrefs();
   const todayLog = logsByOffset[0];
-  const doneToday = enabled.filter((id) => isModuleDone(id, todayLog)).length;
+  const todayEntries = dayEntries(prefs, new Date());
+  const doneToday = todayEntries.filter((e) => isEntryDone(e, todayLog)).length;
   const pointsToday = doneToday * POINTS_PER_MODULE;
+
+  // Something logged on a given (possibly backfilled) day this session?
+  const anyLoggedOn = (offset) => {
+    const log = logsByOffset[offset] || {};
+    return dayEntries(prefs, daysAgo(-offset)).some((e) => isEntryDone(e, log));
+  };
 
   // Consecutive empty days just before today, for the welcome-back tone.
   const missedDays = useMemo(() => {
     let n = 0;
     for (let off = -1; off >= -6; off--) {
-      const edited = enabled.some((id) => isModuleDone(id, logsByOffset[off] || {}));
       const past = MOCK_PAST_DAYS[String(off)];
-      if (edited || (past && (past.modulesLogged > 0 || past.restDay))) break;
+      if (anyLoggedOn(off) || (past && (past.modulesLogged > 0 || past.restDay))) break;
       n++;
     }
     return n;
-  }, [logsByOffset, enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logsByOffset, prefs]);
 
   const days = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
         const offset = i - 6;
         const past = MOCK_PAST_DAYS[String(offset)];
-        const edited = enabled.some((id) => isModuleDone(id, logsByOffset[offset] || {}));
         return {
           offset,
           date: daysAgo(-offset),
           logged:
             offset === 0
               ? doneToday > 0
-              : edited || (past?.modulesLogged || 0) > 0,
+              : anyLoggedOn(offset) || (past?.modulesLogged || 0) > 0,
           restDay: offset === 0 ? restToday : !!past?.restDay,
         };
       }),
-    [logsByOffset, doneToday, restToday, enabled]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [logsByOffset, doneToday, restToday, prefs]
   );
 
   const now = new Date();
@@ -193,8 +201,8 @@ export default function IconHome() {
             onChange={updateLog}
             editable={selectedOffset >= -2}
             restDay={selectedOffset === 0 && restToday}
-            enabledModules={enabled}
             dayLabel={dayLabel}
+            date={selectedDate}
           />
         </div>
 
@@ -202,7 +210,7 @@ export default function IconHome() {
           <ScoreShare
             points={pointsToday}
             doneCount={doneToday}
-            totalModules={enabled.length}
+            totalModules={todayEntries.length}
             lifetimePoints={MOCK_LIFETIME_POINTS}
             restDay={restToday}
             onToggleRest={() => setRestToday((r) => !r)}

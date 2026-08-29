@@ -28,10 +28,62 @@ const ur = {
   common: {
     appName: TODO("Saathban"),
     backToHome: TODO("Back to home"),
+    remove: TODO("Remove"),
   },
 
   settings: {
     title: TODO("Settings"),
+
+    dailyLog: {
+      title: TODO("Your daily log"),
+      hint: TODO(
+        "Choose what appears on your home page each day. Everything here is yours to switch on or off — nothing is required."
+      ),
+      moodAlways: TODO(
+        "Mood is always part of your log — it's how your companion knows what kind of day to keep you company through."
+      ),
+      modules: {
+        mood: TODO("Mood"),
+        sleep: TODO("Sleep"),
+        medication: TODO("Medicines"),
+        exercise: TODO("Movement"),
+        diet: TODO("Meals"),
+        water: TODO("Water"),
+      },
+      meds: {
+        title: TODO("Your medicines"),
+        hint: TODO(
+          "List each medicine with its dose and when you take it. They become a simple tick-off list on your log — a record with reminders, never an alarm to depend on."
+        ),
+        namePlaceholder: TODO("Medicine name"),
+        dosePlaceholder: TODO("Dose"),
+        timePlaceholder: TODO("When"),
+        addCta: TODO("Add medicine"),
+      },
+      diet: {
+        title: TODO("Your meals list"),
+        hint: TODO(
+          "These are the meals and foods you like to keep track of. Add your own, remove any — it's your list."
+        ),
+        addPlaceholder: TODO("Add a meal or food"),
+        addCta: TODO("Add"),
+      },
+      trackers: {
+        title: TODO("Your own trackers"),
+        hint: TODO(
+          "Anything else you'd like to keep an eye on — watering the plants, a phone call, an evening walk. It appears on your log like everything else."
+        ),
+        namePlaceholder: TODO("What would you like to track?"),
+        types: {
+          yesno: TODO("Done / not done"),
+          count: TODO("A count"),
+          note: TODO("A note"),
+        },
+        everyDay: TODO("Every day"),
+        someDays: TODO("Some days"),
+        addCta: TODO("Add tracker"),
+      },
+    },
 
     language: {
       title: TODO("Language"),

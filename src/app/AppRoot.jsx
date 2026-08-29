@@ -36,6 +36,7 @@ import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
+import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
 import EventsRoutes from "./routes/events/EventsRoutes.jsx";
@@ -214,6 +215,17 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <PeopleRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Ludo (routes/games/ludo, migration 0020). Any signed-in
+              role; sessions are participants-only via RLS. Plugs into
+              the games-rails shell when that lane lands (0022). */}
+          <Route
+            path="games/ludo/*"
+            element={
+              <RequireAuth>
+                <LudoRoutes />
               </RequireAuth>
             }
           />

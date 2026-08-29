@@ -9,7 +9,8 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { claimOpenSeat } from "../../lib/games.js";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -194,6 +195,67 @@ function ShareBlock({ post, isIcon, own, dateLocale, onAction }) {
             }}
           >
             {t("community.shares.eventCta")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* Open game table (migration 0022): anyone eligible taps to take a
+     seat; the session auto-starts when the last seat fills. */
+  if (post.post_type === "game_open") {
+    const name = (lang === "ur" ? p.name_ur : p.name_en) || p.game_key || "";
+    return (
+      <div style={box}>
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+          🎲 {t("community.shares.gameOpenLine", { game: name })}
+        </p>
+        <p style={line}>
+          {t("community.shares.gameOpenSeats", {
+            taken: p.seats_taken ?? "…",
+            total: p.seats_total ?? "…",
+          })}
+        </p>
+        {!own && (
+          <div style={{ marginTop: 10 }}>
+            <PrimaryBtn onClick={() => onAction("claimGameSeat", post)}>
+              {t("community.shares.gameOpenCta")}
+            </PrimaryBtn>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* Daily Riddle result — number of guesses only, never the answer. */
+  if (post.post_type === "puzzle_result") {
+    return (
+      <div style={box}>
+        <p style={line}>
+          🧩{" "}
+          <strong>
+            {p.guesses === 1
+              ? t("community.shares.puzzleResultOne")
+              : t("community.shares.puzzleResultLine", { n: p.guesses })}
+          </strong>
+        </p>
+        <div style={{ marginTop: 10 }}>
+          <Link
+            to="/app/games/puzzle"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 20px",
+              borderRadius: 50,
+              border: `2px solid ${C.green}`,
+              color: C.green,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            {t("community.shares.puzzleResultCta")}
           </Link>
         </div>
       </div>
@@ -458,6 +520,7 @@ function PostCard({
 export default function Feed() {
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
+  const navigate = useNavigate();
   const myId = profile?.id;
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
 
@@ -608,6 +671,16 @@ export default function Feed() {
           showToast(t("community.shares.walkJoined"));
         } catch {
           showToast(t("community.shares.walkJoinFailed"));
+        }
+      } else if (kind === "claimGameSeat") {
+        /* ref_id is the game session; the RPC is idempotent for
+           someone already seated and auto-starts on the last seat. */
+        try {
+          await claimOpenSeat(target.ref_id);
+          showToast(t("community.shares.gameOpenTaken"));
+          navigate(`/app/games/s/${target.ref_id}`);
+        } catch {
+          showToast(t("community.shares.gameOpenFull"));
         }
       }
     } catch {

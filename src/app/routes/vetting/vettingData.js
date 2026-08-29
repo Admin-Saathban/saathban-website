@@ -1,117 +1,82 @@
 /* ════════════════════════════════════════════════
-   Saath-Buddy vetting — data contract and copy.
+   Saath-Buddy vetting — data contract.
 
    Field keys are EXACTLY the snake_case columns of
    supabase/migrations/0004_buddy_vetting.sql, so buildPayload()
    produces the `application` / `refs` jsonb arguments that
-   submit_buddy_application() expects, byte for byte. When the real
-   submission lands, only mockSubmit.js changes.
+   submit_buddy_application() expects, byte for byte.
 
-   All user-facing strings for the flow live in this file (plus
-   steps.jsx headings) so the Urdu extraction is contained. The words
-   "elderly" and "user" appear nowhere.
+   All user-facing strings live in locales/en.js + ur.js under
+   vetting.* (the Urdu pass). This file carries KEYS into those files;
+   validation returns keys too, and FieldError translates them at
+   render time. Stored VALUES (languages, reference relationships)
+   stay English — they are data the review team matches on — while
+   their display is localized.
    ════════════════════════════════════════════════ */
 
 // ─── Step registry ───
 export const STEPS = [
-  { id: "identity", title: "Who you are" },
-  { id: "profile", title: "Where and how you can help" },
-  { id: "motivation", title: "Why you want to do this" },
-  { id: "experience", title: "Experience and time" },
-  { id: "references", title: "Two people who know you" },
-  { id: "declarations", title: "Declarations" },
-  { id: "review", title: "Check and send" },
+  { id: "identity", titleKey: "vetting.steps.identity" },
+  { id: "profile", titleKey: "vetting.steps.profile" },
+  { id: "motivation", titleKey: "vetting.steps.motivation" },
+  { id: "experience", titleKey: "vetting.steps.experience" },
+  { id: "references", titleKey: "vetting.steps.references" },
+  { id: "declarations", titleKey: "vetting.steps.declarations" },
+  { id: "review", titleKey: "vetting.steps.review" },
 ];
 
 // ─── Choice lists ───
 // Languages spoken is the single most important matching field (SPEC.md).
+// `value` is what's stored; `key` is how it's displayed.
 export const LANGUAGES = [
-  "Urdu", "Punjabi", "Sindhi", "Pashto", "Balochi",
-  "Saraiki", "Hindko", "Brahui", "English",
+  { value: "Urdu", key: "vetting.languages.urdu" },
+  { value: "Punjabi", key: "vetting.languages.punjabi" },
+  { value: "Sindhi", key: "vetting.languages.sindhi" },
+  { value: "Pashto", key: "vetting.languages.pashto" },
+  { value: "Balochi", key: "vetting.languages.balochi" },
+  { value: "Saraiki", key: "vetting.languages.saraiki" },
+  { value: "Hindko", key: "vetting.languages.hindko" },
+  { value: "Brahui", key: "vetting.languages.brahui" },
+  { value: "English", key: "vetting.languages.english" },
 ];
 
 // References must be non-family — the select simply offers no family option.
 export const REFERENCE_RELATIONSHIPS = [
-  "Friend",
-  "Colleague or coworker",
-  "Teacher or mentor",
-  "Employer",
-  "Neighbour",
-  "Fellow volunteer",
-  "Other (not family)",
+  { value: "Friend", key: "vetting.references.relFriend" },
+  { value: "Colleague or coworker", key: "vetting.references.relColleague" },
+  { value: "Teacher or mentor", key: "vetting.references.relTeacher" },
+  { value: "Employer", key: "vetting.references.relEmployer" },
+  { value: "Neighbour", key: "vetting.references.relNeighbour" },
+  { value: "Fellow volunteer", key: "vetting.references.relVolunteer" },
+  { value: "Other (not family)", key: "vetting.references.relOther" },
 ];
 
 export const WEEKLY_HOURS_OPTIONS = [
-  { value: 2, label: "About 2 hours" },
-  { value: 4, label: "About 4 hours" },
-  { value: 6, label: "About 6 hours" },
-  { value: 8, label: "About 8 hours" },
-  { value: 10, label: "10 or more" },
+  { value: 2, labelKey: "vetting.experience.hours2" },
+  { value: 4, labelKey: "vetting.experience.hours4" },
+  { value: 6, labelKey: "vetting.experience.hours6" },
+  { value: 8, labelKey: "vetting.experience.hours8" },
+  { value: 10, labelKey: "vetting.experience.hours10" },
 ];
 
 export const COMMITMENT_OPTIONS = [
-  { value: 3, label: "3 months" },
-  { value: 6, label: "6 months" },
-  { value: 12, label: "A year or more" },
+  { value: 3, labelKey: "vetting.experience.months3" },
+  { value: 6, labelKey: "vetting.experience.months6" },
+  { value: 12, labelKey: "vetting.experience.months12" },
 ];
 
 export const MOTIVATION_MIN_CHARS = 40;
 
 // ─── Code of conduct (scrollable, accepted explicitly) ───
 export const CODE_OF_CONDUCT = [
-  {
-    title: "Money never changes hands",
-    text:
-      "You will never give money to, accept money from, lend to, borrow from, " +
-      "or discuss financial arrangements with a Saath-Icon or their family. " +
-      "Not as a gift, not as a favour, not once.",
-  },
-  {
-    title: "No soliciting of any kind",
-    text:
-      "No selling, no fundraising, no recruiting, and no religious or " +
-      "political persuasion. You are there for companionship, nothing else.",
-  },
-  {
-    title: "No medical advice, ever",
-    text:
-      "You may listen, and you may encourage someone to speak to their doctor " +
-      "or family. You will never suggest treatments, medicines, dosages, or " +
-      "alternatives to professional care.",
-  },
-  {
-    title: "No photos or recordings without clear consent",
-    text:
-      "Every photo, video, or recording requires the Saath-Icon's clear " +
-      "agreement, every time. When in doubt, don't.",
-  },
-  {
-    title: "Contact stays in-app",
-    text:
-      "All contact goes through Saathban until Saathban itself formalises " +
-      "anything further. Moving conversations to personal phones or social " +
-      "media is not permitted and is treated as a serious concern.",
-  },
-  {
-    title: "What you hear stays private",
-    text:
-      "A Saath-Icon may share personal things with you. They stay between " +
-      "you, them, and — where safety requires it — Saathban. Never material " +
-      "for stories elsewhere.",
-  },
-  {
-    title: "Concerns get reported",
-    text:
-      "If you are ever worried about a Saath-Icon's safety, health, or " +
-      "wellbeing — or about another volunteer's behaviour — you report it to " +
-      "Saathban straight away. Staying silent is not neutral.",
-  },
-  {
-    title: "Reliability is kindness",
-    text:
-      "A cancelled visit can be the loneliest moment of someone's week. If " +
-      "you cannot make it, say so as early as you possibly can.",
-  },
+  { titleKey: "vetting.coc.t1", textKey: "vetting.coc.b1" },
+  { titleKey: "vetting.coc.t2", textKey: "vetting.coc.b2" },
+  { titleKey: "vetting.coc.t3", textKey: "vetting.coc.b3" },
+  { titleKey: "vetting.coc.t4", textKey: "vetting.coc.b4" },
+  { titleKey: "vetting.coc.t5", textKey: "vetting.coc.b5" },
+  { titleKey: "vetting.coc.t6", textKey: "vetting.coc.b6" },
+  { titleKey: "vetting.coc.t7", textKey: "vetting.coc.b7" },
+  { titleKey: "vetting.coc.t8", textKey: "vetting.coc.b8" },
 ];
 
 // ─── Form state ───
@@ -172,55 +137,44 @@ export function isAtLeast18(dobString) {
 }
 
 // ─── Per-step validation ───
-// Returns { fieldKey: message }. Reference errors use keys like "ref0_name";
-// the photo errors keep the column-named keys so the upload boxes can show
-// them. `files` is { cnic: File|null, selfie: File|null }.
+// Returns { fieldKey: messageKEY } — locale keys under vetting.errors.*,
+// translated where they render. Reference errors use keys like
+// "ref0_name"; the photo errors keep the column-named keys so the
+// upload boxes can show them. `files` is { cnic: File|null,
+// selfie: File|null }.
 export function validateStep(stepId, application, refs, files) {
   const e = {};
   if (stepId === "identity") {
-    if (!application.legal_name.trim())
-      e.legal_name = "Please enter your name exactly as it appears on your CNIC.";
-    if (!isValidCnic(application.cnic_number))
-      e.cnic_number = "A CNIC number has 13 digits.";
-    if (!application.dob) e.dob = "Please enter your date of birth.";
-    else if (!isAtLeast18(application.dob))
-      e.dob = "Saath-Buddies must be at least 18.";
-    if (!isValidPhone(application.phone))
-      e.phone = "Please enter a phone number we can reach you on.";
-    if (!files?.cnic)
-      e.cnic_photo_path = "Please add a photo of the front of your CNIC.";
-    if (!files?.selfie)
-      e.selfie_path = "Please add a clear photo of your face.";
+    if (!application.legal_name.trim()) e.legal_name = "vetting.errors.name";
+    if (!isValidCnic(application.cnic_number)) e.cnic_number = "vetting.errors.cnic";
+    if (!application.dob) e.dob = "vetting.errors.dob";
+    else if (!isAtLeast18(application.dob)) e.dob = "vetting.errors.under18";
+    if (!isValidPhone(application.phone)) e.phone = "vetting.errors.phone";
+    if (!files?.cnic) e.cnic_photo_path = "vetting.errors.cnicPhoto";
+    if (!files?.selfie) e.selfie_path = "vetting.errors.selfie";
   }
   if (stepId === "profile") {
-    if (!application.city.trim()) e.city = "Please tell us your city.";
-    if (application.languages.length === 0)
-      e.languages =
-        "Please choose at least one language — matching depends on it more than anything else.";
+    if (!application.city.trim()) e.city = "vetting.errors.city";
+    if (application.languages.length === 0) e.languages = "vetting.errors.languages";
   }
   if (stepId === "motivation") {
     if (application.motivation.trim().length < MOTIVATION_MIN_CHARS)
-      e.motivation =
-        "A few sentences, please — this is the first thing our team reads.";
+      e.motivation = "vetting.errors.motivation";
   }
   if (stepId === "references") {
     refs.forEach((r, i) => {
-      if (!r.name.trim()) e[`ref${i}_name`] = "Please give their name.";
-      if (!r.relationship)
-        e[`ref${i}_relationship`] = "How do you know them? (Not a family member.)";
-      if (!isValidPhone(r.phone))
-        e[`ref${i}_phone`] = "Please give a phone number they answer.";
+      if (!r.name.trim()) e[`ref${i}_name`] = "vetting.errors.refName";
+      if (!r.relationship) e[`ref${i}_relationship`] = "vetting.errors.refRel";
+      if (!isValidPhone(r.phone)) e[`ref${i}_phone`] = "vetting.errors.refPhone";
     });
   }
   if (stepId === "declarations") {
     if (application.declared_criminal_record === null)
-      e.declared_criminal_record = "Please answer yes or no.";
+      e.declared_criminal_record = "vetting.errors.criminalAnswer";
     if (!application.consented_character_certificate)
-      e.consented_character_certificate =
-        "This consent is required to volunteer with Saathban.";
+      e.consented_character_certificate = "vetting.errors.certRequired";
     if (!application.accepted_code_of_conduct)
-      e.accepted_code_of_conduct =
-        "Please read the code of conduct to the end, then accept it.";
+      e.accepted_code_of_conduct = "vetting.errors.cocRequired";
   }
   return e;
 }

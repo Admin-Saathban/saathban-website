@@ -7,7 +7,8 @@
    never colour alone. */
 
 import { useRef } from "react";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 
 export const inputStyle = (hasError) => ({
   width: "100%",
@@ -18,11 +19,15 @@ export const inputStyle = (hasError) => ({
   background: C.white,
   fontSize: 18,
   lineHeight: 1.5,
-  fontFamily: FONTS.sans,
+  fontFamily: "inherit",
   color: C.textMain,
 });
 
+/* Error messages arrive as locale KEYS (vetting.errors.*) and are
+   translated here; anything that isn't a key — e.g. a server message —
+   passes through t() verbatim. */
 export function FieldError({ id, children }) {
+  const { t } = useI18n();
   if (!children) return null;
   return (
     <p
@@ -36,7 +41,7 @@ export function FieldError({ id, children }) {
       }}
     >
       <span aria-hidden="true">⚠ </span>
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </p>
   );
 }
@@ -125,7 +130,7 @@ export function Chip({ selected, onClick, children }) {
         color: selected ? C.cream : C.textMain,
         fontSize: 18,
         fontWeight: selected ? 700 : 500,
-        fontFamily: FONTS.sans,
+        fontFamily: "inherit",
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
@@ -160,8 +165,8 @@ export function CheckRow({ id, checked, onChange, disabled, error, children }) {
           borderRadius: 14,
           border: `2px solid ${error ? C.brown : checked ? C.green : C.warmGray}`,
           background: checked ? "#eef3ea" : C.white,
-          fontFamily: FONTS.sans,
-          textAlign: "left",
+          fontFamily: "inherit",
+          textAlign: "start",
           cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.55 : 1,
         }}
@@ -210,7 +215,7 @@ export function YesNo({ id, value, onChange, error, yesLabel, noLabel }) {
         color: value === val ? C.cream : C.textMain,
         fontSize: 18,
         fontWeight: 700,
-        fontFamily: FONTS.sans,
+        fontFamily: "inherit",
         cursor: "pointer",
       }}
     >
@@ -233,6 +238,7 @@ export function YesNo({ id, value, onChange, error, yesLabel, noLabel }) {
    the PRIVATE buddy-documents bucket happens at submit time
    (supabaseVetting.js). Never a public bucket (SPEC.md, sensitive data). */
 export function UploadBox({ id, label, hint, error, fileName, onFile, capture }) {
+  const { t } = useI18n();
   const inputRef = useRef(null);
   return (
     <div style={{ marginBottom: 22 }}>
@@ -267,7 +273,7 @@ export function UploadBox({ id, label, hint, error, fileName, onFile, capture })
           borderRadius: 16,
           border: `2px dashed ${error ? C.brown : fileName ? C.green : C.textMuted}`,
           background: fileName ? "#eef3ea" : C.white,
-          fontFamily: FONTS.sans,
+          fontFamily: "inherit",
           fontSize: 18,
           color: fileName ? C.green : C.textMain,
           fontWeight: 600,
@@ -281,11 +287,13 @@ export function UploadBox({ id, label, hint, error, fileName, onFile, capture })
       >
         <span aria-hidden="true" style={{ fontSize: 26 }}>{fileName ? "✓" : "📷"}</span>
         <span style={{ wordBreak: "break-word" }}>
-          {fileName ? `${fileName} — tap to replace` : "Tap to add a photo"}
+          {fileName
+            ? t("vetting.fields.tapToReplace", { name: fileName })
+            : t("vetting.fields.tapToAdd")}
         </span>
       </button>
       <p style={{ fontSize: 18, color: C.textMuted, margin: "8px 0 0", lineHeight: 1.5 }}>
-        Stored privately. Seen only by the Saathban review team, never shared.
+        {t("vetting.fields.storedPrivately")}
       </p>
       <FieldError id={`${id}-error`}>{error}</FieldError>
     </div>

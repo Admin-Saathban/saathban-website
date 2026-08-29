@@ -23,7 +23,7 @@ import {
   hoursLeft,
 } from "../../lib/circle.js";
 import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
-import { COPY, MOOD_BY_VALUE } from "./famCopy.js";
+import { MOOD_BY_VALUE } from "./famCopy.js";
 
 const MOOD_CLASS = ["mood", "sleep", "exercise", "diet", "water"];
 
@@ -47,8 +47,7 @@ function summarize(rows) {
 }
 
 function IconCard({ view }) {
-  const { ts, meta } = useI18n();
-  const c = COPY.card;
+  const { t, ts, meta } = useI18n();
   const first = view.name.split(" ")[0];
   const p = view.permissions;
 
@@ -67,7 +66,7 @@ function IconCard({ view }) {
           {view.name}
         </h2>
         {p.sosContact != null && (
-          <Pill tone="brown">🆘 {p.sosContact === 1 ? c.sosFirst : c.sosSecond}</Pill>
+          <Pill tone="brown">🆘 {p.sosContact === 1 ? t("fam.card.sosFirst") : t("fam.card.sosSecond")}</Pill>
         )}
       </div>
       {view.city && (
@@ -86,7 +85,7 @@ function IconCard({ view }) {
           margin: "0 0 8px",
         }}
       >
-        {c.todayLabel}
+        {t("fam.card.todayLabel")}
       </p>
 
       {/* Daily logs — the granted-or-privacy fork */}
@@ -98,41 +97,47 @@ function IconCard({ view }) {
                 <span aria-hidden="true" style={{ marginInlineEnd: 8 }}>
                   {view.today.mood.face}
                 </span>
-                {view.today.mood.label}
+                {t(view.today.mood.labelKey)}
               </BodyText>
             )}
-            <BodyText style={{ marginBottom: 8 }}>{c.logsSummary(view.today.dailyCount)}</BodyText>
+            <BodyText style={{ marginBottom: 8 }}>
+              {view.today.dailyCount === 1
+                ? t("fam.card.logsSummaryOne")
+                : t("fam.card.logsSummaryMany", { n: view.today.dailyCount })}
+            </BodyText>
             {view.today.lastLogAt && (
               <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                {c.lastLog(view.today.lastLogAt)}
+                {t("fam.card.lastLog", { time: view.today.lastLogAt })}
               </BodyText>
             )}
           </div>
         ) : (
           <BodyText muted style={{ marginBottom: 14 }}>
-            {c.quietSoFar}
+            {t("fam.card.quietSoFar")}
           </BodyText>
         )
       ) : (
         <BodyText muted style={{ marginBottom: 14 }}>
-          {c.privateDaily(first)}
+          {t("fam.card.privateDaily", { name: first })}
         </BodyText>
       )}
 
       {/* Health — medication class, its own permission */}
       {p.seeHealth ? (
         <BodyText muted={view.today.medsTaken == null} style={{ marginBottom: 14 }}>
-          {view.today.medsTaken != null ? c.medsSummary(view.today.medsTaken) : c.quietHealth}
+          {view.today.medsTaken != null
+            ? t("fam.card.medsSummary", { taken: view.today.medsTaken })
+            : t("fam.card.quietHealth")}
         </BodyText>
       ) : (
         <BodyText muted style={{ marginBottom: 14 }}>
-          {c.privateHealth(first)}
+          {t("fam.card.privateHealth", { name: first })}
         </BodyText>
       )}
 
       {/* Location standing — stated in words either way; never a map */}
       <BodyText muted style={{ fontSize: ts(16), marginBottom: 18 }}>
-        {p.location === "sos_only" ? c.locationSos : c.locationNever}
+        {p.location === "sos_only" ? t("fam.card.locationSos") : t("fam.card.locationNever")}
       </BodyText>
 
       {/* Reminders — the button exists only where the Icon granted it.
@@ -155,7 +160,7 @@ function IconCard({ view }) {
             textDecoration: "none",
           }}
         >
-          ⏰ {c.remindersCta}
+          ⏰ {t("fam.card.remindersCta")}
         </Link>
       )}
     </Card>
@@ -163,9 +168,8 @@ function IconCard({ view }) {
 }
 
 export default function FamDashboard() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
-  const d = COPY.dashboard;
 
   const [views, setViews] = useState(null); // null = loading
   const [pending, setPending] = useState([]);
@@ -205,7 +209,9 @@ export default function FamDashboard() {
         setPending(requests);
       } catch {
         if (!cancelled) {
-          setError(d.loadError);
+          // Stored as a key, rendered through t() — stays right if the
+          // language changes while the error is up.
+          setError("fam.dashboard.loadError");
           setViews([]);
         }
       }
@@ -229,35 +235,35 @@ export default function FamDashboard() {
           margin: "0 0 8px",
         }}
       >
-        {d.greeting(firstName)}
+        {t("fam.dashboard.greeting", { name: firstName })}
       </h1>
       <BodyText muted style={{ marginBottom: 4 }}>
-        {d.intro}
+        {t("fam.dashboard.intro")}
       </BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
-      <SectionLabel>{d.connectedLabel}</SectionLabel>
+      <SectionLabel>{t("fam.dashboard.connectedLabel")}</SectionLabel>
       {views === null ? (
         <BodyText muted role="status">…</BodyText>
       ) : views.length === 0 ? (
-        <BodyText muted>{d.emptyCircle}</BodyText>
+        <BodyText muted>{t("fam.dashboard.emptyCircle")}</BodyText>
       ) : (
         views.map((v) => <IconCard key={v.membershipId} view={v} />)
       )}
 
       {pending.length > 0 && (
         <>
-          <SectionLabel>{d.pendingLabel}</SectionLabel>
+          <SectionLabel>{t("fam.dashboard.pendingLabel")}</SectionLabel>
           {pending.map((req) => (
             <Card key={req.id} style={{ background: C.cream, border: `1px dashed ${C.olive}` }}>
-              <BodyText>{d.pendingHint(req.invitee_email)}</BodyText>
+              <BodyText>{t("fam.dashboard.pendingHint", { email: req.invitee_email })}</BodyText>
               <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                {d.pendingExpiry(hoursLeft(req.expires_at))}
+                {t("fam.dashboard.pendingExpiry", { h: hoursLeft(req.expires_at) })}
               </BodyText>
             </Card>
           ))}
@@ -265,7 +271,7 @@ export default function FamDashboard() {
       )}
 
       <Card style={{ textAlign: "center" }}>
-        <BodyText muted>{d.inviteHint}</BodyText>
+        <BodyText muted>{t("fam.dashboard.inviteHint")}</BodyText>
         <Link
           to="invite"
           style={{
@@ -282,7 +288,7 @@ export default function FamDashboard() {
             textDecoration: "none",
           }}
         >
-          {d.inviteCta}
+          {t("fam.dashboard.inviteCta")}
         </Link>
       </Card>
     </FamScreen>

@@ -20,12 +20,10 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { requestToJoinCircle, acceptCircleInvite } from "../../lib/circle.js";
 import { FamScreen, Card, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
-import { COPY } from "./famCopy.js";
 
 export default function InviteFlow() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const navigate = useNavigate();
-  const c = COPY.invite;
 
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -62,13 +60,13 @@ export default function InviteFlow() {
       await acceptCircleInvite(joinCode);
       navigate("/app/fam", { replace: true }); // the new card is there
     } catch {
-      setJoinError(c.codeInvalid);
+      setJoinError(t("fam.invite.codeInvalid"));
       setJoinBusy(false);
     }
   };
 
   return (
-    <FamScreen backTo="/app/fam" backLabel={c.backToDashboard}>
+    <FamScreen backTo="/app/fam" backLabel={t("fam.invite.backToDashboard")}>
       <h1
         style={{
           fontFamily: meta.fonts.heading,
@@ -78,27 +76,27 @@ export default function InviteFlow() {
           margin: "0 0 8px",
         }}
       >
-        {c.title}
+        {t("fam.invite.title")}
       </h1>
       <BodyText muted style={{ marginBottom: 20 }}>
-        {c.intro}
+        {t("fam.invite.intro")}
       </BodyText>
 
       {/* Door 1: ask to join by email */}
       <Card>
         <h2 style={{ fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
-          {c.emailLabel}
+          {t("fam.invite.emailLabel")}
         </h2>
         {emailDone ? (
           <BodyText role="status" style={{ fontWeight: 600, color: C.green, margin: 0 }}>
-            ✓ {c.emailSent}
+            ✓ {t("fam.invite.emailSent")}
           </BodyText>
         ) : (
           <form onSubmit={sendRequest}>
             <label
               style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 6 }}
             >
-              {c.emailField}
+              {t("fam.invite.emailField")}
               <input
                 type="email"
                 value={email}
@@ -108,7 +106,7 @@ export default function InviteFlow() {
               />
             </label>
             <BodyText muted style={{ margin: "8px 0 16px" }}>
-              {c.emailHint}
+              {t("fam.invite.emailHint")}
             </BodyText>
             {emailError && (
               <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -116,7 +114,7 @@ export default function InviteFlow() {
               </BodyText>
             )}
             <PrimaryBtn type="submit" disabled={emailBusy}>
-              {c.emailCta}
+              {t("fam.invite.emailCta")}
             </PrimaryBtn>
           </form>
         )}
@@ -125,9 +123,9 @@ export default function InviteFlow() {
       {/* Door 2: a code someone read to you */}
       <Card style={{ background: C.cream }}>
         <h2 style={{ fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
-          {c.haveCodeLabel}
+          {t("fam.invite.haveCodeLabel")}
         </h2>
-        <BodyText muted>{c.haveCodeHint}</BodyText>
+        <BodyText muted>{t("fam.invite.haveCodeHint")}</BodyText>
         {joinError && (
           <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
             ⚠ {joinError}
@@ -138,7 +136,7 @@ export default function InviteFlow() {
           style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
         >
           <label style={{ flex: "1 1 220px", fontSize: ts(A11Y.minBodyPx), fontWeight: 600 }}>
-            {c.haveCodeField}
+            {t("fam.invite.haveCodeField")}
             {/* Digits stay LTR even under Urdu — it's a number read aloud. */}
             <input
               dir="ltr"
@@ -154,7 +152,7 @@ export default function InviteFlow() {
             disabled={joinBusy}
             style={{ borderColor: C.green, color: C.green }}
           >
-            {c.haveCodeCta}
+            {t("fam.invite.haveCodeCta")}
           </GhostBtn>
         </form>
       </Card>

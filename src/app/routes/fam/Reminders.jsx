@@ -23,10 +23,19 @@ import {
   deleteReminder,
 } from "../../lib/circle.js";
 import { FamScreen, Card, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
-import { COPY } from "./famCopy.js";
 
-const DAY_CHOICES = ["Every day", "Weekdays", "Weekends", "Sundays", "Mon · Wed · Fri"];
-const BLANK = { label: "", time: "18:00", days: DAY_CHOICES[0] };
+/* days_label stores the ENGLISH value (it's data, shared with the
+   Icon's app); the select and the list display it through fam.days.*
+   so the screen still reads right in Urdu. */
+const DAY_OPTIONS = [
+  { value: "Every day", key: "fam.days.everyDay" },
+  { value: "Weekdays", key: "fam.days.weekdays" },
+  { value: "Weekends", key: "fam.days.weekends" },
+  { value: "Sundays", key: "fam.days.sundays" },
+  { value: "Mon · Wed · Fri", key: "fam.days.mwf" },
+];
+const dayKeyFor = (v) => DAY_OPTIONS.find((d) => d.value === v)?.key || null;
+const BLANK = { label: "", time: "18:00", days: DAY_OPTIONS[0].value };
 
 /* time column "18:30:00" → input value "18:30" / display "6:30 pm" */
 const toInputTime = (t) => (t || "18:00").slice(0, 5);
@@ -38,8 +47,7 @@ function displayTime(t) {
 
 export default function Reminders() {
   const { iconId } = useParams();
-  const { ts, meta } = useI18n();
-  const c = COPY.reminders;
+  const { t, ts, meta } = useI18n();
 
   const [membership, setMembership] = useState(undefined); // undefined = loading
   const [reminders, setReminders] = useState([]);
@@ -70,7 +78,7 @@ export default function Reminders() {
 
   if (membership === undefined) {
     return (
-      <FamScreen backTo="/app/fam" backLabel={COPY.invite.backToDashboard}>
+      <FamScreen backTo="/app/fam" backLabel={t("fam.invite.backToDashboard")}>
         <BodyText muted role="status">…</BodyText>
       </FamScreen>
     );
@@ -115,7 +123,7 @@ export default function Reminders() {
       setEditing(null);
       setSavedNote(true);
     } catch {
-      setError(c.saveError);
+      setError("fam.reminders.saveError");
     }
   };
 
@@ -126,7 +134,7 @@ export default function Reminders() {
       await deleteReminder(id);
       setReminders(await fetchReminders(iconId));
     } catch {
-      setError(c.saveError);
+      setError("fam.reminders.saveError");
     }
   };
 
@@ -140,7 +148,7 @@ export default function Reminders() {
   );
 
   return (
-    <FamScreen backTo="/app/fam" backLabel={COPY.invite.backToDashboard}>
+    <FamScreen backTo="/app/fam" backLabel={t("fam.invite.backToDashboard")}>
       <h1
         style={{
           fontFamily: meta.fonts.heading,
@@ -150,24 +158,24 @@ export default function Reminders() {
           margin: "0 0 8px",
         }}
       >
-        {c.title(first)}
+        {t("fam.reminders.title", { name: first })}
       </h1>
       <BodyText muted style={{ marginBottom: 24 }}>
-        {c.intro(first)}
+        {t("fam.reminders.intro", { name: first })}
       </BodyText>
 
       {savedNote && (
         <BodyText role="status" style={{ fontWeight: 600, color: C.green, marginBottom: 16 }}>
-          ✓ {c.savedNote}
+          ✓ {t("fam.reminders.savedNote")}
         </BodyText>
       )}
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown, marginBottom: 16 }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
-      {reminders.length === 0 && !editing && <BodyText muted>{c.empty}</BodyText>}
+      {reminders.length === 0 && !editing && <BodyText muted>{t("fam.reminders.empty")}</BodyText>}
 
       {reminders.map((r) =>
         editing === r.id ? null : (
@@ -179,12 +187,13 @@ export default function Reminders() {
               <div style={{ flex: "1 1 200px" }}>
                 <BodyText style={{ fontWeight: 600, margin: 0 }}>{r.label}</BodyText>
                 <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                  {displayTime(r.remind_time)} · {r.days_label}
+                  {displayTime(r.remind_time)} ·{" "}
+                  {dayKeyFor(r.days_label) ? t(dayKeyFor(r.days_label)) : r.days_label}
                 </BodyText>
               </div>
-              <GhostBtn onClick={() => startEdit(r)}>{c.editCta}</GhostBtn>
+              <GhostBtn onClick={() => startEdit(r)}>{t("fam.reminders.editCta")}</GhostBtn>
               <GhostBtn onClick={() => remove(r.id)} style={{ color: C.brown, borderColor: C.brown }}>
-                {c.deleteCta}
+                {t("fam.reminders.deleteCta")}
               </GhostBtn>
             </div>
           </Card>
@@ -195,16 +204,16 @@ export default function Reminders() {
         <Card>
           <form onSubmit={save}>
             {field(
-              c.labelField,
+              t("fam.reminders.labelField"),
               <input
                 autoFocus
                 value={form.label}
-                placeholder={c.labelPlaceholder}
+                placeholder={t("fam.reminders.labelPh")}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
               />
             )}
             {field(
-              c.timeField,
+              t("fam.reminders.timeField"),
               <input
                 type="time"
                 value={form.time}
@@ -212,26 +221,26 @@ export default function Reminders() {
               />
             )}
             {field(
-              c.daysField,
+              t("fam.reminders.daysField"),
               <select value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })}>
-                {DAY_CHOICES.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {DAY_OPTIONS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {t(d.key)}
                   </option>
                 ))}
               </select>
             )}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <PrimaryBtn type="submit" style={{ minWidth: 200 }}>
-                {c.saveCta}
+                {t("fam.reminders.saveCta")}
               </PrimaryBtn>
-              <GhostBtn onClick={() => setEditing(null)}>{c.cancelCta}</GhostBtn>
+              <GhostBtn onClick={() => setEditing(null)}>{t("fam.reminders.cancelCta")}</GhostBtn>
             </div>
           </form>
         </Card>
       ) : (
         <PrimaryBtn onClick={startNew} style={{ marginTop: 8 }}>
-          {c.addCta}
+          {t("fam.reminders.addCta")}
         </PrimaryBtn>
       )}
     </FamScreen>

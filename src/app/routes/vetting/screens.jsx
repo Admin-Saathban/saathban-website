@@ -3,9 +3,13 @@
    Every one of these is a door, not a wall: each explains what is
    true, what happens next, and how to reach Saathban. The pipeline
    view never shows "rejected" — a rejection renders as the cooldown
-   screen with a date, not a scarlet letter. */
+   screen with a date, not a scarlet letter.
 
-import { COLORS as C, FONTS } from "../../../shared/tokens.js";
+   All copy resolves from locales/ under vetting.status.* and
+   vetting.refused.*. */
+
+import { COLORS as C } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import { COOLDOWN_DAYS } from "./supabaseVetting.js";
 
 const card = {
@@ -16,14 +20,14 @@ const card = {
   marginTop: 24,
 };
 
-const h1 = {
-  fontFamily: FONTS.serif,
+const h1For = (meta) => ({
+  fontFamily: meta.fonts.heading,
   fontSize: "clamp(1.6rem, 5vw, 2.1rem)",
   fontWeight: 700,
   color: C.green,
   lineHeight: 1.2,
   margin: "0 0 12px",
-};
+});
 
 const bodyText = { fontSize: 19, lineHeight: 1.6, color: C.textMain, margin: "0 0 16px" };
 const mutedText = { fontSize: 18, lineHeight: 1.6, color: C.textMuted, margin: 0 };
@@ -31,43 +35,31 @@ const mutedText = { fontSize: 18, lineHeight: 1.6, color: C.textMuted, margin: 0
 /* ─── The pipeline, applicant's view ─── */
 
 const PIPELINE = [
-  {
-    status: "pending",
-    label: "Received",
-    now: "Your application is with the review team — a person reads every one, your own words first.",
-  },
+  { status: "pending", labelKey: "vetting.status.pendingLabel", nowKey: "vetting.status.pendingNow" },
   {
     status: "interviewing",
-    label: "Talking",
-    now: "We're at the conversation stage — expect our call, and please give your references a heads-up too.",
+    labelKey: "vetting.status.interviewingLabel",
+    nowKey: "vetting.status.interviewingNow",
   },
   {
     status: "probation",
-    label: "Probation",
-    now: "You're volunteering alongside an experienced Buddy while we all find our feet together.",
+    labelKey: "vetting.status.probationLabel",
+    nowKey: "vetting.status.probationNow",
   },
-  {
-    status: "active",
-    label: "Active",
-    now: "You're a full Saath-Buddy. Thank you for what you're giving.",
-  },
+  { status: "active", labelKey: "vetting.status.activeLabel", nowKey: "vetting.status.activeNow" },
 ];
 
 export function ApplicationStatus({ application, justSubmitted }) {
+  const { t, lang, meta } = useI18n();
+  const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
+
   if (application.status === "suspended") {
     return (
       <div style={card}>
         <p aria-hidden="true" style={{ fontSize: 40, margin: "0 0 8px" }}>🍂</p>
-        <h1 style={h1}>Your volunteering is paused</h1>
-        <p style={bodyText}>
-          We've paused things while we look into something — that's all this
-          screen can say, and we know that's uncomfortable. Someone from
-          Saathban will contact you directly to talk it through.
-        </p>
-        <p style={mutedText}>
-          If you'd rather not wait, write to us and we'll pick it up:
-          team@saathban.org
-        </p>
+        <h1 style={h1For(meta)}>{t("vetting.status.suspendedTitle")}</h1>
+        <p style={bodyText}>{t("vetting.status.suspendedBody")}</p>
+        <p style={mutedText}>{t("vetting.status.suspendedFooter")}</p>
       </div>
     );
   }
@@ -76,18 +68,15 @@ export function ApplicationStatus({ application, justSubmitted }) {
     0,
     PIPELINE.findIndex((p) => p.status === application.status)
   );
-  const stage = PIPELINE[stageIndex];
   const applied = new Date(application.created_at);
 
   return (
     <div style={card}>
       <p aria-hidden="true" style={{ fontSize: 40, margin: "0 0 8px" }}>🌱</p>
-      <h1 style={h1}>
-        {justSubmitted ? "Application received" : "Your application"}
+      <h1 style={h1For(meta)}>
+        {justSubmitted ? t("vetting.status.received") : t("vetting.status.yours")}
       </h1>
-      {justSubmitted && (
-        <p style={bodyText}>Thank you — genuinely. Here's where things stand:</p>
-      )}
+      {justSubmitted && <p style={bodyText}>{t("vetting.status.thanks")}</p>}
 
       <ol style={{ listStyle: "none", margin: "8px 0 20px", padding: 0 }}>
         {PIPELINE.map((p, i) => {
@@ -141,12 +130,20 @@ export function ApplicationStatus({ application, justSubmitted }) {
                     color: current ? C.green : done ? C.textMain : C.textMuted,
                   }}
                 >
-                  {p.label}
-                  {current ? " — you are here" : ""}
+                  {t(p.labelKey)}
+                  {current ? t("vetting.status.youAreHere") : ""}
                 </span>
                 {current && (
-                  <span style={{ display: "block", fontSize: 18, lineHeight: 1.55, color: C.textMain, marginTop: 4 }}>
-                    {p.now}
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 18,
+                      lineHeight: 1.55,
+                      color: C.textMain,
+                      marginTop: 4,
+                    }}
+                  >
+                    {t(p.nowKey)}
                   </span>
                 )}
               </span>
@@ -156,15 +153,16 @@ export function ApplicationStatus({ application, justSubmitted }) {
       </ol>
 
       {application.status === "pending" && (
-        <p style={{ ...mutedText, marginBottom: 12 }}>
-          We'll phone both of your references before anything moves — please
-          let them know to expect a call from Saathban.
-        </p>
+        <p style={{ ...mutedText, marginBottom: 12 }}>{t("vetting.status.refsHeadsUp")}</p>
       )}
       <p style={mutedText}>
-        Applied on {applied.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
-        We'll reach you by email and phone at every stage — there's nothing
-        you need to do here.
+        {t("vetting.status.appliedOn", {
+          date: applied.toLocaleDateString(dateLocale, {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+        })}
       </p>
     </div>
   );
@@ -175,58 +173,46 @@ export function ApplicationStatus({ application, justSubmitted }) {
 const ERROR_SCREENS = {
   under18: {
     icon: "🌤️",
-    title: "Not just yet",
-    body:
-      "Saath-Buddies need to be at least 18, so we can't take your " +
-      "application today — and we're genuinely glad you want to do this. " +
-      "The door opens on your eighteenth birthday, and seniors will still " +
-      "need company then.",
-    footer: "Until then: visiting your own elders counts just as much.",
+    titleKey: "vetting.refused.under18Title",
+    bodyKey: "vetting.refused.under18Body",
+    footerKey: "vetting.refused.under18Footer",
   },
   cooldown: {
     icon: "🍃",
-    title: "A little more time",
-    body:
-      "A previous application was decided recently, and our rule is the " +
-      `same for everyone: ${COOLDOWN_DAYS} days before a fresh start. ` +
-      "This isn't a judgement of you — it's how we keep every review fair " +
-      "and unhurried.",
-    footer:
-      "If you believe something was missed, write to team@saathban.org and " +
-      "a person will look at it.",
+    titleKey: "vetting.refused.cooldownTitle",
+    bodyKey: "vetting.refused.cooldownBody",
+    footerKey: "vetting.refused.cooldownFooter",
   },
   blocked: {
     icon: "🌙",
-    title: "We can't take this application",
-    body:
-      "Something on the account is stopping applications right now. This " +
-      "screen can't see why — but a person can. Write to team@saathban.org " +
-      "and we'll explain directly.",
-    footer: null,
+    titleKey: "vetting.refused.blockedTitle",
+    bodyKey: "vetting.refused.blockedBody",
+    footerKey: null,
   },
   generic: {
     icon: "🌦️",
-    title: "That didn't go through",
-    body:
-      "Something went wrong on our side while sending your application. " +
-      "Nothing you entered was lost — please try again in a moment.",
-    footer: "If it keeps happening, write to team@saathban.org.",
+    titleKey: "vetting.refused.genericTitle",
+    bodyKey: "vetting.refused.genericBody",
+    footerKey: "vetting.refused.genericFooter",
   },
 };
 
 export function KindErrorScreen({ code, daysLeft, onRetry }) {
+  const { t, meta } = useI18n();
   const s = ERROR_SCREENS[code] || ERROR_SCREENS.generic;
   return (
     <div style={{ ...card, border: `2px solid ${C.warmGray}` }}>
       <p aria-hidden="true" style={{ fontSize: 40, margin: "0 0 8px" }}>{s.icon}</p>
-      <h1 style={h1}>{s.title}</h1>
-      <p style={bodyText}>{s.body}</p>
+      <h1 style={h1For(meta)}>{t(s.titleKey)}</h1>
+      <p style={bodyText}>{t(s.bodyKey, { days: COOLDOWN_DAYS })}</p>
       {code === "cooldown" && daysLeft > 0 && (
         <p style={{ ...bodyText, fontWeight: 700, color: C.green }}>
-          You can apply again in {daysLeft} {daysLeft === 1 ? "day" : "days"}.
+          {daysLeft === 1
+            ? t("vetting.refused.applyAgainOne")
+            : t("vetting.refused.applyAgainMany", { n: daysLeft })}
         </p>
       )}
-      {s.footer && <p style={mutedText}>{s.footer}</p>}
+      {s.footerKey && <p style={mutedText}>{t(s.footerKey)}</p>}
       {code === "generic" && onRetry && (
         <button
           type="button"
@@ -241,11 +227,11 @@ export function KindErrorScreen({ code, daysLeft, onRetry }) {
             color: C.cream,
             fontSize: 19,
             fontWeight: 700,
-            fontFamily: FONTS.sans,
+            fontFamily: "inherit",
             cursor: "pointer",
           }}
         >
-          Back to my application
+          {t("vetting.refused.backToForm")}
         </button>
       )}
     </div>

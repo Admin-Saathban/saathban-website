@@ -5,11 +5,16 @@
      setApp  — merge-patch updater
      refs    — the two references
      setRefs — updater
-     errors  — { fieldKey: message } for this step
-   Review additionally gets goTo(stepIndex) for its Edit links. */
+     errors  — { fieldKey: messageKey } for this step
+   Review additionally gets goTo(stepIndex) for its Edit links.
+
+   All copy resolves from locales/ under vetting.*; stored values
+   (languages, relationships) stay English while their display is
+   localized — see vettingData.js. */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import {
   LANGUAGES,
   REFERENCE_RELATIONSHIPS,
@@ -43,31 +48,26 @@ const sectionLabel = {
 /* ─── 1. Identity ─── */
 
 export function StepIdentity({ app, setApp, errors, files, setFiles }) {
+  const { t } = useI18n();
   // Wrong-format picks (e.g. HEIC) are refused here, before upload —
   // the bucket only accepts jpeg/png/webp (migration 0008).
   const [typeErrors, setTypeErrors] = useState({});
   const pick = (kind) => (f) => {
     if (!isAcceptedImage(f)) {
-      setTypeErrors((t) => ({
-        ...t,
-        [kind]: "Please use a JPG, PNG, or WebP photo.",
-      }));
+      setTypeErrors((prev) => ({ ...prev, [kind]: "vetting.identity.badImageType" }));
       return;
     }
-    setTypeErrors((t) => ({ ...t, [kind]: "" }));
+    setTypeErrors((prev) => ({ ...prev, [kind]: "" }));
     setFiles({ ...files, [kind]: f });
   };
   return (
     <>
-      <StepIntro>
-        You'll be trusted with people's company and their confidence, so we
-        verify who everyone is. This stays between you and the review team.
-      </StepIntro>
+      <StepIntro>{t("vetting.identity.intro")}</StepIntro>
 
       <TextField
         id="legal_name"
-        label="Full legal name"
-        hint="Exactly as written on your CNIC."
+        label={t("vetting.identity.nameLabel")}
+        hint={t("vetting.identity.nameHint")}
         error={errors.legal_name}
         value={app.legal_name}
         onChange={(e) => setApp({ legal_name: e.target.value })}
@@ -76,8 +76,8 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 
       <TextField
         id="cnic_number"
-        label="CNIC number"
-        hint="13 digits, for example 35202-1234567-1."
+        label={t("vetting.identity.cnicLabel")}
+        hint={t("vetting.identity.cnicHint")}
         error={errors.cnic_number}
         value={app.cnic_number}
         onChange={(e) => setApp({ cnic_number: formatCnic(e.target.value) })}
@@ -87,8 +87,8 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 
       <TextField
         id="dob"
-        label="Date of birth"
-        hint="You must be at least 18 to volunteer."
+        label={t("vetting.identity.dobLabel")}
+        hint={t("vetting.identity.dobHint")}
         error={errors.dob}
         type="date"
         value={app.dob}
@@ -97,8 +97,8 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 
       <TextField
         id="phone"
-        label="Phone number"
-        hint="We'll use this for your interview call."
+        label={t("vetting.identity.phoneLabel")}
+        hint={t("vetting.identity.phoneHint")}
         error={errors.phone}
         value={app.phone}
         onChange={(e) => setApp({ phone: e.target.value })}
@@ -109,8 +109,8 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 
       <UploadBox
         id="cnic_photo"
-        label="Photo of your CNIC (front)"
-        hint="Clear and readable, all four corners visible."
+        label={t("vetting.identity.cnicPhotoLabel")}
+        hint={t("vetting.identity.cnicPhotoHint")}
         error={typeErrors.cnic || errors.cnic_photo_path}
         fileName={files.cnic?.name}
         onFile={pick("cnic")}
@@ -118,8 +118,8 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 
       <UploadBox
         id="selfie"
-        label="A photo of you"
-        hint="Taken now if possible, so we can match it to your CNIC."
+        label={t("vetting.identity.selfieLabel")}
+        hint={t("vetting.identity.selfieHint")}
         error={typeErrors.selfie || errors.selfie_path}
         fileName={files.selfie?.name}
         capture="user"
@@ -132,12 +132,13 @@ export function StepIdentity({ app, setApp, errors, files, setFiles }) {
 /* ─── 2. Profile — languages carry the weight ─── */
 
 export function StepProfile({ app, setApp, errors }) {
+  const { t } = useI18n();
   const [custom, setCustom] = useState("");
-  const toggleLang = (lang) =>
+  const toggleLang = (value) =>
     setApp({
-      languages: app.languages.includes(lang)
-        ? app.languages.filter((l) => l !== lang)
-        : [...app.languages, lang],
+      languages: app.languages.includes(value)
+        ? app.languages.filter((l) => l !== value)
+        : [...app.languages, value],
     });
   const addCustom = () => {
     const v = custom.trim();
@@ -147,10 +148,7 @@ export function StepProfile({ app, setApp, errors }) {
 
   return (
     <>
-      <StepIntro>
-        Matching starts from two things: where you are, and — above everything
-        else — the languages you're comfortable talking in.
-      </StepIntro>
+      <StepIntro>{t("vetting.profile.intro")}</StepIntro>
 
       {/* Languages first, deliberately: the most important matching field. */}
       <div
@@ -163,11 +161,10 @@ export function StepProfile({ app, setApp, errors }) {
         }}
       >
         <p id="languages-label" style={{ ...sectionLabel, color: C.green }}>
-          Languages you speak comfortably
+          {t("vetting.profile.langLabel")}
         </p>
         <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>
-          The single most important thing on this whole form — a shared language
-          is what makes a match work. Choose every one that applies.
+          {t("vetting.profile.langHint")}
         </p>
         <div
           role="group"
@@ -176,15 +173,15 @@ export function StepProfile({ app, setApp, errors }) {
         >
           {LANGUAGES.map((lang) => (
             <Chip
-              key={lang}
-              selected={app.languages.includes(lang)}
-              onClick={() => toggleLang(lang)}
+              key={lang.value}
+              selected={app.languages.includes(lang.value)}
+              onClick={() => toggleLang(lang.value)}
             >
-              {lang}
+              {t(lang.key)}
             </Chip>
           ))}
           {app.languages
-            .filter((l) => !LANGUAGES.includes(l))
+            .filter((l) => !LANGUAGES.some((x) => x.value === l))
             .map((lang) => (
               <Chip key={lang} selected onClick={() => toggleLang(lang)}>
                 {lang}
@@ -193,8 +190,8 @@ export function StepProfile({ app, setApp, errors }) {
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <input
-            aria-label="Another language"
-            placeholder="Another language…"
+            aria-label={t("vetting.profile.anotherLang")}
+            placeholder={t("vetting.profile.anotherLang")}
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             onKeyDown={(e) => {
@@ -217,11 +214,11 @@ export function StepProfile({ app, setApp, errors }) {
               color: C.green,
               fontSize: 18,
               fontWeight: 700,
-              fontFamily: FONTS.sans,
+              fontFamily: "inherit",
               cursor: "pointer",
             }}
           >
-            Add
+            {t("vetting.profile.addCta")}
           </button>
         </div>
         <FieldError id="languages-error">{errors.languages}</FieldError>
@@ -229,7 +226,7 @@ export function StepProfile({ app, setApp, errors }) {
 
       <TextField
         id="city"
-        label="City"
+        label={t("vetting.profile.cityLabel")}
         error={errors.city}
         value={app.city}
         onChange={(e) => setApp({ city: e.target.value })}
@@ -238,18 +235,18 @@ export function StepProfile({ app, setApp, errors }) {
 
       <TextField
         id="reachable_areas"
-        label="Areas you can easily reach"
-        hint="Neighbourhoods or towns you could visit without difficulty. Optional."
+        label={t("vetting.profile.areasLabel")}
+        hint={t("vetting.profile.areasHint")}
         error={errors.reachable_areas}
         value={app.reachable_areas}
         onChange={(e) => setApp({ reachable_areas: e.target.value })}
-        placeholder="e.g. Gulberg, Model Town, DHA"
+        placeholder={t("vetting.profile.areasPh")}
       />
 
       <TextField
         id="occupation"
-        label="Occupation or institution"
-        hint="What you do, or where you study. Optional."
+        label={t("vetting.profile.occLabel")}
+        hint={t("vetting.profile.occHint")}
         error={errors.occupation}
         value={app.occupation}
         onChange={(e) => setApp({ occupation: e.target.value })}
@@ -261,26 +258,23 @@ export function StepProfile({ app, setApp, errors }) {
 /* ─── 3. Motivation — one open box, free-form ─── */
 
 export function StepMotivation({ app, setApp, errors }) {
+  const { t } = useI18n();
   const count = app.motivation.trim().length;
   return (
     <>
-      <StepIntro>
-        In your own words: why do you want to spend time with seniors? There
-        are no right answers and no boxes to tick — this is the first thing our
-        team reads, before anything else on your application.
-      </StepIntro>
+      <StepIntro>{t("vetting.motivation.intro")}</StepIntro>
       <TextAreaField
         id="motivation"
-        label="Your reason, in your own words"
+        label={t("vetting.motivation.label")}
         error={errors.motivation}
         rows={8}
         value={app.motivation}
         onChange={(e) => setApp({ motivation: e.target.value })}
-        placeholder="Take your time. A few honest sentences say more than a polished page."
+        placeholder={t("vetting.motivation.ph")}
         counter={
           count < MOTIVATION_MIN_CHARS
-            ? `${count} characters — a little more, please`
-            : `${count} characters`
+            ? t("vetting.motivation.countMore", { n: count })
+            : t("vetting.motivation.count", { n: count })
         }
       />
     </>
@@ -290,18 +284,15 @@ export function StepMotivation({ app, setApp, errors }) {
 /* ─── 4. Experience and availability ─── */
 
 export function StepExperience({ app, setApp, errors }) {
+  const { t } = useI18n();
   return (
     <>
-      <StepIntro>
-        Experience helps but isn't required — warmth and reliability matter
-        more. Be realistic about time: a steady two hours every week beats an
-        ambitious ten that fades.
-      </StepIntro>
+      <StepIntro>{t("vetting.experience.intro")}</StepIntro>
 
       <TextAreaField
         id="experience"
-        label="Any experience with seniors or caregiving"
-        hint="Family, work, volunteering — anything counts. Optional."
+        label={t("vetting.experience.expLabel")}
+        hint={t("vetting.experience.expHint")}
         error={errors.experience}
         rows={5}
         value={app.experience}
@@ -310,7 +301,7 @@ export function StepExperience({ app, setApp, errors }) {
 
       <div style={{ marginBottom: 26 }}>
         <p id="weekly-hours-label" style={sectionLabel}>
-          Hours you can give in a typical week
+          {t("vetting.experience.hoursLabel")}
         </p>
         <div
           role="group"
@@ -325,7 +316,7 @@ export function StepExperience({ app, setApp, errors }) {
                 setApp({ weekly_hours: app.weekly_hours === o.value ? null : o.value })
               }
             >
-              {o.label}
+              {t(o.labelKey)}
             </Chip>
           ))}
         </div>
@@ -333,11 +324,10 @@ export function StepExperience({ app, setApp, errors }) {
 
       <div style={{ marginBottom: 8 }}>
         <p id="commitment-label" style={sectionLabel}>
-          How long you can see yourself doing this
+          {t("vetting.experience.commitLabel")}
         </p>
         <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 10px", lineHeight: 1.5 }}>
-          Companionship takes time to grow — we ask so nobody is left waiting
-          for a visit that stops coming.
+          {t("vetting.experience.commitHint")}
         </p>
         <div
           role="group"
@@ -354,7 +344,7 @@ export function StepExperience({ app, setApp, errors }) {
                 })
               }
             >
-              {o.label}
+              {t(o.labelKey)}
             </Chip>
           ))}
         </div>
@@ -366,16 +356,13 @@ export function StepExperience({ app, setApp, errors }) {
 /* ─── 5. Two references, actually called ─── */
 
 export function StepReferences({ refs, setRefs, errors }) {
+  const { t, meta } = useI18n();
   const update = (i, patch) =>
     setRefs(refs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
   return (
     <>
-      <StepIntro>
-        Two people who know you well — not family members. We will genuinely
-        phone both of them, so please let them know to expect a call from
-        Saathban.
-      </StepIntro>
+      <StepIntro>{t("vetting.references.intro")}</StepIntro>
 
       {refs.map((r, i) => (
         <fieldset
@@ -390,19 +377,19 @@ export function StepReferences({ refs, setRefs, errors }) {
         >
           <legend
             style={{
-              fontFamily: FONTS.serif,
+              fontFamily: meta.fonts.heading,
               fontSize: 21,
               fontWeight: 700,
               color: C.brown,
               padding: "0 8px",
             }}
           >
-            {i === 0 ? "First reference" : "Second reference"}
+            {i === 0 ? t("vetting.references.first") : t("vetting.references.second")}
           </legend>
 
           <TextField
             id={`ref${i}_name`}
-            label="Their name"
+            label={t("vetting.references.nameLabel")}
             error={errors[`ref${i}_name`]}
             value={r.name}
             onChange={(e) => update(i, { name: e.target.value })}
@@ -410,8 +397,8 @@ export function StepReferences({ refs, setRefs, errors }) {
 
           <Field
             id={`ref${i}_relationship`}
-            label="How you know them"
-            hint="Family members can't be references."
+            label={t("vetting.references.relLabel")}
+            hint={t("vetting.references.relHint")}
             error={errors[`ref${i}_relationship`]}
           >
             <select
@@ -421,10 +408,10 @@ export function StepReferences({ refs, setRefs, errors }) {
               onChange={(e) => update(i, { relationship: e.target.value })}
               style={{ ...inputStyle(!!errors[`ref${i}_relationship`]), appearance: "auto" }}
             >
-              <option value="">Choose one…</option>
+              <option value="">{t("vetting.references.chooseOne")}</option>
               {REFERENCE_RELATIONSHIPS.map((rel) => (
-                <option key={rel} value={rel}>
-                  {rel}
+                <option key={rel.value} value={rel.value}>
+                  {t(rel.key)}
                 </option>
               ))}
             </select>
@@ -432,7 +419,7 @@ export function StepReferences({ refs, setRefs, errors }) {
 
           <TextField
             id={`ref${i}_phone`}
-            label="Phone number they answer"
+            label={t("vetting.references.phoneLabel")}
             error={errors[`ref${i}_phone`]}
             value={r.phone}
             onChange={(e) => update(i, { phone: e.target.value })}
@@ -448,6 +435,7 @@ export function StepReferences({ refs, setRefs, errors }) {
 /* ─── 6. Declarations + scrollable code of conduct ─── */
 
 export function StepDeclarations({ app, setApp, errors }) {
+  const { t } = useI18n();
   // The accept checkbox unlocks only after the code of conduct has been
   // scrolled to the end (or already accepted in a saved draft).
   const [readToEnd, setReadToEnd] = useState(app.accepted_code_of_conduct);
@@ -465,32 +453,27 @@ export function StepDeclarations({ app, setApp, errors }) {
 
   return (
     <>
-      <StepIntro>
-        Last part before you check everything over. These are direct questions,
-        answered honestly — honesty here matters more to us than a spotless
-        answer.
-      </StepIntro>
+      <StepIntro>{t("vetting.declarations.intro")}</StepIntro>
 
       <div style={{ marginBottom: 26 }}>
         <p id="criminal-label" style={sectionLabel}>
-          Have you ever been convicted of a criminal offence?
+          {t("vetting.declarations.criminalQ")}
         </p>
         <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 10px", lineHeight: 1.5 }}>
-          A record does not automatically end your application — but an
-          undisclosed one does.
+          {t("vetting.declarations.criminalHint")}
         </p>
         <YesNo
           id="declared_criminal_record"
           value={app.declared_criminal_record}
           onChange={(v) => setApp({ declared_criminal_record: v })}
           error={errors.declared_criminal_record}
-          yesLabel="Yes"
-          noLabel="No"
+          yesLabel={t("vetting.declarations.yes")}
+          noLabel={t("vetting.declarations.no")}
         />
         {app.declared_criminal_record === true && (
           <TextAreaField
             id="criminal_record_details"
-            label="Tell us about it, in your own words"
+            label={t("vetting.declarations.criminalDetails")}
             rows={4}
             value={app.criminal_record_details}
             onChange={(e) => setApp({ criminal_record_details: e.target.value })}
@@ -504,12 +487,12 @@ export function StepDeclarations({ app, setApp, errors }) {
         onChange={(v) => setApp({ consented_character_certificate: v })}
         error={errors.consented_character_certificate}
       >
-        I consent to Saathban requesting a police character certificate for me.
+        {t("vetting.declarations.certConsent")}
       </CheckRow>
 
       <div style={{ marginBottom: 4 }}>
         <p id="coc-label" style={sectionLabel}>
-          The Saath-Buddy code of conduct
+          {t("vetting.declarations.cocLabel")}
         </p>
         <div
           ref={scrollerRef}
@@ -528,22 +511,22 @@ export function StepDeclarations({ app, setApp, errors }) {
           }}
         >
           {CODE_OF_CONDUCT.map((rule, i) => (
-            <div key={rule.title} style={{ marginBottom: 18 }}>
+            <div key={rule.titleKey} style={{ marginBottom: 18 }}>
               <p style={{ fontSize: 19, fontWeight: 700, color: C.green, margin: "0 0 4px" }}>
-                {i + 1}. {rule.title}
+                {i + 1}. {t(rule.titleKey)}
               </p>
               <p style={{ fontSize: 18, lineHeight: 1.6, color: C.textMain, margin: 0 }}>
-                {rule.text}
+                {t(rule.textKey)}
               </p>
             </div>
           ))}
           <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 14px" }}>
-            — end of the code of conduct —
+            {t("vetting.declarations.cocEnd")}
           </p>
         </div>
         {!readToEnd && (
           <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 10px", lineHeight: 1.5 }}>
-            Please read to the end — the box below unlocks when you get there.
+            {t("vetting.declarations.readToEnd")}
           </p>
         )}
         <CheckRow
@@ -553,7 +536,7 @@ export function StepDeclarations({ app, setApp, errors }) {
           disabled={!readToEnd}
           error={errors.accepted_code_of_conduct}
         >
-          I have read the code of conduct and I agree to every part of it.
+          {t("vetting.declarations.cocAccept")}
         </CheckRow>
       </div>
     </>
@@ -563,6 +546,7 @@ export function StepDeclarations({ app, setApp, errors }) {
 /* ─── 7. Review ─── */
 
 function ReviewBlock({ title, stepIndex, goTo, rows }) {
+  const { t, meta } = useI18n();
   return (
     <div
       style={{
@@ -576,7 +560,7 @@ function ReviewBlock({ title, stepIndex, goTo, rows }) {
       <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
         <h3
           style={{
-            fontFamily: FONTS.serif,
+            fontFamily: meta.fonts.heading,
             fontSize: 21,
             fontWeight: 700,
             color: C.brown,
@@ -589,7 +573,7 @@ function ReviewBlock({ title, stepIndex, goTo, rows }) {
         <button
           type="button"
           onClick={() => goTo(stepIndex)}
-          aria-label={`Edit ${title}`}
+          aria-label={t("vetting.review.editAria", { title })}
           style={{
             minHeight: A11Y.minTapTargetPx,
             padding: "0 16px",
@@ -599,11 +583,11 @@ function ReviewBlock({ title, stepIndex, goTo, rows }) {
             color: C.green,
             fontSize: 18,
             fontWeight: 700,
-            fontFamily: FONTS.sans,
+            fontFamily: "inherit",
             cursor: "pointer",
           }}
         >
-          Edit
+          {t("vetting.review.edit")}
         </button>
       </div>
       {rows
@@ -619,75 +603,85 @@ function ReviewBlock({ title, stepIndex, goTo, rows }) {
 }
 
 export function StepReview({ app, refs, goTo, files }) {
+  const { t } = useI18n();
   const hours = WEEKLY_HOURS_OPTIONS.find((o) => o.value === app.weekly_hours);
   const months = COMMITMENT_OPTIONS.find((o) => o.value === app.commitment_months);
+  const relDisplay = (value) => {
+    const rel = REFERENCE_RELATIONSHIPS.find((x) => x.value === value);
+    return rel ? t(rel.key) : value;
+  };
   return (
     <>
-      <StepIntro>
-        One look over everything before it goes to the review team. Anything
-        can still be changed.
-      </StepIntro>
+      <StepIntro>{t("vetting.review.intro")}</StepIntro>
 
       <ReviewBlock
-        title="Who you are"
+        title={t("vetting.steps.identity")}
         stepIndex={0}
         goTo={goTo}
         rows={[
-          ["Name", app.legal_name],
-          ["CNIC", app.cnic_number],
-          ["Date of birth", app.dob],
-          ["Phone", app.phone],
-          ["CNIC photo", files.cnic?.name],
-          ["Your photo", files.selfie?.name],
+          [t("vetting.review.rName"), app.legal_name],
+          [t("vetting.review.rCnic"), app.cnic_number],
+          [t("vetting.review.rDob"), app.dob],
+          [t("vetting.review.rPhone"), app.phone],
+          [t("vetting.review.rCnicPhoto"), files.cnic?.name],
+          [t("vetting.review.rYourPhoto"), files.selfie?.name],
         ]}
       />
       <ReviewBlock
-        title="Where and how you can help"
+        title={t("vetting.steps.profile")}
         stepIndex={1}
         goTo={goTo}
         rows={[
-          ["Languages", app.languages.join(", ")],
-          ["City", app.city],
-          ["Reachable areas", app.reachable_areas],
-          ["Occupation", app.occupation],
+          [t("vetting.review.rLanguages"), app.languages.join(", ")],
+          [t("vetting.review.rCity"), app.city],
+          [t("vetting.review.rAreas"), app.reachable_areas],
+          [t("vetting.review.rOccupation"), app.occupation],
         ]}
       />
       <ReviewBlock
-        title="Why you want to do this"
+        title={t("vetting.steps.motivation")}
         stepIndex={2}
         goTo={goTo}
-        rows={[["In your words", app.motivation]]}
+        rows={[[t("vetting.review.rInWords"), app.motivation]]}
       />
       <ReviewBlock
-        title="Experience and time"
+        title={t("vetting.steps.experience")}
         stepIndex={3}
         goTo={goTo}
         rows={[
-          ["Experience", app.experience || "None yet — that's fine"],
-          ["Weekly hours", hours ? hours.label : ""],
-          ["Commitment", months ? months.label : ""],
+          [t("vetting.review.rExperience"), app.experience || t("vetting.review.noneYet")],
+          [t("vetting.review.rHours"), hours ? t(hours.labelKey) : ""],
+          [t("vetting.review.rCommit"), months ? t(months.labelKey) : ""],
         ]}
       />
       <ReviewBlock
-        title="References"
+        title={t("vetting.steps.references")}
         stepIndex={4}
         goTo={goTo}
         rows={refs.map((r, i) => [
-          i === 0 ? "First" : "Second",
-          `${r.name} (${r.relationship}) — ${r.phone}`,
+          i === 0 ? t("vetting.review.rFirst") : t("vetting.review.rSecond"),
+          `${r.name} (${relDisplay(r.relationship)}) — ${r.phone}`,
         ])}
       />
       <ReviewBlock
-        title="Declarations"
+        title={t("vetting.steps.declarations")}
         stepIndex={5}
         goTo={goTo}
         rows={[
           [
-            "Criminal record",
-            app.declared_criminal_record === true ? "Disclosed" : "None declared",
+            t("vetting.review.rCriminal"),
+            app.declared_criminal_record === true
+              ? t("vetting.review.disclosed")
+              : t("vetting.review.noneDeclared"),
           ],
-          ["Character certificate", app.consented_character_certificate ? "Consented" : ""],
-          ["Code of conduct", app.accepted_code_of_conduct ? "Accepted" : ""],
+          [
+            t("vetting.review.rCert"),
+            app.consented_character_certificate ? t("vetting.review.consented") : "",
+          ],
+          [
+            t("vetting.review.rCoc"),
+            app.accepted_code_of_conduct ? t("vetting.review.accepted") : "",
+          ],
         ]}
       />
     </>

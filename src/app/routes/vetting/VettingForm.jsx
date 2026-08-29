@@ -22,7 +22,8 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C, FONTS } from "../../../shared/tokens.js";
+import { COLORS as C } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import {
   STEPS,
   INITIAL_APPLICATION,
@@ -106,6 +107,7 @@ export default function VettingForm() {
 }
 
 function VettingFormInner() {
+  const { t, meta } = useI18n();
   const draft = useRef(loadDraft()).current;
   const [app, setAppState] = useState({ ...INITIAL_APPLICATION, ...(draft?.app || {}) });
   const [refs, setRefs] = useState(draft?.refs || INITIAL_REFS);
@@ -273,7 +275,7 @@ function VettingFormInner() {
         } catch {
           /* fall through to the generic banner */
         }
-        setSubmitError("An application already exists for this account.");
+        setSubmitError("vetting.form.duplicate");
       } else if (code === "under18" || code === "blocked") {
         setRefusal({ code });
         setPhase("refused");
@@ -289,7 +291,8 @@ function VettingFormInner() {
         setPhase("refused");
         if (typeof window !== "undefined") window.scrollTo(0, 0);
       } else {
-        setSubmitError(err.message || "Something went wrong — please try again.");
+        // A locale key or a server message — t() renders either.
+        setSubmitError(err.message || "vetting.form.generic");
       }
     } finally {
       setSubmitting(false);
@@ -307,7 +310,7 @@ function VettingFormInner() {
         <style>{css}</style>
         <div style={columnStyle}>
           <p role="status" style={{ fontSize: 19, color: C.textMuted, marginTop: 48, textAlign: "center" }}>
-            One moment…
+            {t("vetting.form.oneMoment")}
           </p>
         </div>
       </main>
@@ -346,25 +349,29 @@ function VettingFormInner() {
       <style>{css}</style>
       <div style={columnStyle}>
         <header style={{ margin: "8px 0 20px" }}>
-          <h1 style={h1Style}>Become a Saath-Buddy</h1>
+          <h1 style={{ ...h1Style, fontFamily: meta.fonts.heading }}>
+            {t("vetting.form.title")}
+          </h1>
           <p style={{ fontSize: 18, lineHeight: 1.6, color: C.textMuted, margin: "10px 0 0" }}>
-            This application is thorough on purpose: Saath-Buddies are matched
-            with seniors who place real trust in us. It takes about ten
-            minutes, and your answers save on this device as you go.
+            {t("vetting.form.intro")}
           </p>
         </header>
 
         {/* Progress */}
         <div style={{ marginBottom: 22 }}>
           <p style={{ fontSize: 18, fontWeight: 700, color: C.green, margin: "0 0 8px" }}>
-            Step {stepIndex + 1} of {STEPS.length} — {step.title}
+            {t("vetting.form.stepOf", {
+              n: stepIndex + 1,
+              total: STEPS.length,
+              title: t(step.titleKey),
+            })}
           </p>
           <div
             role="progressbar"
             aria-valuenow={stepIndex + 1}
             aria-valuemin={1}
             aria-valuemax={STEPS.length}
-            aria-label={`Step ${stepIndex + 1} of ${STEPS.length}`}
+            aria-label={t("vetting.form.stepAria", { n: stepIndex + 1, total: STEPS.length })}
             style={{ display: "flex", gap: 5 }}
           >
             {STEPS.map((s, i) => (
@@ -385,7 +392,7 @@ function VettingFormInner() {
           ref={headingRef}
           tabIndex={-1}
           style={{
-            fontFamily: FONTS.serif,
+            fontFamily: meta.fonts.heading,
             fontSize: 26,
             fontWeight: 700,
             color: C.brown,
@@ -393,20 +400,20 @@ function VettingFormInner() {
             outline: "none",
           }}
         >
-          {step.title}
+          {t(step.titleKey)}
         </h2>
 
         {errorCount > 0 && (
           <p role="alert" style={alertStyle}>
             {errorCount === 1
-              ? "One thing needs your attention below."
-              : `${errorCount} things need your attention below.`}
+              ? t("vetting.form.oneIssue")
+              : t("vetting.form.manyIssues", { n: errorCount })}
           </p>
         )}
 
         {submitError && (
           <p role="alert" style={alertStyle}>
-            {submitError}
+            {t(submitError)}
           </p>
         )}
 
@@ -445,11 +452,11 @@ function VettingFormInner() {
                   color: C.green,
                   fontSize: 19,
                   fontWeight: 700,
-                  fontFamily: FONTS.sans,
+                  fontFamily: "inherit",
                   cursor: "pointer",
                 }}
               >
-                Back
+                {t("vetting.form.back")}
               </button>
             )}
             <button
@@ -464,7 +471,7 @@ function VettingFormInner() {
                 color: C.cream,
                 fontSize: 19,
                 fontWeight: 700,
-                fontFamily: FONTS.sans,
+                fontFamily: "inherit",
                 cursor: submitting ? "wait" : "pointer",
                 opacity: submitting ? 0.7 : 1,
               }}
@@ -472,28 +479,27 @@ function VettingFormInner() {
               {step.id === "review"
                 ? submitting
                   ? submitStage === "photos"
-                    ? "Saving your photos…"
-                    : "Sending…"
-                  : "Send my application"
-                : "Continue"}
+                    ? t("vetting.form.savingPhotos")
+                    : t("vetting.form.sending")
+                  : t("vetting.form.sendCta")
+                : t("vetting.form.continueCta")}
             </button>
           </div>
         </form>
 
         <p style={{ fontSize: 18, color: C.textMuted, margin: "24px 0 0", lineHeight: 1.5 }}>
-          Not ready to finish? Everything you've entered stays saved on this
-          device — come back any time. Photos are the one thing we'll ask for
-          again.
+          {t("vetting.form.draftNote")}
         </p>
       </div>
     </main>
   );
 }
 
+// Font family is inherited from the LanguageProvider wrapper, so the
+// whole flow flips to Nastaliq under Urdu automatically.
 const pageStyle = {
   minHeight: "100vh",
   background: C.bg,
-  fontFamily: FONTS.sans,
   color: C.textMain,
   fontSize: 18,
 };
@@ -505,7 +511,6 @@ const columnStyle = {
 };
 
 const h1Style = {
-  fontFamily: FONTS.serif,
   fontSize: "clamp(1.7rem, 5vw, 2.2rem)",
   fontWeight: 700,
   color: C.green,

@@ -1,4 +1,35 @@
-# Open questions for the team
+# Open product questions
+
+Decisions a lane needed but SPEC.md doesn't settle. Each entry records
+the conservative choice taken in code so nothing here blocks a build —
+answering a question may simply change a default.
+
+## Events + Calendar (events lane, 2026-08-29)
+
+1. **Can Fam members RSVP on an Icon's behalf?** SPEC says Fam "can see
+   events so they can bring their parent" but only Icons are attendees.
+   *Taken:* RSVP is Saath-Icon-only (enforced in `rsvp_to_event()`); the
+   Fam view shows "family are welcome alongside — no sign-up needed".
+2. **Should the marketing site's events (src/shared/eventsData.js) ever
+   take RSVPs?** They are content, not rows, and some are past.
+   *Taken:* shown in the merged list with a "From saathban.com" pill,
+   display-only. If an announced event needs RSVPs, an admin recreates it
+   in Manage.
+3. **Does the personal calendar belong to Icons only?** SPEC places it
+   under the Icon home.
+   *Taken:* the My calendar tab renders for Icons only; the
+   `calendar_entries` table itself is role-neutral (owner-only RLS), so
+   widening later is a UI change, not a migration.
+4. **Who performs at-event check-in?** SPEC names the feature but not the
+   hand.
+   *Taken:* admins, via the Manage tab's door list (`checked_in_at`).
+   Self-check-in or Buddy-assisted check-in would need its own policy.
+5. **Event capacity semantics when someone cancels:** freed place is
+   first-come (no waitlist). *Taken:* no waitlist in v1.
+
+---
+
+# Integration questions (overnight session)
 
 Decisions the overnight integration could not make alone. Each has a
 recommendation; none blocks the current preview.

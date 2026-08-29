@@ -37,6 +37,7 @@ import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
+import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
 import EventsRoutes from "./routes/events/EventsRoutes.jsx";
@@ -226,6 +227,18 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <LudoRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Games shell: registry, lobbies + live boards, Daily
+              Riddle (routes/games, migrations 0022/0022b). Any
+              signed-in role; RLS keeps sessions participants-only.
+              games/ludo/* above stays more specific and wins. */}
+          <Route
+            path="games/*"
+            element={
+              <RequireAuth>
+                <GamesRoutes />
               </RequireAuth>
             }
           />

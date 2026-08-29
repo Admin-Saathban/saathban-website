@@ -197,10 +197,28 @@ error: the game continues, and that player may still cover her on a
 later shot under the no-coins clause above.
 
 **Timeouts.** Carrom is `timeout_style = 'pass_turn'`. A lapsed turn
-is a **missed** turn: the seat advances, no move is recorded, and no
-shot is played on the absent player's behalf. Carrom has **no bot
-player at all** — since 0043 `start_with_bots` refuses to seat one
-here, because a bot seat made the table unfinishable.
+is a **missed** turn: the miss is counted against that seat, the turn
+advances, the board is untouched, and no shot is played on the absent
+player's behalf. Carrom has **no bot player at all** — since 0043
+`start_with_bots` refuses to seat one here, because a bot seat made
+the table unfinishable.
+
+A precise note about what IS recorded, because the obvious reading is
+wrong: a lapsed turn does write a `game_moves` row, and that row has
+`by_bot = true`. No bot played it. `game_tick` passes `p_by_bot =
+true` for the pass, and `exec_game_move` short-circuits on a
+`{"pass": true}` payload — the carrom executor is never called and
+the state is never touched. So on the rails, **`by_bot` means "not
+played by the seated human", not "a bot played"**, and the two are
+only distinguishable by the move body: `{"pass": true}` versus a
+real `shot`.
+
+That matters beyond carrom. `tests/bot-players.mjs` proves a game has
+a working bot by asserting `by_bot > 0` after a tick — which is sound
+only because it makes that assertion for `bot_plays` games alone. The
+same count on a `pass_turn` game is true with no bot in existence.
+Any future check of "did a bot play?" should look at the move body,
+not the flag.
 
 **The trust boundary, stated plainly.** The server validates; it does
 not re-simulate. It checks that every coin claimed as scored is
@@ -212,6 +230,46 @@ foul or declare the queen covered. That is a known limitation of the
 0024 design, recorded here rather than implied: it is acceptable for a
 friendly two-player game between people who chose each other, and it
 is not acceptable if carrom ever becomes competitive or public.
+
+### Every game — a table nobody is playing is closed (0044b)
+
+This one is the rails', not any single game's, and it has teeth against
+test fixtures as well as abandoned tables, so it belongs where every
+lane will see it.
+
+**The rule.** In a game with **no bot player** (`timeout_style =
+'pass_turn'`, which today means carrom), `game_tick` calls a table off
+once its move log ends in `max(8, seats × 4)` consecutive passes. It
+also stops after one full circuit of passes within a single call rather
+than spinning to its guard.
+
+**Why it exists.** Without it, a table where every seat is a bot or an
+absent human is an unbounded write loop: the tick plays every such seat
+and only exits on reaching a seat that is neither, so it wrote 50 passes
+per table per call, every cron minute, for ever. Measured at 350 rows a
+minute, flat, across seven tables. It needs no defect to reach — two
+people start a carrom game, both wander off, both are marked `away`
+after three missed turns, and it begins.
+
+**It only applies to `pass_turn` games, and that restriction is
+load-bearing.** In ludo a pass is a normal part of play — every piece in
+the yard and no six is a pass — and eight in a row runs about 23% in the
+opening. A general "consecutive passes means abandoned" rule would have
+quietly cancelled real ludo games with people sitting at them. In a
+pass_turn game a pass means nobody acted; in a bot_plays game it can
+mean the dice did not cooperate. Same word, different fact.
+
+**It reads the move body, never `by_bot`.** For a `{"pass": true}`
+payload `exec_game_move` short-circuits before the executor, so
+`by_bot` on those rows means "not played by the seated human", not "a
+bot played". The flag cannot tell a game being played from one being
+abandoned.
+
+**What this means if you write tests.** A `pass_turn` fixture left idle
+across cron minutes can be cancelled by the tick with nothing in your
+code doing it — a session going `cancelled` on its own reads like a
+product bug and is not one. Assert on `status` at the step that matters
+rather than assuming a table you created is still live later.
 
 ### Snakes & Ladders — the rules as implemented
 

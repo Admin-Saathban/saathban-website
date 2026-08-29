@@ -46,8 +46,9 @@ grows its section links.
 
 ## 3. Strings → locales
 
-All copy in `eventsCopy.js` (`COPY`), one-file extraction under `events.*`;
-interpolating strings are functions → `{name}`-style templates.
+**Done.** All copy lives in `locales/en.js` + `ur.js` under `events.*`
+(`eventsCopy.js` is gone); Urdu is drafted, pending the native review
+queued in QUESTIONS.md #4.
 
 ## 4. Previewing without registration
 

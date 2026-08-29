@@ -44,9 +44,10 @@ when empty — it renders the door, not a scoreboard.
 
 ## 2. Strings → locales
 
-All copy is in `copy.js` (`COPY`), following the fam/home convention, so the
-Urdu pass is a one-file extraction into a `circle.*` namespace. Interpolating
-strings are functions; they become `{name}`-style templates in the locale files.
+**Done** (quality-report pass): all copy lives in `locales/en.js` + `ur.js`
+under `circle.*` (`copy.js` is gone), Urdu drafted pending native review;
+the two inline name fallbacks moved to `circle.member.unknownFallback` /
+`circle.requests.unknownFallback`.
 
 ## 3. Data contract (already real — migration 0005)
 

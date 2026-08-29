@@ -15,7 +15,6 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { useCircle } from "./circleStore.js";
-import { COPY } from "./copy.js";
 import {
   Card,
   SectionLabel,
@@ -27,14 +26,19 @@ import {
   Segmented,
 } from "./ui.jsx";
 
-function personName(person, fallback) {
-  return person?.full_name || fallback || "A member";
+function personName(person, t) {
+  return person?.full_name || t("circle.member.unknownFallback");
+}
+
+function sosOrderLabel(t, n) {
+  if (n === 1) return t("circle.member.sosFirst");
+  if (n === 2) return t("circle.member.sosSecond");
+  return t("circle.member.sosNth", { n });
 }
 
 function MemberCard({ m, sosCount, busy, actions }) {
-  const { ts, meta } = useI18n();
-  const name = personName(m.person);
-  const c = COPY.member;
+  const { t, ts, meta } = useI18n();
+  const name = personName(m.person, t);
 
   return (
     <Card>
@@ -44,25 +48,26 @@ function MemberCard({ m, sosCount, busy, actions }) {
         </h3>
         {m.person?.city && <BodyText muted style={{ margin: 0 }}>{m.person.city}</BodyText>}
         {m.is_sos_contact && (
-          <Pill tone="brown">🆘 {COPY.member.sosOrder(m.sos_order)}</Pill>
+          <Pill tone="brown">🆘 {sosOrderLabel(t, m.sos_order)}</Pill>
         )}
       </div>
 
-      <SectionLabel>{c.permissionsLabel}</SectionLabel>
+      <SectionLabel>{t("circle.member.permissionsLabel")}</SectionLabel>
 
       {/* SOS — a permission plus, when on, ordering among SOS contacts */}
       <Toggle
         checked={m.is_sos_contact}
         busy={busy}
         onChange={() => actions.toggleSos(m.id)}
-        label={COPY.perms.sos.label}
-        hint={COPY.perms.sos.hint}
+        label={t("circle.perms.sos.label")}
+        hint={t("circle.perms.sos.hint")}
       />
       {m.is_sos_contact && sosCount > 1 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "2px 0 6px" }}>
-          <span style={{ fontSize: ts(16), color: C.textMuted }}>{COPY.member.sosOrder(m.sos_order)}</span>
+          {/* Ordering is status text — floored at 18 (QUALITY_REPORT §3). */}
+          <span style={{ fontSize: ts(18), color: C.textMuted }}>{sosOrderLabel(t, m.sos_order)}</span>
           <GhostBtn
-            aria-label={c.moveEarlier}
+            aria-label={t("circle.member.moveEarlier")}
             disabled={busy || m.sos_order <= 1}
             onClick={() => actions.moveSos(m.id, -1)}
             style={{ minWidth: A11Y.minTapTargetPx, padding: "0 14px" }}
@@ -70,7 +75,7 @@ function MemberCard({ m, sosCount, busy, actions }) {
             ↑
           </GhostBtn>
           <GhostBtn
-            aria-label={c.moveLater}
+            aria-label={t("circle.member.moveLater")}
             disabled={busy || m.sos_order >= sosCount}
             onClick={() => actions.moveSos(m.id, 1)}
             style={{ minWidth: A11Y.minTapTargetPx, padding: "0 14px" }}
@@ -85,34 +90,34 @@ function MemberCard({ m, sosCount, busy, actions }) {
         checked={m.can_see_mood}
         busy={busy}
         onChange={() => actions.setPermission(m.id, "can_see_mood", !m.can_see_mood)}
-        label={COPY.perms.mood.label}
-        hint={COPY.perms.mood.hint}
+        label={t("circle.perms.mood.label")}
+        hint={t("circle.perms.mood.hint")}
       />
       <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
       <Toggle
         checked={m.can_see_health}
         busy={busy}
         onChange={() => actions.setPermission(m.id, "can_see_health", !m.can_see_health)}
-        label={COPY.perms.health.label}
-        hint={COPY.perms.health.hint}
+        label={t("circle.perms.health.label")}
+        hint={t("circle.perms.health.hint")}
       />
       <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
       <Toggle
         checked={m.can_manage_reminders}
         busy={busy}
         onChange={() => actions.setPermission(m.id, "can_manage_reminders", !m.can_manage_reminders)}
-        label={COPY.perms.reminders.label}
-        hint={COPY.perms.reminders.hint}
+        label={t("circle.perms.reminders.label")}
+        hint={t("circle.perms.reminders.hint")}
       />
       <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
       <Segmented
-        label={COPY.perms.location.label}
-        hint={COPY.perms.location.hint}
+        label={t("circle.perms.location.label")}
+        hint={t("circle.perms.location.hint")}
         value={m.location_access}
         onChange={(v) => actions.setLocation(m.id, v)}
         options={[
-          { value: "never", label: COPY.perms.location.never },
-          { value: "sos_only", label: COPY.perms.location.sosOnly },
+          { value: "never", label: t("circle.perms.location.never") },
+          { value: "sos_only", label: t("circle.perms.location.sosOnly") },
         ]}
       />
 
@@ -120,11 +125,11 @@ function MemberCard({ m, sosCount, busy, actions }) {
       <div style={{ marginTop: 12 }}>
         <GhostBtn
           disabled={busy}
-          aria-label={c.removeLabel(name)}
+          aria-label={t("circle.member.removeLabel", { name })}
           onClick={() => actions.removeMember(m.id)}
           style={{ color: C.error, borderColor: C.error }}
         >
-          {c.remove}
+          {t("circle.member.remove")}
         </GhostBtn>
       </div>
     </Card>
@@ -132,17 +137,19 @@ function MemberCard({ m, sosCount, busy, actions }) {
 }
 
 function RequestCard({ r, busy, onApprove }) {
-  const { ts, meta } = useI18n();
-  const name = personName(r.person, null);
-  const body = r.person ? COPY.requests.body(name) : COPY.requests.byEmail(r.invitee_email);
+  const { t, ts, meta } = useI18n();
+  const name = personName(r.person, t);
+  const body = r.person
+    ? t("circle.requests.body", { name })
+    : t("circle.requests.byEmail", { email: r.invitee_email });
   return (
     <Card style={{ background: C.cream, border: `1px dashed ${C.olive}` }}>
       <h3 style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
-        {r.person ? name : (r.invitee_email || "Someone")}
+        {r.person ? name : (r.invitee_email || t("circle.requests.unknownFallback"))}
       </h3>
       <BodyText>{body}</BodyText>
       <PrimaryBtn disabled={busy} onClick={() => onApprove(r.id)}>
-        {busy ? COPY.requests.approving : COPY.requests.approve}
+        {busy ? t("circle.requests.approving") : t("circle.requests.approve")}
       </PrimaryBtn>
     </Card>
   );
@@ -151,11 +158,11 @@ function RequestCard({ r, busy, onApprove }) {
 /* The empty state's door: create a real invite code (one token, 48h,
    single-use) the Icon can read aloud. */
 function InvitePanel({ createInvite }) {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(null);
   const [busy, setBusy] = useState(false);
-  const c = COPY.invite;
+  const k = (key) => t(`circle.invite.${key}`);
 
   const generate = async () => {
     setBusy(true);
@@ -166,15 +173,15 @@ function InvitePanel({ createInvite }) {
 
   if (!open) {
     return (
-      <PrimaryBtn onClick={() => setOpen(true)}>{c.open}</PrimaryBtn>
+      <PrimaryBtn onClick={() => setOpen(true)}>{k("open")}</PrimaryBtn>
     );
   }
   return (
     <Card>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{k("intro")}</BodyText>
       {code ? (
         <>
-          <p style={{ fontSize: ts(15), color: C.textMuted, margin: "4px 0" }}>{c.codeLabel}</p>
+          <p style={{ fontSize: ts(18), color: C.textMuted, margin: "4px 0" }}>{k("codeLabel")}</p>
           <p
             dir="ltr"
             style={{
@@ -188,18 +195,18 @@ function InvitePanel({ createInvite }) {
           >
             {code.replace(/(\d{3})(\d{3})/, "$1 $2")}
           </p>
-          <BodyText muted>{c.codeSpoken}</BodyText>
+          <BodyText muted>{k("codeSpoken")}</BodyText>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <GhostBtn onClick={generate} disabled={busy}>{c.another}</GhostBtn>
-            <GhostBtn onClick={() => setOpen(false)}>{c.close}</GhostBtn>
+            <GhostBtn onClick={generate} disabled={busy}>{k("another")}</GhostBtn>
+            <GhostBtn onClick={() => setOpen(false)}>{k("close")}</GhostBtn>
           </div>
         </>
       ) : (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <PrimaryBtn onClick={generate} disabled={busy}>
-            {busy ? c.generating : c.generate}
+            {busy ? k("generating") : k("generate")}
           </PrimaryBtn>
-          <GhostBtn onClick={() => setOpen(false)}>{c.close}</GhostBtn>
+          <GhostBtn onClick={() => setOpen(false)}>{k("close")}</GhostBtn>
         </div>
       )}
     </Card>
@@ -207,7 +214,7 @@ function InvitePanel({ createInvite }) {
 }
 
 export default function CirclePage() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const iconId = profile?.id ?? null;
   const { members, requests, loading, error, busyIds, actions } = useCircle(iconId);
@@ -217,20 +224,20 @@ export default function CirclePage() {
     <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 8px" }}>
-          {COPY.title}
+          {t("circle.title")}
         </h1>
-        <BodyText muted style={{ marginBottom: 8 }}>{COPY.intro}</BodyText>
+        <BodyText muted style={{ marginBottom: 8 }}>{t("circle.intro")}</BodyText>
 
         {error && (
           <Card style={{ background: "#f8ece9", border: `1px solid ${C.error}` }}>
-            <BodyText style={{ color: C.error, margin: 0 }} role="alert">{COPY.error}</BodyText>
+            <BodyText style={{ color: C.error, margin: 0 }} role="alert">{t("circle.error")}</BodyText>
           </Card>
         )}
 
         {/* Incoming requests first — a one-tap yes shouldn't be buried. */}
         {requests.length > 0 && (
           <>
-            <SectionLabel>{COPY.requests.heading}</SectionLabel>
+            <SectionLabel>{t("circle.requests.heading")}</SectionLabel>
             {requests.map((r) => (
               <RequestCard key={r.id} r={r} busy={busyIds.has(r.id)} onApprove={actions.approveRequest} />
             ))}
@@ -242,15 +249,17 @@ export default function CirclePage() {
         ) : members.length === 0 ? (
           <Card>
             <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(24), fontWeight: 700, color: C.brown, margin: "0 0 8px" }}>
-              {COPY.empty.heading}
+              {t("circle.empty.heading")}
             </h2>
-            <BodyText muted style={{ marginBottom: 16 }}>{COPY.empty.body}</BodyText>
+            <BodyText muted style={{ marginBottom: 16 }}>{t("circle.empty.body")}</BodyText>
             <InvitePanel createInvite={actions.createInvite} />
           </Card>
         ) : (
           <>
             <SectionLabel>
-              {members.length === 1 ? "1 person" : `${members.length} people`}
+              {members.length === 1
+                ? t("circle.member.onePerson")
+                : t("circle.member.manyPeople", { n: members.length })}
             </SectionLabel>
             {members.map((m) => (
               <MemberCard

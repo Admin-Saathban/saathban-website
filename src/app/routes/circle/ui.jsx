@@ -8,7 +8,6 @@
 
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { COPY } from "./copy.js";
 
 export function Card({ children, style }) {
   return (
@@ -36,7 +35,9 @@ export function SectionLabel({ children }) {
         fontWeight: 700,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
-        color: C.olive,
+        // greenMuted, not olive: olive is ~4.06:1 on cream, below AA
+        // (QUALITY_REPORT §3 contrast).
+        color: C.greenMuted,
         margin: "24px 0 12px",
       }}
     >
@@ -68,7 +69,8 @@ export function Pill({ children, tone = "neutral", style }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        fontSize: ts(15),
+        // Pills carry status (SOS contact) — floor at 18 (QUALITY_REPORT §3).
+        fontSize: ts(18),
         fontWeight: 600,
         color: t.fg,
         background: t.bg,
@@ -144,7 +146,7 @@ export function GhostBtn({ children, style, ...props }) {
 /* A labelled on/off switch. State is announced (On/Off text + a knob
    position + aria-checked), never colour alone. */
 export function Toggle({ checked, onChange, label, hint, busy }) {
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "12px 0" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -171,13 +173,15 @@ export function Toggle({ checked, onChange, label, hint, busy }) {
           border: `2px solid ${checked ? C.green : C.warmGray}`,
           background: checked ? "#e8f0e6" : C.white,
           color: checked ? C.green : C.textMuted,
-          fontSize: ts(16),
+          // On/Off announces the state of a role="switch" — floor at 18
+          // (QUALITY_REPORT §3, interactive text).
+          fontSize: ts(18),
           fontWeight: 700,
           fontFamily: "inherit",
           cursor: busy ? "default" : "pointer",
         }}
       >
-        <span>{checked ? COPY.toggle.on : COPY.toggle.off}</span>
+        <span>{checked ? t("circle.toggle.on") : t("circle.toggle.off")}</span>
         <span
           aria-hidden="true"
           style={{
@@ -227,7 +231,9 @@ export function Segmented({ label, hint, value, options, onChange }) {
                 border: `${active ? 3 : 1.5}px solid ${active ? C.green : C.warmGray}`,
                 background: active ? C.white : "transparent",
                 color: C.textMain,
-                fontSize: ts(16),
+                // Option labels on a role="radio" — floor at 18
+                // (QUALITY_REPORT §3, interactive text).
+                fontSize: ts(18),
                 fontWeight: active ? 700 : 500,
                 fontFamily: "inherit",
                 cursor: "pointer",

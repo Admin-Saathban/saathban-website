@@ -10,7 +10,7 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 export default function CalendarStrip({ days, selectedOffset, onSelect }) {
-  const { t, lang, meta } = useI18n();
+  const { t, ts, lang, meta } = useI18n();
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
   const scrollRef = useRef(null);
 
@@ -73,16 +73,16 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
                 padding: "6px 2px",
               }}
             >
-              <span style={{ fontSize: 18, fontWeight: 500, color: C.textMuted }}>
+              <span style={{ fontSize: ts(18), fontWeight: 500, color: C.textMuted }}>
                 {isToday ? t("home.today") : shortDay}
               </span>
-              <span style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.15 }}>
+              <span style={{ fontSize: ts(21), fontWeight: 700, lineHeight: 1.15 }}>
                 {day.date.getDate()}
               </span>
               <span
                 aria-hidden="true"
                 style={{
-                  fontSize: 18,
+                  fontSize: ts(18),
                   lineHeight: "20px",
                   height: 20,
                   fontWeight: 700,

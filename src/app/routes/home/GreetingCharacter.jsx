@@ -55,7 +55,7 @@ function SproutCharacter() {
 }
 
 export default function GreetingCharacter({ greeting, name, line }) {
-  const { t, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   return (
     <section aria-label={t("home.greetingAria")} style={{ margin: "18px 0 22px" }}>
       <h1
@@ -83,7 +83,7 @@ export default function GreetingCharacter({ greeting, name, line }) {
             border: `2px solid ${C.warmGray}`,
             borderRadius: "18px 18px 18px 4px",
             padding: "14px 18px",
-            fontSize: 19,
+            fontSize: ts(19),
             lineHeight: 1.55,
             color: C.textMain,
           }}

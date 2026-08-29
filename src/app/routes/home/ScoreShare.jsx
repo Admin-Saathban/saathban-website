@@ -27,6 +27,7 @@ function nextBadge(totalPoints) {
 /* ─── Share sheet ─── */
 
 function ShareRow({ icon, title, sub, onClick }) {
+  const { ts } = useI18n();
   return (
     <button
       type="button"
@@ -46,12 +47,12 @@ function ShareRow({ icon, title, sub, onClick }) {
         cursor: "pointer",
       }}
     >
-      <span aria-hidden="true" style={{ fontSize: 26 }}>{icon}</span>
+      <span aria-hidden="true" style={{ fontSize: ts(26) }}>{icon}</span>
       <span style={{ flex: 1 }}>
-        <span style={{ display: "block", fontSize: 19, fontWeight: 700, color: C.textMain }}>
+        <span style={{ display: "block", fontSize: ts(19), fontWeight: 700, color: C.textMain }}>
           {title}
         </span>
-        <span style={{ display: "block", fontSize: 18, color: C.textMuted, lineHeight: 1.45 }}>
+        <span style={{ display: "block", fontSize: ts(18), color: C.textMuted, lineHeight: 1.45 }}>
           {sub}
         </span>
       </span>
@@ -60,7 +61,7 @@ function ShareRow({ icon, title, sub, onClick }) {
 }
 
 function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
-  const { t, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -113,7 +114,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
           <h2
             style={{
               fontFamily: meta.fonts.heading,
-              fontSize: 24,
+              fontSize: ts(24),
               fontWeight: 700,
               color: C.brown,
               margin: 0,
@@ -133,7 +134,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
               borderRadius: 14,
               border: `2px solid ${C.warmGray}`,
               background: C.white,
-              fontSize: 22,
+              fontSize: ts(22),
               fontWeight: 700,
               color: C.textMain,
               cursor: "pointer",
@@ -143,7 +144,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
           </button>
         </div>
 
-        <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
           {doneCount > 0
             ? doneCount === 1
               ? t("home.score.share.soFarOne", { points })
@@ -212,7 +213,7 @@ export default function ScoreShare({
   editable,
   circleMembers,
 }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const badge = nextBadge(lifetimePoints + points);
@@ -240,7 +241,7 @@ export default function ScoreShare({
             style={{
               display: "block",
               fontFamily: "inherit",
-              fontSize: 52,
+              fontSize: ts(52),
               fontWeight: 700,
               lineHeight: 1,
               fontVariantNumeric: "lining-nums",
@@ -248,12 +249,12 @@ export default function ScoreShare({
           >
             {restDay ? "☾" : points}
           </span>
-          <span style={{ display: "block", fontSize: 18, opacity: 0.9, marginTop: 4 }}>
+          <span style={{ display: "block", fontSize: ts(18), opacity: 0.9, marginTop: 4 }}>
             {restDay ? t("home.score.restDayWord") : t("home.score.pointsToday")}
           </span>
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 19, lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
+          <p style={{ fontSize: ts(19), lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
             {restDay
               ? t("home.score.restLine")
               : doneCount === 0
@@ -265,7 +266,7 @@ export default function ScoreShare({
 
       {badge && !restDay && (
         <div style={{ marginTop: 18 }}>
-          <p style={{ fontSize: 18, margin: "0 0 8px", opacity: 0.95 }}>
+          <p style={{ fontSize: ts(18), margin: "0 0 8px", opacity: 0.95 }}>
             {t("home.score.badgeToGo", { n: badge.toGo, name: t(badge.nameKey) })}
           </p>
           <div
@@ -304,7 +305,7 @@ export default function ScoreShare({
             border: "none",
             background: C.cream,
             color: C.green,
-            fontSize: 19,
+            fontSize: ts(19),
             fontWeight: 700,
             fontFamily: "inherit",
             cursor: "pointer",
@@ -324,7 +325,7 @@ export default function ScoreShare({
               border: `2px solid ${C.cream}`,
               background: restDay ? C.cream : "transparent",
               color: restDay ? C.green : C.cream,
-              fontSize: 19,
+              fontSize: ts(19),
               fontWeight: 700,
               fontFamily: "inherit",
               cursor: "pointer",
@@ -357,7 +358,7 @@ export default function ScoreShare({
             maxWidth: "min(92vw, 560px)",
             background: C.brown,
             color: C.cream,
-            fontSize: 18,
+            fontSize: ts(18),
             lineHeight: 1.5,
             fontFamily: "inherit",
             padding: "14px 22px",

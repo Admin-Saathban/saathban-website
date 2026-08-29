@@ -32,6 +32,7 @@ import { useIconPrefs, trackerDueOn } from "../../lib/iconPrefs.js";
 /* ─── Small shared pieces ─── */
 
 function Chip({ selected, onClick, children, label }) {
+  const { ts } = useI18n();
   return (
     <button
       type="button"
@@ -46,7 +47,7 @@ function Chip({ selected, onClick, children, label }) {
         border: `2px solid ${selected ? C.green : C.warmGray}`,
         background: selected ? C.green : C.white,
         color: selected ? C.cream : C.textMain,
-        fontSize: 18,
+        fontSize: ts(18),
         fontWeight: selected ? 700 : 500,
         fontFamily: "inherit",
         display: "inline-flex",
@@ -80,8 +81,9 @@ function ChipRow({ children, columns }) {
 }
 
 function EditorLabel({ children }) {
+  const { ts } = useI18n();
   return (
-    <p style={{ fontSize: 18, fontWeight: 600, color: C.textMuted, margin: "18px 0 8px" }}>
+    <p style={{ fontSize: ts(18), fontWeight: 600, color: C.textMuted, margin: "18px 0 8px" }}>
       {children}
     </p>
   );
@@ -90,7 +92,7 @@ function EditorLabel({ children }) {
 /* ─── Per-module editors ─── */
 
 function MoodEditor({ value, onChange }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const [voice, setVoice] = useState(null); // null | "recording" | "saved"
   const chosen = MOODS.find((m) => m.id === value.choice);
   return (
@@ -125,12 +127,12 @@ function MoodEditor({ value, onChange }) {
                 fontFamily: "inherit",
               }}
             >
-              <span style={{ fontSize: 30, lineHeight: 1 }} aria-hidden="true">
+              <span style={{ fontSize: ts(30), lineHeight: 1 }} aria-hidden="true">
                 {m.face}
               </span>
               <span
                 style={{
-                  fontSize: 18,
+                  fontSize: ts(18),
                   fontWeight: selected ? 700 : 500,
                   color: selected ? C.green : C.textMain,
                 }}
@@ -157,7 +159,7 @@ function MoodEditor({ value, onChange }) {
               borderRadius: 14,
               border: `2px solid ${C.warmGray}`,
               background: C.white,
-              fontSize: 18,
+              fontSize: ts(18),
               lineHeight: 1.55,
               fontFamily: "inherit",
               color: C.textMain,
@@ -175,7 +177,7 @@ function MoodEditor({ value, onChange }) {
                 border: `2px solid ${voice === "recording" ? C.brown : C.green}`,
                 background: voice === "recording" ? C.brown : C.white,
                 color: voice === "recording" ? C.cream : C.green,
-                fontSize: 18,
+                fontSize: ts(18),
                 fontWeight: 600,
                 fontFamily: "inherit",
                 display: "inline-flex",
@@ -187,15 +189,15 @@ function MoodEditor({ value, onChange }) {
               {voice === "recording" ? t("home.log.recording") : t("home.log.speakInstead")}
             </button>
             {voice === "saved" && (
-              <span role="status" style={{ fontSize: 18, color: C.textMuted }}>
+              <span role="status" style={{ fontSize: ts(18), color: C.textMuted }}>
                 {t("home.log.voiceKept")}
               </span>
             )}
             {voice !== "saved" && (
-              <span style={{ fontSize: 18, color: C.textMuted }}>{t("home.log.upToTwoMinutes")}</span>
+              <span style={{ fontSize: ts(18), color: C.textMuted }}>{t("home.log.upToTwoMinutes")}</span>
             )}
           </div>
-          <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
+          <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
             {t("home.log.moodPrivate")}
           </p>
         </div>
@@ -205,7 +207,7 @@ function MoodEditor({ value, onChange }) {
 }
 
 function SleepEditor({ value, onChange }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const [showTimes, setShowTimes] = useState(false);
   return (
     <div>
@@ -231,7 +233,7 @@ function SleepEditor({ value, onChange }) {
             selected={value.quality === q.id}
             onClick={() => onChange({ ...value, quality: q.id })}
           >
-            <span aria-hidden="true" style={{ fontSize: 24 }}>{q.face}</span> {t(q.labelKey)}
+            <span aria-hidden="true" style={{ fontSize: ts(24) }}>{q.face}</span> {t(q.labelKey)}
           </Chip>
         ))}
       </ChipRow>
@@ -247,7 +249,7 @@ function SleepEditor({ value, onChange }) {
           background: "none",
           border: "none",
           color: C.green,
-          fontSize: 18,
+          fontSize: ts(18),
           fontWeight: 600,
           fontFamily: "inherit",
           textDecoration: "underline",
@@ -263,7 +265,7 @@ function SleepEditor({ value, onChange }) {
             ["bed", t("home.log.wentToBed")],
             ["wake", t("home.log.wokeUp")],
           ].map(([key, label]) => (
-            <label key={key} style={{ fontSize: 18, color: C.textMain, display: "flex", flexDirection: "column", gap: 6 }}>
+            <label key={key} style={{ fontSize: ts(18), color: C.textMain, display: "flex", flexDirection: "column", gap: 6 }}>
               {label}
               <input
                 type="time"
@@ -274,7 +276,7 @@ function SleepEditor({ value, onChange }) {
                   padding: "0 12px",
                   borderRadius: 12,
                   border: `2px solid ${C.warmGray}`,
-                  fontSize: 18,
+                  fontSize: ts(18),
                   fontFamily: "inherit",
                   background: C.white,
                   color: C.textMain,
@@ -290,9 +292,9 @@ function SleepEditor({ value, onChange }) {
 
 /* An empty module is a door to Settings, never a dead end. */
 function SettingsDoor({ children }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   return (
-    <p style={{ fontSize: 18, color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
+    <p style={{ fontSize: ts(18), color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
       {children}{" "}
       <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
         {t("home.log.openSettings")}
@@ -302,7 +304,7 @@ function SettingsDoor({ children }) {
 }
 
 function MedicationEditor({ value, onChange, meds }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const taken = value.taken || [];
   const toggle = (id) =>
     onChange({
@@ -350,7 +352,7 @@ function MedicationEditor({ value, onChange, meds }) {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 20,
+                  fontSize: ts(20),
                   fontWeight: 700,
                   flexShrink: 0,
                 }}
@@ -358,11 +360,11 @@ function MedicationEditor({ value, onChange, meds }) {
                 {done ? "✓" : ""}
               </span>
               <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontSize: 19, fontWeight: 600, color: C.textMain }}>
+                <span style={{ display: "block", fontSize: ts(19), fontWeight: 600, color: C.textMain }}>
                   {med.name}
                 </span>
                 {(med.dose || med.time) && (
-                  <span style={{ display: "block", fontSize: 18, color: C.textMuted }}>
+                  <span style={{ display: "block", fontSize: ts(18), color: C.textMuted }}>
                     {[med.dose, med.time].filter(Boolean).join(" · ")}
                   </span>
                 )}
@@ -371,7 +373,7 @@ function MedicationEditor({ value, onChange, meds }) {
           );
         })}
       </div>
-      <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
         {t("home.log.medsNote")}
       </p>
     </div>
@@ -379,7 +381,7 @@ function MedicationEditor({ value, onChange, meds }) {
 }
 
 function ExerciseEditor({ value, onChange }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   return (
     <div>
       <EditorLabel>{t("home.log.moveQ")}</EditorLabel>
@@ -412,7 +414,7 @@ function ExerciseEditor({ value, onChange }) {
 }
 
 function DietEditor({ value, onChange, items }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const meals = value.meals || [];
   const toggle = (id) =>
     onChange({
@@ -432,7 +434,7 @@ function DietEditor({ value, onChange, items }) {
           </Chip>
         ))}
       </ChipRow>
-      <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
         {t("home.log.dietNote")}
       </p>
     </div>
@@ -442,7 +444,7 @@ function DietEditor({ value, onChange, items }) {
 /* ─── Custom tracker editors (Settings → "your own trackers") ─── */
 
 function TrackerEditor({ tracker, value, onChange }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   if (tracker.type === "yesno") {
     const done = !!value.done;
     return (
@@ -463,7 +465,7 @@ function TrackerEditor({ tracker, value, onChange }) {
       border: `2px solid ${C.green}`,
       background: C.white,
       color: C.green,
-      fontSize: 30,
+      fontSize: ts(30),
       fontWeight: 700,
       fontFamily: "inherit",
       display: "inline-flex",
@@ -475,7 +477,7 @@ function TrackerEditor({ tracker, value, onChange }) {
         <button type="button" onClick={() => set(count - 1)} aria-label={t("home.log.oneFewer")} style={btn}>
           −
         </button>
-        <span role="status" style={{ fontSize: 34, fontWeight: 700, color: C.green, minWidth: 60, textAlign: "center" }}>
+        <span role="status" style={{ fontSize: ts(34), fontWeight: 700, color: C.green, minWidth: 60, textAlign: "center" }}>
           {count}
         </span>
         <button type="button" onClick={() => set(count + 1)} aria-label={t("home.log.oneMore")} style={btn}>
@@ -498,7 +500,7 @@ function TrackerEditor({ tracker, value, onChange }) {
         borderRadius: 14,
         border: `2px solid ${C.warmGray}`,
         background: C.white,
-        fontSize: 18,
+        fontSize: ts(18),
         lineHeight: 1.55,
         fontFamily: "inherit",
         color: C.textMain,
@@ -509,7 +511,7 @@ function TrackerEditor({ tracker, value, onChange }) {
 }
 
 function WaterEditor({ value, onChange }) {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const glasses = value.glasses || 0;
   const set = (n) => onChange({ ...value, glasses: Math.max(0, Math.min(15, n)) });
   const btn = {
@@ -519,7 +521,7 @@ function WaterEditor({ value, onChange }) {
     border: `2px solid ${C.green}`,
     background: C.white,
     color: C.green,
-    fontSize: 30,
+    fontSize: ts(30),
     fontWeight: 700,
     fontFamily: "inherit",
     display: "inline-flex",
@@ -532,10 +534,10 @@ function WaterEditor({ value, onChange }) {
         −
       </button>
       <div style={{ textAlign: "center", minWidth: 110 }} role="status">
-        <span style={{ display: "block", fontSize: 34, fontWeight: 700, color: C.green }}>
+        <span style={{ display: "block", fontSize: ts(34), fontWeight: 700, color: C.green }}>
           {glasses}
         </span>
-        <span style={{ display: "block", fontSize: 18, color: C.textMuted }}>
+        <span style={{ display: "block", fontSize: ts(18), color: C.textMuted }}>
           {t("home.log.ofGlasses", { n: WATER_GOAL_GLASSES })}
         </span>
       </div>
@@ -661,7 +663,7 @@ function summaryFor(entry, log, prefs, t) {
 /* ─── The card ─── */
 
 export default function DailyLogCard({ log, onChange, editable, restDay, dayLabel, isToday, date }) {
-  const { t, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const prefs = useIconPrefs();
   const entries = dayEntries(prefs, date);
   const moodDone = isModuleDone("mood", log);
@@ -686,7 +688,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
         <h2
           style={{
             fontFamily: meta.fonts.heading,
-            fontSize: 25,
+            fontSize: ts(25),
             fontWeight: 700,
             color: C.brown,
             margin: 0,
@@ -694,7 +696,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
         >
           {isToday ? t("home.log.titleToday") : t("home.log.titleFor", { day: dayLabel })}
         </h2>
-        <p style={{ fontSize: 18, color: C.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>
+        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>
           {t("home.log.intro")}
         </p>
       </div>
@@ -702,7 +704,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
       {restDay && (
         <p
           style={{
-            fontSize: 18,
+            fontSize: ts(18),
             lineHeight: 1.55,
             color: C.green,
             background: "#eef3ea",
@@ -717,7 +719,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
       )}
 
       {!editable && (
-        <p style={{ fontSize: 18, color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>
           {t("home.log.settled")}
         </p>
       )}
@@ -755,17 +757,17 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
                   cursor: editable ? "pointer" : "default",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: 26 }}>{mod.icon}</span>
+                <span aria-hidden="true" style={{ fontSize: ts(26) }}>{mod.icon}</span>
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontSize: 20, fontWeight: 700, color: C.textMain }}>
+                  <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
                     {entryName(mod)}
                   </span>
-                  <span style={{ display: "block", fontSize: 18, color: done ? C.green : C.textMuted }}>
+                  <span style={{ display: "block", fontSize: ts(18), color: done ? C.green : C.textMuted }}>
                     {done ? `✓ ${summary}` : editable ? t("home.log.tapToAdd") : "—"}
                   </span>
                 </span>
                 {editable && (
-                  <span aria-hidden="true" style={{ fontSize: 18, color: C.textMuted, fontWeight: 700 }}>
+                  <span aria-hidden="true" style={{ fontSize: ts(18), color: C.textMuted, fontWeight: 700 }}>
                     {open ? "▲" : "▼"}
                   </span>
                 )}
@@ -785,7 +787,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
         })}
       </div>
 
-      <p style={{ fontSize: 18, color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
         {t("home.log.chooseHere")}{" "}
         <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
           {t("home.log.fromSettings")}

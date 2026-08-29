@@ -172,16 +172,52 @@ Tokens are **single-use and expire in 48 hours.**
 join an Icon's circle; the Icon approves with one tap. Blocking this blocks the
 most likely acquisition path.
 
-### Per-member permissions — default OFF except SOS contact
+### Per-member permissions — family defaults OPEN, opt-out in Settings
+
+**Decision, 2026-08-29 (supersedes "default OFF except SOS").** A new circle
+membership arrives with sharing ON:
 
 - SOS contact (and ordering — first, second)
 - Can see mood and daily logs
 - Can see health entries and appointments
 - Can add or edit reminders
-- Can see location — never, or only during an SOS
+- Can see location — **still `never` by default**; location is the one grant
+  that stays closed until it is asked for
+- Tell them if my days go quiet — **off by default**, offered per member
 
-Everything-visible-by-default turns a companionship app into surveillance aimed
-at the person it serves.
+The people who join an Icon's circle are their daughter, their son, the
+neighbour of thirty years. Meeting them with five switches set to "no" asked a
+79-year-old to configure a permissions matrix before their family could help,
+and the likeliest outcome was that nobody ever turned anything on. Open by
+default, said plainly, with one tap to close, serves the person better than a
+private-by-default screen nobody completes.
+
+What keeps this honest, and is required, not optional:
+
+- **One warm screen at the moment of acceptance**, in the Icon's own words:
+  "{Name} joins your circle — they'll be able to see your days, your health
+  notes, and be there for you. You can change any of this later in Settings."
+  One button. No checklist, no second step.
+- **One notification straight after**, to the Icon: "{Name} can now see your
+  days — tap to review what's shared", deep-linking to *that member's* row in
+  Settings, which opens scrolled to them.
+- **The granular editor is unchanged.** Every switch stays one tap away, for
+  anyone who wants distance.
+- **No silent migration, ever.** Existing memberships keep exactly the grants
+  they have. Nobody wakes up sharing more than they did yesterday. (Enforced
+  in migration 0037: the defaults live inside the two acceptance RPCs, on the
+  INSERT — there is no UPDATE over `circle_members` anywhere in it.)
+
+**The open edge, recorded rather than hidden:** assisted signup means the
+person tapping "Okay" may be the family member who created the account at an
+event, granting themselves access on the Icon's behalf. The notification is
+the mitigation — the Icon is told, in their own notifications, with the review
+screen one tap away — but it is a mitigation, not a fix. Revisit if assisted
+signup becomes the dominant path (QUESTIONS.md).
+
+Everything-visible-by-default *without* those four guarantees turns a
+companionship app into surveillance aimed at the person it serves. The
+guarantees are what separate the two.
 
 **Removal is one tap.** No confirmation maze, no notification to the removed
 person. Relationships sour; the Icon needs no one's permission to close a door.
@@ -273,7 +309,11 @@ a paid API — budget line alongside geocoding.
 
 ### Sharing
 
-- Everything defaults private. Circle permissions govern what Fam sees.
+- Everything defaults private to the world. Circle permissions govern what Fam
+  sees — and inside the circle, family defaults OPEN since 2026-08-29 (see
+  §My Circle: one warm screen, one notification, one tap to close, no
+  migration of existing grants). Community and links are unchanged: never
+  medication, never notes, score level only.
 - If the Icon enables it, permitted Fam get an automatic daily summary.
 - Per-day share options: Fam, friends (connections), community (score-level
   summary only — never medication or personal notes), or copy link.

@@ -381,3 +381,27 @@ outranks the community gate - flag if that reading is wrong.
    the badge boast deep-links to the booster's people-profile.
 
 ---
+
+## Circle defaults (circle lane, 2026-08-29)
+
+1. **Family circles now default OPEN** — a new membership arrives with
+   mood/daily-logs, health, reminders and the SOS slot on; location
+   alone stays `never`. User-directed decision, recorded in SPEC.md
+   §My Circle with the four guarantees that keep it honest (one warm
+   acceptance screen, one review notification deep-linking to that
+   member, the unchanged granular editor, and no migration of existing
+   rows). Migration 0037 contains no UPDATE over `circle_members`.
+2. **Open question — assisted signup.** SPEC says assisted signup is
+   first-class: a Fam member or staffer creates the account at an
+   event using the Icon's own email. That same person may therefore be
+   the one tapping "Okay" on the acceptance screen, granting
+   themselves health access. The Icon is notified and the review
+   screen is one tap away, but if assisted signup becomes the dominant
+   path this wants revisiting — perhaps defaults stay open only when
+   the Icon's session is the one that approves.
+3. **Quiet-days notice is built but not scheduled.** The per-member
+   toggle (off by default, Icon-controlled) and the sender
+   `notify_quiet_days(p_days)` both exist; nothing calls it yet.
+   Wiring it to a schedule is a product decision — how many quiet days
+   before a note, and whether staff outreach should see the same
+   signal first.

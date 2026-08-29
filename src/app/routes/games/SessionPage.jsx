@@ -30,6 +30,7 @@ import {
   boastToPeople,
   startWithBots,
   claimOpenSeat,
+  cancelSession,
   GAME_STICKERS,
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
@@ -47,9 +48,6 @@ import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stic
 const POLL_MS = 2500;
 
 export default function SessionPage() {
-  // Arriving at a table should show the top of the board, not the
-  // scroll position of the page you came from.
-  useEffect(() => { window.scrollTo(0, 0); }, []);
   const { sessionId } = useParams();
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
@@ -234,6 +232,19 @@ export default function SessionPage() {
   // never the generic board (which reads as Race to 100).
   // The LOBBY stays on the rails (invite card, picker, spoken code —
   // ludo's own screen has none of those); the board is ludo's.
+  // Called off: an invite deep-link is exactly how someone arrives here,
+  // and they deserve a sentence rather than a broken table.
+  if (session.status === "cancelled") {
+    return (
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+        <h1 style={{ fontSize: ts(28), margin: "0 0 12px", color: C.brown }}>{gameName}</h1>
+        <Card>
+          <BodyText style={{ margin: 0, fontWeight: 600 }}>{t("games.wait.calledOff")}</BodyText>
+        </Card>
+      </GamesScreen>
+    );
+  }
+
   if (session.game_key === "ludo" && session.status !== "lobby") {
     return <Navigate to={`/app/games/ludo/${session.id}`} replace />;
   }
@@ -495,8 +506,19 @@ function WaitingRoom({
           >
             🔗 {t("games.wait.share")}
           </GhostBtn>
-          <GhostBtn onClick={() => navigate("/app/games")} style={{ padding: "0 16px" }}>
-            {t("games.wait.cancel")}
+          <GhostBtn
+            disabled={busy}
+            onClick={() =>
+              isHost
+                ? act(async () => {
+                    await cancelSession(session.id);
+                    navigate("/app/games");
+                  }, t("games.wait.calledOffToast"))
+                : navigate("/app/games")
+            }
+            style={{ padding: "0 16px" }}
+          >
+            {isHost ? t("games.wait.cancel") : t("games.wait.leave")}
           </GhostBtn>
         </div>
       )}

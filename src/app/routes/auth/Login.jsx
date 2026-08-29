@@ -1,110 +1,75 @@
 /* ════════════════════════════════════════════════
-   /app/auth/login — sign in, both methods on one screen.
+   /app/auth/login — one card, one choice.
 
-   Email link for Saath-Icons and Saath-Fam (the frictionless path);
-   password for Saath-Buddies. The link request always lands on the
-   check-email screen with the same message whether or not the address
-   has an account — sign-in must never confirm which emails exist.
+   The default and frictionless path is the email sign-in link (Icons and
+   Fam never need a password). A quiet "I have a password" toggle reveals
+   the password field and turns the button into Sign in — for Buddies and
+   admins, and anyone who set one. The link request always lands on the
+   check-email screen with the same message whether or not the address has
+   an account — sign-in must never confirm which emails exist. Reset stays
+   reachable from the password state.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
-import {
-  AuthScreen,
-  Title,
-  Field,
-  Button,
-  ErrorText,
-  LinkButton,
-} from "../../components/ui.jsx";
+import { AuthScreen, Title, Field, Button, ErrorText, LinkButton } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, isValidEmail } from "../../lib/authFlow.js";
 import { rememberPostLoginPath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 
-const sectionStyle = {
-  background: C.white,
-  border: `2px solid ${C.warmGray}`,
-  borderRadius: 18,
-  padding: "24px 22px",
-  marginBottom: 20,
-};
-
 export default function Login() {
-  const { t, meta, ts } = useI18n();
+  const { t, ts } = useI18n();
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  // RequireAuth passes the page that bounced the person here; stash it
-  // so the Complete screen can send them back after sign-in — the
-  // stash survives the magic-link email round-trip, router state
-  // doesn't.
+  // RequireAuth passes the page that bounced the person here; stash it so
+  // the Complete screen can send them back after sign-in. The stash
+  // survives the magic-link email round-trip; router state doesn't.
   useEffect(() => {
     if (state?.from) rememberPostLoginPath(state.from);
   }, [state]);
 
-  const [magicEmail, setMagicEmail] = useState("");
-  const [magicError, setMagicError] = useState("");
-  const [magicBusy, setMagicBusy] = useState(false);
-
-  const [pwEmail, setPwEmail] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [pwError, setPwError] = useState("");
-  const [pwBusy, setPwBusy] = useState(false);
+  const [mode, setMode] = useState("magic"); // 'magic' | 'password'
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const h2Style = {
-    fontFamily: meta.fonts.heading,
-    fontSize: ts(22),
-    fontWeight: 700,
-    color: C.green,
-    margin: "0 0 4px",
-  };
-  const hintStyle = {
-    fontSize: ts(A11Y.minBodyPx),
-    color: C.textMuted,
-    margin: "0 0 18px",
-  };
-
-  const submitMagic = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    setMagicError("");
-    if (!isValidEmail(magicEmail)) return setMagicError(t("auth.common.errorEmail"));
-    setMagicBusy(true);
-    // Whatever happens server-side, the answer is the same "check your
-    // email" screen — never a hint about whether the account exists.
-    try {
-      await sendMagicLink(magicEmail, {}, { createUser: false });
-    } catch {
-      /* deliberate: same outcome */
-    }
-    setMagicBusy(false);
-    navigate("/app/auth/check-email", {
-      state: { email: magicEmail.trim(), kind: "magic" },
-    });
-  };
+    setError("");
 
-  const submitPassword = async (e) => {
-    e.preventDefault();
-    setPwError("");
-    if (!isValidEmail(pwEmail) || !password) {
-      return setPwError(t("auth.login.badCredentials"));
+    if (mode === "magic") {
+      if (!isValidEmail(email)) return setError(t("auth.common.errorEmail"));
+      setBusy(true);
+      // Whatever happens server-side, the answer is the same "check your
+      // email" screen — never a hint about whether the account exists.
+      try {
+        await sendMagicLink(email, {}, { createUser: false });
+      } catch {
+        /* deliberate: same outcome */
+      }
+      setBusy(false);
+      navigate("/app/auth/check-email", { state: { email: email.trim(), kind: "magic" } });
+      return;
     }
-    setPwBusy(true);
+
+    // Password mode.
+    if (!isValidEmail(email) || !password) return setError(t("auth.login.badCredentials"));
+    setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: pwEmail.trim(),
+      const { error: err } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
-      if (error) {
-        setPwError(t("auth.login.badCredentials"));
-      } else {
-        navigate("/app/auth/complete", { replace: true });
-      }
+      if (err) setError(t("auth.login.badCredentials"));
+      else navigate("/app/auth/complete", { replace: true });
     } catch {
-      setPwError(t("auth.common.errorGeneric"));
+      setError(t("auth.common.errorGeneric"));
     } finally {
-      setPwBusy(false);
+      setBusy(false);
     }
   };
 
@@ -112,57 +77,66 @@ export default function Login() {
     <AuthScreen>
       <Title>{t("auth.login.title")}</Title>
 
-      <section style={{ ...sectionStyle, marginTop: 20 }}>
-        <h2 style={h2Style}>{t("auth.login.magicTitle")}</h2>
-        <p style={hintStyle}>{t("auth.login.magicHint")}</p>
-        <form onSubmit={submitMagic} noValidate>
-          <ErrorText>{magicError}</ErrorText>
-          <Field id="login-magic-email" label={t("auth.common.emailLabel")}>
-            <input
-              id="login-magic-email"
-              type="email"
-              value={magicEmail}
-              onChange={(e) => setMagicEmail(e.target.value)}
-              autoComplete="email"
-              inputMode="email"
-            />
-          </Field>
-          <Button busy={magicBusy}>{t("auth.login.magicCta")}</Button>
-        </form>
-      </section>
+      <section
+        style={{
+          background: C.white,
+          border: `2px solid ${C.warmGray}`,
+          borderRadius: 18,
+          padding: "24px 22px",
+          marginTop: 20,
+          marginBottom: 20,
+        }}
+      >
+        <form onSubmit={submit} noValidate>
+          <ErrorText>{error}</ErrorText>
 
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>{t("auth.login.passwordTitle")}</h2>
-        <p style={hintStyle}>
-          {t("auth.login.passwordHint")}
-        </p>
-        <form onSubmit={submitPassword} noValidate>
-          <ErrorText>{pwError}</ErrorText>
-          <Field id="login-pw-email" label={t("auth.common.emailLabel")}>
+          <Field id="login-email" label={t("auth.common.emailLabel")}>
             <input
-              id="login-pw-email"
+              id="login-email"
               type="email"
-              value={pwEmail}
-              onChange={(e) => setPwEmail(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               inputMode="email"
             />
           </Field>
-          <Field id="login-pw-password" label={t("auth.common.passwordLabel")}>
-            <input
-              id="login-pw-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </Field>
-          <Button busy={pwBusy}>{t("auth.login.passwordCta")}</Button>
+
+          {mode === "password" && (
+            <Field id="login-password" label={t("auth.common.passwordLabel")}>
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                autoFocus
+              />
+            </Field>
+          )}
+
+          <Button busy={busy}>
+            {mode === "magic" ? t("auth.login.continueCta") : t("auth.login.passwordCta")}
+          </Button>
         </form>
-        <div style={{ textAlign: "center", marginTop: 10 }}>
-          <LinkButton onClick={() => navigate("/app/auth/reset")}>
-            {t("auth.login.forgot")}
-          </LinkButton>
+
+        {/* The single quiet toggle. */}
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          {mode === "magic" ? (
+            <LinkButton onClick={() => { setMode("password"); setError(""); }}>
+              {t("auth.login.havePassword")}
+            </LinkButton>
+          ) : (
+            <>
+              <LinkButton onClick={() => { setMode("magic"); setPassword(""); setError(""); }}>
+                {t("auth.login.useLinkInstead")}
+              </LinkButton>
+              <div style={{ marginTop: 6 }}>
+                <LinkButton onClick={() => navigate("/app/auth/reset")}>
+                  {t("auth.login.forgot")}
+                </LinkButton>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

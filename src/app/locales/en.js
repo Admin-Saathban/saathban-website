@@ -359,7 +359,7 @@ const en = {
       intro: "Here's how everyone you're connected with is doing.",
       connectedLabel: "Your people",
       emptyCircle:
-        "No one yet — and connecting takes a minute. Ask to join someone's circle below, or enter a code they read to you.",
+        "Connecting takes only a minute. Ask to join someone's circle below, or enter a code they read to you.",
       pendingLabel: "Waiting for a yes",
       pendingHint:
         "Your request went to {email}. If it belongs to someone on Saathban, they'll see it and can say yes with one tap.",

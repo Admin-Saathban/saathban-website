@@ -166,6 +166,19 @@ still untracked — the local build passed, every build from git
 failed. Run `git ls-files <path>` before wiring an import, and verify
 in the isolated worktree before pushing.
 
+**1b. The same trap catches STRINGS, not just modules.** A commit
+shipped code calling `games.wait.calledOff` while that key sat
+unstaged in the shared locale files — it builds, it deploys, and it
+fails as a missing string in front of a person. The rule is anything
+the code NAMES must be on the branch: imports, locale keys, RPC names,
+routes, storage buckets. Grep the branch for the identifier, not just
+the file.
+
+**1c. Only running it catches a scope error.** A handler defined in a
+parent while the button lives in the child builds perfectly and throws
+"not defined" on the first tap. Build, run, AND check the branch —
+they each catch a different class, and none substitutes for another.
+
 **2. Say which tree you verified against.** "Verified" against a dev
 server and "verified" against origin are different claims, and they
 diverged today. State which one you mean when you report a run.

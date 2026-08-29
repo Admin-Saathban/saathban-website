@@ -6,27 +6,30 @@
    Skills, Events and Community rows belong to their own build steps
    and are not built here.
 
-   All data comes from homeMock.js — no Supabase calls yet. State is
-   per-day: today and the two days behind it are editable (48-hour
-   backfill window); older days are settled.
+   Logs read from and write to Supabase daily_logs (migration 0006)
+   through logStore.js for the signed-in Icon — offline-first, with a
+   localStorage queue that syncs on reconnect. State is per-day: today
+   and the two days behind it are editable (48-hour backfill window);
+   older days are settled. Module choices (iconPrefs) stay local.
    ════════════════════════════════════════════════ */
 
 import { useMemo, useState } from "react";
 import { COLORS as C, FONTS } from "../../../shared/tokens.js";
 import {
   MOCK_ICON,
-  MOCK_PAST_DAYS,
   POINTS_PER_MODULE,
-  MOCK_LIFETIME_POINTS,
   characterLine,
   greetingForHour,
   daysAgo,
+  isoDate,
 } from "./homeMock.js";
 import CalendarStrip from "./CalendarStrip.jsx";
 import GreetingCharacter from "./GreetingCharacter.jsx";
 import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import ScoreShare from "./ScoreShare.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
+import { useSession } from "../../lib/session.jsx";
+import { useDailyLogs } from "./logStore.js";
 
 const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = [
@@ -54,20 +57,29 @@ const css = `
 `;
 
 export default function IconHome() {
-  // Logs the Icon writes this session, keyed by day offset (0 = today).
-  const [logsByOffset, setLogsByOffset] = useState({ 0: {}, "-1": {}, "-2": {} });
+  const { profile } = useSession();
+  // RequireAuth guarantees an Icon profile here; the fallback only
+  // covers the first render of edge navigations.
+  const iconId = profile?.id ?? null;
+  const firstName = (profile?.full_name || MOCK_ICON.firstName).split(" ")[0];
+
+  const { logsByDate, writeEntry, status, pendingCount, lifetimePoints } =
+    useDailyLogs(iconId);
   const [selectedOffset, setSelectedOffset] = useState(0);
+  // Rest day is a gentle UI state, not a daily_logs module — it stays
+  // per-session until the schema gives it a home.
   const [restToday, setRestToday] = useState(false);
 
   const prefs = useIconPrefs();
-  const todayLog = logsByOffset[0];
+  const logFor = (offset) => logsByDate[isoDate(daysAgo(-offset))] || {};
+  const todayLog = logFor(0);
   const todayEntries = dayEntries(prefs, new Date());
   const doneToday = todayEntries.filter((e) => isEntryDone(e, todayLog)).length;
   const pointsToday = doneToday * POINTS_PER_MODULE;
 
-  // Something logged on a given (possibly backfilled) day this session?
+  // Something logged on a given day — server rows and local writes alike.
   const anyLoggedOn = (offset) => {
-    const log = logsByOffset[offset] || {};
+    const log = logFor(offset);
     return dayEntries(prefs, daysAgo(-offset)).some((e) => isEntryDone(e, log));
   };
 
@@ -75,31 +87,26 @@ export default function IconHome() {
   const missedDays = useMemo(() => {
     let n = 0;
     for (let off = -1; off >= -6; off--) {
-      const past = MOCK_PAST_DAYS[String(off)];
-      if (anyLoggedOn(off) || (past && (past.modulesLogged > 0 || past.restDay))) break;
+      if (anyLoggedOn(off)) break;
       n++;
     }
     return n;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logsByOffset, prefs]);
+  }, [logsByDate, prefs]);
 
   const days = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
         const offset = i - 6;
-        const past = MOCK_PAST_DAYS[String(offset)];
         return {
           offset,
           date: daysAgo(-offset),
-          logged:
-            offset === 0
-              ? doneToday > 0
-              : anyLoggedOn(offset) || (past?.modulesLogged || 0) > 0,
-          restDay: offset === 0 ? restToday : !!past?.restDay,
+          logged: offset === 0 ? doneToday > 0 : anyLoggedOn(offset),
+          restDay: offset === 0 && restToday,
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [logsByOffset, doneToday, restToday, prefs]
+    [logsByDate, doneToday, restToday, prefs]
   );
 
   const now = new Date();
@@ -115,15 +122,12 @@ export default function IconHome() {
     moodId: todayLog.mood?.choice,
     doneCount: doneToday,
     missedDays,
-    firstName: MOCK_ICON.firstName,
+    firstName,
     restDay: restToday,
   });
 
-  const updateLog = (moduleId, value) =>
-    setLogsByOffset((prev) => ({
-      ...prev,
-      [selectedOffset]: { ...prev[selectedOffset], [moduleId]: value },
-    }));
+  const updateLog = (moduleKey, value) =>
+    writeEntry(isoDate(selectedDate), moduleKey, value);
 
   return (
     <main
@@ -154,7 +158,7 @@ export default function IconHome() {
         <div className="ih-card">
           <GreetingCharacter
             greeting={greetingForHour(now.getHours())}
-            name={MOCK_ICON.firstName}
+            name={firstName}
             line={line}
           />
         </div>
@@ -197,7 +201,7 @@ export default function IconHome() {
         <div className="ih-card">
           <DailyLogCard
             key={selectedOffset}
-            log={logsByOffset[selectedOffset] || {}}
+            log={logFor(selectedOffset)}
             onChange={updateLog}
             editable={selectedOffset >= -2}
             restDay={selectedOffset === 0 && restToday}
@@ -206,12 +210,29 @@ export default function IconHome() {
           />
         </div>
 
+        {/* Sync standing — only speaks when something is still on its way.
+            A fact about the device, never a worry about the person. */}
+        {(pendingCount > 0 || status === "local") && (
+          <p
+            role="status"
+            style={{
+              fontSize: 18,
+              lineHeight: 1.5,
+              color: C.textMuted,
+              margin: "-8px 0 14px",
+              paddingInlineStart: 4,
+            }}
+          >
+            ✓ Saved on this phone — it syncs on its own once you're back online.
+          </p>
+        )}
+
         <div className="ih-card">
           <ScoreShare
             points={pointsToday}
             doneCount={doneToday}
             totalModules={todayEntries.length}
-            lifetimePoints={MOCK_LIFETIME_POINTS}
+            lifetimePoints={lifetimePoints ?? 0}
             restDay={restToday}
             onToggleRest={() => setRestToday((r) => !r)}
             editable

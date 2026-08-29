@@ -78,19 +78,9 @@ export const BADGES = [
   { name: "Mountain Quiet", at: 2000 },
 ];
 
-// Lifetime points before today (mock).
-export const MOCK_LIFETIME_POINTS = 210;
-
-// ─── Past days (mock) ───
-// Keyed by offset-from-today. Days -1 and -2 are deliberately empty so the
-// character greets with "welcome back", never guilt. Day -4 was a rest day —
-// it counts as showing up, exactly like a fully logged day.
-export const MOCK_PAST_DAYS = {
-  "-6": { modulesLogged: 5 },
-  "-5": { modulesLogged: 4 },
-  "-4": { restDay: true, modulesLogged: 0 },
-  "-3": { modulesLogged: 6 },
-};
+// Past days and lifetime points now come from Supabase daily_logs —
+// see logStore.js. What remains in this file is the screen's copy,
+// the module/choice definitions, and the character's tone matrix.
 
 // ─── Character tone matrix (SPEC.md, "Points, character, celebrations") ───
 // Mood is asked first precisely so this can be mood-aware.

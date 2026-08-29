@@ -88,6 +88,7 @@ const rest = async (path) => (await fetch(`${SUPA}/rest/v1/${path}`, { headers: 
 const drop = (id) => rpc("leave_game_session", { p_session: id });
 
 // The registry decides what gets tested — not a list maintained here.
+const createdHere = [];
 const games = await rest("games?select=key,name_en,kind,min_seats,timeout_style&enabled=eq.true");
 const turnGames = games.filter((g) => g.kind === "turns");
 console.log(`registry: ${turnGames.length} turn-based games\n`);
@@ -106,6 +107,7 @@ for (const g of turnGames) {
     continue;
   }
   const id = created.body;
+  createdHere.push(id);
   const bots = await rpc("start_with_bots", { p_session: id });
 
   if (g.timeout_style === "bot_plays") {
@@ -135,14 +137,64 @@ for (const g of turnGames) {
 /* A cleanup that is not verified is not a cleanup. Prove the suite left
    nothing live behind on the account it borrows — the exact failure this
    file shipped with. */
+/* Scoped to tables THIS run created: another lane's litter on the
+   shared account must not fail our suite, nor mask it. The account-wide
+   number is printed as a note — it is also a live proof the query can
+   see live tables at all. */
 const mine = await rest(
   `game_sessions?select=id,status&created_by=eq.${session.user.id}&status=in.(lobby,active)`
 );
+const ours = (mine || []).filter((m) => createdHere.includes(m.id));
 check(
   "suite leaves no live table behind",
-  (mine || []).length === 0,
-  `${(mine || []).length} still live: ${(mine || []).map((m) => m.id.slice(0, 8)).join(", ")}`
+  ours.length === 0,
+  `${ours.length} of ours still live` +
+    ` (account-wide live: ${(mine || []).length}` +
+    `${(mine || []).length ? " — not ours, left for their owner" : ""})`
 );
+
+/* ── The invariant, not the route ──────────────────────────────────
+   The two checks above exercise start_with_bots, because that is the
+   door 0043 closed — and a test written from a fix inherits that
+   fix's blind spot. leave_game_session seats a bot too (its active
+   branch converts the leaver's seat) and nothing here would ever have
+   noticed. So assert the END STATE instead, reached by any route:
+   a live table in a game with no bot player must never contain a bot
+   seat. This covers doors nobody has thought of yet.
+
+   NOTE: this is expected to FAIL until 0044 lands — seven such tables
+   exist right now, created through leave after 0043. That is the
+   point: it is a live invariant violation, and it will go green when
+   0044 remediates them rather than because anyone edited this file. */
+const passTurnGames = games.filter((g) => g.timeout_style === "pass_turn").map((g) => g.key);
+if (passTurnGames.length) {
+  const live = await rest(
+    `game_sessions?select=id,game_key,status,game_seats(is_bot)` +
+      `&game_key=in.(${passTurnGames.join(",")})&status=in.(lobby,active)`
+  );
+  /* UNREADABLE IS NOT CLEAN. Every real session has seats, so an empty
+     seat array means RLS hid them, not that none exist — and that is
+     exactly what happens here: once this account's own seat is converted
+     to a bot it is no longer a participant, so it can no longer read the
+     seats of the very table that proves the bug. Counting that as "no
+     bots found" is how this check first reported the invariant holding
+     while seven violations sat in front of it. Blind rows are reported
+     as unverifiable and FAIL the check; they are not passes. */
+  const offenders = (live || []).filter((s) => (s.game_seats || []).some((seat) => seat.is_bot));
+  const blind = (live || []).filter((s) => (s.game_seats || []).length === 0);
+  check(
+    "invariant: no live table in a bot-less game holds a bot seat",
+    offenders.length === 0 && blind.length === 0,
+    offenders.length || blind.length
+      ? `${offenders.length} with a bot seat, ${blind.length} unverifiable (seats hidden by RLS — not clean)` +
+        `; reachable via leave_game_session until 0044`
+      : "none, by any route"
+  );
+}
+
+/* A run that ends early must not read as a short clean one
+   (agreement 11). */
+console.log("\nsuite completed — all sections ran");
 
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

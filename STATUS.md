@@ -252,6 +252,19 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**12. Unreadable is not clean, and a test written from a fix
+inherits that fix's blind spot.** Two lessons that met in one check.
+A suite guarding `start_with_bots` could never notice that
+`leave_game_session` seats bots through a different door — so assert
+the INVARIANT ("no live table in a bot-less game holds a bot seat")
+reached by any route, not the RPC the fix happened to touch. And when
+that invariant was written, it read RLS-hidden rows as empty and
+reported the invariant HOLDING while seven violations sat in front of
+it: this account's own seat had been converted to a bot, so it was no
+longer a participant and could no longer read the seats proving the
+bug. A row you cannot see is UNVERIFIABLE and must fail, never pass.
+Silence is not evidence of absence.
+
 **11. A crash before the cleanup is a SILENT skip — isolate every
 case.** A suite threw on its fourth case, so cases five and six, all
 the drops, and the final leaves-nothing-live assertion never ran. The

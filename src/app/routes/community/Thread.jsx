@@ -30,6 +30,8 @@ import { CommunityScreen, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx
 import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
 import { startCarromInThread } from "../games/carrom/rails.js";
 import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
+import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 
 export default function Thread() {
   const { requestId } = useParams();
@@ -38,6 +40,7 @@ export default function Thread() {
   const myId = profile?.id;
   const carrom = CARROM[lang] || CARROM.en;
   const [starting, setStarting] = useState(false);
+  const [stickersOpen, setStickersOpen] = useState(false);
 
   const [request, setRequest] = useState(undefined); // undefined loading, null missing
   const [messages, setMessages] = useState([]);
@@ -157,7 +160,8 @@ export default function Thread() {
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === myId;
-            const moneyFlag = !mine && m.body && MONEY_PATTERN.test(m.body);
+            const stickerId = parseStickerRef(m.body);
+            const moneyFlag = !mine && !stickerId && m.body && MONEY_PATTERN.test(m.body);
 
             /* A game attachment renders the live board inline — full
                width, the conversation continuing beneath. */
@@ -202,21 +206,27 @@ export default function Thread() {
                     ⚠ {t("community.dm.moneyWarning")}
                   </div>
                 )}
-                <div
-                  style={{
-                    background: mine ? C.green : C.white,
-                    color: mine ? C.cream : C.textMain,
-                    border: mine ? "none" : `1.5px solid ${C.warmGray}`,
-                    borderRadius: 16,
-                    padding: "10px 16px",
-                    fontSize: ts(A11Y.minBodyPx),
-                    lineHeight: 1.5,
-                    overflowWrap: "anywhere",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {m.body}
-                </div>
+                {stickerId ? (
+                  /* Brand sticker (stickers lane's :sticker/<id>:
+                     convention) — large and joyful, no bubble. */
+                  <Sticker id={stickerId} size={96} />
+                ) : (
+                  <div
+                    style={{
+                      background: mine ? C.green : C.white,
+                      color: mine ? C.cream : C.textMain,
+                      border: mine ? "none" : `1.5px solid ${C.warmGray}`,
+                      borderRadius: 16,
+                      padding: "10px 16px",
+                      fontSize: ts(A11Y.minBodyPx),
+                      lineHeight: 1.5,
+                      overflowWrap: "anywhere",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {m.body}
+                  </div>
+                )}
                 {/* Report is a safety affordance: full 48px target,
                     full 18px text (QUALITY_REPORT §3 must-fix). */}
                 {!mine && (
@@ -253,10 +263,43 @@ export default function Thread() {
           maxLength={2000}
           style={{ flex: 1 }}
         />
+        <button
+          type="button"
+          aria-label={t("games.chat.stickers")}
+          aria-expanded={stickersOpen}
+          onClick={() => setStickersOpen((v) => !v)}
+          style={{
+            minWidth: A11Y.minTapTargetPx,
+            minHeight: A11Y.minTapTargetPx,
+            fontSize: 24,
+            background: C.white,
+            border: `2px solid ${C.warmGray}`,
+            borderRadius: 12,
+            cursor: "pointer",
+          }}
+        >
+          🌸
+        </button>
         <PrimaryBtn type="submit" onClick={send} disabled={!body.trim()}>
           {t("community.dm.threadSend")}
         </PrimaryBtn>
       </form>
+      {stickersOpen && (
+        <div style={{ marginTop: 10 }}>
+          <StickerPicker
+            label={t("games.chat.stickers")}
+            onPick={async (id) => {
+              setStickersOpen(false);
+              try {
+                await sendMessage(requestId, myId, stickerRef(id));
+                await load();
+              } catch {
+                setError(t("community.dm.sendError"));
+              }
+            }}
+          />
+        </div>
+      )}
 
       <Toast text={toast} />
     </CommunityScreen>

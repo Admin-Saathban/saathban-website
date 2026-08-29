@@ -5,8 +5,8 @@ the palette (chai, roses, dua hands, the sprout, crescent, Nastaliq
 calligraphy words — MashaAllah / Shabash / Jeetay Raho / Wah Wah /
 Salaam / Shukriya — and game reactions for captures, wins, near-misses
 and gentle teasing). Currently wired: **Ludo game chat**, **people DM threads**, **rails
-session chat**, and **group chat**. Community DMs remain: three lines,
-below.
+session chat**, **group chat**, and **community DM threads**. Every
+chat surface has now adopted.
 
 ## Wire protocol
 

@@ -24,6 +24,8 @@ import {
 } from "../../lib/circle.js";
 import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
 import { MOOD_BY_VALUE } from "./famCopy.js";
+import AreaCards from "../../components/AreaCards.jsx";
+import YourTurnChips from "../games/YourTurnChips.jsx";
 
 const MOOD_CLASS = ["mood", "sleep", "exercise", "diet", "water"];
 
@@ -240,6 +242,24 @@ export default function FamDashboard() {
       <BodyText muted style={{ marginBottom: 4 }}>
         {t("fam.dashboard.intro")}
       </BodyText>
+
+      {/* Fam plays too: chips when a table waits on them. */}
+      <YourTurnChips />
+
+      {/* Every role's home surfaces everything the role can reach —
+          Fam takes part in games, events, groups, community, skills. */}
+      <div style={{ margin: "14px 0 6px" }}>
+        <AreaCards
+          cards={[
+            { to: "/app/games", emoji: "🎲", key: "hub.games" },
+            { to: "/app/events", emoji: "🎪", key: "hub.events" },
+            { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
+            { to: "/app/community", emoji: "🪷", key: "hub.community" },
+            { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
+            { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
+          ]}
+        />
+      </div>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

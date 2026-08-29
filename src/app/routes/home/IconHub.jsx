@@ -33,7 +33,9 @@ import YourTurnChips from "../games/YourTurnChips.jsx";
    (SPEC.md, "The empty circle" — the page itself renders the door). */
 const CARDS = [
   { to: "/app/community", emoji: "🪷", key: "hub.community" },
+  { to: "/app/games", emoji: "🎲", key: "hub.games" },
   { to: "/app/events", emoji: "🎪", key: "hub.events" },
+  { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
   { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
   { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
   { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },

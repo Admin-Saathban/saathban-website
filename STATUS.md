@@ -70,6 +70,14 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
 ## Round log
+- **Role-home navigation round (user testing):** new rule adopted —
+  every role's home surfaces everything that role can reach, via the
+  shared AreaCards component (hub card style). Fam dashboard gains
+  YourTurnChips + cards for Games, Events, Groups, Community, Skills,
+  Notifications. Buddy home gains Events/Skills/Notifications for any
+  Buddy, plus Community/Games/Groups + chips once ACTIVE (verified
+  gated-absent on the pending fixture). Icon hub itself was missing
+  Games and Groups cards — added (audit catch).
 - **Groups + stickers wiring:** groups/* registered in AppRoot per
   GROUPS_WIRING (the lane had shipped routes + moderation but no
   registration); sticker picker adopted in the rails session chat and

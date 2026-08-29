@@ -33,6 +33,8 @@ import {
   cooldownDaysLeft,
   uploadBuddyDocument,
 } from "../vetting/supabaseVetting.js";
+import AreaCards from "../../components/AreaCards.jsx";
+import YourTurnChips from "../games/YourTurnChips.jsx";
 
 const STATUS_LINE = {
   pending: "Your application is with the review team.",
@@ -293,6 +295,28 @@ export default function BuddyHome() {
               </div>
             </section>
           )}
+
+          {/* Every role's home surfaces everything the role can
+              reach. Events, skills and notifications are open to any
+              signed-in Buddy; community, games and groups open once
+              vetting reaches active (the can_use_community gate). */}
+          {status === "active" && <YourTurnChips />}
+          <div style={{ marginTop: 6 }}>
+            <AreaCards
+              cards={[
+                ...(status === "active"
+                  ? [
+                      { to: "/app/community", emoji: "🪷", key: "hub.community" },
+                      { to: "/app/games", emoji: "🎲", key: "hub.games" },
+                      { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
+                    ]
+                  : []),
+                { to: "/app/events", emoji: "🎪", key: "hub.events" },
+                { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
+                { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
+              ]}
+            />
+          </div>
         </div>
       </main>
     </>

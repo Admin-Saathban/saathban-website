@@ -20,7 +20,7 @@ import { StatusChip, FlagBadge, fmtDate } from "./ui.jsx";
 const TABS = [...PIPELINE, "suspended", "rejected"];
 
 export default function BuddyQueue() {
-  const { applications } = useOutletContext();
+  const { applications, loading } = useOutletContext();
   const navigate = useNavigate();
   const [tab, setTab] = useState("pending");
 
@@ -107,6 +107,7 @@ export default function BuddyQueue() {
       {/* ─── Queue table ─── */}
       {rows.length === 0 ? (
         <div
+          aria-busy={loading}
           style={{
             background: C.white,
             border: `1px solid ${C.warmGray}`,
@@ -116,7 +117,9 @@ export default function BuddyQueue() {
             color: C.textMuted,
           }}
         >
-          Nothing waiting under “{STATUS_LABELS[tab]}” right now.
+          {loading
+            ? "Loading applications…"
+            : `Nothing waiting under “${STATUS_LABELS[tab]}” right now.`}
         </div>
       ) : (
         <div

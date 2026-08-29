@@ -1,120 +1,89 @@
 /* ════════════════════════════════════════════════
-   /app/admin — layout shell and the mock data store.
+   /app/admin — layout shell over REAL data.
 
-   All admin state lives here as plain React state seeded from
-   ./data.js, passed to child routes via Outlet context. NO Supabase
-   calls in this lane yet — every action below mutates local state in
-   the same shape the real RPC/update would, so wiring the backend later
-   replaces the bodies of these callbacks and nothing else.
+   RequireAuth (AppRoot) already guarantees a signed-in admin profile;
+   this layout reads it from useSession() — who you are and your level
+   (support / super) come from the profiles row, not a switcher.
 
-   Mirrored server behaviour worth knowing about (0004_buddy_vetting.sql):
-   every status change appends an audit entry — the mock does the same,
-   so the detail view's audit trail behaves like production.
-
-   There is no auth yet either; the header carries a mock identity
-   switcher for the two admin levels (support / super) so scoping can be
-   exercised in the UI before it is enforced anywhere.
+   Applications load from Supabase through ./api.js; every action
+   awaits its real write and then refetches, so what the reviewer sees
+   is always what the database holds (including trigger-stamped fields
+   like decided_at and reviewed_by). Moderation stays a mock skeleton —
+   no reports table exists until build step 11.
    ════════════════════════════════════════════════ */
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
-import { MOCK_APPLICATIONS, MOCK_REPORTS, MOCK_ADMINS } from "./data.js";
+import { useSession } from "../../lib/session.jsx";
+import { MOCK_REPORTS } from "./data.js";
+import * as api from "./api.js";
 
 export default function AdminLayout() {
-  const [applications, setApplications] = useState(MOCK_APPLICATIONS);
+  const { profile } = useSession();
+  const admin = {
+    id: profile.id,
+    name: profile.full_name,
+    level: profile.admin_level, // 'support' | 'super'
+  };
+
+  const [applications, setApplications] = useState(null); // null = loading
+  const [loadError, setLoadError] = useState(null);
   const [reports, setReports] = useState(MOCK_REPORTS);
-  const [admin, setAdmin] = useState(MOCK_ADMINS[0]);
 
-  // ─── Actions (the future Supabase surface) ───
-  const actions = useMemo(() => {
-    const patchApp = (id, fn) =>
-      setApplications((apps) => apps.map((a) => (a.id === id ? fn(a) : a)));
+  const reload = useCallback(async () => {
+    try {
+      setLoadError(null);
+      setApplications(await api.fetchApplications());
+    } catch (e) {
+      setLoadError(e.message || "Could not load applications.");
+      setApplications([]);
+    }
+  }, []);
 
-    return {
-      // Status transitions audit-log automatically, mirroring the
-      // on_buddy_status_change trigger.
-      setStatus(id, to, note) {
-        patchApp(id, (a) => ({
-          ...a,
-          status: to,
-          review_notes: note || a.review_notes,
-          reviewed_by: admin.id,
-          decided_at: ["rejected", "active", "suspended"].includes(to)
-            ? new Date().toISOString()
-            : a.decided_at,
-          audit: [
-            ...a.audit,
-            {
-              at: new Date().toISOString(),
-              actor: admin.name,
-              action: "Status change",
-              from: a.status,
-              to,
-              note: note || null,
-            },
-          ],
-        }));
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  // Every mutation is a real write, then a refetch. Errors bubble to
+  // the calling screen, which shows them next to the control used.
+  const actions = useMemo(
+    () => ({
+      async setStatus(id, to, note) {
+        await api.setApplicationStatus(id, to, note);
+        await reload();
       },
-
-      toggleFlag(id, flagKey) {
-        patchApp(id, (a) => ({
-          ...a,
-          reviewer_flags: a.reviewer_flags.includes(flagKey)
-            ? a.reviewer_flags.filter((f) => f !== flagKey)
-            : [...a.reviewer_flags, flagKey],
-        }));
+      async toggleFlag(app, flagKey) {
+        const flags = app.reviewer_flags.includes(flagKey)
+          ? app.reviewer_flags.filter((f) => f !== flagKey)
+          : [...app.reviewer_flags, flagKey];
+        await api.setReviewerFlags(app.id, flags);
+        await reload();
       },
-
-      saveReviewNotes(id, notes) {
-        patchApp(id, (a) => ({ ...a, review_notes: notes }));
+      async saveReviewNotes(id, notes) {
+        await api.saveReviewNotes(id, notes);
+        await reload();
       },
-
-      // "The collection is not the safeguard; the call is."
-      recordReferenceCall(id, refId, callNotes) {
-        patchApp(id, (a) => ({
-          ...a,
-          references: a.references.map((r) =>
-            r.id === refId
-              ? {
-                  ...r,
-                  called_at: new Date().toISOString(),
-                  called_by: admin.id,
-                  call_notes: callNotes || null,
-                }
-              : r
-          ),
-        }));
+      async recordReferenceCall(refId, callNotes) {
+        await api.recordReferenceCall(refId, admin.id, callNotes);
+        await reload();
       },
-
-      requestDocument(id, type, note) {
-        patchApp(id, (a) => ({
-          ...a,
-          document_requests: [
-            ...a.document_requests,
-            {
-              id: `doc-${Date.now()}`,
-              type,
-              note: note || null,
-              requested_at: new Date().toISOString(),
-              requested_by: admin.id,
-              status: "awaiting",
-            },
-          ],
-        }));
+      // Real, audited write via admin_contact_icon (see api.js).
+      async requestDocument(applicantId, type, note) {
+        await api.requestDocument(applicantId, type, note);
       },
-
+      // Moderation is still the mock skeleton.
       resolveReport(id, resolution) {
         setReports((rs) =>
-          rs.map((r) =>
-            r.id === id ? { ...r, status: "resolved", resolution } : r
-          )
+          rs.map((r) => (r.id === id ? { ...r, status: "resolved", resolution } : r))
         );
       },
-    };
-  }, [admin]);
+    }),
+    [admin.id, reload]
+  );
 
-  const openBuddyCount = applications.filter((a) =>
+  const apps = applications ?? [];
+  const openBuddyCount = apps.filter((a) =>
     ["pending", "interviewing"].includes(a.status)
   ).length;
   const openReportCount = reports.filter((r) => r.status === "open").length;
@@ -259,34 +228,57 @@ export default function AdminLayout() {
             background: C.white,
           }}
         >
-          <span style={{ fontSize: 16, color: C.textMuted }}>
-            Signed in as (mock)
+          <span style={{ fontSize: 17 }}>
+            <strong>{admin.name}</strong>
+            <span style={{ color: C.textMuted }}>
+              {" · "}
+              {admin.level === "super" ? "Super-admin" : "Support admin"}
+            </span>
           </span>
-          {MOCK_ADMINS.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => setAdmin(a)}
-              style={{
-                minHeight: A11Y.minTapTargetPx,
-                padding: "0 18px",
-                borderRadius: 10,
-                border: `2px solid ${admin.id === a.id ? C.green : C.warmGray}`,
-                background: admin.id === a.id ? C.green : C.white,
-                color: admin.id === a.id ? C.cream : C.textMain,
-                fontFamily: FONTS.sans,
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {a.name} · {a.level === "super" ? "Super-admin" : "Support admin"}
-            </button>
-          ))}
         </header>
 
         <main style={{ flex: 1, padding: "30px 32px", minWidth: 0 }}>
-          <Outlet context={{ applications, reports, admin, actions }} />
+          {loadError && (
+            <p
+              role="alert"
+              style={{
+                border: `2px solid ${C.brown}`,
+                borderRadius: 10,
+                padding: "12px 16px",
+                color: C.brown,
+                fontWeight: 600,
+                marginBottom: 18,
+              }}
+            >
+              {loadError}{" "}
+              <button
+                type="button"
+                onClick={reload}
+                style={{
+                  minHeight: A11Y.minTapTargetPx,
+                  border: "none",
+                  background: "none",
+                  color: C.green,
+                  fontSize: 17,
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  fontFamily: FONTS.sans,
+                }}
+              >
+                Try again
+              </button>
+            </p>
+          )}
+          <Outlet
+            context={{
+              applications: apps,
+              loading: applications === null,
+              reports,
+              admin,
+              actions,
+            }}
+          />
         </main>
       </div>
     </div>

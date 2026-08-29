@@ -1,22 +1,26 @@
 /* ════════════════════════════════════════════════
-   /app/admin/buddies/:id — one application, in full.
+   /app/admin/buddies/:id — one application, in full, on REAL data.
 
    Layout follows the reviewer's actual reading order from SPEC.md:
-   motivation FIRST ("the field the reviewer reads first"), then
-   identity, profile, experience, declarations, references (with the
-   call actually recorded — the call is the safeguard, not the
-   collection), the red-flag checklist, document requests, prior
-   attempts by the same applicant, and the audit trail.
+   motivation FIRST, then identity, profile, declarations, references
+   (recording the call is a real UPDATE — the call is the safeguard),
+   the red-flag checklist, document requests, prior attempts by the
+   same applicant, and the audit trail.
 
-   Decisions live in one place on the right: advance along the
-   pipeline, or the deliberate exits (suspend / reject). Rejection
-   requires a typed reason — it becomes the audit entry and drives the
-   90-day reapply cooldown server-side.
+   Writes go through the layout's actions (→ api.js → Supabase):
+   - Advance / suspend / reject: UPDATE buddy_applications.status; the
+     DB trigger writes the audit entry and stamps decided_at and
+     reviewed_by. Rejection requires a typed reason — it becomes the
+     audit reason and drives the 90-day reapply cooldown server-side.
+   - Document requests: rpc admin_contact_icon — an audited in-app
+     notification to the applicant (no documents table exists yet).
 
-   Mock data only; every action goes through the AdminLayout store.
+   Scoping: the audit trail is super-admin only (0003 RLS). Support
+   admins get a scope notice — never an empty list pretending to be
+   history.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import {
@@ -26,6 +30,7 @@ import {
   RED_FLAGS,
   DOCUMENT_TYPES,
 } from "./data.js";
+import { fetchAuditTrail } from "./api.js";
 import {
   Card,
   Field,
@@ -52,19 +57,39 @@ const inputStyle = {
 
 export default function BuddyApplication() {
   const { id } = useParams();
-  const { applications, actions } = useOutletContext();
+  const { applications, loading, admin, actions } = useOutletContext();
 
   const app = applications.find((a) => a.id === id);
+
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState(null);
   const [rejectNote, setRejectNote] = useState("");
   const [notesDraft, setNotesDraft] = useState(null); // null = not editing
   const [callDraft, setCallDraft] = useState({}); // refId -> notes text
   const [docType, setDocType] = useState(DOCUMENT_TYPES[0]);
   const [docNote, setDocNote] = useState("");
+  const [docsSent, setDocsSent] = useState([]); // this session's sends
+  const [audit, setAudit] = useState(null); // null = not loaded
+
+  const isSuper = admin.level === "super";
+
+  // Audit trail: super-admin scope. Support never queries — RLS would
+  // silently return [], which must not read as "no history".
+  useEffect(() => {
+    let alive = true;
+    if (!isSuper || !app) return undefined;
+    fetchAuditTrail(app.applicant_id)
+      .then((rows) => alive && setAudit(rows))
+      .catch(() => alive && setAudit(null));
+    return () => {
+      alive = false;
+    };
+  }, [isSuper, app?.applicant_id, app?.status]); // refetch after transitions
 
   if (!app) {
     return (
       <div>
-        <p>No application with id “{id}”.</p>
+        <p>{loading ? "Loading…" : `No application with id “${id}”.`}</p>
         <Link to=".." style={{ color: C.green }}>
           ← Back to the queue
         </Link>
@@ -72,12 +97,27 @@ export default function BuddyApplication() {
     );
   }
 
+  const run = async (fn) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await fn();
+      return true;
+    } catch (e) {
+      setActionError(e.message || "That didn't save. Please try again.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const priorAttempts = applications
     .filter((a) => a.applicant_id === app.applicant_id && a.id !== app.id)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
+  const refs = app.references || [];
   const next = NEXT_STATUS[app.status];
-  const callsDone = app.references.filter((r) => r.called_at).length;
+  const callsDone = refs.filter((r) => r.called_at).length;
   const advanceBlockedByCalls = next === "probation" && callsDone < 2;
 
   return (
@@ -143,6 +183,22 @@ export default function BuddyApplication() {
         <PipelineStepper status={app.status} pipeline={PIPELINE} />
       </div>
 
+      {actionError && (
+        <p
+          role="alert"
+          style={{
+            border: `2px solid ${C.brown}`,
+            borderRadius: 10,
+            padding: "12px 16px",
+            color: C.brown,
+            fontWeight: 600,
+            marginBottom: 18,
+          }}
+        >
+          {actionError}
+        </p>
+      )}
+
       {/* ─── Two-column body ─── */}
       <div
         style={{
@@ -183,8 +239,9 @@ export default function BuddyApplication() {
               </Field>
               <Field label="Phone">{app.phone}</Field>
               {/* Sensitive documents live in the PRIVATE buddy-documents
-                  bucket. These placeholders will become signed-URL image
-                  views; nothing here may ever be a public URL. */}
+                  bucket. These placeholders become signed-URL image views
+                  once uploads exist; the signed-URL fetch is where
+                  app-level read logging will fire. Never a public URL. */}
               <Field label="CNIC photo">
                 <DocPlaceholder path={app.cnic_photo_path} />
               </Field>
@@ -250,7 +307,7 @@ export default function BuddyApplication() {
                   color: callsDone === 2 ? C.green : C.brown,
                 }}
               >
-                {callsDone} of 2 called
+                {callsDone} of {refs.length || 2} called
               </span>
             }
           >
@@ -259,7 +316,7 @@ export default function BuddyApplication() {
               the safeguard — the call is.
             </p>
             <div style={{ display: "grid", gap: 14 }}>
-              {app.references.map((r) => (
+              {refs.map((r) => (
                 <div
                   key={r.id}
                   style={{
@@ -311,11 +368,13 @@ export default function BuddyApplication() {
                       <div>
                         <AdminBtn
                           kind="outline"
+                          disabled={busy}
                           onClick={() =>
-                            actions.recordReferenceCall(
-                              app.id,
-                              r.id,
-                              (callDraft[r.id] || "").trim()
+                            run(() =>
+                              actions.recordReferenceCall(
+                                r.id,
+                                (callDraft[r.id] || "").trim()
+                              )
                             )
                           }
                         >
@@ -379,17 +438,25 @@ export default function BuddyApplication() {
             )}
           </Card>
 
-          {/* ─── Audit trail (mirrors the DB status-change trigger) ─── */}
+          {/* ─── Audit trail: super-admin scope (0003) ─── */}
           <Card title="Audit trail">
-            {app.audit.length === 0 ? (
+            {!isSuper ? (
               <p style={{ margin: 0, color: C.textMuted }}>
-                No status changes recorded yet.
+                The audit trail is super-admin scope. Status changes are still
+                recorded automatically — a super-admin can review who moved
+                what, when, and why.
+              </p>
+            ) : audit === null ? (
+              <p style={{ margin: 0, color: C.textMuted }}>Loading…</p>
+            ) : audit.length === 0 ? (
+              <p style={{ margin: 0, color: C.textMuted }}>
+                No entries for this applicant yet.
               </p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                {app.audit.map((e, i) => (
+                {audit.map((e) => (
                   <div
-                    key={i}
+                    key={e.id}
                     style={{
                       display: "flex",
                       gap: 12,
@@ -399,14 +466,19 @@ export default function BuddyApplication() {
                     }}
                   >
                     <span style={{ color: C.textMuted, whiteSpace: "nowrap" }}>
-                      {fmtDateTime(e.at)}
+                      {fmtDateTime(e.created_at)}
                     </span>
                     <span>
-                      <strong>{e.actor}</strong> moved{" "}
-                      {STATUS_LABELS[e.from] || e.from} →{" "}
-                      <strong>{STATUS_LABELS[e.to] || e.to}</strong>
-                      {e.note && (
-                        <span style={{ color: C.textMuted }}> — {e.note}</span>
+                      <strong>{e.action}</strong>
+                      {e.detail?.from && e.detail?.to && (
+                        <>
+                          {" "}
+                          {STATUS_LABELS[e.detail.from] || e.detail.from} →{" "}
+                          <strong>{STATUS_LABELS[e.detail.to] || e.detail.to}</strong>
+                        </>
+                      )}
+                      {e.reason && (
+                        <span style={{ color: C.textMuted }}> — {e.reason}</span>
                       )}
                     </span>
                   </div>
@@ -423,13 +495,13 @@ export default function BuddyApplication() {
               {next && (
                 <AdminBtn
                   kind="primary"
-                  disabled={advanceBlockedByCalls}
+                  disabled={busy || advanceBlockedByCalls}
                   title={
                     advanceBlockedByCalls
                       ? "Both reference calls must be recorded before probation"
                       : undefined
                   }
-                  onClick={() => actions.setStatus(app.id, next)}
+                  onClick={() => run(() => actions.setStatus(app.id, next))}
                 >
                   Move to {STATUS_LABELS[next]}
                 </AdminBtn>
@@ -443,11 +515,14 @@ export default function BuddyApplication() {
               {app.status === "active" && (
                 <AdminBtn
                   kind="danger"
+                  disabled={busy}
                   onClick={() =>
-                    actions.setStatus(
-                      app.id,
-                      "suspended",
-                      rejectNote.trim() || "Suspended from admin review."
+                    run(() =>
+                      actions.setStatus(
+                        app.id,
+                        "suspended",
+                        rejectNote.trim() || "Suspended from admin review."
+                      )
                     )
                   }
                 >
@@ -457,11 +532,14 @@ export default function BuddyApplication() {
               {app.status === "suspended" && (
                 <AdminBtn
                   kind="primary"
+                  disabled={busy}
                   onClick={() =>
-                    actions.setStatus(
-                      app.id,
-                      "active",
-                      rejectNote.trim() || "Reinstated after review."
+                    run(() =>
+                      actions.setStatus(
+                        app.id,
+                        "active",
+                        rejectNote.trim() || "Reinstated after review."
+                      )
                     )
                   }
                 >
@@ -479,10 +557,12 @@ export default function BuddyApplication() {
                   />
                   <AdminBtn
                     kind="danger"
-                    disabled={!rejectNote.trim()}
-                    onClick={() => {
-                      actions.setStatus(app.id, "rejected", rejectNote.trim());
-                      setRejectNote("");
+                    disabled={busy || !rejectNote.trim()}
+                    onClick={async () => {
+                      const ok = await run(() =>
+                        actions.setStatus(app.id, "rejected", rejectNote.trim())
+                      );
+                      if (ok) setRejectNote("");
                     }}
                   >
                     Reject
@@ -520,7 +600,8 @@ export default function BuddyApplication() {
                     <input
                       type="checkbox"
                       checked={on}
-                      onChange={() => actions.toggleFlag(app.id, f.key)}
+                      disabled={busy}
+                      onChange={() => run(() => actions.toggleFlag(app, f.key))}
                       style={{ width: 22, height: 22, marginTop: 2, accentColor: C.brown }}
                     />
                     <span style={{ fontWeight: on ? 700 : 400 }}>
@@ -533,26 +614,19 @@ export default function BuddyApplication() {
             </div>
           </Card>
 
-          {/* ─── Document requests ─── */}
+          {/* ─── Document requests (real, audited admin contact) ─── */}
           <Card title="Documents">
-            {app.document_requests.length > 0 && (
-              <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
-                {app.document_requests.map((d) => (
-                  <div key={d.id} style={{ fontSize: 16 }}>
-                    <strong>{d.type}</strong>{" "}
-                    <span
-                      style={{
-                        color: d.status === "received" ? C.green : C.brown,
-                        fontWeight: 700,
-                      }}
-                    >
-                      · {d.status === "received" ? "received" : "awaiting"}
-                    </span>
-                    <div style={{ color: C.textMuted, fontSize: 15 }}>
-                      Requested {fmtDate(d.requested_at)}
-                      {d.note && <> — {d.note}</>}
-                    </div>
-                  </div>
+            <p style={{ margin: "0 0 12px", fontSize: 15, color: C.textMuted }}>
+              A request reaches the applicant as an in-app notification and is
+              audit-logged. There is no documents table yet, so past requests
+              live in the audit trail.
+            </p>
+            {docsSent.length > 0 && (
+              <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
+                {docsSent.map((d, i) => (
+                  <p key={i} style={{ margin: 0, fontSize: 16, color: C.green, fontWeight: 600 }}>
+                    ✓ Requested: {d}
+                  </p>
                 ))}
               </div>
             )}
@@ -577,9 +651,15 @@ export default function BuddyApplication() {
               />
               <AdminBtn
                 kind="outline"
-                onClick={() => {
-                  actions.requestDocument(app.id, docType, docNote.trim());
-                  setDocNote("");
+                disabled={busy}
+                onClick={async () => {
+                  const ok = await run(() =>
+                    actions.requestDocument(app.applicant_id, docType, docNote.trim())
+                  );
+                  if (ok) {
+                    setDocsSent((d) => [...d, docType]);
+                    setDocNote("");
+                  }
                 }}
               >
                 Request document
@@ -598,6 +678,7 @@ export default function BuddyApplication() {
                 </p>
                 <AdminBtn
                   kind="ghost"
+                  disabled={busy}
                   onClick={() => setNotesDraft(app.review_notes || "")}
                 >
                   Edit notes
@@ -614,14 +695,17 @@ export default function BuddyApplication() {
                 <div style={{ display: "flex", gap: 10 }}>
                   <AdminBtn
                     kind="primary"
-                    onClick={() => {
-                      actions.saveReviewNotes(app.id, notesDraft.trim());
-                      setNotesDraft(null);
+                    disabled={busy}
+                    onClick={async () => {
+                      const ok = await run(() =>
+                        actions.saveReviewNotes(app.id, notesDraft.trim())
+                      );
+                      if (ok) setNotesDraft(null);
                     }}
                   >
                     Save
                   </AdminBtn>
-                  <AdminBtn kind="ghost" onClick={() => setNotesDraft(null)}>
+                  <AdminBtn kind="ghost" disabled={busy} onClick={() => setNotesDraft(null)}>
                     Cancel
                   </AdminBtn>
                 </div>
@@ -635,7 +719,7 @@ export default function BuddyApplication() {
 }
 
 /* Placeholder for images in the private buddy-documents bucket. When
-   Supabase lands, this becomes a signed-URL <img> fetched on demand —
+   uploads exist this becomes a signed-URL <img> fetched on demand —
    and the fetch is the moment app-level audit logging fires. */
 function DocPlaceholder({ path }) {
   return (

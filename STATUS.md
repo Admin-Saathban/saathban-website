@@ -70,6 +70,21 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
 ## Round log
+- **Games wiring + nav round:** GAMES_WIRING one-liners wired (bell
+  rows with a link deep-link and mark read on tap; YourTurnChips on
+  the hub) and the doc deleted per its instruction. AppHeader is now
+  genuinely responsive: ≤640px collapses to mark + icon back arrow +
+  bell + menu (full-width panel, 48px+ targets); collision-checked at
+  390px. First-arrival ceremony: "Your email is confirmed — welcome,
+  {name}" with Continue, first sign-in only (per-account+device),
+  verified with a real minted signup incl. no-repeat. Hub: My Circle
+  card always visible (door, per user direction overriding the
+  nav-gating reading), My profile lives in the header only. Verified:
+  Icon signup names persist (the "nameless" report was the root-
+  landing bug, since fixed); invite eligibility live-checked (0025
+  intact, 0027 widened game_connected with friendships). Groups lane
+  (0026) and community_social (0027) landed self-committed and are in
+  the registry.
 - **Magic-link + game-invite round:** traced the root-landing magic
   links to the customized email template using redirect_to={{ .SiteURL }}
   instead of {{ .RedirectTo }} (edge logs show the clicked link's

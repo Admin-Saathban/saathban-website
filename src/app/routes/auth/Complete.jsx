@@ -36,6 +36,7 @@ export default function Complete() {
   );
   const sessionRef = useRef(null);
   const doneRef = useRef(false);
+  const [welcome, setWelcome] = useState(null); // { name, dest } — first arrival only
 
   const finish = useCallback(
     async (session) => {
@@ -45,9 +46,27 @@ export default function Complete() {
       try {
         const result = await ensureProfile(session);
         if (result.status === "ok") {
+          const dest = consumePostLoginPath(result.role);
+          // First arrival only: a brief confirmed-welcome before the
+          // app. Marked per account+device so it never repeats.
+          const arrivedKey = `saathban.app.arrived.${session.user.id}`;
+          let firstArrival = false;
+          try {
+            firstArrival =
+              !localStorage.getItem(arrivedKey) &&
+              (result.created ||
+                Date.now() - new Date(session.user.created_at).getTime() < 15 * 60 * 1000);
+            localStorage.setItem(arrivedKey, "1");
+          } catch {
+            /* storage unavailable — skip the ceremony */
+          }
+          if (firstArrival) {
+            setWelcome({ name: (result.name || "").split(" ")[0], dest });
+            return;
+          }
           // Back to the page that bounced them here if their role may
           // see it, else their role's home.
-          navigate(consumePostLoginPath(result.role), { replace: true });
+          navigate(dest, { replace: true });
         } else {
           // Definitive: authed reads found no row and nothing stashed.
           navigate("/app/auth?finish=1", { replace: true });
@@ -90,6 +109,24 @@ export default function Complete() {
           await finish(sessionRef.current);
         }}
       />
+    );
+  }
+
+  if (welcome) {
+    return (
+      <AuthScreen>
+        <Title>
+          {welcome.name
+            ? t("auth.complete.confirmedTitle", { name: welcome.name })
+            : t("auth.complete.confirmedTitleNoName")}
+        </Title>
+        <p style={{ fontSize: ts(20), color: C.textMuted, margin: "0 0 28px", lineHeight: 1.6 }}>
+          {t("auth.complete.confirmedBody")}
+        </p>
+        <Button type="button" onClick={() => navigate(welcome.dest, { replace: true })}>
+          {t("auth.complete.continueCta")}
+        </Button>
+      </AuthScreen>
     );
   }
 

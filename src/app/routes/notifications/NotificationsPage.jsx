@@ -8,6 +8,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STRINGS, relativeTime } from "./strings.js";
@@ -117,7 +118,22 @@ export default function NotificationsPage() {
                         {s.unread}
                       </span>
                     )}
-                    <h2 style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: 0 }}>{n.title}</h2>
+                    {/* GAMES_WIRING §1: rows with a deep link open it
+                        (game invites, your-turn, table ready…) and
+                        count as read on tap. Linkless rows unchanged. */}
+                    {n.link ? (
+                      <h2 style={{ fontSize: ts(20), fontWeight: 700, margin: 0 }}>
+                        <Link
+                          to={n.link}
+                          onClick={() => { if (isUnread) onMarkOne(n.id); }}
+                          style={{ color: C.green, textDecoration: "underline" }}
+                        >
+                          {n.title}
+                        </Link>
+                      </h2>
+                    ) : (
+                      <h2 style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: 0 }}>{n.title}</h2>
+                    )}
                   </div>
                   {n.body && (
                     <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "8px 0 0", lineHeight: 1.6 }}>{n.body}</p>

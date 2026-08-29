@@ -92,7 +92,7 @@ async function readProfileWithRetry(userId) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, role")
+        .select("id, role, full_name")
         .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
@@ -116,7 +116,7 @@ export async function ensureProfile(session) {
   if (!user) return { status: "no-session" };
 
   const existing = await readProfileWithRetry(user.id);
-  if (existing) return { status: "ok", role: existing.role };
+  if (existing) return { status: "ok", role: existing.role, name: existing.full_name };
 
   const m = user.user_metadata || {};
   const role = SIGNUP_ROLES.includes(m.pending_role) ? m.pending_role : null;
@@ -127,7 +127,7 @@ export async function ensureProfile(session) {
     .from("profiles")
     .insert(profileRow(user.id, { ...m, role, full_name: fullName }));
   if (insErr && !isDuplicate(insErr)) throw insErr;
-  return { status: "ok", role };
+  return { status: "ok", role, name: fullName, created: true };
 }
 
 /* Finish mode: a session exists but no profile row and no stashed

@@ -25,16 +25,19 @@ import { greetingKeyForHour, isoDate, POINTS_PER_MODULE } from "./homeMock.js";
 import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import { awardMyBadges, fetchMyEarnedBadges } from "../../lib/points.js";
+import YourTurnChips from "../games/YourTurnChips.jsx";
 
-/* Notifications and Settings live in the AppHeader (bell + links) —
-   the hub keeps cards for the places, not the chrome. */
+/* Notifications, Settings, and My profile live in the AppHeader —
+   the hub keeps cards for the places, not the chrome. My Circle is
+   always here: an empty circle is a door to open, never a gap
+   (SPEC.md, "The empty circle" — the page itself renders the door). */
 const CARDS = [
   { to: "/app/community", emoji: "🪷", key: "hub.community" },
   { to: "/app/events", emoji: "🎪", key: "hub.events" },
   { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
   { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
   { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
-  { to: "/app/profile", emoji: "🙂", key: "hub.profile" },
+  { to: "/app/circle", emoji: "🤝", key: "hub.circle" },
 ];
 
 export default function IconHub() {
@@ -50,7 +53,6 @@ export default function IconHub() {
   const done = entries.filter((e) => isEntryDone(e, todayLog)).length;
 
   const [reminders, setReminders] = useState([]);
-  const [hasCircle, setHasCircle] = useState(false);
   const [unseenBadges, setUnseenBadges] = useState(0);
 
   // Celebration hook: catch-up award, then count unseen celebrations —
@@ -76,24 +78,13 @@ export default function IconHub() {
     if (!iconId) return undefined;
     let alive = true;
     (async () => {
-      const [{ data: rem }, { data: members }, { data: invites }] = await Promise.all([
-        supabase
-          .from("reminders")
-          .select("id, label, emoji, remind_times, days_label")
-          .eq("icon_id", iconId)
-          .order("remind_time"),
-        supabase.from("circle_members").select("id").eq("icon_id", iconId).limit(1),
-        supabase
-          .from("circle_invites")
-          .select("id")
-          .eq("icon_id", iconId)
-          .eq("direction", "member_to_icon")
-          .is("used_at", null)
-          .limit(1),
-      ]);
+      const { data: rem } = await supabase
+        .from("reminders")
+        .select("id, label, emoji, remind_times, days_label")
+        .eq("icon_id", iconId)
+        .order("remind_time");
       if (!alive) return;
       setReminders(rem || []);
-      setHasCircle((members || []).length > 0 || (invites || []).length > 0);
     })();
     return () => {
       alive = false;
@@ -149,6 +140,10 @@ export default function IconHub() {
             {t(greetingKeyForHour(new Date().getHours()))}
             {firstName ? (meta.dir === "rtl" ? "، " : ", ") + firstName : ""}
           </h1>
+
+          {/* GAMES_WIRING §2: green "your move" chips when a table is
+              waiting on this Icon; renders null otherwise. */}
+          <YourTurnChips />
 
           {/* ── Today's log, one tap away ── */}
           <Link
@@ -232,10 +227,7 @@ export default function IconHub() {
 
           {/* ── Everywhere else ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {(hasCircle
-              ? [...CARDS.slice(0, 3), { to: "/app/circle", emoji: "🤝", key: "hub.circle" }, ...CARDS.slice(3)]
-              : CARDS
-            ).map((c) => {
+            {CARDS.map((c) => {
               const celebrating = c.key === "hub.milestones" && unseenBadges > 0;
               return (
                 <Link

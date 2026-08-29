@@ -24,7 +24,7 @@ export function announceRead() {
 export async function fetchNotifications() {
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, title, body, kind, read_at, created_at")
+    .select("id, title, body, kind, link, read_at, created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];

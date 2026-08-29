@@ -1,0 +1,57 @@
+# Overnight status — feature/app
+
+Maintained by the overnight integration session. Last update:
+**2026-08-29, integration round 1** (early morning).
+
+## TL;DR
+Everything landed and integrated; build clean; the full smoke suite
+(17 checks) passes locally against real Supabase. Open decisions live
+in [QUESTIONS.md](QUESTIONS.md). Preview verification for the latest
+push is noted per round below.
+
+## What landed tonight (integration round 1)
+
+| Commit | What |
+|---|---|
+| `cecff3c` | Fam lane on real data: circle memberships via lib/circle.js, permitted daily-log views, join requests, reminders (migration 0011 — applied to the project) |
+| `ac6831d` | My Circle, Icon side: permission toggles (default OFF), one-tap removal, SOS ordering, request approval, 48-hour invite codes |
+| `58e8cc1` | i18n: Icon home + front door extracted to locales (home.*, appHome.*), Urdu drafted, Intl dates |
+| `6797ac6` | Integration: `circle/*` wired per CIRCLE_WIRING.md (CircleRoutes), ensureProfile retry (3 attempts, backoff) per yesterday's preview anomaly |
+| (this)   | Smoke suite in `tests/` (`npm run smoke`), STATUS.md, QUESTIONS.md |
+
+All three wiring docs (CIRCLE, FAM, VETTING) are applied and marked
+WIRED in place.
+
+## How to run the checks
+```
+npm run dev            # port 5173
+npm run smoke          # 17 checks against localhost
+BASE_URL=<preview url> npm run smoke   # against a deployment
+```
+Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
+`SaathTest!2026` (see QUESTIONS.md #2 before touching passwords).
+
+## Working / verified
+- All four role homes on real data (icon logs, admin review queue +
+  questions + broadcasts, fam dashboard, buddy vetting status).
+- Guards + cross-role bounces; no guarded-content flash.
+- Icon daily-log persistence: server round-trip verified in a fresh
+  browser session.
+- /app/circle (Icon) wired and rendering.
+- Missing-env deploys can no longer white-screen the marketing site
+  (lazy client + /app boundary screen).
+- Vercel Preview env vars fixed; latest verified preview:
+  see the round log below.
+
+## Broken / stubbed / watch out
+- Moderation queue: mock (no reports table until step 11).
+- Rest day: session-only UI state (QUESTIONS.md #5).
+- iconPrefs: device-local, shared across accounts (QUESTIONS.md #1).
+- SOS: deferred by design (SPEC — PWA push limits).
+- Email onboarding blocked on custom SMTP (QUESTIONS.md #3).
+
+## Round log
+- **Round 1 (early morning):** committed fam/circle/i18n lanes, wired
+  circle, ensureProfile retry, smoke suite added (17/17 local).
+  Preview verification: pending at time of writing — appended below
+  once checked.

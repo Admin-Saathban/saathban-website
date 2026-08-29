@@ -146,6 +146,8 @@ export default function OutdoorHome() {
         {t("outdoor.home.title")}
       </h1>
       <BodyText muted style={{ marginBottom: 12 }}>{t("outdoor.home.intro")}</BodyText>
+      {/* Thumb test: say what a tap on a place does. */}
+      <BodyText style={{ marginBottom: 12, fontWeight: 600 }}>👉 {t("outdoor.home.tapHint")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

@@ -219,6 +219,15 @@ export async function fetchSessionInvites(sessionId) {
   return data ?? [];
 }
 
+/* Display names for a set of profile ids (safe view) → {id: name}. */
+export async function fetchNames(ids) {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (!unique.length) return {};
+  const { data, error } = await supabase.from("safe_profiles").select("id, full_name").in("id", unique);
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((p) => [p.id, p.full_name]));
+}
+
 export async function fetchMyInvites(profileId) {
   const { data, error } = await supabase
     .from("game_invites")

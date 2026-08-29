@@ -23,6 +23,7 @@ import {
   respondInvite,
   fetchMyInvites,
   fetchSessionInvites,
+  fetchNames,
   createSession,
   gamePeople,
   boastToPeople,
@@ -54,7 +55,9 @@ export default function SessionPage() {
   const [myInvite, setMyInvite] = useState(null); // my pending invite here
   const [pendingInvites, setPendingInvites] = useState([]); // host's view
   const [filledInfo, setFilledInfo] = useState(null); // respond → 'filled'
+  const [inviteNames, setInviteNames] = useState({}); // invitee id → name
   const [loadError, setLoadError] = useState(false);
+  const [notMine, setNotMine] = useState(false); // RLS: not a table I'm at
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -71,7 +74,8 @@ export default function SessionPage() {
       setSession(s);
       setMoves(m);
       setChat(c);
-      setLoadError(!s);
+      setLoadError(false);
+      setNotMine(!s);
       if (s?.status === "lobby") {
         const [mine, all] = await Promise.all([
           fetchMyInvites(profile.id).catch(() => []),
@@ -79,6 +83,9 @@ export default function SessionPage() {
         ]);
         setMyInvite(mine.find((i) => i.session_id === sessionId) ?? null);
         setPendingInvites(all);
+        if (all.length) {
+          setInviteNames(await fetchNames(all.map((i) => i.invitee_id)).catch(() => ({})));
+        }
       } else {
         setMyInvite(null);
       }
@@ -144,7 +151,10 @@ export default function SessionPage() {
       if (r.result === "filled") {
         setFilledInfo(r);
       } else if (r.result === "declined") {
+        // Nothing left to do here: say so, then take them home.
         setToast(t("games.lobby.declinedQuiet"));
+        window.setTimeout(() => navigate("/app/games"), 1400);
+        return;
       }
       await refresh();
     } catch {
@@ -157,10 +167,12 @@ export default function SessionPage() {
      game and size, inviting this table's humans who are connected to
      me (the server would refuse the rest — filter, never fail). */
   const startSameTable = async () => {
-    if (!filledInfo || busy) return;
+    if (busy) return;
+    const info = filledInfo ?? { game_key: session?.game_key, seats_total: session?.seats_total };
+    if (!info.game_key) return;
     setBusy(true);
     try {
-      const id = await createSession(filledInfo.game_key, filledInfo.seats_total);
+      const id = await createSession(info.game_key, info.seats_total);
       const mine = new Set((await gamePeople().catch(() => [])).map((p) => p.id));
       const others = (session?.seats ?? [])
         .map((s) => s.profile_id)
@@ -179,10 +191,19 @@ export default function SessionPage() {
     }
   };
 
+  if (notMine && !session) {
+    return (
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+        <BodyText style={{ fontWeight: 600 }}>{t("games.board.notYours")}</BodyText>
+        <PrimaryBtn onClick={() => navigate("/app/games")}>{t("games.board.backHome")}</PrimaryBtn>
+      </GamesScreen>
+    );
+  }
   if (loadError && !session) {
     return (
       <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
         <BodyText role="alert">{t("games.loadError")}</BodyText>
+        <PrimaryBtn onClick={() => navigate("/app/games")}>{t("games.board.backHome")}</PrimaryBtn>
       </GamesScreen>
     );
   }
@@ -236,6 +257,7 @@ export default function SessionPage() {
           isHost={isHost}
           isInvitee={!!myInvite}
           pendingInvites={pendingInvites}
+          inviteNames={inviteNames}
           profile={profile}
           busy={busy}
           act={act}
@@ -258,6 +280,7 @@ export default function SessionPage() {
           act={act}
           onPlay={() => act(() => playTurn(session.id))}
           onReclaim={() => act(() => reclaimSeat(session.id), t("games.board.reclaimed"))}
+          onPlayAgain={startSameTable}
           onBoast={() =>
             act(
               () =>
@@ -273,7 +296,7 @@ export default function SessionPage() {
         />
       )}
 
-      {mySeat && (
+      {mySeat && !(session.status === "finished" && chat.length === 0) && (
         <ChatPanel
           sessionId={session.id}
           chat={chat}
@@ -302,6 +325,7 @@ function Lobby({
   isHost,
   isInvitee,
   pendingInvites = [],
+  inviteNames = {},
   profile,
   busy,
   act,
@@ -322,13 +346,27 @@ function Lobby({
   const openAllocations =
     session.seats_total - filled - pendingInvites.length;
 
+  const hostName = session.seats.find((s) => s.profile_id === session.created_by)?.name;
+  const missing = session.seats_total - filled;
+  const pendingBySeat = Object.fromEntries(pendingInvites.map((i) => [i.seat_no, i]));
+  // THE one plain sentence for where this table stands right now.
+  const statusLine = isInvitee
+    ? t("games.lobby.invitedIntro", { host: hostName || "…" })
+    : !mySeat
+      ? t("games.lobby.openIntro")
+      : missing === 1
+        ? t("games.lobby.waitingForOne")
+        : t("games.lobby.waitingFor", { n: missing });
+
   return (
     <>
       <Card>
         <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 8px" }}>
           {t("games.lobby.title")}
         </p>
-        <BodyText muted>{t("games.lobby.codeHint")}</BodyText>
+        <BodyText style={{ fontWeight: 600 }}>{statusLine}</BodyText>
+        {mySeat && <BodyText muted>{t("games.lobby.codeHint")}</BodyText>}
+        {mySeat && (
         <p
           aria-label={session.join_code?.split("").join(" ")}
           style={{
@@ -342,12 +380,14 @@ function Lobby({
         >
           {session.join_code}
         </p>
+        )}
         <BodyText style={{ fontWeight: 600 }}>
           {t("games.lobby.seats", { filled, total: session.seats_total })}
         </BodyText>
         <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
           {Array.from({ length: session.seats_total }, (_, i) => {
             const seat = session.seats.find((s) => s.seat_no === i + 1);
+            const asked = !seat ? pendingBySeat[i + 1] : null;
             return (
               <li
                 key={i}
@@ -360,7 +400,7 @@ function Lobby({
                   borderBottom: `1px solid ${C.warmGray}`,
                 }}
               >
-                <span aria-hidden="true">{seat ? (seat.is_bot ? "🤖" : "🪑") : "▫️"}</span>
+                <span aria-hidden="true">{seat ? (seat.is_bot ? "🤖" : "🪑") : asked ? "✉️" : "▫️"}</span>
                 <span style={{ color: seat ? C.textMain : C.textMuted }}>
                   {seat
                     ? seat.is_bot
@@ -368,15 +408,14 @@ function Lobby({
                       : seat.profile_id === profile.id
                         ? t("games.board.you")
                         : seat.name
-                    : t("games.lobby.seatEmpty")}
+                    : asked
+                      ? t("games.lobby.askedRow", { name: inviteNames[asked.invitee_id] || "…" })
+                      : t("games.lobby.seatEmpty")}
                 </span>
               </li>
             );
           })}
         </ul>
-        <BodyText muted style={{ margin: 0 }}>
-          {t("games.lobby.waiting")}
-        </BodyText>
       </Card>
 
       {!mySeat && !isInvitee && (
@@ -440,7 +479,7 @@ function Lobby({
 
 /* ── Race to 100 board ─────────────────────────────────────────── */
 
-function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, onBoast, t, ts }) {
+function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, onBoast, onPlayAgain, t, ts }) {
   const target = Number(session.house_rules?.target) || 100;
   const myTurn =
     session.status === "active" && mySeat && session.current_seat === mySeat.seat_no;
@@ -473,6 +512,14 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
             <PrimaryBtn disabled={busy} onClick={onBoast} style={{ marginTop: 12 }}>
               📣 {t("games.board.boastCta")}
             </PrimaryBtn>
+          )}
+          {/* Next obvious step, one tap: the same people, a fresh table. */}
+          {mySeat && onPlayAgain && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+              <GhostBtn disabled={busy} onClick={onPlayAgain}>
+                🔁 {t("games.board.playAgainCta")}
+              </GhostBtn>
+            </div>
           )}
         </Card>
       )}

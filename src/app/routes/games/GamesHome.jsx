@@ -119,6 +119,63 @@ export default function GamesHome() {
     setBusy(false);
   };
 
+  const live = tables.filter((s) => s.status !== "finished");
+  const recent = tables.filter((s) => s.status === "finished").slice(0, 3);
+  const nextStep = (s) =>
+    s.status === "lobby"
+      ? t("games.home.nextLobby")
+      : s.status === "finished"
+        ? t("games.home.nextFinished")
+        : s.current_seat === s.my_seat
+          ? t("games.home.nextYourTurn")
+          : t("games.home.nextTheirTurn");
+  const renderTable = (s) => {
+    const g = byKey[s.game_key];
+    const myTurn = s.status === "active" && s.current_seat === s.my_seat;
+    return (
+      <Link
+        key={s.id}
+        to={`/app/games/s/${s.id}`}
+        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+      >
+        <Card
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            borderColor: myTurn ? C.green : C.warmGray,
+            borderWidth: myTurn ? 2 : 1,
+            borderStyle: "solid",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 4px" }}>
+              {g ? gameName(g, lang) : s.game_key}
+            </p>
+            <BodyText muted style={{ margin: 0 }}>
+              {nextStep(s)}
+            </BodyText>
+          </div>
+          {myTurn && (
+            <span
+              style={{
+                background: C.green,
+                color: C.cream,
+                borderRadius: 50,
+                padding: "8px 16px",
+                fontSize: ts(16),
+                fontWeight: 700,
+                animation: "sb-games-pulse 2s infinite",
+              }}
+            >
+              {t("games.home.yourTurnChip")}
+            </span>
+          )}
+        </Card>
+      </Link>
+    );
+  };
+
   return (
     <GamesScreen>
       <h1 style={{ fontSize: ts(30), margin: "0 0 6px", color: C.brown }}>{t("games.title")}</h1>
@@ -192,55 +249,13 @@ export default function GamesHome() {
         )}
       </Card>
 
-      {/* My tables */}
+      {/* My tables — live ones only; finished games sit below the
+          registry as a short "recent" list, so "Open a table" is
+          never buried under old boards. Every card says its next
+          step in one sentence. */}
       <SectionLabel>{t("games.home.myTables")}</SectionLabel>
-      {tables.length === 0 && <BodyText muted>{t("games.home.empty")}</BodyText>}
-      {tables.map((s) => {
-        const g = byKey[s.game_key];
-        const myTurn = s.status === "active" && s.current_seat === s.my_seat;
-        return (
-          <Link
-            key={s.id}
-            to={`/app/games/s/${s.id}`}
-            style={{ textDecoration: "none", color: "inherit", display: "block" }}
-          >
-            <Card
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                borderColor: myTurn ? C.green : C.warmGray,
-                borderWidth: myTurn ? 2 : 1,
-                borderStyle: "solid",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 4px" }}>
-                  {g ? gameName(g, lang) : s.game_key}
-                </p>
-                <BodyText muted style={{ margin: 0 }}>
-                  {t(`games.home.status${s.status[0].toUpperCase()}${s.status.slice(1)}`)}
-                </BodyText>
-              </div>
-              {myTurn && (
-                <span
-                  style={{
-                    background: C.green,
-                    color: C.cream,
-                    borderRadius: 50,
-                    padding: "8px 16px",
-                    fontSize: ts(16),
-                    fontWeight: 700,
-                    animation: "sb-games-pulse 2s infinite",
-                  }}
-                >
-                  {t("games.home.yourTurnChip")}
-                </span>
-              )}
-            </Card>
-          </Link>
-        );
-      })}
+      {live.length === 0 && <BodyText muted>{t("games.home.empty")}</BodyText>}
+      {live.map(renderTable)}
 
       {/* Registry */}
       <SectionLabel>{t("games.create.title")}</SectionLabel>
@@ -332,6 +347,13 @@ export default function GamesHome() {
           )}
         </Card>
       ))}
+
+      {recent.length > 0 && (
+        <>
+          <SectionLabel>{t("games.home.recentTitle")}</SectionLabel>
+          {recent.map(renderTable)}
+        </>
+      )}
 
       <Toast text={toast} />
     </GamesScreen>

@@ -44,9 +44,10 @@ function Face({ person, size = 44 }) {
 
 /* states: {id: 'seated' | 'invited' | 'picked'} — anything else is
    free to tap. onToggle(person) is called only for free/picked. */
-export default function PeoplePicker({ states = {}, onToggle, maxPick, pickedCount = 0 }) {
+export default function PeoplePicker({ states = {}, onToggle, maxPick, pickedCount = 0, searchable = false }) {
   const { t, ts } = useI18n();
   const [people, setPeople] = useState(null); // null = loading
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -91,12 +92,39 @@ export default function PeoplePicker({ states = {}, onToggle, maxPick, pickedCou
     );
   }
 
+  // Search narrows the faces; the list itself is already filtered
+  // server-side for eligibility and blocks (game_people).
+  const needle = q.trim().toLowerCase();
+  const shown = needle ? people.filter((p) => (p.full_name || "").toLowerCase().includes(needle)) : people;
+
   const howLabel = (how) =>
     t(how === "circle" ? "games.picker.howCircle" : how === "friend" ? "games.picker.howFriend" : "games.picker.howGroup");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {people.map((p) => {
+      {searchable && (
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("games.new.searchPh")}
+          aria-label={t("games.new.searchPh")}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            minHeight: A11Y.minTapTargetPx,
+            fontSize: ts(A11Y.minBodyPx),
+            fontFamily: "inherit",
+            color: C.textMain,
+            background: C.white,
+            border: "2px solid " + C.warmGray,
+            borderRadius: 14,
+            padding: "8px 14px",
+            marginBottom: 4,
+          }}
+        />
+      )}
+      {shown.map((p) => {
         const state = states[p.id];
         const locked = state === "seated" || state === "invited";
         const picked = state === "picked";

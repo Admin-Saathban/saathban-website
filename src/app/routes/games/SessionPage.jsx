@@ -37,6 +37,7 @@ import PeoplePicker from "./PeoplePicker.jsx";
    Everything else is the reference Race to 100 board below. */
 import CarromRailsController from "./carrom/CarromRailsController.jsx";
 import SnakesBoard from "./snakes/SnakesBoard.jsx";
+import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
@@ -46,6 +47,9 @@ import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stic
 const POLL_MS = 2500;
 
 export default function SessionPage() {
+  // Arriving at a table should show the top of the board, not the
+  // scroll position of the page you came from.
+  useEffect(() => { window.scrollTo(0, 0); }, []);
   const { sessionId } = useParams();
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
@@ -269,10 +273,9 @@ export default function SessionPage() {
       )}
 
       {session.status === "lobby" && (
-        <Lobby
+        <WaitingRoom
           session={session}
           game={game}
-          gameName={gameName}
           mySeat={mySeat}
           isHost={isHost}
           isInvitee={!!myInvite}
@@ -281,6 +284,7 @@ export default function SessionPage() {
           profile={profile}
           busy={busy}
           act={act}
+          navigate={navigate}
           t={t}
           ts={ts}
         />
@@ -333,165 +337,225 @@ export default function SessionPage() {
   );
 }
 
-/* ── Lobby ─────────────────────────────────────────────────────── */
+/* ── The waiting room IS the board ───────────────────────────────
+   After Start you land here: the seats show who is in and who is
+   still being waited on, the board sits underneath when the game has
+   one to show, and the code hides behind a small share button. When
+   the last seat fills, the status flips to active and this whole
+   thing is replaced by play — no separate lobby page anywhere.
 
-function Lobby({
-  session,
-  game,
-  gameName,
-  mySeat,
-  isHost,
-  isInvitee,
-  pendingInvites = [],
-  inviteNames = {},
-  profile,
-  busy,
-  act,
-  t,
-  ts,
+   Board-OPTIONAL by design: ludo's board lives on the ludo lane's own
+   screen (SessionPage redirects there once active), so this renders
+   correctly with nothing where a board would be.
+   ───────────────────────────────────────────────────────────────── */
+
+function SeatChip({ name, state, seatNo, ts }) {
+  // The chip wears its seat colour, so the waiting room and the board
+  // agree about who is who before a single move is made.
+  const seatColor = SEAT_COLORS[(seatNo - 1) % SEAT_COLORS.length];
+  const seatInk = SEAT_INK[(seatNo - 1) % SEAT_INK.length];
+  // state: 'you' | 'seated' | 'bot' | 'waiting' | 'open'
+  const waiting = state === "waiting";
+  const empty = state === "open";
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 56,
+        padding: "8px 14px",
+        borderRadius: 16,
+        border: `2px solid ${empty || waiting ? C.warmGray : seatColor}`,
+        background: empty || waiting ? "rgba(255,255,255,0.6)" : "#eef3e8",
+        opacity: empty ? 0.75 : 1,
+        minWidth: 0,
+        flex: "1 1 46%",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: empty || waiting ? C.warmGray : seatColor,
+          color: empty || waiting ? C.cream : seatInk,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: ts(16),
+          fontWeight: 800,
+          flex: "0 0 auto",
+        }}
+      >
+        {state === "bot" ? "🤖" : waiting ? "…" : empty ? "+" : (name || "?").trim().charAt(0).toUpperCase()}
+      </span>
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span
+          style={{
+            display: "block",
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 700,
+            color: empty || waiting ? C.textMuted : C.textMain,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {name}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function WaitingRoom({
+  session, game, mySeat, isHost, isInvitee,
+  pendingInvites = [], inviteNames = {}, profile, busy, act, navigate, t, ts,
 }) {
+  const [shareOpen, setShareOpen] = useState(false);
   const [posted, setPosted] = useState(false);
-  const filled = session.seats.length;
   const canPost = profile.role === "saath_icon" || profile.is_org;
+  const filled = session.seats.length;
+  const pendingBySeat = Object.fromEntries(pendingInvites.map((i) => [i.seat_no, i]));
+  const takenSeatNos = new Set(session.seats.map((x) => x.seat_no));
 
-  // People-first invite states for the picker: seated beats invited.
   const pickerStates = useMemo(() => {
     const out = {};
     for (const inv of pendingInvites) out[inv.invitee_id] = "invited";
-    for (const s of session.seats) if (s.profile_id) out[s.profile_id] = "seated";
+    for (const x of session.seats) if (x.profile_id) out[x.profile_id] = "seated";
     return out;
   }, [session.seats, pendingInvites]);
-  const openAllocations =
-    session.seats_total - filled - pendingInvites.length;
+  const openAllocations = session.seats_total - filled - pendingInvites.length;
 
-  const hostName = session.seats.find((s) => s.profile_id === session.created_by)?.name;
-  const missing = session.seats_total - filled;
-  const pendingBySeat = Object.fromEntries(pendingInvites.map((i) => [i.seat_no, i]));
-  // THE one plain sentence for where this table stands right now.
-  const statusLine = isInvitee
-    ? t("games.lobby.invitedIntro", { host: hostName || "…" })
-    : !mySeat
-      ? t("games.lobby.openIntro")
-      : missing === 1
-        ? t("games.lobby.waitingForOne")
-        : t("games.lobby.waitingFor", { n: missing });
+  /* Seat chips, in seat order: who's here, who we're waiting on. */
+  const chips = Array.from({ length: session.seats_total }, (_, i) => {
+    const no = i + 1;
+    const seat = session.seats.find((x) => x.seat_no === no);
+    if (seat) {
+      return {
+        key: no,
+        name: seat.is_bot
+          ? t("games.board.bot")
+          : seat.profile_id === profile.id
+            ? t("games.board.you")
+            : seat.name,
+        state: seat.is_bot ? "bot" : seat.profile_id === profile.id ? "you" : "seated",
+      };
+    }
+    // An invite may name a seat, or simply be outstanding for the table.
+    const asked = pendingBySeat[no]
+      || pendingInvites.filter((inv) => !takenSeatNos.has(inv.seat_no))[0];
+    if (asked) {
+      return {
+        key: no,
+        name: t("games.wait.waitingFor", { name: inviteNames[asked.invitee_id] || "…" }),
+        state: "waiting",
+      };
+    }
+    return { key: no, name: t("games.wait.openSeat"), state: "open" };
+  });
 
   return (
     <>
-      <Card>
-        <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 8px" }}>
-          {t("games.lobby.title")}
-        </p>
-        <BodyText style={{ fontWeight: 600 }}>{statusLine}</BodyText>
-        {mySeat && <BodyText muted>{t("games.lobby.codeHint")}</BodyText>}
-        {mySeat && (
-        <p
-          aria-label={session.join_code?.split("").join(" ")}
-          style={{
-            fontSize: ts(40),
-            fontWeight: 800,
-            letterSpacing: "0.35em",
-            color: C.green,
-            margin: "0 0 12px",
-            textAlign: "center",
-          }}
-        >
-          {session.join_code}
-        </p>
-        )}
-        <BodyText style={{ fontWeight: 600 }}>
-          {t("games.lobby.seats", { filled, total: session.seats_total })}
-        </BodyText>
-        <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
-          {Array.from({ length: session.seats_total }, (_, i) => {
-            const seat = session.seats.find((s) => s.seat_no === i + 1);
-            const asked = !seat ? pendingBySeat[i + 1] : null;
-            return (
-              <li
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  minHeight: A11Y.minTapTargetPx,
-                  fontSize: ts(A11Y.minBodyPx),
-                  borderBottom: `1px solid ${C.warmGray}`,
-                }}
-              >
-                <span aria-hidden="true">{seat ? (seat.is_bot ? "🤖" : "🪑") : asked ? "✉️" : "▫️"}</span>
-                <span style={{ color: seat ? C.textMain : C.textMuted }}>
-                  {seat
-                    ? seat.is_bot
-                      ? t("games.board.bot")
-                      : seat.profile_id === profile.id
-                        ? t("games.board.you")
-                        : seat.name
-                    : asked
-                      ? t("games.lobby.askedRow", { name: inviteNames[asked.invitee_id] || "…" })
-                      : t("games.lobby.seatEmpty")}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+      {/* The seats — the chess.com read: who is at this table. */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+        {chips.map((c) => (
+          <SeatChip key={c.key} name={c.name} state={c.state} seatNo={c.key} ts={ts} />
+        ))}
+      </div>
 
+      {/* The board itself, where this screen has one to show. Ludo's
+          lives on its own screen, so nothing renders here for it. */}
+      {session.game_key === "snakes" && (
+        <div aria-hidden="true" style={{ opacity: 0.55, pointerEvents: "none", marginBottom: 12 }}>
+          <SnakesBoard
+            seats={session.seats}
+            currentSeat={null}
+            label={t("games.wait.boardLabel")}
+            mySeat={mySeat ? mySeat.seat_no - 1 : null}
+          />
+        </div>
+      )}
+
+      {/* Anyone who wandered in on an open table can sit down. */}
       {!mySeat && !isInvitee && (
-        <PrimaryBtn
-          disabled={busy}
-          onClick={() => act(() => claimOpenSeat(session.id))}
-          style={{ marginBottom: 16 }}
-        >
+        <PrimaryBtn disabled={busy} onClick={() => act(() => claimOpenSeat(session.id))} style={{ marginBottom: 12 }}>
           {t("community.shares.gameOpenCta")}
         </PrimaryBtn>
       )}
 
-      {isHost && (
-        <Card>
-          <SectionLabel>{t("games.picker.title")}</SectionLabel>
-          <BodyText muted>{t("games.picker.intro")}</BodyText>
-          {/* One tap invites — the RPC is idempotent, so a double-tap
-              can never double-invite or re-notify. */}
-          <PeoplePicker
-            states={pickerStates}
-            maxPick={Math.max(0, openAllocations)}
-            pickedCount={0}
-            onToggle={(p) =>
-              act(
-                () => inviteToGame(session.id, p.id),
-                t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] })
-              )
-            }
-          />
+      {/* Share + Cancel: two small controls, no paragraphs. */}
+      {mySeat && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <GhostBtn
+            onClick={() => setShareOpen((o) => !o)}
+            aria-expanded={shareOpen}
+            aria-label={t("games.wait.share")}
+            style={{ padding: "0 16px" }}
+          >
+            🔗 {t("games.wait.share")}
+          </GhostBtn>
+          <GhostBtn onClick={() => navigate("/app/games")} style={{ padding: "0 16px" }}>
+            {t("games.wait.cancel")}
+          </GhostBtn>
+        </div>
+      )}
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
-            {canPost && !posted && (
-              <GhostBtn
-                disabled={busy}
-                onClick={() =>
-                  act(async () => {
-                    await createShare(profile.id, "game_open", session.id, {
-                      game_key: session.game_key,
-                      name_en: game?.name_en,
-                      name_ur: game?.name_ur,
-                      seats_total: session.seats_total,
-                      seats_taken: session.seats.length,
-                    });
-                    setPosted(true);
-                  }, t("games.lobby.openPosted"))
-                }
-              >
-                {t("games.lobby.openPostCta")}
-              </GhostBtn>
-            )}
-            {/* Carrom passes turns on timeout and has no bot player —
-                a bot seat would be an empty chair with a clock. */}
-            {game?.timeout_style !== "pass_turn" && (
-              <GhostBtn disabled={busy} onClick={() => act(() => startWithBots(session.id))}>
-                {t("games.lobby.botsCta")}
-              </GhostBtn>
-            )}
-          </div>
+      {shareOpen && mySeat && (
+        <Card style={{ marginTop: 12 }}>
+          <p
+            dir="ltr"
+            aria-label={session.join_code?.split("").join(" ")}
+            style={{
+              fontSize: ts(40),
+              fontWeight: 800,
+              letterSpacing: "0.35em",
+              color: C.green,
+              margin: "0 0 10px",
+              textAlign: "center",
+            }}
+          >
+            {session.join_code}
+          </p>
+          {isHost && openAllocations > 0 && (
+            <PeoplePicker
+              searchable
+              states={pickerStates}
+              maxPick={Math.max(0, openAllocations)}
+              pickedCount={0}
+              onToggle={(p) =>
+                act(
+                  () => inviteToGame(session.id, p.id),
+                  t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] })
+                )
+              }
+            />
+          )}
+          {isHost && canPost && !posted && (
+            <GhostBtn
+              disabled={busy}
+              style={{ marginTop: 12 }}
+              onClick={() =>
+                act(async () => {
+                  await createShare(profile.id, "game_open", session.id, {
+                    game_key: session.game_key,
+                    name_en: game?.name_en,
+                    name_ur: game?.name_ur,
+                    seats_total: session.seats_total,
+                    seats_taken: session.seats.length,
+                  });
+                  setPosted(true);
+                }, t("games.lobby.openPosted"))
+              }
+            >
+              {t("games.lobby.openPostCta")}
+            </GhostBtn>
+          )}
+          {isHost && game?.timeout_style !== "pass_turn" && (
+            <GhostBtn disabled={busy} style={{ marginTop: 12 }} onClick={() => act(() => startWithBots(session.id))}>
+              {t("games.lobby.botsCta")}
+            </GhostBtn>
+          )}
         </Card>
       )}
     </>

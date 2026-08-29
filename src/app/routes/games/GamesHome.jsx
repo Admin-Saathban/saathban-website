@@ -7,18 +7,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { pushToast, useFresh } from "../../lib/feedback.jsx";
+import { useFresh } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import {
   fetchGames,
   fetchMySessions,
   fetchMyAttempts,
-  createSession,
-  inviteToGame,
   joinByCode,
   puzzleToday,
 } from "../../lib/games.js";
-import PeoplePicker from "./PeoplePicker.jsx";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
 function gameName(g, lang) {
@@ -39,9 +36,6 @@ export default function GamesHome() {
   const [solvedToday, setSolvedToday] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
   const [loadError, setLoadError] = useState(false);
-  const [creating, setCreating] = useState(null); // game key with the people picker open
-  const [picked, setPicked] = useState([]); // chosen people, in tap order
-  const [extraSeats, setExtraSeats] = useState(0); // bot/open seats past the people
   const [busy, setBusy] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -85,39 +79,6 @@ export default function GamesHome() {
   const byKey = useMemo(() => Object.fromEntries(games.map((g) => [g.key, g])), [games]);
   const tables = sessions.filter((s) => byKey[s.game_key]?.kind === "turns");
   const turnGames = games.filter((g) => g.kind === "turns");
-
-  /* People first: seats = you + everyone you tapped + any extra
-     seats you left for bots or the community. Invites go out the
-     moment the table exists (server-idempotent — a retry can't
-     double-invite anyone). */
-  const startTable = async (game) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const seats = Math.min(
-        game.max_seats,
-        Math.max(game.min_seats, picked.length + 1 + extraSeats)
-      );
-      const id = await createSession(game.key, seats);
-      pushToast(t("feedback.tableCreated"));
-      // Remembered so the table glows in My tables when they come back.
-      try { sessionStorage.setItem("saathban.app.freshTable", id); } catch { /* fine */ }
-      for (const p of picked.slice(0, seats - 1)) {
-        try {
-          await inviteToGame(id, p.id);
-          pushToast(t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] }), {
-            key: `invite-${p.id}`,
-          });
-        } catch {
-          /* one refused invite must not strand the table */
-        }
-      }
-      navigate(`/app/games/s/${id}`);
-    } catch {
-      pushToast(t("games.actionError"), { tone: "error", key: "games" });
-      setBusy(false);
-    }
-  };
 
   const submitCode = async (e) => {
     e.preventDefault();
@@ -298,79 +259,9 @@ export default function GamesHome() {
             <BodyText muted style={{ fontWeight: 600, margin: 0 }}>
               {t("games.home.comingSoon")}
             </BodyText>
-          ) : creating === g.key ? (
-            <div>
-              {/* PEOPLE FIRST — the picker before any form. */}
-              <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 2px" }}>
-                {t("games.picker.title")}
-              </p>
-              <BodyText muted>{t("games.picker.intro")}</BodyText>
-              <PeoplePicker
-                states={Object.fromEntries(picked.map((p) => [p.id, "picked"]))}
-                maxPick={g.max_seats - 1}
-                pickedCount={picked.length}
-                onToggle={(p) =>
-                  setPicked((cur) =>
-                    cur.some((x) => x.id === p.id)
-                      ? cur.filter((x) => x.id !== p.id)
-                      : [...cur, p]
-                  )
-                }
-              />
-              {/* Then bots / open seats as the explicit fallback. */}
-              {picked.length + 1 < g.max_seats && (
-                <div style={{ marginTop: 12 }}>
-                  <BodyText muted style={{ marginBottom: 6 }}>
-                    {t("games.picker.botNote")}
-                  </BodyText>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {Array.from(
-                      { length: g.max_seats - Math.max(g.min_seats, picked.length + 1) + 1 },
-                      (_, i) => i
-                    ).map((n) => (
-                      <GhostBtn
-                        key={n}
-                        aria-pressed={extraSeats === n}
-                        onClick={() => setExtraSeats(n)}
-                        style={
-                          extraSeats === n
-                            ? { borderColor: C.green, background: C.green, color: C.cream }
-                            : undefined
-                        }
-                      >
-                        +{n}
-                      </GhostBtn>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-                <PrimaryBtn disabled={busy} onClick={() => startTable(g)}>
-                  {picked.length === 0
-                    ? t("games.picker.continueNone")
-                    : picked.length === 1
-                      ? t("games.picker.continueOne")
-                      : t("games.picker.continueCta", { n: picked.length })}
-                </PrimaryBtn>
-                <GhostBtn
-                  onClick={() => {
-                    setCreating(null);
-                    setPicked([]);
-                    setExtraSeats(0);
-                  }}
-                >
-                  {t("outdoor.place.formCancel")}
-                </GhostBtn>
-              </div>
-            </div>
           ) : (
-            <GhostBtn
-              onClick={() => {
-                setCreating(g.key);
-                setPicked([]);
-                setExtraSeats(0);
-              }}
-            >
+            /* One tap → the compact setup screen (seats, who, Start). */
+            <GhostBtn onClick={() => navigate(`/app/games/new/${g.key}`)}>
               {t("games.home.playCta")}
             </GhostBtn>
           )}

@@ -1394,6 +1394,22 @@ const en = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
+    new: {
+      hint: "Who are you playing?",
+      players: "Players",
+      people: "Play your people",
+      bots: "Play bots",
+      open: "Open to community",
+      start: "Start",
+      searchPh: "Search",
+    },
+    wait: {
+      waitingFor: "Waiting for {name}…",
+      openSeat: "Open seat",
+      share: "Share code",
+      cancel: "Cancel",
+      boardLabel: "The board, ready",
+    },
     title: "Games",
     intro: "A table is always open — play with neighbours, or let the bots keep you company.",
     loadError: "That didn't load. Please try again in a moment.",

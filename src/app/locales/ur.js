@@ -1375,6 +1375,22 @@ const ur = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
+    new: {
+      hint: "آپ کس کے ساتھ کھیلیں گے؟",
+      players: "کھلاڑی",
+      people: "اپنوں کے ساتھ کھیلیں",
+      bots: "کمپیوٹر کے ساتھ کھیلیں",
+      open: "برادری کے لیے کھلا",
+      start: "شروع کریں",
+      searchPh: "تلاش کریں",
+    },
+    wait: {
+      waitingFor: "{name} کا انتظار…",
+      openSeat: "خالی جگہ",
+      share: "کوڈ بھیجیں",
+      cancel: "منسوخ",
+      boardLabel: "بورڈ تیار ہے",
+    },
     title: "کھیل",
     intro: "بساط ہر وقت بچھی ہے — پڑوسیوں کے ساتھ کھیلیں، یا بوٹ آپ کا ساتھ دیں گے۔",
     loadError: "یہ کھل نہ سکا۔ ذرا دیر میں دوبارہ کوشش کیجیے۔",

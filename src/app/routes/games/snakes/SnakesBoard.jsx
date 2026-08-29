@@ -17,6 +17,7 @@
 import { COLORS as C } from "../../../../shared/tokens.js";
 import { SIZE, CELL, LADDERS, SNAKES, cellCenter } from "./board.js";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
+import Pawn from "../Pawn.jsx";
 
 const TOKEN_FILLS = SEAT_COLORS;
 
@@ -165,24 +166,10 @@ export default function SnakesBoard({ seats = [], currentSeat = null, label = ""
           const turn = currentSeat != null && s.seat_no === currentSeat;
           const mine = mySeat != null && s.seat_no === mySeat;
           return (
-            <g key={s.seat_no} transform={`translate(${x + spread} ${y + 1.2})`}>
-              {mine && <circle r={4.1} fill="none" stroke={C.brown} strokeWidth="0.5" strokeDasharray="1 1" />}
-              <circle
-                r={turn ? 3.1 : 2.7}
-                fill={TOKEN_FILLS[(s.seat_no - 1) % TOKEN_FILLS.length]}
-                stroke={turn ? C.cream : C.white}
-                strokeWidth={turn ? 0.9 : 0.5}
-              />
-              <text
-                y="1.1"
-                textAnchor="middle"
-                fontSize="3"
-                fontWeight="800"
-                fontFamily="DM Sans, sans-serif"
-                fill={SEAT_INK[(s.seat_no - 1) % SEAT_INK.length]}
-              >
-                {s.seat_no}
-              </text>
+            <g key={s.seat_no} transform={`translate(${x + spread} ${y})`}>
+              {mine && <circle r={4.4} fill="none" stroke={C.brown} strokeWidth="0.5" strokeDasharray="1 1" />}
+              {turn && <circle r={4.4} fill="none" stroke={C.green} strokeWidth="0.7" />}
+              <Pawn seat={s.seat_no - 1} cx={0} cy={0} r={3.4} />
             </g>
           );
         })

@@ -69,7 +69,6 @@ const en = {
       moodAlways: "Mood is always part of your log — it's how your companion knows what kind of day to keep you company through.",
       modules: {
         mood: "Mood",
-      moodDaily: "This month, day by day",
         sleep: "Sleep",
         medication: "Medicines",
         exercise: "Movement",
@@ -1449,6 +1448,10 @@ const en = {
       nextFinished: "Finished — tap to see the board, or play again.",
       recentTitle: "Recent games",
       activeTitle: "Your game",
+      puzzleDone: "Solved ✓ — back tomorrow",
+      puzzleStreak: "{n} days running",
+      startCta: "Start a game",
+      pickTitle: "Which game?",
       resumeCta: "Open",
       resumeYourTurn: "Your move",
       pastTitle: "Past games",
@@ -1698,6 +1701,7 @@ const en = {
       privacy:
         "Only you can see these — never your circle, never anyone else, whatever is shared elsewhere.",
       mood: "How the month has felt",
+      moodDaily: "This month, day by day",
       sleep: "Sleep this month",
       sleepBar: "{d}: {h} hours",
       empty: "A few more days and a gentle pattern will appear here.",

@@ -46,6 +46,8 @@ export default function GamesHome() {
   // The table standing in the way, when someone tries for a second.
   const [blockedBy, setBlockedBy] = useState(null);
   const [pastOpen, setPastOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -72,6 +74,18 @@ export default function GamesHome() {
         }
         const solved = attempts.filter((a) => a.solved_at);
         setSolvedCount(solved.length);
+        /* Consecutive solved days ending today (or yesterday, so the
+           streak survives until the day is actually missed). */
+        const days = new Set(solved.map((a) => a.puzzle_date));
+        let n = 0;
+        for (let i = 0; i < 400; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const key = d.toISOString().slice(0, 10);
+          if (days.has(key)) n += 1;
+          else if (i > 0) break;
+        }
+        setStreak(n);
         setSolvedToday(solved.some((a) => a.puzzle_date === puzzleToday()));
       } catch {
         if (alive) setLoadError(true);
@@ -258,26 +272,65 @@ export default function GamesHome() {
         </>
       )}
 
-      {/* Daily Riddle door */}
-      <Card style={{ background: C.creamDark ?? C.bg, borderColor: C.olive }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <span aria-hidden="true" style={{ fontSize: 34 }}>
-            🧩
-          </span>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 4px" }}>
-              {t("games.puzzle.title")}
-            </p>
-            <BodyText muted style={{ margin: 0 }}>
-              {solvedToday ? t("games.home.puzzleSolved") : t("games.home.puzzleCta")}
-              {solvedCount > 0 && <> — {t("games.puzzle.daysSolved", { n: solvedCount })}</>}
-            </BodyText>
+      {/* ── Daily Riddle. Bright and inviting while it waits; once
+             today's is solved the card goes QUIET — done is done, and
+             a solved thing should stop competing for attention. It
+             stays tappable to look back at, and wakes up bright again
+             at the new day. ── */}
+      <Link
+        to="/app/games/puzzle"
+        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+      >
+        <Card
+          style={
+            solvedToday
+              ? { background: "#f2efe9", borderColor: C.warmGray }
+              : { background: C.creamDark ?? C.bg, borderColor: C.olive, borderWidth: 2 }
+          }
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <span aria-hidden="true" style={{ fontSize: 34, opacity: solvedToday ? 0.45 : 1 }}>
+              🧩
+            </span>
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <p
+                style={{
+                  fontSize: ts(21),
+                  fontWeight: 700,
+                  margin: "0 0 4px",
+                  color: solvedToday ? C.textMuted : C.textMain,
+                }}
+              >
+                {t("games.puzzle.title")}
+              </p>
+              {solvedToday ? (
+                <BodyText muted style={{ margin: 0 }}>
+                  {t("games.home.puzzleDone")}
+                  {streak > 1 && <> · {t("games.home.puzzleStreak", { n: streak })}</>}
+                </BodyText>
+              ) : (
+                <BodyText style={{ margin: 0, fontWeight: 600 }}>
+                  {t("games.home.puzzleCta")}
+                </BodyText>
+              )}
+            </div>
+            {!solvedToday && (
+              <span
+                style={{
+                  background: C.green,
+                  color: C.cream,
+                  borderRadius: 50,
+                  padding: "10px 20px",
+                  fontSize: ts(A11Y.minBodyPx),
+                  fontWeight: 700,
+                }}
+              >
+                {t("games.home.openCta")}
+              </span>
+            )}
           </div>
-          <PrimaryBtn onClick={() => navigate("/app/games/puzzle")}>
-            {t("games.home.openCta")}
-          </PrimaryBtn>
-        </div>
-      </Card>
+        </Card>
+      </Link>
 
       {/* Join by code — prominent, large digits, LTR-pinned so the
           six digits read the same under Urdu. */}
@@ -325,38 +378,68 @@ export default function GamesHome() {
         )}
       </Card>
 
-      {/* Registry */}
-      <SectionLabel>{t("games.create.title")}</SectionLabel>
-      {turnGames.map((g) => (
-        <Card key={g.key}>
-          <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 4px" }}>
-            {gameName(g, lang)}
-          </p>
-          <BodyText muted>{gameTagline(g, lang)}</BodyText>
-          {!g.enabled ? (
-            <BodyText muted style={{ fontWeight: 600, margin: 0 }}>
-              {t("games.home.comingSoon")}
-            </BodyText>
-          ) : (
-            /* One tap → the compact setup screen (seats, who, Start). */
-            <GhostBtn
-              onClick={() => {
-                // The refusal belongs where the second table would
-                // begin, not on the way in.
-                const inTheWay = liveSessionOf(sessions);
-                if (inTheWay) {
-                  setBlockedBy(inTheWay);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                  return;
-                }
-                navigate(`/app/games/new/${g.key}`);
+      {/* ── ONE way to start. A stack of per-game cards asked the
+             person to compare three things before they'd decided they
+             wanted a game at all; now it's one button, and the choice
+             of game comes after. ── */}
+      {!pickerOpen ? (
+        <PrimaryBtn
+          onClick={() => {
+            const inTheWay = liveSessionOf(sessions);
+            if (inTheWay) {
+              setBlockedBy(inTheWay);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
+            setPickerOpen(true);
+          }}
+          style={{ width: "100%", marginBottom: 16 }}
+        >
+          ✚ {t("games.home.startCta")}
+        </PrimaryBtn>
+      ) : (
+        <>
+          <SectionLabel>{t("games.home.pickTitle")}</SectionLabel>
+          {turnGames.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              disabled={!g.enabled}
+              onClick={() => navigate(`/app/games/new/${g.key}`)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                width: "100%",
+                minHeight: 76,
+                padding: "14px 18px",
+                marginBottom: 10,
+                background: C.white,
+                border: `2px solid ${C.warmGray}`,
+                borderRadius: 18,
+                fontFamily: "inherit",
+                textAlign: "start",
+                cursor: g.enabled ? "pointer" : "default",
+                opacity: g.enabled ? 1 : 0.5,
               }}
             >
-              {t("games.home.playCta")}
-            </GhostBtn>
-          )}
-        </Card>
-      ))}
+              <BoardThumb gameKey={g.key} size={48} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
+                  {gameName(g, lang)}
+                </span>
+                <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
+                  {g.enabled ? gameTagline(g, lang) : t("games.home.comingSoon")}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
+                ›
+              </span>
+            </button>
+          ))}
+          <GhostBtn onClick={() => setPickerOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
+        </>
+      )}
 
       {/* ── Past games: folded away. Finished tables must never
              stack up the screen; three at a time, behind a link. ── */}

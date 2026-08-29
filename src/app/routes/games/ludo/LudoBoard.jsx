@@ -16,6 +16,7 @@
    ════════════════════════════════════════════════ */
 
 import { COLORS as C } from "../../../../shared/tokens.js";
+import Pawn from "../Pawn.jsx";
 import {
   TRACK,
   HOME_COLUMNS,
@@ -127,7 +128,7 @@ export default function LudoBoard({
               width={CELL - 2}
               height={CELL - 2}
               rx={6}
-              fill={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.white}
+              fill={startSeat >= 0 ? SEAT_TINTS[startSeat] : C.white}
               stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
               strokeWidth={startSeat >= 0 ? 2.5 : 1}
               opacity={startSeat >= 0 && startSeat >= seatsInPlay ? 0.3 : 1}
@@ -137,7 +138,7 @@ export default function LudoBoard({
                 x={c * CELL + CELL / 2}
                 y={r * CELL + CELL / 2 + 7}
                 spin={spin}
-                fontSize={20}
+                fontSize={23}
                 fill={C.olive}
                 aria-hidden="true"
               >
@@ -151,7 +152,7 @@ export default function LudoBoard({
                 spin={spin}
                 fontSize={19}
                 fontWeight="700"
-                fill={SEAT_INK[startSeat]}
+                fill={SEAT_COLORS[startSeat]}
                 aria-hidden="true"
               >
                 ★
@@ -233,25 +234,7 @@ export default function LudoBoard({
                   strokeDasharray="6 5"
                 />
               )}
-              <circle
-                cx={cx}
-                cy={cy}
-                r={15}
-                fill={SEAT_COLORS[seat]}
-                stroke={C.white}
-                strokeWidth={2.5}
-              />
-              <Upright
-                x={cx}
-                y={cy + 6}
-                spin={spin}
-                fontSize={16}
-                fontWeight="700"
-                fill={SEAT_INK[seat]}
-                aria-hidden="true"
-              >
-                {seat + 1}
-              </Upright>
+              <Pawn seat={seat} cx={cx} cy={cy} r={15} spin={spin} />
               {isLegal && <circle cx={cx} cy={cy} r={26} fill="transparent" />}
             </g>
           );

@@ -16,6 +16,9 @@ export const COLORS = {
   olive: "#6b7c5e", sage: "#8fa67e", warmGray: "#d4cdc4",
   bg: "#FAF3E9", white: "#FFFFFF", dark: "#1a1a1a",
   textMain: "#2d2418", textMuted: "#6b5e52", accent: "#573425",
+  // Form validation only. Never the only signal — always pair the colour
+  // with words (SPEC.md: no dependence on colour alone).
+  error: "#8C2F22",
 };
 
 // ─── Type ───

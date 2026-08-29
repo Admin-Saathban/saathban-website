@@ -1,0 +1,249 @@
+/* ════════════════════════════════════════════════
+   Admin lane — small shared UI primitives.
+
+   Desktop-first (admins are the Saathban team on laptops), but the
+   accessibility floors still apply: 18px body text, 48px tap targets.
+   All colour comes from the shared brand tokens — no hardcoded hex.
+   There is no red in the palette, so danger/flag emphasis is carried by
+   the dark brown + weight + an explicit glyph, never colour alone.
+   ════════════════════════════════════════════════ */
+
+import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { STATUS_LABELS } from "./data.js";
+
+// ─── Status chip ───
+// Each pipeline stage gets a distinct token pairing; the label always
+// carries the meaning so colour is never the only signal.
+const STATUS_STYLES = {
+  pending: { bg: C.warmGray, fg: C.textMain },
+  interviewing: { bg: C.olive, fg: C.white },
+  probation: { bg: C.sage, fg: C.dark },
+  active: { bg: C.green, fg: C.cream },
+  suspended: { bg: C.brown, fg: C.cream },
+  rejected: { bg: C.dark, fg: C.warmGray },
+};
+
+export function StatusChip({ status }) {
+  const s = STATUS_STYLES[status] || STATUS_STYLES.pending;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "4px 14px",
+        borderRadius: 50,
+        background: s.bg,
+        color: s.fg,
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: 0.3,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
+
+// ─── Red-flag badge — glyph + count/text, never colour alone ───
+export function FlagBadge({ count, label }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "3px 12px",
+        borderRadius: 50,
+        background: C.brown,
+        color: C.cream,
+        fontSize: 14,
+        fontWeight: 700,
+      }}
+    >
+      ⚑ {label ?? `${count} flag${count === 1 ? "" : "s"}`}
+    </span>
+  );
+}
+
+// ─── Layout blocks ───
+export function Card({ title, aside, children, style }) {
+  return (
+    <section
+      style={{
+        background: C.white,
+        border: `1px solid ${C.warmGray}`,
+        borderRadius: 14,
+        padding: "22px 26px",
+        ...style,
+      }}
+    >
+      {(title || aside) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 16,
+            marginBottom: 14,
+          }}
+        >
+          {title && (
+            <h2
+              style={{
+                fontFamily: FONTS.serif,
+                fontSize: 21,
+                fontWeight: 600,
+                color: C.green,
+                margin: 0,
+              }}
+            >
+              {title}
+            </h2>
+          )}
+          {aside}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+export function Field({ label, children, wide }) {
+  return (
+    <div style={{ gridColumn: wide ? "1 / -1" : undefined }}>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: 0.8,
+          textTransform: "uppercase",
+          color: C.textMuted,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: A11Y.minBodyPx, color: C.textMain, lineHeight: 1.6 }}>
+        {children ?? "—"}
+      </div>
+    </div>
+  );
+}
+
+// ─── Buttons ───
+// kind: "primary" (green solid), "outline" (default actions),
+//       "danger" (dark brown solid — reject/suspend territory)
+export function AdminBtn({ kind = "outline", disabled, onClick, children, title }) {
+  const looks = {
+    primary: { background: C.green, color: C.cream, border: `2px solid ${C.green}` },
+    outline: { background: C.white, color: C.green, border: `2px solid ${C.green}` },
+    danger: { background: C.brown, color: C.cream, border: `2px solid ${C.brown}` },
+    ghost: { background: "transparent", color: C.textMuted, border: `2px solid ${C.warmGray}` },
+  };
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        minHeight: A11Y.minTapTargetPx,
+        padding: "0 22px",
+        borderRadius: 10,
+        fontFamily: FONTS.sans,
+        fontSize: 17,
+        fontWeight: 600,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+        ...looks[kind],
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Pipeline stepper: pending → interviewing → probation → active ───
+// Suspended/rejected render as a terminal note beside the track rather
+// than a step — they are exits, not stages.
+export function PipelineStepper({ status, pipeline }) {
+  const idx = pipeline.indexOf(status);
+  const offTrack = idx === -1;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0, flexWrap: "wrap" }}>
+      {pipeline.map((stage, i) => {
+        const reached = !offTrack && i <= idx;
+        const current = !offTrack && i === idx;
+        return (
+          <div key={stage} style={{ display: "flex", alignItems: "center" }}>
+            {i > 0 && (
+              <div
+                style={{
+                  width: 34,
+                  height: 2,
+                  background: reached ? C.green : C.warmGray,
+                }}
+              />
+            )}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 14px",
+                borderRadius: 50,
+                border: `2px solid ${reached ? C.green : C.warmGray}`,
+                background: current ? C.green : C.white,
+                color: current ? C.cream : reached ? C.green : C.textMuted,
+                fontSize: 15,
+                fontWeight: current ? 700 : 500,
+              }}
+            >
+              {reached && !current ? "✓ " : ""}
+              {STATUS_LABELS[stage]}
+            </div>
+          </div>
+        );
+      })}
+      {offTrack && (
+        <div style={{ marginLeft: 16 }}>
+          <StatusChip status={status} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Date helpers ───
+export function fmtDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function fmtDateTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function hoursAgo(iso) {
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 36e5));
+}
+
+export function ageFromDob(dob) {
+  const d = new Date(dob);
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}

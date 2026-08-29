@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════
    Community feed — /app/community.
 
    Chronological, nothing else (SPEC.md: no algorithm). Icons and the
@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { COPY, REACTIONS } from "./communityCopy.js";
+import { REACTIONS } from "./communityCopy.js";
 import {
   canUseCommunity,
   canPostCommunity,
@@ -34,10 +34,8 @@ import {
 } from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
-const c = COPY.feed;
-
 function AuthorLine({ author, when, dateLocale }) {
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
       <span style={{ fontSize: ts(19), fontWeight: 700, color: C.green }}>
@@ -54,7 +52,7 @@ function AuthorLine({ author, when, dateLocale }) {
             padding: "3px 12px",
           }}
         >
-          {c.announcement}
+          {t("community.feed.announcement")}
         </span>
       )}
       <span style={{ fontSize: ts(15), color: C.textMuted }}>
@@ -71,13 +69,14 @@ function AuthorLine({ author, when, dateLocale }) {
 
 /* Inline report form — small, no prompt() dialogs. */
 function ReportForm({ onSend, onCancel }) {
+  const { t } = useI18n();
   const [reason, setReason] = useState("");
   return (
     <div style={{ marginTop: 12 }}>
-      <BodyText muted style={{ marginBottom: 6 }}>{c.reportPrompt}</BodyText>
+      <BodyText muted style={{ marginBottom: 6 }}>{t("community.feed.reportPrompt")}</BodyText>
       <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-        <PrimaryBtn onClick={() => onSend(reason)}>{c.menuReport}</PrimaryBtn>
+        <PrimaryBtn onClick={() => onSend(reason)}>{t("community.feed.menuReport")}</PrimaryBtn>
         <GhostBtn onClick={onCancel}>✕</GhostBtn>
       </div>
     </div>
@@ -95,7 +94,7 @@ function PostCard({
   onToggleReaction,
   onAction,
 }) {
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -166,7 +165,7 @@ function PostCard({
         </div>
         <div style={{ position: "relative" }}>
           <GhostBtn
-            aria-label={c.menuAria}
+            aria-label={t("community.feed.menuAria")}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
             style={{ padding: "0 14px" }}
@@ -188,11 +187,11 @@ function PostCard({
                 padding: "6px 0",
               }}
             >
-              {menuItem(c.menuReport, () => setReporting(true))}
-              {!own && menuItem(c.menuMessage, () => onAction("dm", post))}
-              {!own && menuItem(c.menuMute, () => onAction("mute", post))}
-              {!own && menuItem(c.menuBlock, () => onAction("block", post))}
-              {own && menuItem(c.menuDeleteOwn, () => onAction("delete", post))}
+              {menuItem(t("community.feed.menuReport"), () => setReporting(true))}
+              {!own && menuItem(t("community.feed.menuMessage"), () => onAction("dm", post))}
+              {!own && menuItem(t("community.feed.menuMute"), () => onAction("mute", post))}
+              {!own && menuItem(t("community.feed.menuBlock"), () => onAction("block", post))}
+              {own && menuItem(t("community.feed.menuDeleteOwn"), () => onAction("delete", post))}
             </div>
           )}
         </div>
@@ -220,7 +219,7 @@ function PostCard({
       {/* Reactions: one each, tap again to take it back. */}
       <div
         role="group"
-        aria-label={c.reactAria}
+        aria-label={t("community.feed.reactAria")}
         style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 4 }}
       >
         {REACTIONS.map((emoji) => {
@@ -253,7 +252,7 @@ function PostCard({
           );
         })}
         <GhostBtn aria-expanded={commentsOpen} onClick={openComments} style={{ border: "none" }}>
-          💬 {c.comments}
+          💬 {t("community.feed.comments")}
         </GhostBtn>
       </div>
 
@@ -262,7 +261,7 @@ function PostCard({
           {comments === null ? (
             <BodyText muted role="status">…</BodyText>
           ) : comments.length === 0 ? (
-            <BodyText muted>{c.noComments}</BodyText>
+            <BodyText muted>{t("community.feed.noComments")}</BodyText>
           ) : (
             comments.map((cm) => (
               <div key={cm.id} style={{ marginBottom: 10 }}>
@@ -270,21 +269,24 @@ function PostCard({
                   <span style={{ fontSize: ts(17), fontWeight: 700, color: C.green }}>
                     {commentAuthors[cm.author_id]?.full_name || "…"}
                   </span>
+                  {/* Report is a safety affordance: full 48px target,
+                      full 18px text (QUALITY_REPORT §3 must-fix). */}
                   <button
                     type="button"
                     onClick={() => setCommentReporting(cm.id)}
                     style={{
-                      minHeight: 32,
+                      minHeight: A11Y.minTapTargetPx,
                       background: "none",
                       border: "none",
                       color: C.textMuted,
-                      fontSize: ts(15),
+                      fontSize: ts(18),
                       fontFamily: "inherit",
                       textDecoration: "underline",
                       cursor: "pointer",
+                      padding: "0 8px",
                     }}
                   >
-                    {c.menuReport}
+                    {t("community.feed.menuReport")}
                   </button>
                 </div>
                 <BodyText style={{ margin: "2px 0 0" }}>{cm.body}</BodyText>
@@ -305,11 +307,11 @@ function PostCard({
               <input
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
-                placeholder={c.commentPlaceholder}
+                placeholder={t("community.feed.commentPlaceholder")}
                 style={{ flex: 1 }}
               />
               <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
-                {c.commentCta}
+                {t("community.feed.commentCta")}
               </GhostBtn>
             </form>
           )}
@@ -320,7 +322,7 @@ function PostCard({
 }
 
 export default function Feed() {
-  const { ts, meta, lang } = useI18n();
+  const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
@@ -360,7 +362,7 @@ export default function Feed() {
       setAuthors(a);
       setReactions(r);
     } catch {
-      setError(c.loadError);
+      setError(t("community.feed.loadError"));
       setAccess(true);
     }
   }, []);
@@ -380,7 +382,7 @@ export default function Feed() {
       setFile(null);
       await load();
     } catch {
-      setError(c.postError);
+      setError(t("community.feed.postError"));
     } finally {
       setPosting(false);
     }
@@ -400,14 +402,14 @@ export default function Feed() {
     try {
       if (kind === "report") {
         await fileReport(myId, "post", target.id, target.author_id, target.body, reason);
-        showToast(c.reportedToast);
+        showToast(t("community.feed.reportedToast"));
       } else if (kind === "reportComment") {
         await fileReport(myId, "comment", target.id, target.author_id, target.body, reason);
-        showToast(c.reportedToast);
+        showToast(t("community.feed.reportedToast"));
       } else if (kind === "mute" || kind === "block") {
         await blockOrMute(myId, target.author_id, kind);
         await load();
-        showToast(kind === "mute" ? c.mutedToast : c.blockedToast, c.undo, async () => {
+        showToast(kind === "mute" ? t("community.feed.mutedToast") : t("community.feed.blockedToast"), t("community.feed.undo"), async () => {
           await unblock(myId, target.author_id, kind);
           setToast(null);
           await load();
@@ -418,13 +420,13 @@ export default function Feed() {
       } else if (kind === "dm") {
         try {
           await sendDmRequest(target.author_id);
-          showToast(c.dmRequestedToast);
+          showToast(t("community.feed.dmRequestedToast"));
         } catch {
-          showToast(c.dmRequestFailed);
+          showToast(t("community.feed.dmRequestFailed"));
         }
       }
     } catch {
-      setError(c.loadError);
+      setError(t("community.feed.loadError"));
     }
   };
 
@@ -449,7 +451,7 @@ export default function Feed() {
             flex: 1,
           }}
         >
-          {c.title}
+          {t("community.feed.title")}
         </h1>
         <Link
           to="messages"
@@ -466,10 +468,10 @@ export default function Feed() {
             textDecoration: "none",
           }}
         >
-          ✉️ {c.messagesCta}
+          ✉️ {t("community.feed.messagesCta")}
         </Link>
       </div>
-      <BodyText muted style={{ marginBottom: 18 }}>{c.intro}</BodyText>
+      <BodyText muted style={{ marginBottom: 18 }}>{t("community.feed.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -481,7 +483,7 @@ export default function Feed() {
         <BodyText muted role="status">…</BodyText>
       ) : access === false ? (
         <Card>
-          <BodyText muted style={{ margin: 0 }}>{c.noAccess}</BodyText>
+          <BodyText muted style={{ margin: 0 }}>{t("community.feed.noAccess")}</BodyText>
         </Card>
       ) : (
         <>
@@ -492,7 +494,7 @@ export default function Feed() {
                   rows={3}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder={c.composerPlaceholder}
+                  placeholder={t("community.feed.composerPlaceholder")}
                   maxLength={4000}
                 />
                 <input
@@ -504,10 +506,10 @@ export default function Feed() {
                 />
                 <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                   <GhostBtn onClick={() => fileRef.current?.click()}>
-                    📷 {file ? c.composerImageChosen : c.composerImage}
+                    📷 {file ? t("community.feed.composerImageChosen") : t("community.feed.composerImage")}
                   </GhostBtn>
                   <PrimaryBtn type="submit" onClick={share} disabled={posting || !body.trim()}>
-                    {posting ? c.posting : c.composerCta}
+                    {posting ? t("community.feed.posting") : t("community.feed.composerCta")}
                   </PrimaryBtn>
                 </div>
               </form>
@@ -515,7 +517,7 @@ export default function Feed() {
           )}
 
           {posts.length === 0 ? (
-            <BodyText muted>{c.emptyFeed}</BodyText>
+            <BodyText muted>{t("community.feed.emptyFeed")}</BodyText>
           ) : (
             posts.map((p) => (
               <PostCard

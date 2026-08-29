@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════
    One DM thread — /app/community/messages/:requestId.
 
    Participants only, at the database level. A message from the other
@@ -13,7 +13,7 @@ import { useParams, Navigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { COPY, MONEY_PATTERN } from "./communityCopy.js";
+import { MONEY_PATTERN } from "./communityCopy.js";
 import {
   fetchThread,
   fetchAuthors,
@@ -23,11 +23,9 @@ import {
 } from "./communityData.js";
 import { CommunityScreen, BodyText, PrimaryBtn, Toast } from "./ui.jsx";
 
-const c = COPY.dm;
-
 export default function Thread() {
   const { requestId } = useParams();
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
 
@@ -49,7 +47,7 @@ export default function Thread() {
         markThreadRead(requestId, myId);
       }
     } catch {
-      setError(c.loadError);
+      setError(t("community.dm.loadError"));
       setRequest(null);
     }
   }, [requestId, myId]);
@@ -77,22 +75,22 @@ export default function Thread() {
       setBody("");
       await load();
     } catch {
-      setError(c.sendError);
+      setError(t("community.dm.sendError"));
     }
   };
 
   const reportMessage = async (m) => {
     try {
       await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
-      setToast(COPY.feed.reportedToast);
+      setToast(t("community.feed.reportedToast"));
       window.setTimeout(() => setToast(""), 5000);
     } catch {
-      setError(c.loadError);
+      setError(t("community.dm.loadError"));
     }
   };
 
   return (
-    <CommunityScreen backTo="/app/community/messages" backLabel={c.title} width={560}>
+    <CommunityScreen backTo="/app/community/messages" backLabel={t("community.dm.title")} width={560}>
       <h1
         style={{
           fontSize: ts(24),
@@ -128,13 +126,15 @@ export default function Thread() {
                       borderRadius: 14,
                       padding: "10px 14px",
                       marginBottom: 6,
-                      fontSize: ts(16),
+                      // Safety banner: never below the 18px floor
+                      // (QUALITY_REPORT §3 must-fix).
+                      fontSize: ts(18),
                       lineHeight: 1.5,
                       color: C.brown,
                       fontWeight: 600,
                     }}
                   >
-                    ⚠ {c.moneyWarning}
+                    ⚠ {t("community.dm.moneyWarning")}
                   </div>
                 )}
                 <div
@@ -152,23 +152,25 @@ export default function Thread() {
                 >
                   {m.body}
                 </div>
+                {/* Report is a safety affordance: full 48px target,
+                    full 18px text (QUALITY_REPORT §3 must-fix). */}
                 {!mine && (
                   <button
                     type="button"
                     onClick={() => reportMessage(m)}
                     style={{
-                      minHeight: 36,
+                      minHeight: A11Y.minTapTargetPx,
                       background: "none",
                       border: "none",
                       color: C.textMuted,
-                      fontSize: ts(14),
+                      fontSize: ts(18),
                       fontFamily: "inherit",
                       textDecoration: "underline",
                       cursor: "pointer",
-                      padding: "2px 4px",
+                      padding: "2px 8px",
                     }}
                   >
-                    {c.reportMessage}
+                    {t("community.dm.reportMessage")}
                   </button>
                 )}
               </div>
@@ -182,12 +184,12 @@ export default function Thread() {
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder={c.threadPlaceholder}
+          placeholder={t("community.dm.threadPlaceholder")}
           maxLength={2000}
           style={{ flex: 1 }}
         />
         <PrimaryBtn type="submit" onClick={send} disabled={!body.trim()}>
-          {c.threadSend}
+          {t("community.dm.threadSend")}
         </PrimaryBtn>
       </form>
 

@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════
    Outdoor — /app/outdoor. A clean list grouped by city and area
    (SPEC.md; no map API in v1). Each place shows how many people the
    CALLER may know are there right now — the count is personal by
@@ -10,14 +10,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { COPY, TYPE_ICONS } from "./outdoorCopy.js";
+import { TYPE_ICONS } from "./outdoorCopy.js";
 import { canUseCommunity, fetchPlaces, fetchLiveCheckins } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
 
-const c = COPY.home;
-
 export default function OutdoorHome() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const [access, setAccess] = useState(null);
   const [places, setPlaces] = useState([]);
   const [liveCounts, setLiveCounts] = useState({});
@@ -39,7 +37,7 @@ export default function OutdoorHome() {
         setLiveCounts(counts);
       } catch {
         if (!cancelled) {
-          setError(c.loadError);
+          setError(t("outdoor.home.loadError"));
           setAccess(true);
         }
       }
@@ -68,9 +66,9 @@ export default function OutdoorHome() {
           margin: "0 0 8px",
         }}
       >
-        {c.title}
+        {t("outdoor.home.title")}
       </h1>
-      <BodyText muted style={{ marginBottom: 12 }}>{c.intro}</BodyText>
+      <BodyText muted style={{ marginBottom: 12 }}>{t("outdoor.home.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -82,7 +80,7 @@ export default function OutdoorHome() {
         <BodyText muted role="status">…</BodyText>
       ) : access === false ? (
         <Card>
-          <BodyText muted style={{ margin: 0 }}>{c.noAccess}</BodyText>
+          <BodyText muted style={{ margin: 0 }}>{t("outdoor.home.noAccess")}</BodyText>
         </Card>
       ) : (
         Object.entries(byCity).map(([city, areas]) => (
@@ -136,7 +134,7 @@ export default function OutdoorHome() {
                         </span>
                         {n > 0 && (
                           <span style={{ display: "block", fontSize: ts(16), color: C.olive, fontWeight: 600 }}>
-                            {n === 1 ? c.hereNowOne : c.hereNowMany.replace("{n}", n)}
+                            {n === 1 ? t("outdoor.home.hereNowOne") : t("outdoor.home.hereNowMany", { n })}
                           </span>
                         )}
                       </span>

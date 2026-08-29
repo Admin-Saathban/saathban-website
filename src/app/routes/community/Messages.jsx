@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════
    Messages — /app/community/messages.
 
    Request-gated (SPEC.md): a request must be accepted before any
@@ -12,14 +12,11 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { COPY } from "./communityCopy.js";
 import { fetchDmOverview, fetchAuthors, respondToRequest } from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
-const c = COPY.dm;
-
 export default function Messages() {
-  const { ts, meta } = useI18n();
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
 
@@ -37,7 +34,7 @@ export default function Messages() {
       ]);
       setPeople(await fetchAuthors(ids));
     } catch {
-      setError(c.loadError);
+      setError(t("community.dm.loadError"));
       setOverview({ incoming: [], outgoing: [], threads: [] });
     }
   }, [myId]);
@@ -54,7 +51,7 @@ export default function Messages() {
       await respondToRequest(id, status);
       await load();
     } catch {
-      setError(c.loadError);
+      setError(t("community.dm.loadError"));
     }
   };
 
@@ -74,7 +71,7 @@ export default function Messages() {
   );
 
   return (
-    <CommunityScreen backTo="/app/community" backLabel={c.backToFeed}>
+    <CommunityScreen backTo="/app/community" backLabel={t("community.dm.backToFeed")}>
       <h1
         style={{
           fontFamily: meta.fonts.heading,
@@ -84,9 +81,9 @@ export default function Messages() {
           margin: "0 0 8px",
         }}
       >
-        {c.title}
+        {t("community.dm.title")}
       </h1>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{t("community.dm.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -100,24 +97,24 @@ export default function Messages() {
         <>
           {overview.incoming.length > 0 && (
             <>
-              {sectionLabel(c.requestsLabel)}
+              {sectionLabel(t("community.dm.requestsLabel"))}
               {overview.incoming.map((r) => (
                 <Card key={r.id}>
                   <BodyText>
-                    <strong>{nameOf(r.requester_id)}</strong> {c.requestLine}
+                    <strong>{nameOf(r.requester_id)}</strong> {t("community.dm.requestLine")}
                   </BodyText>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <PrimaryBtn onClick={() => respond(r.id, "accepted")}>{c.accept}</PrimaryBtn>
-                    <GhostBtn onClick={() => respond(r.id, "declined")}>{c.decline}</GhostBtn>
+                    <PrimaryBtn onClick={() => respond(r.id, "accepted")}>{t("community.dm.accept")}</PrimaryBtn>
+                    <GhostBtn onClick={() => respond(r.id, "declined")}>{t("community.dm.decline")}</GhostBtn>
                   </div>
                 </Card>
               ))}
             </>
           )}
 
-          {sectionLabel(c.threadsLabel)}
+          {sectionLabel(t("community.dm.threadsLabel"))}
           {overview.threads.length === 0 ? (
-            <BodyText muted>{c.emptyThreads}</BodyText>
+            <BodyText muted>{t("community.dm.emptyThreads")}</BodyText>
           ) : (
             overview.threads.map((r) => (
               <Link
@@ -146,10 +143,10 @@ export default function Messages() {
 
           {overview.outgoing.length > 0 && (
             <>
-              {sectionLabel(c.outgoingLabel)}
+              {sectionLabel(t("community.dm.outgoingLabel"))}
               {overview.outgoing.map((r) => (
                 <BodyText key={r.id} muted>
-                  <strong>{nameOf(r.recipient_id)}</strong> {c.outgoingLine}
+                  <strong>{nameOf(r.recipient_id)}</strong> {t("community.dm.outgoingLine")}
                 </BodyText>
               ))}
             </>
@@ -157,7 +154,7 @@ export default function Messages() {
 
           {overview.incoming.length === 0 &&
             overview.threads.length === 0 &&
-            overview.outgoing.length === 0 && <BodyText muted>{c.empty}</BodyText>}
+            overview.outgoing.length === 0 && <BodyText muted>{t("community.dm.empty")}</BodyText>}
         </>
       )}
     </CommunityScreen>

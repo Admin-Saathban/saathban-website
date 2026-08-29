@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════
    One place — /app/outdoor/:placeId.
 
    Check-in panel (Icons; manual only, ~2h auto-expiry, per-check-in
@@ -14,7 +14,7 @@ import { useParams, Navigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { COPY, TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
+import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
 import {
   fetchPlaces,
   fetchLiveCheckins,
@@ -33,10 +33,8 @@ import {
 } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
-const c = COPY.place;
-
 function VisibilityChoice({ value, onChange }) {
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   const option = (val, label, hint) => (
     <button
       type="button"
@@ -65,16 +63,16 @@ function VisibilityChoice({ value, onChange }) {
     </button>
   );
   return (
-    <div role="radiogroup" aria-label={c.visibilityLabel} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      {option("connections", c.visConnections, c.visConnectionsHint)}
-      {option("board", c.visBoard, c.visBoardHint)}
+    <div role="radiogroup" aria-label={t("outdoor.place.visibilityLabel")} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {option("connections", t("outdoor.place.visConnections"), t("outdoor.place.visConnectionsHint"))}
+      {option("board", t("outdoor.place.visBoard"), t("outdoor.place.visBoardHint"))}
     </div>
   );
 }
 
 export default function PlaceView() {
   const { placeId } = useParams();
-  const { ts, meta, lang } = useI18n();
+  const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
   const isIcon = profile?.role === "saath_icon";
@@ -126,7 +124,7 @@ export default function PlaceView() {
         ])
       );
     } catch {
-      setError(COPY.home.loadError);
+      setError(t("outdoor.home.loadError"));
       setPlace((p) => (p === undefined ? null : p));
     }
   }, [placeId, myId]);
@@ -143,7 +141,7 @@ export default function PlaceView() {
       await checkIn(placeId, visibility);
       await load();
     } catch {
-      setError(c.checkinFailed);
+      setError(t("outdoor.place.checkinFailed"));
     }
   };
 
@@ -153,7 +151,7 @@ export default function PlaceView() {
       await leaveCheckin(mine.id);
       await load();
     } catch {
-      setError(c.checkinFailed);
+      setError(t("outdoor.place.checkinFailed"));
     }
   };
 
@@ -168,7 +166,7 @@ export default function PlaceView() {
       setPlanNote("");
       await load();
     } catch {
-      setError(c.checkinFailed);
+      setError(t("outdoor.place.checkinFailed"));
     }
   };
 
@@ -181,16 +179,16 @@ export default function PlaceView() {
       setBoardBody("");
       await load();
     } catch {
-      setError(c.checkinFailed);
+      setError(t("outdoor.place.checkinFailed"));
     }
   };
 
   const report = async (m) => {
     try {
       await reportBoardMessage(myId, m);
-      showToast(c.reportedToast);
+      showToast(t("outdoor.place.reportedToast"));
     } catch {
-      setError(COPY.home.loadError);
+      setError(t("outdoor.home.loadError"));
     }
   };
 
@@ -198,30 +196,32 @@ export default function PlaceView() {
     try {
       await blockAuthor(myId, m.author_id);
       await load();
-      showToast(c.blockedToast, c.undo, async () => {
+      showToast(t("outdoor.place.blockedToast"), t("outdoor.place.undo"), async () => {
         await unblockAuthor(myId, m.author_id);
         setToast(null);
         await load();
       });
     } catch {
-      setError(COPY.home.loadError);
+      setError(t("outdoor.home.loadError"));
     }
   };
 
+  /* Report and block are safety affordances: full 48px target, full
+     18px text (same floor as the Community fixes, QUALITY_REPORT §3). */
   const smallLink = (label, onClick) => (
     <button
       type="button"
       onClick={onClick}
       style={{
-        minHeight: 36,
+        minHeight: A11Y.minTapTargetPx,
         background: "none",
         border: "none",
         color: C.textMuted,
-        fontSize: ts(15),
+        fontSize: ts(18),
         fontFamily: "inherit",
         textDecoration: "underline",
         cursor: "pointer",
-        padding: "2px 6px",
+        padding: "2px 8px",
       }}
     >
       {label}
@@ -229,7 +229,7 @@ export default function PlaceView() {
   );
 
   return (
-    <OutdoorScreen backTo="/app/outdoor" backLabel={c.backToPlaces}>
+    <OutdoorScreen backTo="/app/outdoor" backLabel={t("outdoor.place.backToPlaces")}>
       {place === undefined ? (
         <BodyText muted role="status">…</BodyText>
       ) : (
@@ -262,37 +262,36 @@ export default function PlaceView() {
                 <>
                   <BodyText style={{ fontWeight: 600 }}>
                     ✓{" "}
-                    {c.checkedInUntil.replace(
-                      "{time}",
-                      new Date(mine.expires_at).toLocaleTimeString(dateLocale, {
+                    {t("outdoor.place.checkedInUntil", {
+                      time: new Date(mine.expires_at).toLocaleTimeString(dateLocale, {
                         hour: "numeric",
                         minute: "2-digit",
-                      })
-                    )}
+                      }),
+                    })}
                   </BodyText>
                   <GhostBtn onClick={doLeave} style={{ borderColor: C.green, color: C.green }}>
-                    {c.leaveCta}
+                    {t("outdoor.place.leaveCta")}
                   </GhostBtn>
                 </>
               ) : (
                 <>
-                  <BodyText style={{ fontWeight: 700, marginBottom: 8 }}>{c.visibilityLabel}</BodyText>
+                  <BodyText style={{ fontWeight: 700, marginBottom: 8 }}>{t("outdoor.place.visibilityLabel")}</BodyText>
                   <VisibilityChoice value={visibility} onChange={setVisibility} />
                   <div style={{ marginTop: 12 }}>
-                    <PrimaryBtn onClick={doCheckIn}>{c.checkInCta}</PrimaryBtn>
+                    <PrimaryBtn onClick={doCheckIn}>{t("outdoor.place.checkInCta")}</PrimaryBtn>
                   </div>
                 </>
               )}
               <BodyText muted style={{ margin: "10px 0 0", fontSize: ts(16) }}>
-                {c.expiresNote}
+                {t("outdoor.place.expiresNote")}
               </BodyText>
             </Card>
           )}
 
           {/* Here now — first names only, coarse presence. */}
-          <SectionLabel>{c.hereNowLabel}</SectionLabel>
+          <SectionLabel>{t("outdoor.place.hereNowLabel")}</SectionLabel>
           {here.length === 0 ? (
-            <BodyText muted>{c.nobodyHere}</BodyText>
+            <BodyText muted>{t("outdoor.place.nobodyHere")}</BodyText>
           ) : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
               {here.map((ci) => (
@@ -318,8 +317,8 @@ export default function PlaceView() {
           )}
 
           {/* Planned outings */}
-          <SectionLabel>{c.outingsLabel}</SectionLabel>
-          {outings.length === 0 && <BodyText muted>{c.noOutings}</BodyText>}
+          <SectionLabel>{t("outdoor.place.outingsLabel")}</SectionLabel>
+          {outings.length === 0 && <BodyText muted>{t("outdoor.place.noOutings")}</BodyText>}
           {outings.map((o) => (
             <Card key={o.id} style={{ padding: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -339,7 +338,7 @@ export default function PlaceView() {
                 </BodyText>
                 {o.creator_id === myId && (
                   <GhostBtn onClick={() => cancelOuting(o.id).then(load)}>
-                    {c.outingRemove}
+                    {t("outdoor.place.outingRemove")}
                   </GhostBtn>
                 )}
               </div>
@@ -350,7 +349,7 @@ export default function PlaceView() {
               <Card>
                 <form onSubmit={savePlan}>
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
-                    {c.outingWhen}
+                    {t("outdoor.place.outingWhen")}
                     <input
                       type="datetime-local"
                       value={planWhen}
@@ -359,11 +358,11 @@ export default function PlaceView() {
                     />
                   </label>
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
-                    {c.outingNote}
+                    {t("outdoor.place.outingNote")}
                     <input
                       value={planNote}
                       onChange={(e) => setPlanNote(e.target.value)}
-                      placeholder={c.outingNotePh}
+                      placeholder={t("outdoor.place.outingNotePh")}
                       maxLength={300}
                       style={{ marginTop: 6 }}
                     />
@@ -371,27 +370,27 @@ export default function PlaceView() {
                   <VisibilityChoice value={planVis} onChange={setPlanVis} />
                   <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     <PrimaryBtn type="submit" onClick={savePlan} disabled={!planWhen}>
-                      {c.outingSave}
+                      {t("outdoor.place.outingSave")}
                     </PrimaryBtn>
-                    <GhostBtn onClick={() => setPlanOpen(false)}>{c.formCancel}</GhostBtn>
+                    <GhostBtn onClick={() => setPlanOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
                   </div>
                 </form>
               </Card>
             ) : (
               <GhostBtn onClick={() => setPlanOpen(true)} style={{ borderColor: C.green, color: C.green }}>
-                🗓️ {c.planCta}
+                🗓️ {t("outdoor.place.planCta")}
               </GhostBtn>
             ))}
 
           {/* Park board — open chat, guards one tap away. */}
-          <SectionLabel>{c.boardLabel}</SectionLabel>
-          <BodyText muted>{c.boardIntro}</BodyText>
+          <SectionLabel>{t("outdoor.place.boardLabel")}</SectionLabel>
+          <BodyText muted>{t("outdoor.place.boardIntro")}</BodyText>
           <Card>
             <form onSubmit={postBoard} style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               <input
                 value={boardBody}
                 onChange={(e) => setBoardBody(e.target.value)}
-                placeholder={c.boardPh}
+                placeholder={t("outdoor.place.boardPh")}
                 maxLength={1000}
                 style={{ flex: 1 }}
               />
@@ -400,11 +399,11 @@ export default function PlaceView() {
                 onClick={postBoard}
                 style={{ borderColor: C.green, color: C.green }}
               >
-                {c.boardSend}
+                {t("outdoor.place.boardSend")}
               </GhostBtn>
             </form>
             {board.length === 0 ? (
-              <BodyText muted style={{ margin: 0 }}>{c.boardEmpty}</BodyText>
+              <BodyText muted style={{ margin: 0 }}>{t("outdoor.place.boardEmpty")}</BodyText>
             ) : (
               board.map((m) => (
                 <div
@@ -425,8 +424,8 @@ export default function PlaceView() {
                     </span>
                     {m.author_id !== myId && (
                       <span>
-                        {smallLink(c.report, () => report(m))}
-                        {smallLink(c.block, () => block(m))}
+                        {smallLink(t("outdoor.place.report"), () => report(m))}
+                        {smallLink(t("outdoor.place.block"), () => block(m))}
                       </span>
                     )}
                   </div>

@@ -36,10 +36,34 @@ import {
 } from "../src/app/routes/games/carrom/physics.js";
 
 let failures = 0;
+let ran = 0;
 const check = (name, ok, note = "") => {
+  ran++;
   if (!ok) failures++;
   console.log((ok ? "PASS" : "FAIL").padEnd(5), name.padEnd(58), String(note).slice(0, 80));
 };
+
+/* How many checks each mode must reach. A run that ends early prints
+   fewer PASS lines and looks SHORTER rather than broken — which is how
+   an earlier version of this file crashed at B4, skipped its own
+   cleanup, and still read as green. Counting the checks turns a
+   truncated run into a failed one. Update these when adding a case. */
+const EXPECTED_A = 32;
+const EXPECTED_FULL = 48; // 32 rules + 15 live + the cleanup assertion
+
+function finish(mode) {
+  const want = mode === "A" ? EXPECTED_A : EXPECTED_FULL;
+  if (ran < want) {
+    failures++;
+    console.log(
+      "FAIL ".padEnd(5),
+      "the suite ran to the end".padEnd(58),
+      `only ${ran} of ${want} checks ran — it stopped early`
+    );
+  }
+  console.log(`\n${ran} checks, ${failures} failed — suite complete (${mode === "A" ? "rules only" : "rules + live engine"}).`);
+  process.exit(failures ? 1 : 0);
+}
 
 /* ─────────────────────────────────────────────────────────────
    Part A — the rules themselves, driven directly.
@@ -238,8 +262,7 @@ check("seat 0 plays white, seat 1 plays black", OWNER_OF[0] === "w" && OWNER_OF[
 
 if (process.env.PART === "A") {
   console.log("\n[Part B skipped: PART=A — the live half needs the DB channel]");
-  console.log("\n" + failures + " failed.");
-  process.exit(failures ? 1 : 0);
+  finish("A");
 }
 
 console.log("\n── Part B · the live engine ──\n");
@@ -496,6 +519,15 @@ await runCase("B6", async () => {
    carrom tables from an earlier run of this file are evidence for the
    leave-seats-a-bot defect and are being remediated by a migration,
    not by me. */
+/* Deliberately asserted on the END state — "nothing of ours is live" —
+   and never on the mechanism that gets there. Today the first leaver
+   seats a bot and the second cancels; a proposed migration makes the
+   first leaver cancel outright on a game with no bot player, after
+   which the second meets an already-cancelled table and gets an
+   idempotent 'over'. Both routes end in the same place, so this
+   cleanup survives the change. Do not add an assertion here about a
+   bot seat existing, or the table still being active after one leave:
+   that pins the test to a behaviour that is on its way out. */
 for (const id of created) {
   const status = await drop(id).catch(() => "error");
   if (status === "lobby" || status === "active") {
@@ -522,5 +554,4 @@ console.log(
     `(this run owns ${stillMine.length}; the rest are pre-existing and left alone)`
 );
 
-console.log(`\n${failures} failed.`);
-process.exit(failures ? 1 : 0);
+finish("FULL");

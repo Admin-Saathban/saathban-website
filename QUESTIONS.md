@@ -117,3 +117,57 @@ different password for a browser test (it had already churned via GoTrue's
 rehash-on-login). Per #2, the fix is a dedicated `test-reset@saathban.dev`; the
 four shared accounts should be restored to `SaathTest!2026` and left alone. I did
 not re-reset it this session (the write is now permission-gated).
+
+---
+
+# Community v1 (community lane, overnight 2026-08-29)
+
+Conservative readings encoded in migration 0014 and routes/community/;
+answering any of these changes a policy or a prop, not the schema.
+
+## C1. Do Saath-Buddies see the community before they are active?
+SPEC gives Buddies "no access to any Icon data" before `active`, and the
+feed is Icon-authored content. *Taken:* community access requires an
+ACTIVE application (`can_use_community()`); pending/interviewing Buddies
+land on their vetting status instead.
+
+## C2. Can Fam and Buddies comment?
+SPEC: "Icons post; everyone else reads." The build brief asked for
+comments but not who may write them. *Taken:* comments follow the posting
+rule — Icons + the org account write, everyone else reads. Widening this
+is a one-line policy change (`can_use_community()` instead of
+`can_post_community()` on the comments insert policy).
+
+## C3. Reactions from readers
+Strictly, "everyone else reads." *Taken:* any community reader may leave
+one reaction (👍 ❤️ 🌸 🤲) — non-verbal, no text surface, revocable.
+
+## C4. Who can send DM requests, and to whom?
+SPEC describes request-gating but not eligibility. *Taken:* any community
+member (per C1) can request anyone; 5 outgoing requests per 24h (RPC).
+A request to someone who blocked the sender is stored but never shown —
+the sender cannot probe blocks.
+
+## C5. Reported DMs vs. DM privacy
+Admins must moderate reported DMs, but DMs are participants-only at the
+database level. *Taken:* the report row carries a `target_excerpt`
+snapshot taken by the reporter's client; admins act on the snapshot and
+have NO read path into threads. A disputed snapshot needs a super-admin
+decision on whether a break-glass-style DM read should ever exist.
+
+## C6. Money-talk detection is client-side and English/Urdu keyword based
+The warning banner to the recipient fires on a keyword list (Rs, rupees,
+easypaisa, jazzcash, bank, پیسے, رقم, بینک…). It is deliberately
+over-broad and advisory only; nothing is blocked and nothing is logged.
+A server-side pattern (or none at all) is a product call.
+
+## C7. Deleted posts leave their images in the public bucket
+Clients cannot delete from community-images (posters upload only).
+Orphan cleanup needs a service-role job; images are public by design so
+this is a cost/tidiness question, not a privacy one.
+
+## C8. Community strings are in routes/community/communityCopy.js
+The locales files were out of scope for this lane tonight. The copy file
+follows the famCopy convention (flat keys, ready to lift into en.js/ur.js
+under community.* by the i18n lane).
+

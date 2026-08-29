@@ -49,7 +49,7 @@ const check = (name, ok, note = "") => {
    cleanup, and still read as green. Counting the checks turns a
    truncated run into a failed one. Update these when adding a case. */
 const EXPECTED_A = 32;
-const EXPECTED_FULL = 48; // 32 rules + 15 live + the cleanup assertion
+const EXPECTED_FULL = 52; // 32 rules + 19 live + the cleanup assertion
 
 function finish(mode) {
   const want = mode === "A" ? EXPECTED_A : EXPECTED_FULL;
@@ -478,24 +478,48 @@ await runCase("B4", async () => {
   }
 });
 
-/* ── B5. A lapsed turn is a MISSED turn — never a bot shot ── */
+/* ── B5. A lapsed turn is a MISSED turn — nothing is played for you ──
+
+   The flag alone does not say this. game_tick calls exec_game_move
+   with p_by_bot = TRUE for a pass, so the move row reads by_bot=true
+   even though carrom has no bot player and no bot did anything — for
+   a '{"pass": true}' payload exec_game_move short-circuits and never
+   calls the executor at all. Counting by_bot rows therefore fails a
+   correct engine, which is what an earlier version of this case did.
+
+   So assert what the rule actually promises: the board is untouched,
+   what was recorded is a PASS and not a shot, the miss is counted
+   against the absent seat, and no bot ever takes a seat here. ── */
 await runCase("B5", async () => {
   const id = await table({ turnSeconds: 1 });
-  if (!id) check("B5: table ready", false);
-  else {
-    const before = await seatNow(id);
-    await new Promise((r) => setTimeout(r, 1800));
-    const ticked = await host.rpc("game_tick", { p_session: id });
-    check("B5: the tick is accepted", ticked.ok, JSON.stringify(ticked.body).slice(0, 60));
-    const after = await seatNow(id);
-    check("B5: a lapsed turn passes to the other player", after.current_seat !== before.current_seat,
-      `seat ${before.current_seat} → ${after.current_seat}`);
-    const moves = await host.rest(`game_moves?select=id,by_bot&session_id=eq.${id}`);
-    const botMoves = (moves || []).filter((m) => m.by_bot).length;
-    check("B5: no bot shot was played", botMoves === 0, `${botMoves} bot moves`);
-    check("B5: the table is still live, not finished", after.status === "active", after.status);
-    await drop(id);
-  }
+  if (!id) return check("B5: table ready", false);
+  const before = await seatNow(id);
+  await new Promise((r) => setTimeout(r, 1800));
+  const ticked = await host.rpc("game_tick", { p_session: id });
+  check("B5: the tick is accepted", ticked.ok, JSON.stringify(ticked.body).slice(0, 60));
+
+  const after = await seatNow(id);
+  check("B5: a lapsed turn passes to the other player", after.current_seat !== before.current_seat,
+    `seat ${before.current_seat} → ${after.current_seat}`);
+  check("B5: the table is still live, not finished", after.status === "active", after.status);
+
+  // Nothing was played on the absent person's behalf.
+  check("B5: the board is untouched by a timeout",
+    JSON.stringify(after.state) === JSON.stringify(before.state));
+
+  const moves = await host.rest(`game_moves?select=seat_no,by_bot,move&session_id=eq.${id}`);
+  const shots = (moves || []).filter((m) => m.move && m.move.shot !== undefined);
+  check("B5: no SHOT was played for the absent player", shots.length === 0,
+    `${shots.length} shot(s) recorded`);
+  const passes = (moves || []).filter((m) => m.move && m.move.pass === true);
+  check("B5: the timeout is recorded as a pass", passes.length === 1,
+    `${passes.length} pass row(s)`);
+
+  const seats = await host.rest(`game_seats?select=seat_no,is_bot,missed_turns&session_id=eq.${id}`);
+  const missed = (seats || []).find((x) => x.seat_no === before.current_seat)?.missed_turns;
+  check("B5: the miss is counted against the seat that missed", missed === 1, `missed_turns=${missed}`);
+  check("B5: no seat became a bot", !(seats || []).some((x) => x.is_bot));
+  await drop(id);
 });
 
 /* ── B6. And a bot can never be seated here at all (0043) ── */

@@ -252,6 +252,22 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**13. The invariant is about the TABLE, not the seat: a game that
+cannot progress must stop.** Four siblings, each retiring the
+previous framing. Ludo declared a bot player it did not have (0042d);
+`start_with_bots` seated bots where none could play (0043); `leave`
+seated one through another door (0044). Each time the rule was
+restated as "never seat a player that cannot act" — and the fourth
+case has no seating decision anywhere in it: two people start a
+carrom game, both walk away, both go `away` after three missed turns,
+and game_tick spins 350 writes a minute for ever against a table
+nobody is at. A rule about seats could not have prevented it. State
+the property as termination — progress must be possible, or the game
+ends — and it covers all four.
+
+Corollary, because this one was found by MEASURING rather than
+reasoning: a loop that writes steadily and forever looks exactly like
+a busy app. Watch write RATE per minute, not just correctness.
 **12. Unreadable is not clean, and a test written from a fix
 inherits that fix's blind spot.** Two lessons that met in one check.
 A suite guarding `start_with_bots` could never notice that

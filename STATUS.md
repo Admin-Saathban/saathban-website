@@ -92,6 +92,25 @@ password grants).
 | Circle membership test-fam→test-icon | circle_members | re-seeded baseline row |
 
 ## Round log
+- **Together/My-People/parity integration + full matrix (2026-08-29,
+  tip `3d802a8`, preview `saathban-website-kfu76nujc`):** integrated
+  and pushed, in order: 13's My People (`4923dcb`, rode the STATUS
+  push), 8f's together layer (`4f44a82` rails 0029/0029b/0029c/0029d
+  all applied + `97902f1` UI), 34's parity round (`c644a22` 0032
+  applied, `3c89474` live bell, `3035c42` cross-role fixes incl. my
+  suspended-buddy finding, `f420150` PARITY.md), and 13's pending-pane
+  fix (`3d802a8`). **Matrix run in the real browser:** 34 role×route
+  cells green (icon 13, fam 9, buddy 7, admin 5); suspended-buddy
+  fixture flip verified UI + RLS gates (0 rows leak) then restored;
+  deep flows all green — people-first create → invite → accept →
+  auto-start → dice turn, open-table spoken code → buddy code-join,
+  riddle solve + people strip + Shabash (daily cap renders 👏 ✓),
+  group post, activity join state, game_tick RPC. **Smoke suite now
+  37 checks** (games/riddle/group/activity sections added) — 37/37 on
+  the preview. Deferred (owners): server-minted notification text is
+  English-only in every writer — needs key+params design (34 flagged;
+  future round); game timeout end-to-end beyond game_tick's 200 (pg
+  cron minute — integration).
 - **DM unification round (2026-08-29, `1259a32`):** ONE canonical
   thread per pair at `/app/people/<id>/chat` (decision + contract in
   MIGRATIONS.md). ThreadPage now carries the full feature set (carrom

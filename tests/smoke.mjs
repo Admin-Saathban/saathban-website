@@ -244,6 +244,161 @@ for (const [email, label, home, foreign] of ROLES) {
   await famCtx.close();
 }
 
+// 6. Games together layer: people-first create → invite → accept →
+//    start → a real turn; then an open table joined by spoken code.
+//    Each run creates two throwaway sessions (purge list covers them).
+{
+  const iconSess = await login("test-icon@saathban.dev");
+  const famSess = await login("test-fam@saathban.dev");
+  const buddySess = await login("test-buddy@saathban.dev");
+
+  const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
+  await goto(iconPage, "/app/games", 2000);
+  await iconPage.locator('button:has-text("Open a table")').last().click(); // Race to 100
+  await iconPage.waitForTimeout(1400);
+  check(
+    "games: create opens people picker",
+    (await iconPage.evaluate(() => document.body.innerText)).includes("Who's playing?")
+  );
+  await iconPage.locator('button:has-text("Test Fam")').first().click();
+  await iconPage.waitForTimeout(500);
+  await iconPage.locator('button:has-text("set the table")').first().click();
+  await iconPage.waitForTimeout(3000);
+  const sessionPath = pathOf(iconPage);
+  check("games: table created with invite", /^\/app\/games\/s\//.test(sessionPath), sessionPath);
+
+  const { ctx: famCtx, page: famPage } = await pageFor(browser, famSess);
+  const inviteTxt = await goto(famPage, sessionPath, 2500);
+  check("games: invitee sees Take my seat", inviteTxt.includes("Take my seat"));
+  await famPage.locator('button:has-text("Take my seat")').first().click();
+  await famPage.waitForTimeout(3000);
+
+  // Two humans fill the table — someone must now hold the dice.
+  let rolled = false;
+  for (const p of [iconPage, famPage]) {
+    await p.reload({ waitUntil: "networkidle" });
+    await p.waitForTimeout(2200);
+    const roll = p.locator('button:has-text("Roll the dice")');
+    if ((await roll.count()) > 0 && (await roll.first().isEnabled().catch(() => false))) {
+      await roll.first().click();
+      await p.waitForTimeout(2200);
+      rolled = true;
+      break;
+    }
+  }
+  check("games: accept auto-starts and a turn plays", rolled);
+  await famCtx.close();
+
+  // Open table + code join.
+  await goto(iconPage, "/app/games", 1800);
+  await iconPage.locator('button:has-text("Open a table")').last().click();
+  await iconPage.waitForTimeout(1200);
+  await iconPage.locator('button:has-text("set the table"), button:has-text("open the table")').first().click();
+  await iconPage.waitForTimeout(2800);
+  const lobby = await iconPage.evaluate(() => document.body.innerText);
+  const code = (lobby.match(/(\d[\s ]?){6}/) || [""])[0].replace(/\D/g, "");
+  check("games: open table shows 6-digit code", code.length === 6, code);
+
+  if (code.length === 6) {
+    const { ctx: buddyCtx, page: buddyPage } = await pageFor(browser, buddySess);
+    await goto(buddyPage, "/app/games", 1800);
+    await buddyPage.locator('button:has-text("Have a code?")').click();
+    await buddyPage.waitForTimeout(400);
+    await buddyPage.fill('input[inputmode="numeric"]', code);
+    await buddyPage.locator('button:has-text("Take me to the table")').click();
+    await buddyPage.waitForTimeout(3000);
+    check("games: buddy joins by code", /^\/app\/games\/s\//.test(pathOf(buddyPage)), pathOf(buddyPage));
+    await buddyCtx.close();
+  }
+  await iconCtx.close();
+}
+
+// 7. Daily Riddle: solving works (or today's solve stands), the
+//    people strip renders, and a cheer sends (or the daily cap
+//    answers kindly) — riddle_touch through the real UI either way.
+{
+  const famSess = await login("test-fam@saathban.dev");
+  const { ctx, page } = await pageFor(browser, famSess);
+  const t0 = await goto(page, "/app/games/puzzle", 2200);
+  if (t0.includes("Solved")) {
+    check("riddle: today's solve stands", true, "already solved");
+  } else {
+    // The answer list for the seeded dev riddles includes "clock";
+    // a wrong guess is still a pass for the MECHANISM if the guess
+    // count moves — but assert the solve to catch RPC regressions.
+    await page.fill("form input", "clock");
+    await page.locator("form button").last().click();
+    await page.waitForTimeout(2400);
+    check(
+      "riddle: guess submits and solves",
+      (await page.evaluate(() => document.body.innerText)).includes("Solved")
+    );
+  }
+  const strip = await page.evaluate(() => document.body.innerText);
+  check("riddle: people strip shows a connection", strip.includes("Test Icon"));
+  const cheer = page.locator('button:has-text("Shabash")');
+  if ((await cheer.count()) > 0) {
+    await cheer.first().click();
+    await page.waitForTimeout(2000);
+    const t1 = await page.evaluate(() => document.body.innerText);
+    check("riddle: cheer sends or caps kindly", /Shabash sent|plenty/i.test(t1), t1.slice(0, 60));
+  } else {
+    // Today's cheer already spent: the button yields to the 👏 ✓ mark
+    // (riddle_touches cap). Either affordance passing is the check.
+    check(
+      "riddle: cheer sends or caps kindly",
+      strip.includes("👏 ✓") || /plenty/i.test(strip),
+      strip.includes("👏 ✓") ? "capped: 👏 ✓" : "no cheer affordance at all"
+    );
+  }
+  await ctx.close();
+}
+
+// 8. Groups + activities: a group post lands; the standing activity
+//    renders its join state on the outdoor place page (join_activity
+//    path exercised by tapping when offered).
+{
+  const iconSess = await login("test-icon@saathban.dev");
+  const { ctx, page } = await pageFor(browser, iconSess);
+  await goto(page, "/app/groups", 2000);
+  await page.locator('a:has-text("Sticker Test Group"), button:has-text("Sticker Test Group")').first().click();
+  await page.waitForTimeout(2200);
+  const marker = `smoke-group-${Math.floor(Math.random() * 1e9)}`;
+  await page.locator("textarea, form input[type='text']").first().fill(marker);
+  await page.locator('button:has-text("Post"), button:has-text("Share"), button:has-text("Send")').first().click();
+  await page.waitForTimeout(2200);
+  check(
+    "group: post lands",
+    (await page.evaluate(() => document.body.innerText)).includes(marker)
+  );
+  await ctx.close();
+
+  const famSess = await login("test-fam@saathban.dev");
+  const { ctx: famCtx, page: famPage } = await pageFor(browser, famSess);
+  const outTxt = await goto(famPage, "/app/outdoor", 2200);
+  // The fam fixture defaults to Karachi; the standing activity lives
+  // in Lahore — switch chips when needed.
+  if (!outTxt.includes("Model Town")) {
+    await famPage.locator('button:has-text("Lahore")').first().click().catch(() => {});
+    await famPage.waitForTimeout(1800);
+  }
+  await famPage.locator('a:has-text("Model Town"), button:has-text("Model Town")').first().click();
+  await famPage.waitForTimeout(2200);
+  const placeTxt = await famPage.evaluate(() => document.body.innerText);
+  const joinBtn = famPage.locator('button', { hasText: "I'm in" });
+  if ((await joinBtn.count()) > 0) {
+    await joinBtn.first().click();
+    await famPage.waitForTimeout(2200);
+  }
+  const after = await famPage.evaluate(() => document.body.innerText);
+  check(
+    "activity: happening renders with join state",
+    /chai and carrom/i.test(placeTxt) && (/✓|in — room|on the list|is in/i.test(after)),
+    after.match(/[^\n]*(room|is in|list)[^\n]*/)?.[0]?.slice(0, 70) || placeTxt.slice(0, 70)
+  );
+  await famCtx.close();
+}
+
 await browser.close();
 
 console.log(`\n${results.length} checks, ${failures} failed.`);

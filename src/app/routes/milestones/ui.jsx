@@ -47,7 +47,9 @@ export function SectionLabel({ children }) {
         fontWeight: 700,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
-        color: C.olive,
+        // greenMuted, not olive: olive is ~4.06:1 on cream, below AA
+        // (QUALITY_REPORT §3 contrast).
+        color: C.greenMuted,
         margin: "26px 0 12px",
       }}
     >
@@ -125,15 +127,17 @@ export function BodyText({ children, muted, style, ...props }) {
   );
 }
 
-export const inputStyle = {
+/* Takes ts so input text follows the in-app text-size control
+   (QUALITY_REPORT §3: raw px never scales). */
+export const inputStyle = (ts) => ({
   width: "100%",
   minHeight: A11Y.minTapTargetPx,
   padding: "10px 14px",
   borderRadius: 12,
   border: `1.5px solid ${C.warmGray}`,
   background: C.white,
-  fontSize: 18,
+  fontSize: ts(A11Y.minBodyPx),
   fontFamily: "inherit",
   color: C.textMain,
   marginTop: 6,
-};
+});

@@ -19,11 +19,10 @@ import {
   adminAttachMilestoneMessage,
 } from "../../lib/points.js";
 import { Card, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
-import { COPY } from "./milestonesCopy.js";
 
 export default function AdminMilestones() {
-  const { ts, meta } = useI18n();
-  const c = COPY.admin;
+  const { t, ts, meta } = useI18n();
+  const k = (key) => t(`milestones.admin.${key}`);
 
   const [awards, setAwards] = useState(null);
   const [defs, setDefs] = useState([]);
@@ -41,7 +40,7 @@ export default function AdminMilestones() {
 
   useEffect(() => {
     load().catch(() => {
-      setError(COPY.loadError);
+      setError("milestones.loadError");
       setAwards([]);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +59,7 @@ export default function AdminMilestones() {
       setSentFor(id);
       await load();
     } catch (err) {
-      setError(err.message || c.error);
+      setError(err.message || "milestones.admin.error");
     } finally {
       setBusy(false);
     }
@@ -77,20 +76,20 @@ export default function AdminMilestones() {
           margin: "12px 0 8px",
         }}
       >
-        {c.title}
+        {k("title")}
       </h1>
-      <BodyText muted>{c.intro}</BodyText>
+      <BodyText muted>{k("intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
       {awards === null ? (
         <BodyText muted role="status">…</BodyText>
       ) : awards.length === 0 ? (
-        <BodyText muted>{c.empty}</BodyText>
+        <BodyText muted>{k("empty")}</BodyText>
       ) : (
         awards.map((a) => {
           const b = defByKey[a.badge_key];
@@ -114,26 +113,26 @@ export default function AdminMilestones() {
                     })}
                   </BodyText>
                   {a.message && (
-                    <BodyText muted style={{ margin: "8px 0 0", fontSize: ts(16) }}>
+                    <BodyText muted style={{ margin: "8px 0 0", fontSize: ts(18) }}>
                       💌{" "}
-                      {c.alreadySent(
-                        new Date(a.message_at).toLocaleDateString("en-GB", {
+                      {t("milestones.admin.alreadySent", {
+                        date: new Date(a.message_at).toLocaleDateString("en-GB", {
                           day: "numeric",
                           month: "long",
-                        })
-                      )}
+                        }),
+                      })}
                       : “{a.message}”
                     </BodyText>
                   )}
                   {sentFor === a.id && (
                     <BodyText role="status" style={{ margin: "8px 0 0", fontWeight: 700, color: C.green }}>
-                      ✓ {c.sentNote}
+                      ✓ {k("sentNote")}
                     </BodyText>
                   )}
                 </div>
                 {!a.message && writingFor !== a.id && (
                   <GhostBtn onClick={() => { setWritingFor(a.id); setDraft(""); setSentFor(null); }}>
-                    💌 {c.attachCta}
+                    💌 {k("attachCta")}
                   </GhostBtn>
                 )}
               </div>
@@ -147,21 +146,21 @@ export default function AdminMilestones() {
                   style={{ marginTop: 14 }}
                 >
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600 }}>
-                    {c.attachCta}
+                    {k("attachCta")}
                     <textarea
                       autoFocus
                       rows={3}
                       value={draft}
-                      placeholder={c.placeholder}
+                      placeholder={k("placeholder")}
                       onChange={(e) => setDraft(e.target.value)}
-                      style={{ ...inputStyle, resize: "vertical" }}
+                      style={{ ...inputStyle(ts), resize: "vertical" }}
                     />
                   </label>
                   <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     <PrimaryBtn type="submit" disabled={busy || draft.trim().length < 5}>
-                      {c.sendCta}
+                      {k("sendCta")}
                     </PrimaryBtn>
-                    <GhostBtn onClick={() => setWritingFor(null)}>{c.cancelCta}</GhostBtn>
+                    <GhostBtn onClick={() => setWritingFor(null)}>{k("cancelCta")}</GhostBtn>
                   </div>
                 </form>
               )}

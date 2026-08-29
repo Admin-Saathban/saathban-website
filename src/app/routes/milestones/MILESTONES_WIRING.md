@@ -51,10 +51,11 @@ from the Icon home's score card ("your milestones"), and an admin-layout tab.
 
 ## 3. Strings → locales
 
-UI copy in `milestonesCopy.js` (`COPY`) for a one-file extraction under
-`milestones.*`. Badge names/descriptions are DATA (badges table, both
-languages) — the screens pick `name_en`/`name_ur` by active locale; no
-extraction needed for them.
+**Done.** UI copy lives in `locales/en.js` + `ur.js` under `milestones.*`
+(`milestonesCopy.js` is gone); Urdu drafted, pending native review.
+Badge names/descriptions are DATA (badges table, both languages) — the
+screens pick `name_en`/`name_ur` by active locale; no extraction needed
+for them.
 
 ## 4. Previewing without registration
 

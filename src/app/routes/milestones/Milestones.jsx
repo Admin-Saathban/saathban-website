@@ -25,7 +25,6 @@ import {
   ARC_TARGET_DAYS,
 } from "../../lib/points.js";
 import { Card, SectionLabel, PrimaryBtn, BodyText } from "./ui.jsx";
-import { COPY } from "./milestonesCopy.js";
 
 const css = `
   .ms-celebrate { animation: msPop 0.5s ease both; }
@@ -42,13 +41,12 @@ const badgeName = (b, lang) => (lang === "ur" ? b.name_ur : b.name_en);
 const badgeDesc = (b, lang) => (lang === "ur" ? b.desc_ur : b.desc_en);
 
 function Celebration({ badge, earned, onContinue, busy }) {
-  const { ts, lang, meta } = useI18n();
-  const c = COPY.celebration;
+  const { t, ts, lang, meta } = useI18n();
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={c.heading}
+      aria-label={t("milestones.celebration.heading")}
       style={{
         position: "fixed",
         inset: 0,
@@ -73,8 +71,8 @@ function Celebration({ badge, earned, onContinue, busy }) {
         <p aria-hidden="true" style={{ fontSize: 72, lineHeight: 1, margin: "0 0 10px" }}>
           {badge.emoji}
         </p>
-        <p style={{ fontSize: ts(18), fontWeight: 700, color: C.olive, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 6px" }}>
-          {c.heading}
+        <p style={{ fontSize: ts(18), fontWeight: 700, color: C.greenMuted, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 6px" }}>
+          {t("milestones.celebration.heading")}
         </p>
         <h1
           lang={lang}
@@ -103,15 +101,15 @@ function Celebration({ badge, earned, onContinue, busy }) {
               textAlign: "start",
             }}
           >
-            <p style={{ fontSize: ts(16), fontWeight: 700, color: C.olive, margin: "0 0 6px" }}>
-              💌 {c.messageLabel}
+            <p style={{ fontSize: ts(18), fontWeight: 700, color: C.greenMuted, margin: "0 0 6px" }}>
+              💌 {t("milestones.celebration.messageLabel")}
             </p>
             <BodyText style={{ margin: 0 }}>{earned.message}</BodyText>
           </div>
         )}
 
         <PrimaryBtn onClick={onContinue} disabled={busy} style={{ width: "100%" }}>
-          {c.continueCta}
+          {t("milestones.celebration.continueCta")}
         </PrimaryBtn>
       </div>
     </div>
@@ -119,7 +117,7 @@ function Celebration({ badge, earned, onContinue, busy }) {
 }
 
 export default function Milestones() {
-  const { ts, lang, meta } = useI18n();
+  const { t, ts, lang, meta } = useI18n();
 
   const [progress, setProgress] = useState(null);
   const [defs, setDefs] = useState([]);
@@ -145,7 +143,7 @@ export default function Milestones() {
         setQueue(e.filter((x) => !x.seen_at));
       } catch {
         if (!cancelled) {
-          setError(COPY.loadError);
+          setError("milestones.loadError");
           setProgress({ points: 0, presence_days: 0, current_streak: 0 });
         }
       }
@@ -200,13 +198,13 @@ export default function Milestones() {
           margin: "12px 0 8px",
         }}
       >
-        {COPY.title}
+        {t("milestones.title")}
       </h1>
-      <BodyText muted>{COPY.intro}</BodyText>
+      <BodyText muted>{t("milestones.intro")}</BodyText>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          ⚠ {t(error)}
         </BodyText>
       )}
 
@@ -218,16 +216,20 @@ export default function Milestones() {
               {progress ? progress.points : "…"}
             </span>
             <span style={{ display: "block", fontSize: ts(18), opacity: 0.9, marginTop: 4 }}>
-              {COPY.points.label}
+              {t("milestones.points.label")}
             </span>
           </div>
           <div style={{ flex: "1 1 220px" }}>
             <p style={{ fontSize: ts(18), lineHeight: 1.55, margin: "0 0 8px", fontWeight: 500 }}>
-              {COPY.points.line}
+              {t("milestones.points.line")}
             </p>
             <p style={{ fontSize: ts(18), lineHeight: 1.5, margin: 0, opacity: 0.9 }}>
-              {COPY.streak.line(progress?.current_streak ?? 0)}{" "}
-              {COPY.streak.forgiveness}
+              {(progress?.current_streak ?? 0) === 0
+                ? t("milestones.streak.lineNone")
+                : (progress?.current_streak ?? 0) === 1
+                ? t("milestones.streak.lineOne")
+                : t("milestones.streak.lineMany", { n: progress?.current_streak ?? 0 })}{" "}
+              {t("milestones.streak.forgiveness")}
             </p>
           </div>
         </div>
@@ -236,17 +238,23 @@ export default function Milestones() {
       {/* The 100-day arc */}
       <Card>
         <p style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
-          🌳 {COPY.arc.title}
+          🌳 {t("milestones.arc.title")}
         </p>
         <BodyText style={{ marginBottom: 10 }}>
-          {days >= ARC_TARGET_DAYS ? COPY.arc.done : COPY.arc.line(days)}
+          {days >= ARC_TARGET_DAYS
+            ? t("milestones.arc.done")
+            : days === 0
+            ? t("milestones.arc.lineNone")
+            : days === 1
+            ? t("milestones.arc.lineOne")
+            : t("milestones.arc.lineMany", { days })}
         </BodyText>
         <div
           role="progressbar"
           aria-valuenow={Math.min(days, ARC_TARGET_DAYS)}
           aria-valuemin={0}
           aria-valuemax={ARC_TARGET_DAYS}
-          aria-label={COPY.arc.title}
+          aria-label={t("milestones.arc.title")}
           style={{ height: 14, borderRadius: 7, background: C.cream, border: `1px solid ${C.warmGray}`, overflow: "hidden", marginBottom: 10 }}
         >
           <div
@@ -258,15 +266,15 @@ export default function Milestones() {
             }}
           />
         </div>
-        <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-          {COPY.arc.note}
+        <BodyText muted style={{ margin: 0, fontSize: ts(18) }}>
+          {t("milestones.arc.note")}
         </BodyText>
       </Card>
 
       {/* Earned badges */}
       {earned.length > 0 && (
         <>
-          <SectionLabel>{COPY.badges.earnedLabel}</SectionLabel>
+          <SectionLabel>{t("milestones.badges.earnedLabel")}</SectionLabel>
           {earned
             .slice()
             .reverse()
@@ -287,12 +295,12 @@ export default function Milestones() {
                         {badgeDesc(b, lang)}
                       </BodyText>
                       <BodyText muted style={{ margin: "6px 0 0", fontSize: ts(16) }}>
-                        {COPY.badges.earnedOn(
-                          new Date(e.earned_at).toLocaleDateString(
+                        {t("milestones.badges.earnedOn", {
+                          date: new Date(e.earned_at).toLocaleDateString(
                             lang === "ur" ? "ur-PK" : "en-GB",
                             { day: "numeric", month: "long" }
-                          )
-                        )}
+                          ),
+                        })}
                       </BodyText>
                       {e.message && (
                         <div
@@ -305,7 +313,7 @@ export default function Milestones() {
                           }}
                         >
                           <BodyText style={{ margin: 0, fontSize: ts(17) }}>
-                            💌 <strong>{COPY.badges.noteFrom}:</strong> {e.message}
+                            💌 <strong>{t("milestones.badges.noteFrom")}:</strong> {e.message}
                           </BodyText>
                         </div>
                       )}
@@ -318,9 +326,9 @@ export default function Milestones() {
       )}
 
       {/* Still ahead — doors, never locks */}
-      <SectionLabel>{COPY.badges.aheadLabel}</SectionLabel>
-      <BodyText muted style={{ fontSize: ts(16) }}>
-        {COPY.badges.aheadNote}
+      <SectionLabel>{t("milestones.badges.aheadLabel")}</SectionLabel>
+      <BodyText muted style={{ fontSize: ts(18) }}>
+        {t("milestones.badges.aheadNote")}
       </BodyText>
       {defs
         .filter((b) => !earnedKeys.has(b.key))

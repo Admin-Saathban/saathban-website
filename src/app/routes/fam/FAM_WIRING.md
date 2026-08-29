@@ -1,83 +1,46 @@
 # Fam lane — wiring notes
 
-> **Status: WIRED.** `/app/fam/*` is registered in `AppRoot.jsx` behind
-> `RequireAuth roles={["family_member"]}`, `roleHomePath()` sends the role
-> here, and the `/app` front door links it. Section 1 below is applied;
-> sections 2–3 remain as the i18n and Supabase contracts.
+> **Status: WIRED to Supabase.** `/app/fam/*` is registered in `AppRoot.jsx`
+> behind `RequireAuth roles={["family_member"]}`, and every screen now reads
+> and writes real data through `src/app/lib/circle.js` (migrations 0005 +
+> 0011). `famMock.js` is gone; the lane's copy lives in `famCopy.js`.
 
-This folder is self-contained: mock data only, no Supabase calls.
+## Data layer
 
-## 1. Route registration (AppRoot.jsx)
+All Supabase access goes through `src/app/lib/circle.js`. (The Icon-side
+Circle page lives in `routes/circle/` — the circle lane's own folder with
+its own store — and is linked from Settings; `circle.js` keeps its
+icon-side helpers available for whoever consolidates the two later.)
 
-```jsx
-import FamRoutes from "./routes/fam/FamRoutes.jsx";
-import { RequireAuth } from "./lib/session.jsx";
+- **Dashboard** — `circle_members` rows where this account is the member,
+  joined with each Icon's `safe_profiles` row, plus today's `daily_logs`
+  per Icon. RLS trims the log rows to exactly what the Icon granted
+  (`can_see_mood` → mood/sleep/exercise/diet/water, `can_see_health` →
+  medication and the vitals); the membership row's booleans drive the
+  privacy lines, the rows themselves drive the content. Pending join
+  requests come from `circle_invites` (own, `member_to_icon`, unredeemed).
+- **Connect flow** — `request_to_join_circle(email)` (the answer shown is
+  ALWAYS "request sent" — decision #6, no email probing) and
+  `accept_circle_invite(code)`, which connects immediately and returns to
+  the dashboard. Invite codes are *generated* on the Icon's side only.
+- **Reminders** — the `reminders` table (migration 0011). Read/insert/
+  update/delete allowed to the Icon and to circle members holding
+  `can_manage_reminders`, enforced by RLS live — revoking the grant cuts
+  access mid-session. The screen re-checks the membership row and bounces
+  to the dashboard without the grant; the button never rendered anyway.
 
-// inside <Routes>, alongside the other lanes:
-<Route
-  path="fam/*"
-  element={
-    <RequireAuth roles={["family_member"]}>
-      <FamRoutes />
-    </RequireAuth>
-  }
-/>
-```
+## Strings → locales
 
-Since session guarding landed (`src/app/lib/session.jsx`), two more one-liners
-belong to the same seam pass:
+All copy sits in `famCopy.js` (`COPY` + `MOOD_BY_VALUE`), still a one-file
+Urdu extraction under a `fam.*` namespace. Several strings are functions
+(interpolations); they become `{name}`-style templates on extraction.
 
-- `roleHomePath()` in `session.jsx` currently sends `family_member` to the
-  `/app/auth/welcome` placeholder — its own comment says to point the role at
-  the real dashboard when it lands. Change that case to return `"/app/fam"`.
-- The mock signed-in member in `famMock.js` (`MOCK_FAM`) becomes the
-  `useAuth()` profile at the same time.
-
-`FamRoutes.jsx` owns everything below `/app/fam`:
-
-| Path | Screen |
-|---|---|
-| `/app/fam` | `FamDashboard` — connected Icons, pending request, invite door |
-| `/app/fam/invite` | `InviteFlow` — email / 6-digit code / QR placeholder, plus "enter a code" join request |
-| `/app/fam/icon/:iconId/reminders` | `Reminders` — routines management, gated on `manageReminders` |
-
-The route table must stay inside the `LanguageProvider` wrapper (it already
-wraps the whole table), since every screen here uses `useI18n()` for `ts()`,
-direction, and font metadata.
-
-Optional: add a Fam card to the `/app` front door (`AppHome.jsx`) the way the
-other landed lanes are linked.
-
-## 2. Strings → locales
-
-Following the home lane's convention, all copy sits in one place —
-`famMock.js` → `COPY` — so the Urdu pass is a one-file extraction into
-`locales/en.js` + `locales/ur.js` (TODO-wrapped) under a `fam.*` namespace.
-Note that several strings are functions (interpolations); they become
-`{name}`-style templates when they move into the locale files.
-
-## 3. Mock → Supabase (My Circle backend, build step 7)
-
-`famMock.js` is the data contract to replace:
-
-- `MOCK_CONNECTED_ICONS` — circle memberships where this account is the Fam
-  member, joined with each Icon's *permitted* daily summary. The permission
-  object (`sosContact`, `seeDailyLogs`, `seeHealth`, `manageReminders`,
-  `location: "never" | "sos_only"`) mirrors the per-member grants in SPEC.md
-  §My Circle — **RLS must enforce it; the card component only reflects it.**
-- `MOCK_PENDING` — outgoing join requests (single-use tokens, 48 h expiry).
-- `MOCK_INVITE` — a real single-use token behind all three faces (email send,
-  6-digit code, QR). The QR is a drawn placeholder; swap in a QR render of the
-  token URL when tokens exist.
-- Reminder add/edit/delete in `Reminders.jsx` writes local state; each handler
-  marks the seam for the corresponding insert/update/delete.
-
-## Deliberate UI decisions (keep on rewire)
+## Deliberate UI decisions (kept through the rewire)
 
 - An Icon who granted nothing beyond the default shows privacy lines, not
   locked-state teasers; the reminders button is **absent**, never disabled.
-- "Nothing logged yet today" copy is a fact, never an alarm — no scoreboard
-  framing (SPEC.md, empty states are doors).
-- Reminder deletion is one tap, no confirmation maze (mirrors circle removal).
-- Digit groups (invite code, code entry) are pinned `dir="ltr"` so they don't
-  reorder under Urdu.
+- "Nothing logged yet today" copy is a fact, never an alarm.
+- The pending-request card names only the email the requester typed —
+  never whether it matched an account.
+- Reminder deletion is one tap, no confirmation maze.
+- Digit groups (code entry) are pinned `dir="ltr"` under Urdu.

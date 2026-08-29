@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { LOCALES } from "../locales/index.js";
 import { TEXT_SIZES, useI18n } from "../lib/i18n.jsx";
+import { useSession } from "../lib/session.jsx";
 import {
   OPTIONAL_MODULES,
   TRACKER_TYPES,
@@ -186,6 +187,7 @@ function Section({ title, hint, ts, children }) {
 
 export default function AppSettings() {
   const { t, ts, lang, setLang, textSize, setTextSize, meta } = useI18n();
+  const { profile } = useSession();
 
   return (
     <main
@@ -227,6 +229,38 @@ export default function AppSettings() {
         >
           {t("settings.title")}
         </h1>
+
+        {/* ── My Circle (Icons only) — the circle's permanent home is
+            Settings; it enters main navigation only once it has a
+            member (SPEC.md §My Circle). Strings are local English for
+            now — i18n lane: lift under settings.circle.*. */}
+        {profile?.role === "saath_icon" && (
+          <Section
+            title="My Circle"
+            hint="Choose who's kept in the loop, and exactly what each person may see."
+            ts={ts}
+          >
+            <Link
+              to="/app/circle"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 24px",
+                borderRadius: 50,
+                border: `2px solid ${C.green}`,
+                color: C.green,
+                background: C.white,
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              🏡 Open My Circle
+            </Link>
+          </Section>
+        )}
 
         {/* ── Language ── */}
         <Section title={t("settings.language.title")} hint={t("settings.language.hint")} ts={ts}>

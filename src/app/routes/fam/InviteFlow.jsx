@@ -1,97 +1,70 @@
 /* ════════════════════════════════════════════════
-   Invite flow — three faces of ONE underlying token (SPEC.md, My
-   Circle): send by email, read a 6-digit code aloud, or show a QR
-   when you're in the same room. Single-use, 48-hour expiry, said in
-   words on every face.
+   Connect flow, Fam side — the two real doors migration 0005 gives a
+   family account:
 
-   Both directions live here: inviting someone, and — because a Fam
-   member can sign up first — entering a code you were given to ask
-   to join an Icon's circle (they approve with one tap).
+   1. Ask to join by email → request_to_join_circle(). The answer is
+      ALWAYS "request sent" (decision #6): whether or not the email
+      matched an Icon, this screen shows the same message — nobody can
+      probe which emails have accounts.
+   2. Enter a code an Icon read aloud → accept_circle_invite(). This
+      connects immediately (the code IS the Icon's yes) and lands back
+      on the dashboard, where the new card starts all-private.
 
-   UI only; "sending" flips local state. The QR is a drawn placeholder,
-   labeled as such — no QR library until the real token exists.
+   Codes are generated on the Icon's side only (/app/circle) — the
+   mock's code/QR display tabs moved there with the real RPC.
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { FamScreen, Card, Pill, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
-import { MOCK_INVITE, COPY } from "./famMock.js";
-
-/* Deterministic decorative grid standing in for a real QR code. */
-function QrPlaceholder() {
-  const size = 13;
-  const cells = [];
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const corner =
-        (x < 4 && y < 4) || (x >= size - 4 && y < 4) || (x < 4 && y >= size - 4);
-      const on = corner
-        ? x === 0 || y === 0 || x === 3 || y === 3 || (x % 4 < 3 && y % 4 < 3 && x % 2 === y % 2)
-        : (x * 7 + y * 13 + ((x * y) % 5)) % 3 === 0;
-      if (on) cells.push(<rect key={`${x}-${y}`} x={x} y={y} width={0.92} height={0.92} />);
-    }
-  }
-  return (
-    <svg
-      viewBox={`0 0 ${size} ${size}`}
-      role="img"
-      aria-label="QR code placeholder"
-      style={{ width: 180, height: 180, fill: C.dark, background: C.white, padding: 12, borderRadius: 12, border: `2px solid ${C.warmGray}` }}
-    >
-      {cells}
-    </svg>
-  );
-}
-
-function TabBtn({ active, onClick, children }) {
-  const { ts } = useI18n();
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        minHeight: A11Y.minTapTargetPx,
-        padding: "0 20px",
-        borderRadius: 50,
-        border: active ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
-        background: active ? C.white : "transparent",
-        color: C.textMain,
-        fontSize: ts(A11Y.minBodyPx),
-        fontWeight: 600,
-        fontFamily: "inherit",
-        cursor: "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-      }}
-    >
-      <span aria-hidden="true" style={{ color: C.green, visibility: active ? "visible" : "hidden" }}>✓</span>
-      {children}
-    </button>
-  );
-}
+import { requestToJoinCircle, acceptCircleInvite } from "../../lib/circle.js";
+import { FamScreen, Card, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
+import { COPY } from "./famCopy.js";
 
 export default function InviteFlow() {
   const { ts, meta } = useI18n();
+  const navigate = useNavigate();
   const c = COPY.invite;
 
-  const [tab, setTab] = useState("email"); // email | code | qr
   const [email, setEmail] = useState("");
-  const [emailSentTo, setEmailSentTo] = useState(null);
-  const [joinCode, setJoinCode] = useState("");
-  const [joinSent, setJoinSent] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailDone, setEmailDone] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
-  const sendEmail = (e) => {
+  const [joinCode, setJoinCode] = useState("");
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  const sendRequest = async (e) => {
     e.preventDefault();
     if (!/.+@.+\..+/.test(email)) return;
-    setEmailSentTo(email); // mock — no request leaves the page
+    setEmailBusy(true);
+    setEmailError("");
+    try {
+      await requestToJoinCircle(email.trim());
+      setEmailDone(true); // the one and only outcome shown for any email
+    } catch (err) {
+      // Only real failures land here (e.g. the daily rate limit); the
+      // RPC's own message is written for people.
+      setEmailError(err.message);
+    } finally {
+      setEmailBusy(false);
+    }
   };
-  const sendJoin = (e) => {
+
+  const redeemCode = async (e) => {
     e.preventDefault();
     if (joinCode.replace(/\D/g, "").length !== 6) return;
-    setJoinSent(true); // mock
+    setJoinBusy(true);
+    setJoinError("");
+    try {
+      await acceptCircleInvite(joinCode);
+      navigate("/app/fam", { replace: true }); // the new card is there
+    } catch {
+      setJoinError(c.codeInvalid);
+      setJoinBusy(false);
+    }
   };
 
   return (
@@ -111,103 +84,79 @@ export default function InviteFlow() {
         {c.intro}
       </BodyText>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        <TabBtn active={tab === "email"} onClick={() => setTab("email")}>{c.tabEmail}</TabBtn>
-        <TabBtn active={tab === "code"} onClick={() => setTab("code")}>{c.tabCode}</TabBtn>
-        <TabBtn active={tab === "qr"} onClick={() => setTab("qr")}>{c.tabQr}</TabBtn>
-      </div>
-
-      {tab === "email" && (
-        <Card>
-          {emailSentTo ? (
-            <BodyText role="status" style={{ fontWeight: 600, color: C.green, margin: 0 }}>
-              ✓ {c.emailSent(emailSentTo)}
+      {/* Door 1: ask to join by email */}
+      <Card>
+        <h2 style={{ fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
+          {c.emailLabel}
+        </h2>
+        {emailDone ? (
+          <BodyText role="status" style={{ fontWeight: 600, color: C.green, margin: 0 }}>
+            ✓ {c.emailSent}
+          </BodyText>
+        ) : (
+          <form onSubmit={sendRequest}>
+            <label
+              style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 6 }}
+            >
+              {c.emailField}
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                style={{ marginTop: 6 }}
+              />
+            </label>
+            <BodyText muted style={{ margin: "8px 0 16px" }}>
+              {c.emailHint}
             </BodyText>
-          ) : (
-            <form onSubmit={sendEmail}>
-              <label
-                style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 6 }}
-              >
-                {c.emailField}
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  style={{ marginTop: 6 }}
-                />
-              </label>
-              <BodyText muted style={{ margin: "8px 0 16px" }}>
-                {c.emailHint}
+            {emailError && (
+              <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
+                ⚠ {emailError}
               </BodyText>
-              <PrimaryBtn type="submit">{c.emailCta}</PrimaryBtn>
-            </form>
-          )}
-        </Card>
-      )}
+            )}
+            <PrimaryBtn type="submit" disabled={emailBusy}>
+              {c.emailCta}
+            </PrimaryBtn>
+          </form>
+        )}
+      </Card>
 
-      {tab === "code" && (
-        <Card style={{ textAlign: "center" }}>
-          <BodyText muted>{c.codeHint}</BodyText>
-          {/* Digits stay LTR even under Urdu — it's a number read aloud. */}
-          <p
-            dir="ltr"
-            style={{
-              fontFamily: meta.fonts.heading,
-              fontSize: ts(52),
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              color: C.green,
-              margin: "12px 0",
-            }}
-          >
-            {MOCK_INVITE.code}
-          </p>
-          <Pill>⏳ {c.codeExpiry}</Pill>
-        </Card>
-      )}
-
-      {tab === "qr" && (
-        <Card style={{ textAlign: "center" }}>
-          <BodyText muted>{c.qrHint}</BodyText>
-          <div style={{ display: "flex", justifyContent: "center", margin: "16px 0" }}>
-            <QrPlaceholder />
-          </div>
-          <Pill>🚧 {c.qrPlaceholderNote}</Pill>
-          <div style={{ marginTop: 12 }}>
-            <Pill>⏳ {c.codeExpiry}</Pill>
-          </div>
-        </Card>
-      )}
-
-      {/* The other direction: a code someone read to you */}
+      {/* Door 2: a code someone read to you */}
       <Card style={{ background: C.cream }}>
         <h2 style={{ fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
           {c.haveCodeLabel}
         </h2>
         <BodyText muted>{c.haveCodeHint}</BodyText>
-        {joinSent ? (
-          <BodyText role="status" style={{ fontWeight: 600, color: C.green, margin: 0 }}>
-            ✓ {c.haveCodeSent}
+        {joinError && (
+          <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
+            ⚠ {joinError}
           </BodyText>
-        ) : (
-          <form onSubmit={sendJoin} style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <label style={{ flex: "1 1 220px", fontSize: ts(A11Y.minBodyPx), fontWeight: 600 }}>
-              {c.haveCodeField}
-              <input
-                dir="ltr"
-                inputMode="numeric"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                placeholder="000 000"
-                style={{ marginTop: 6, letterSpacing: "0.15em" }}
-              />
-            </label>
-            <GhostBtn type="submit" style={{ borderColor: C.green, color: C.green }}>
-              {c.haveCodeCta}
-            </GhostBtn>
-          </form>
         )}
+        <form
+          onSubmit={redeemCode}
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <label style={{ flex: "1 1 220px", fontSize: ts(A11Y.minBodyPx), fontWeight: 600 }}>
+            {c.haveCodeField}
+            {/* Digits stay LTR even under Urdu — it's a number read aloud. */}
+            <input
+              dir="ltr"
+              inputMode="numeric"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="000 000"
+              style={{ marginTop: 6, letterSpacing: "0.15em" }}
+            />
+          </label>
+          <GhostBtn
+            type="submit"
+            disabled={joinBusy}
+            style={{ borderColor: C.green, color: C.green }}
+          >
+            {c.haveCodeCta}
+          </GhostBtn>
+        </form>
       </Card>
     </FamScreen>
   );

@@ -1,66 +1,134 @@
 /* ════════════════════════════════════════════════
-   Reminders & routines for one connected Icon — reachable only
-   through a card that rendered the button, which itself only renders
-   with the manageReminders permission. As a second gate, this screen
-   re-checks the permission and bounces to the dashboard without it,
-   the same shape the RLS-backed version will have.
+   Reminders & routines for one connected Icon — wired to the real
+   reminders table (migration 0011). Reachable only through a card
+   that rendered the button, which itself only renders with the
+   manageReminders grant; this screen re-checks the membership row and
+   bounces without it. Either way RLS is the boundary: without
+   can_manage_reminders the reads return nothing and the writes fail.
 
-   Add / change / remove work against local state (mock). Positioning
-   per SPEC.md: reminders are gentle nudges positioned as part of the
+   Positioning per SPEC.md: reminders are gentle nudges, part of the
    log, never alarms to rely on (iOS PWA push is best-effort) — the
-   intro says so in words, and the times are labeled with the Icon's
-   timezone because most Fam members are overseas.
+   intro says so in words.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import {
+  fetchMembershipsAsMember,
+  fetchReminders,
+  addReminder,
+  updateReminder,
+  deleteReminder,
+} from "../../lib/circle.js";
 import { FamScreen, Card, PrimaryBtn, GhostBtn, BodyText } from "./ui.jsx";
-import { MOCK_CONNECTED_ICONS, COPY } from "./famMock.js";
+import { COPY } from "./famCopy.js";
 
 const DAY_CHOICES = ["Every day", "Weekdays", "Weekends", "Sundays", "Mon · Wed · Fri"];
 const BLANK = { label: "", time: "18:00", days: DAY_CHOICES[0] };
 
+/* time column "18:30:00" → input value "18:30" / display "6:30 pm" */
+const toInputTime = (t) => (t || "18:00").slice(0, 5);
+function displayTime(t) {
+  const [h, m] = toInputTime(t).split(":").map(Number);
+  const suffix = h >= 12 ? "pm" : "am";
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 export default function Reminders() {
   const { iconId } = useParams();
   const { ts, meta } = useI18n();
-  const icon = MOCK_CONNECTED_ICONS.find((i) => i.id === iconId);
-
-  // Unknown Icon or no granted permission → back to the dashboard.
-  if (!icon || !icon.permissions.manageReminders) {
-    return <Navigate to="/app/fam" replace />;
-  }
-
   const c = COPY.reminders;
-  const first = icon.name.split(" ")[0];
-  const [reminders, setReminders] = useState(icon.reminders);
+
+  const [membership, setMembership] = useState(undefined); // undefined = loading
+  const [reminders, setReminders] = useState([]);
   const [editing, setEditing] = useState(null); // null | "new" | reminder id
   const [form, setForm] = useState(BLANK);
   const [savedNote, setSavedNote] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const memberships = await fetchMembershipsAsMember();
+        const m = memberships.find((x) => x.icon_id === iconId) || null;
+        if (cancelled) return;
+        setMembership(m);
+        if (m?.can_manage_reminders) {
+          setReminders(await fetchReminders(iconId));
+        }
+      } catch {
+        if (!cancelled) setMembership(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [iconId]);
+
+  if (membership === undefined) {
+    return (
+      <FamScreen backTo="/app/fam" backLabel={COPY.invite.backToDashboard}>
+        <BodyText muted role="status">…</BodyText>
+      </FamScreen>
+    );
+  }
+
+  // Unknown Icon or no granted permission → back to the dashboard.
+  if (!membership || !membership.can_manage_reminders) {
+    return <Navigate to="/app/fam" replace />;
+  }
+
+  const first = (membership.icon_profile?.full_name || "").split(" ")[0];
 
   const startNew = () => {
     setForm(BLANK);
     setEditing("new");
     setSavedNote(false);
+    setError("");
   };
   const startEdit = (r) => {
-    setForm({ label: r.label, time: r.time, days: r.days });
+    setForm({ label: r.label, time: toInputTime(r.remind_time), days: r.days_label });
     setEditing(r.id);
     setSavedNote(false);
+    setError("");
   };
-  const save = (e) => {
+
+  const save = async (e) => {
     e.preventDefault();
     if (!form.label.trim()) return;
-    if (editing === "new") {
-      setReminders([...reminders, { id: `r-${reminders.length + 1}-${form.label.length}`, icon: "⏰", ...form }]);
-    } else {
-      setReminders(reminders.map((r) => (r.id === editing ? { ...r, ...form } : r)));
+    setError("");
+    const patch = {
+      label: form.label.trim(),
+      remind_time: form.time,
+      days_label: form.days,
+    };
+    try {
+      if (editing === "new") {
+        await addReminder(iconId, patch);
+      } else {
+        await updateReminder(editing, patch);
+      }
+      setReminders(await fetchReminders(iconId));
+      setEditing(null);
+      setSavedNote(true);
+    } catch {
+      setError(c.saveError);
     }
-    setEditing(null);
-    setSavedNote(true);
   };
-  const remove = (id) => setReminders(reminders.filter((r) => r.id !== id));
+
+  /* One tap, no confirmation maze — mirrors the circle's removal rule. */
+  const remove = async (id) => {
+    setError("");
+    try {
+      await deleteReminder(id);
+      setReminders(await fetchReminders(iconId));
+    } catch {
+      setError(c.saveError);
+    }
+  };
 
   const field = (label, control) => (
     <div style={{ marginBottom: 18 }}>
@@ -85,15 +153,17 @@ export default function Reminders() {
         {c.title(first)}
       </h1>
       <BodyText muted style={{ marginBottom: 24 }}>
-        {c.intro(first, icon.timezoneLabel)}
+        {c.intro(first)}
       </BodyText>
 
       {savedNote && (
-        <BodyText
-          role="status"
-          style={{ fontWeight: 600, color: C.green, marginBottom: 16 }}
-        >
+        <BodyText role="status" style={{ fontWeight: 600, color: C.green, marginBottom: 16 }}>
           ✓ {c.savedNote}
+        </BodyText>
+      )}
+      {error && (
+        <BodyText role="alert" style={{ fontWeight: 700, color: C.brown, marginBottom: 16 }}>
+          ⚠ {error}
         </BodyText>
       )}
 
@@ -104,18 +174,16 @@ export default function Reminders() {
           <Card key={r.id} style={{ padding: 20 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
               <span aria-hidden="true" style={{ fontSize: ts(24) }}>
-                {r.icon}
+                {r.emoji}
               </span>
               <div style={{ flex: "1 1 200px" }}>
                 <BodyText style={{ fontWeight: 600, margin: 0 }}>{r.label}</BodyText>
                 <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                  {r.time} · {r.days}
+                  {displayTime(r.remind_time)} · {r.days_label}
                 </BodyText>
               </div>
               <GhostBtn onClick={() => startEdit(r)}>{c.editCta}</GhostBtn>
-              {/* One tap, no confirmation maze — mirrors the circle's
-                  removal rule for things this member manages. */}
-              <GhostBtn onClick={() => remove(r.id)} style={{ color: C.error, borderColor: C.error }}>
+              <GhostBtn onClick={() => remove(r.id)} style={{ color: C.brown, borderColor: C.brown }}>
                 {c.deleteCta}
               </GhostBtn>
             </div>

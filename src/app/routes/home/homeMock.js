@@ -1,12 +1,12 @@
 /* ════════════════════════════════════════════════
-   Saath-Icon home — mock data layer.
+   Saath-Icon home — module/choice definitions and the character's
+   tone matrix.
 
-   Everything the home screen shows comes from here; no Supabase
-   calls yet. When the real data layer lands (build step 9 backend),
-   this file is the contract to replace.
-
-   Also the single place for this screen's copy and the character's
-   tone matrix, so the Urdu pass (locales/) is a one-file extraction.
+   All user-facing copy now lives in locales/en.js + ur.js under
+   home.* (the Urdu pass) — this file carries only ids, icons, and
+   KEY references into those files. Components resolve keys with
+   t() from useI18n(); custom trackers keep their user-typed names
+   verbatim (personal data is never translated).
 
    SPEC.md guardrails encoded here:
    - Points reward participation, never performance. Every module
@@ -26,39 +26,41 @@ export const MOCK_ICON = {
 };
 
 // ─── Log modules ───
+// Display names come from the existing settings.dailyLog.modules.* keys
+// (one source for Settings and the log card alike).
 export const MODULES = [
-  { id: "mood", name: "Mood", icon: "🌤️" },
-  { id: "sleep", name: "Sleep", icon: "🌙" },
-  { id: "medication", name: "Medication", icon: "💊" },
-  { id: "exercise", name: "Movement", icon: "🚶" },
-  { id: "diet", name: "Meals", icon: "🍲" },
-  { id: "water", name: "Water", icon: "💧" },
+  { id: "mood", icon: "🌤️" },
+  { id: "sleep", icon: "🌙" },
+  { id: "medication", icon: "💊" },
+  { id: "exercise", icon: "🚶" },
+  { id: "diet", icon: "🍲" },
+  { id: "water", icon: "💧" },
 ];
 
 // Five options, always in this order. The note placeholder adapts to the
 // selection — a heavy day is met with patience, a bright one with curiosity.
 export const MOODS = [
-  { id: "wonderful", face: "😄", label: "Wonderful", placeholder: "What made today shine?" },
-  { id: "good", face: "🙂", label: "Good", placeholder: "What has been good so far?" },
-  { id: "okay", face: "😐", label: "Okay", placeholder: "Anything on your mind?" },
-  { id: "low", face: "🙁", label: "Low", placeholder: "Would you like to share what's on your heart?" },
-  { id: "heavy", face: "😞", label: "Heavy", placeholder: "Take your time. Whatever you write stays yours." },
+  { id: "wonderful", face: "😄", labelKey: "home.moods.wonderful", phKey: "home.moods.phWonderful" },
+  { id: "good", face: "🙂", labelKey: "home.moods.good", phKey: "home.moods.phGood" },
+  { id: "okay", face: "😐", labelKey: "home.moods.okay", phKey: "home.moods.phOkay" },
+  { id: "low", face: "🙁", labelKey: "home.moods.low", phKey: "home.moods.phLow" },
+  { id: "heavy", face: "😞", labelKey: "home.moods.heavy", phKey: "home.moods.phHeavy" },
 ];
 
 export const SLEEP_HOURS = ["4", "5", "6", "7", "8", "9", "10+"];
 
 export const SLEEP_QUALITY = [
-  { id: "restful", face: "🙂", label: "Restful" },
-  { id: "fair", face: "😐", label: "So-so" },
-  { id: "restless", face: "🙁", label: "Restless" },
+  { id: "restful", face: "🙂", labelKey: "home.sleepQuality.restful" },
+  { id: "fair", face: "😐", labelKey: "home.sleepQuality.fair" },
+  { id: "restless", face: "🙁", labelKey: "home.sleepQuality.restless" },
 ];
 
 export const EXERCISE_TYPES = [
-  { id: "walk", icon: "🚶", label: "A walk" },
-  { id: "stretch", icon: "🙆", label: "Stretching" },
-  { id: "garden", icon: "🌿", label: "Gardening" },
-  { id: "house", icon: "🧹", label: "Housework" },
-  { id: "other", icon: "✨", label: "Something else" },
+  { id: "walk", icon: "🚶", labelKey: "home.exercise.walk" },
+  { id: "stretch", icon: "🙆", labelKey: "home.exercise.stretch" },
+  { id: "garden", icon: "🌿", labelKey: "home.exercise.garden" },
+  { id: "house", icon: "🧹", labelKey: "home.exercise.house" },
+  { id: "other", icon: "✨", labelKey: "home.exercise.other" },
 ];
 
 export const EXERCISE_MINUTES = ["10", "20", "30", "45+"];
@@ -71,45 +73,39 @@ export const WATER_GOAL_GLASSES = 8;
 export const POINTS_PER_MODULE = 10;
 
 export const BADGES = [
-  { name: "First Light", at: 50 },
-  { name: "Morning Star", at: 250 },
-  { name: "Neem Tree", at: 500 },
-  { name: "Monsoon Steady", at: 1000 },
-  { name: "Mountain Quiet", at: 2000 },
+  { nameKey: "home.score.badges.firstLight", at: 50 },
+  { nameKey: "home.score.badges.morningStar", at: 250 },
+  { nameKey: "home.score.badges.neemTree", at: 500 },
+  { nameKey: "home.score.badges.monsoonSteady", at: 1000 },
+  { nameKey: "home.score.badges.mountainQuiet", at: 2000 },
 ];
 
-// Past days and lifetime points now come from Supabase daily_logs —
-// see logStore.js. What remains in this file is the screen's copy,
-// the module/choice definitions, and the character's tone matrix.
+// Past days and lifetime points come from Supabase daily_logs — see
+// logStore.js.
 
 // ─── Character tone matrix (SPEC.md, "Points, character, celebrations") ───
-// Mood is asked first precisely so this can be mood-aware.
+// Mood is asked first precisely so this can be mood-aware. Returns a
+// { key, vars } pair for t() — never a finished sentence, so the matrix
+// stays language-neutral.
 export function characterLine({ moodId, doneCount, missedDays, firstName, restDay }) {
-  if (restDay) {
-    return `A rest day is a good day, ${firstName}. I'll be right here.`;
-  }
+  const vars = { name: firstName };
+  if (restDay) return { key: "home.character.restDay", vars };
   if (!moodId) {
     if (missedDays >= 2) {
       // Returning after missed days → warm welcome, never guilt.
-      return `${firstName}! How lovely to see you again. How is your heart today?`;
+      return { key: "home.character.welcomeBack", vars };
     }
-    return `How is your heart today, ${firstName}?`;
+    return { key: "home.character.ask", vars };
   }
   if (moodId === "low" || moodId === "heavy") {
     // Low mood → gentle, regardless of activity.
-    return "Thank you for telling me. No hurry today — I'm right here with you.";
+    return { key: "home.character.lowMood", vars };
   }
-  if (moodId === "okay") {
-    return "An okay day still counts. Thank you for checking in.";
-  }
+  if (moodId === "okay") return { key: "home.character.okayMood", vars };
   // Good or wonderful:
-  if (doneCount >= 4) {
-    return `Look at you go, ${firstName}! What a day you're making.`;
-  }
-  if (doneCount <= 2) {
-    return "Feeling bright, I see! Shall we give that energy somewhere to go?";
-  }
-  return "That's wonderful to hear. The day is yours.";
+  if (doneCount >= 4) return { key: "home.character.activeDay", vars };
+  if (doneCount <= 2) return { key: "home.character.brightNudge", vars };
+  return { key: "home.character.goodMood", vars };
 }
 
 // ─── Share sheet copy ───
@@ -129,8 +125,8 @@ export function daysAgo(n) {
   return d;
 }
 
-export function greetingForHour(h) {
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+export function greetingKeyForHour(h) {
+  if (h < 12) return "home.greetingMorning";
+  if (h < 17) return "home.greetingAfternoon";
+  return "home.greetingEvening";
 }

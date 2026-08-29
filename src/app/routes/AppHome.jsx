@@ -11,15 +11,7 @@ import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
 
-/* ⚠ TEMPORARY hardcoded English — the locales files are owned by
-   another lane right now. i18n lane: move to en.js/ur.js under
-   appHome.* and swap to t(). "Sign in" and "Back to saathban.com"
-   already reuse existing keys below. */
-const STRINGS = {
-  tagline: "Timeless Togetherness",
-  welcome: "Good company, close at hand. Sign in, or join us.",
-  join: "Join Saathban",
-};
+/* All strings live in locales/ (appHome.* plus two reused auth keys). */
 
 export default function AppHome() {
   const { t, ts, meta } = useI18n();
@@ -77,7 +69,7 @@ export default function AppHome() {
             marginBottom: 12,
           }}
         >
-          {STRINGS.tagline}
+          {t("appHome.tagline")}
         </h1>
 
         <p
@@ -87,7 +79,7 @@ export default function AppHome() {
             marginBottom: 32,
           }}
         >
-          {STRINGS.welcome}
+          {t("appHome.welcome")}
         </p>
 
         <div
@@ -103,7 +95,7 @@ export default function AppHome() {
             {t("auth.roleSelect.signIn")}
           </Link>
           <Link to="/app/auth" style={door(false)}>
-            {STRINGS.join}
+            {t("appHome.join")}
           </Link>
         </div>
 

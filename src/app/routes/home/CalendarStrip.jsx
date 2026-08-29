@@ -6,22 +6,24 @@
    days are shown settled, not as failures. */
 
 import { useEffect, useRef } from "react";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 
 export default function CalendarStrip({ days, selectedOffset, onSelect }) {
+  const { t, lang, meta } = useI18n();
+  const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
   const scrollRef = useRef(null);
 
   // On very narrow screens the strip scrolls sideways; start it at
-  // the right so today is always in view.
+  // the inline end so today is always in view (RTL uses negative
+  // scrollLeft in modern browsers).
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollLeft = el.scrollWidth;
-  }, []);
+    if (el) el.scrollLeft = meta.dir === "rtl" ? -el.scrollWidth : el.scrollWidth;
+  }, [meta.dir]);
 
   return (
-    <nav aria-label="Recent days" style={{ marginBottom: 8 }}>
+    <nav aria-label={t("home.recentDays")} style={{ marginBottom: 8 }}>
       <div
         ref={scrollRef}
         style={{
@@ -38,10 +40,11 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
           const editable = day.offset >= -2; // 48-hour backfill window
           const mark = day.restDay ? "☾" : day.logged ? "✓" : "";
           const markLabel = day.restDay
-            ? ", rest day"
+            ? t("home.ariaRestDay")
             : day.logged
-            ? ", logged"
+            ? t("home.ariaLogged")
             : "";
+          const shortDay = day.date.toLocaleDateString(dateLocale, { weekday: "short" });
           return (
             <button
               key={day.offset}
@@ -49,7 +52,7 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
               onClick={() => editable && onSelect(day.offset)}
               aria-pressed={selected}
               aria-current={isToday ? "date" : undefined}
-              aria-label={`${isToday ? "Today, " : ""}${WEEKDAYS[day.date.getDay()]} ${day.date.getDate()}${markLabel}`}
+              aria-label={`${isToday ? t("home.ariaToday") : ""}${shortDay} ${day.date.getDate()}${markLabel}`}
               aria-disabled={!editable}
               style={{
                 minHeight: 76,
@@ -65,13 +68,13 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
                   : `2px solid ${isToday ? C.greenMuted : "transparent"}`,
                 background: selected ? C.white : editable ? "rgba(255,255,255,0.55)" : "transparent",
                 color: editable ? C.textMain : C.textMuted,
-                fontFamily: FONTS.sans,
+                fontFamily: "inherit",
                 cursor: editable ? "pointer" : "default",
                 padding: "6px 2px",
               }}
             >
               <span style={{ fontSize: 18, fontWeight: 500, color: C.textMuted }}>
-                {isToday ? "Today" : WEEKDAYS[day.date.getDay()]}
+                {isToday ? t("home.today") : shortDay}
               </span>
               <span style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.15 }}>
                 {day.date.getDate()}

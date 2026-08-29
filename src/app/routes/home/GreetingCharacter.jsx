@@ -4,7 +4,8 @@
    character work lands. Its speech bubble is driven by the tone matrix
    in homeMock.js: mood-aware because mood is always logged first. */
 
-import { COLORS as C, FONTS } from "../../../shared/tokens.js";
+import { COLORS as C } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 
 function SproutCharacter() {
   return (
@@ -54,11 +55,12 @@ function SproutCharacter() {
 }
 
 export default function GreetingCharacter({ greeting, name, line }) {
+  const { t, meta } = useI18n();
   return (
-    <section aria-label="Greeting" style={{ margin: "18px 0 22px" }}>
+    <section aria-label={t("home.greetingAria")} style={{ margin: "18px 0 22px" }}>
       <h1
         style={{
-          fontFamily: FONTS.serif,
+          fontFamily: meta.fonts.heading,
           fontSize: "clamp(1.75rem, 6vw, 2.3rem)",
           fontWeight: 700,
           color: C.green,

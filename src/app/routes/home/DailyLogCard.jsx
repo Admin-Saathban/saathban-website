@@ -7,12 +7,17 @@
    meals list are the Icon's own (defined in Settings), and custom
    trackers appear as entries after the built-in modules.
 
+   All copy comes from locales/ (home.log.* and the shared
+   settings.dailyLog.modules.* names); user-defined names (trackers,
+   meds, meals) render verbatim in whatever language they were typed.
+
    Every control here is ≥48px tall and ≥18px text. Selection is always
    shown with a ✓ mark as well as colour. */
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import {
   MODULES,
   MOODS,
@@ -43,7 +48,7 @@ function Chip({ selected, onClick, children, label }) {
         color: selected ? C.cream : C.textMain,
         fontSize: 18,
         fontWeight: selected ? 700 : 500,
-        fontFamily: FONTS.sans,
+        fontFamily: "inherit",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -85,6 +90,7 @@ function EditorLabel({ children }) {
 /* ─── Per-module editors ─── */
 
 function MoodEditor({ value, onChange }) {
+  const { t } = useI18n();
   const [voice, setVoice] = useState(null); // null | "recording" | "saved"
   const chosen = MOODS.find((m) => m.id === value.choice);
   return (
@@ -116,7 +122,7 @@ function MoodEditor({ value, onChange }) {
                 justifyContent: "center",
                 gap: 4,
                 padding: "8px 2px",
-                fontFamily: FONTS.sans,
+                fontFamily: "inherit",
               }}
             >
               <span style={{ fontSize: 30, lineHeight: 1 }} aria-hidden="true">
@@ -130,7 +136,7 @@ function MoodEditor({ value, onChange }) {
                 }}
               >
                 {selected ? "✓ " : ""}
-                {m.label}
+                {t(m.labelKey)}
               </span>
             </button>
           );
@@ -142,9 +148,9 @@ function MoodEditor({ value, onChange }) {
           <textarea
             value={value.note || ""}
             onChange={(e) => onChange({ ...value, note: e.target.value })}
-            placeholder={chosen.placeholder}
+            placeholder={t(chosen.phKey)}
             rows={3}
-            aria-label="A note about today, if you like"
+            aria-label={t("home.log.noteAria")}
             style={{
               width: "100%",
               padding: "14px 16px",
@@ -153,7 +159,7 @@ function MoodEditor({ value, onChange }) {
               background: C.white,
               fontSize: 18,
               lineHeight: 1.55,
-              fontFamily: FONTS.sans,
+              fontFamily: "inherit",
               color: C.textMain,
               resize: "vertical",
             }}
@@ -171,26 +177,26 @@ function MoodEditor({ value, onChange }) {
                 color: voice === "recording" ? C.cream : C.green,
                 fontSize: 18,
                 fontWeight: 600,
-                fontFamily: FONTS.sans,
+                fontFamily: "inherit",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
               }}
             >
               <span aria-hidden="true">🎤</span>
-              {voice === "recording" ? "Recording… tap to finish" : "Speak instead"}
+              {voice === "recording" ? t("home.log.recording") : t("home.log.speakInstead")}
             </button>
             {voice === "saved" && (
               <span role="status" style={{ fontSize: 18, color: C.textMuted }}>
-                ✓ Voice note kept (0:12). Written copy is made automatically.
+                {t("home.log.voiceKept")}
               </span>
             )}
             {voice !== "saved" && (
-              <span style={{ fontSize: 18, color: C.textMuted }}>Up to 2 minutes</span>
+              <span style={{ fontSize: 18, color: C.textMuted }}>{t("home.log.upToTwoMinutes")}</span>
             )}
           </div>
           <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
-            Your mood and notes stay private unless you choose to share them.
+            {t("home.log.moodPrivate")}
           </p>
         </div>
       )}
@@ -199,24 +205,25 @@ function MoodEditor({ value, onChange }) {
 }
 
 function SleepEditor({ value, onChange }) {
+  const { t } = useI18n();
   const [showTimes, setShowTimes] = useState(false);
   return (
     <div>
-      <EditorLabel>How many hours?</EditorLabel>
+      <EditorLabel>{t("home.log.hoursQ")}</EditorLabel>
       <ChipRow>
         {SLEEP_HOURS.map((h) => (
           <Chip
             key={h}
             selected={value.hours === h}
             onClick={() => onChange({ ...value, hours: h })}
-            label={`${h} hours`}
+            label={t("home.log.hoursAria", { h })}
           >
             {h}
           </Chip>
         ))}
       </ChipRow>
 
-      <EditorLabel>How did it feel?</EditorLabel>
+      <EditorLabel>{t("home.log.feelQ")}</EditorLabel>
       <ChipRow columns={3}>
         {SLEEP_QUALITY.map((q) => (
           <Chip
@@ -224,7 +231,7 @@ function SleepEditor({ value, onChange }) {
             selected={value.quality === q.id}
             onClick={() => onChange({ ...value, quality: q.id })}
           >
-            <span aria-hidden="true" style={{ fontSize: 24 }}>{q.face}</span> {q.label}
+            <span aria-hidden="true" style={{ fontSize: 24 }}>{q.face}</span> {t(q.labelKey)}
           </Chip>
         ))}
       </ChipRow>
@@ -242,19 +249,19 @@ function SleepEditor({ value, onChange }) {
           color: C.green,
           fontSize: 18,
           fontWeight: 600,
-          fontFamily: FONTS.sans,
+          fontFamily: "inherit",
           textDecoration: "underline",
           cursor: "pointer",
         }}
       >
-        {showTimes ? "Hide bed and wake times" : "Add bed and wake times (optional)"}
+        {showTimes ? t("home.log.hideTimes") : t("home.log.addTimes")}
       </button>
 
       {showTimes && (
         <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
           {[
-            ["bed", "Went to bed"],
-            ["wake", "Woke up"],
+            ["bed", t("home.log.wentToBed")],
+            ["wake", t("home.log.wokeUp")],
           ].map(([key, label]) => (
             <label key={key} style={{ fontSize: 18, color: C.textMain, display: "flex", flexDirection: "column", gap: 6 }}>
               {label}
@@ -268,7 +275,7 @@ function SleepEditor({ value, onChange }) {
                   borderRadius: 12,
                   border: `2px solid ${C.warmGray}`,
                   fontSize: 18,
-                  fontFamily: FONTS.sans,
+                  fontFamily: "inherit",
                   background: C.white,
                   color: C.textMain,
                 }}
@@ -283,30 +290,27 @@ function SleepEditor({ value, onChange }) {
 
 /* An empty module is a door to Settings, never a dead end. */
 function SettingsDoor({ children }) {
+  const { t } = useI18n();
   return (
     <p style={{ fontSize: 18, color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
       {children}{" "}
       <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
-        Open Settings
+        {t("home.log.openSettings")}
       </Link>
     </p>
   );
 }
 
 function MedicationEditor({ value, onChange, meds }) {
+  const { t } = useI18n();
   const taken = value.taken || [];
   const toggle = (id) =>
     onChange({
       ...value,
-      taken: taken.includes(id) ? taken.filter((t) => t !== id) : [...taken, id],
+      taken: taken.includes(id) ? taken.filter((x) => x !== id) : [...taken, id],
     });
   if (meds.length === 0) {
-    return (
-      <SettingsDoor>
-        When you list your medicines in Settings — name, dose, and when you
-        take them — they'll appear here to tick off each day.
-      </SettingsDoor>
-    );
+    return <SettingsDoor>{t("home.log.medsEmpty")}</SettingsDoor>;
   }
   return (
     <div>
@@ -329,8 +333,8 @@ function MedicationEditor({ value, onChange, meds }) {
                 borderRadius: 14,
                 border: `2px solid ${done ? C.green : C.warmGray}`,
                 background: done ? "#eef3ea" : C.white,
-                fontFamily: FONTS.sans,
-                textAlign: "left",
+                fontFamily: "inherit",
+                textAlign: "start",
                 width: "100%",
               }}
             >
@@ -368,38 +372,38 @@ function MedicationEditor({ value, onChange, meds }) {
         })}
       </div>
       <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
-        Reminders can nudge you, but this list is the reliable record — please
-        don't depend on the reminder alone.
+        {t("home.log.medsNote")}
       </p>
     </div>
   );
 }
 
 function ExerciseEditor({ value, onChange }) {
+  const { t } = useI18n();
   return (
     <div>
-      <EditorLabel>What did you do?</EditorLabel>
+      <EditorLabel>{t("home.log.moveQ")}</EditorLabel>
       <ChipRow>
-        {EXERCISE_TYPES.map((t) => (
+        {EXERCISE_TYPES.map((et) => (
           <Chip
-            key={t.id}
-            selected={value.type === t.id}
-            onClick={() => onChange({ ...value, type: t.id })}
+            key={et.id}
+            selected={value.type === et.id}
+            onClick={() => onChange({ ...value, type: et.id })}
           >
-            <span aria-hidden="true">{t.icon}</span> {t.label}
+            <span aria-hidden="true">{et.icon}</span> {t(et.labelKey)}
           </Chip>
         ))}
       </ChipRow>
-      <EditorLabel>For about how long?</EditorLabel>
+      <EditorLabel>{t("home.log.howLongQ")}</EditorLabel>
       <ChipRow>
         {EXERCISE_MINUTES.map((m) => (
           <Chip
             key={m}
             selected={value.minutes === m}
             onClick={() => onChange({ ...value, minutes: m })}
-            label={`${m} minutes`}
+            label={t("home.log.minutesAria", { m })}
           >
-            {m} min
+            {t("home.log.minShort", { m })}
           </Chip>
         ))}
       </ChipRow>
@@ -408,6 +412,7 @@ function ExerciseEditor({ value, onChange }) {
 }
 
 function DietEditor({ value, onChange, items }) {
+  const { t } = useI18n();
   const meals = value.meals || [];
   const toggle = (id) =>
     onChange({
@@ -415,16 +420,11 @@ function DietEditor({ value, onChange, items }) {
       meals: meals.includes(id) ? meals.filter((m) => m !== id) : [...meals, id],
     });
   if (items.length === 0) {
-    return (
-      <SettingsDoor>
-        Add the meals and foods you'd like to keep track of in Settings, and
-        they'll appear here.
-      </SettingsDoor>
-    );
+    return <SettingsDoor>{t("home.log.dietEmpty")}</SettingsDoor>;
   }
   return (
     <div>
-      <EditorLabel>What have you eaten today?</EditorLabel>
+      <EditorLabel>{t("home.log.dietQ")}</EditorLabel>
       <ChipRow>
         {items.map((m) => (
           <Chip key={m.id} selected={meals.includes(m.id)} onClick={() => toggle(m.id)}>
@@ -433,8 +433,7 @@ function DietEditor({ value, onChange, items }) {
         ))}
       </ChipRow>
       <p style={{ fontSize: 18, color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
-        Your own list — change it any time in Settings. Just a record for you,
-        never a diet plan.
+        {t("home.log.dietNote")}
       </p>
     </div>
   );
@@ -443,12 +442,13 @@ function DietEditor({ value, onChange, items }) {
 /* ─── Custom tracker editors (Settings → "your own trackers") ─── */
 
 function TrackerEditor({ tracker, value, onChange }) {
+  const { t } = useI18n();
   if (tracker.type === "yesno") {
     const done = !!value.done;
     return (
       <ChipRow>
         <Chip selected={done} onClick={() => onChange({ ...value, done: !done })}>
-          Done today
+          {t("home.log.trackerDone")}
         </Chip>
       </ChipRow>
     );
@@ -465,20 +465,20 @@ function TrackerEditor({ tracker, value, onChange }) {
       color: C.green,
       fontSize: 30,
       fontWeight: 700,
-      fontFamily: FONTS.sans,
+      fontFamily: "inherit",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
     };
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <button type="button" onClick={() => set(count - 1)} aria-label="One fewer" style={btn}>
+        <button type="button" onClick={() => set(count - 1)} aria-label={t("home.log.oneFewer")} style={btn}>
           −
         </button>
         <span role="status" style={{ fontSize: 34, fontWeight: 700, color: C.green, minWidth: 60, textAlign: "center" }}>
           {count}
         </span>
-        <button type="button" onClick={() => set(count + 1)} aria-label="One more" style={btn}>
+        <button type="button" onClick={() => set(count + 1)} aria-label={t("home.log.oneMore")} style={btn}>
           +
         </button>
       </div>
@@ -489,9 +489,9 @@ function TrackerEditor({ tracker, value, onChange }) {
     <textarea
       value={value.note || ""}
       onChange={(e) => onChange({ ...value, note: e.target.value })}
-      placeholder="A line or two, whenever you like."
+      placeholder={t("home.log.trackerNotePh")}
       rows={3}
-      aria-label={`A note for ${tracker.name}`}
+      aria-label={t("home.log.trackerNoteAria", { name: tracker.name })}
       style={{
         width: "100%",
         padding: "14px 16px",
@@ -500,7 +500,7 @@ function TrackerEditor({ tracker, value, onChange }) {
         background: C.white,
         fontSize: 18,
         lineHeight: 1.55,
-        fontFamily: FONTS.sans,
+        fontFamily: "inherit",
         color: C.textMain,
         resize: "vertical",
       }}
@@ -509,6 +509,7 @@ function TrackerEditor({ tracker, value, onChange }) {
 }
 
 function WaterEditor({ value, onChange }) {
+  const { t } = useI18n();
   const glasses = value.glasses || 0;
   const set = (n) => onChange({ ...value, glasses: Math.max(0, Math.min(15, n)) });
   const btn = {
@@ -520,14 +521,14 @@ function WaterEditor({ value, onChange }) {
     color: C.green,
     fontSize: 30,
     fontWeight: 700,
-    fontFamily: FONTS.sans,
+    fontFamily: "inherit",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
   };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-      <button type="button" onClick={() => set(glasses - 1)} aria-label="One glass fewer" style={btn}>
+      <button type="button" onClick={() => set(glasses - 1)} aria-label={t("home.log.glassFewer")} style={btn}>
         −
       </button>
       <div style={{ textAlign: "center", minWidth: 110 }} role="status">
@@ -535,10 +536,10 @@ function WaterEditor({ value, onChange }) {
           {glasses}
         </span>
         <span style={{ display: "block", fontSize: 18, color: C.textMuted }}>
-          of {WATER_GOAL_GLASSES} glasses
+          {t("home.log.ofGlasses", { n: WATER_GOAL_GLASSES })}
         </span>
       </div>
-      <button type="button" onClick={() => set(glasses + 1)} aria-label="One glass more" style={btn}>
+      <button type="button" onClick={() => set(glasses + 1)} aria-label={t("home.log.glassMore")} style={btn}>
         +
       </button>
     </div>
@@ -552,20 +553,22 @@ const TRACKER_ICONS = { yesno: "☑️", count: "🔢", note: "📝" };
 /* Everything the log card shows for a given day, in order: mood first,
    the other enabled modules, then custom trackers on their schedule.
    IconHome uses the same list for participation points, so a tracker
-   counts exactly like a module — never scaled by content. */
+   counts exactly like a module — never scaled by content. Module
+   display names resolve from settings.dailyLog.modules.* at render
+   time; tracker names are the Icon's own words. */
 export function dayEntries(prefs, date) {
   const mods = MODULES.filter((m) => prefs.enabledModules.includes(m.id)).map(
-    (m) => ({ kind: "module", key: m.id, id: m.id, name: m.name, icon: m.icon })
+    (m) => ({ kind: "module", key: m.id, id: m.id, icon: m.icon })
   );
   const trackers = prefs.trackers
-    .filter((t) => trackerDueOn(t, date))
-    .map((t) => ({
+    .filter((tr) => trackerDueOn(tr, date))
+    .map((tr) => ({
       kind: "tracker",
-      key: `tracker:${t.id}`,
-      id: t.id,
-      name: t.name,
-      icon: TRACKER_ICONS[t.type] || "☑️",
-      tracker: t,
+      key: `tracker:${tr.id}`,
+      id: tr.id,
+      name: tr.name,
+      icon: TRACKER_ICONS[tr.type] || "☑️",
+      tracker: tr,
     }));
   return [...mods, ...trackers];
 }
@@ -608,16 +611,16 @@ export function isModuleDone(id, log) {
   return isEntryDone({ kind: "module", key: id, id }, log);
 }
 
-function summaryFor(entry, log, prefs) {
+function summaryFor(entry, log, prefs, t) {
   const v = log[entry.key] || {};
   if (entry.kind === "tracker") {
     switch (entry.tracker.type) {
       case "yesno":
-        return v.done ? "Done" : null;
+        return v.done ? t("home.log.sumDone") : null;
       case "count":
         return (v.count || 0) > 0 ? `${v.count}` : null;
       case "note":
-        return (v.note || "").trim() ? "Noted" : null;
+        return (v.note || "").trim() ? t("home.log.sumNoted") : null;
       default:
         return null;
     }
@@ -625,27 +628,30 @@ function summaryFor(entry, log, prefs) {
   switch (entry.id) {
     case "mood": {
       const m = MOODS.find((x) => x.id === v.choice);
-      return m ? `${m.label} ${m.face}` : null;
+      return m ? `${t(m.labelKey)} ${m.face}` : null;
     }
     case "sleep": {
       const q = SLEEP_QUALITY.find((x) => x.id === v.quality);
-      return v.hours && q ? `${v.hours} hours · ${q.label}` : null;
+      return v.hours && q ? t("home.log.sumSleep", { h: v.hours, q: t(q.labelKey) }) : null;
     }
     case "medication": {
       const n = (v.taken || []).length;
-      return n > 0 ? `${n} of ${prefs.medications.length} ticked` : null;
+      return n > 0 ? t("home.log.sumMeds", { n, total: prefs.medications.length }) : null;
     }
     case "exercise": {
-      const t = EXERCISE_TYPES.find((x) => x.id === v.type);
-      return t && v.minutes ? `${t.label} · ${v.minutes} min` : null;
+      const et = EXERCISE_TYPES.find((x) => x.id === v.type);
+      return et && v.minutes
+        ? `${t(et.labelKey)} · ${t("home.log.minShort", { m: v.minutes })}`
+        : null;
     }
     case "diet": {
       const n = (v.meals || []).length;
-      return n > 0 ? `${n} logged` : null;
+      return n > 0 ? t("home.log.sumDiet", { n }) : null;
     }
     case "water": {
       const n = v.glasses || 0;
-      return n > 0 ? `${n} ${n === 1 ? "glass" : "glasses"}` : null;
+      if (n <= 0) return null;
+      return n === 1 ? t("home.log.sumGlassOne") : t("home.log.sumGlassMany", { n });
     }
     default:
       return null;
@@ -654,15 +660,19 @@ function summaryFor(entry, log, prefs) {
 
 /* ─── The card ─── */
 
-export default function DailyLogCard({ log, onChange, editable, restDay, dayLabel, date }) {
+export default function DailyLogCard({ log, onChange, editable, restDay, dayLabel, isToday, date }) {
+  const { t, meta } = useI18n();
   const prefs = useIconPrefs();
   const entries = dayEntries(prefs, date);
   const moodDone = isModuleDone("mood", log);
   const [openId, setOpenId] = useState(moodDone ? null : "mood");
 
+  const entryName = (entry) =>
+    entry.kind === "module" ? t(`settings.dailyLog.modules.${entry.id}`) : entry.name;
+
   return (
     <section
-      aria-label={`Log for ${dayLabel}`}
+      aria-label={isToday ? t("home.log.titleToday") : t("home.log.titleFor", { day: dayLabel })}
       style={{
         background: C.white,
         borderRadius: 22,
@@ -675,17 +685,17 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
       <div style={{ marginBottom: 6 }}>
         <h2
           style={{
-            fontFamily: FONTS.serif,
+            fontFamily: meta.fonts.heading,
             fontSize: 25,
             fontWeight: 700,
             color: C.brown,
             margin: 0,
           }}
         >
-          {dayLabel === "today" ? "Today's log" : `Log for ${dayLabel}`}
+          {isToday ? t("home.log.titleToday") : t("home.log.titleFor", { day: dayLabel })}
         </h2>
         <p style={{ fontSize: 18, color: C.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>
-          Only what you choose to keep. Honest days and busy days count exactly the same.
+          {t("home.log.intro")}
         </p>
       </div>
 
@@ -702,13 +712,13 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
             margin: "14px 0 4px",
           }}
         >
-          ☾ Rest day. Nothing is expected — log anything you like, or nothing at all.
+          {t("home.log.restBanner")}
         </p>
       )}
 
       {!editable && (
         <p style={{ fontSize: 18, color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>
-          This day is settled and kept safe. Logs can be added for up to two days back.
+          {t("home.log.settled")}
         </p>
       )}
 
@@ -716,7 +726,7 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
         {entries.map((mod) => {
           const done = isEntryDone(mod, log);
           const open = openId === mod.key;
-          const summary = summaryFor(mod, log, prefs);
+          const summary = summaryFor(mod, log, prefs, t);
           return (
             <div
               key={mod.key}
@@ -740,18 +750,18 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
                   padding: "10px 16px",
                   background: done ? "#f4f7f1" : C.white,
                   border: "none",
-                  fontFamily: FONTS.sans,
-                  textAlign: "left",
+                  fontFamily: "inherit",
+                  textAlign: "start",
                   cursor: editable ? "pointer" : "default",
                 }}
               >
                 <span aria-hidden="true" style={{ fontSize: 26 }}>{mod.icon}</span>
                 <span style={{ flex: 1 }}>
                   <span style={{ display: "block", fontSize: 20, fontWeight: 700, color: C.textMain }}>
-                    {mod.name}
+                    {entryName(mod)}
                   </span>
                   <span style={{ display: "block", fontSize: 18, color: done ? C.green : C.textMuted }}>
-                    {done ? `✓ ${summary}` : editable ? "Tap to add" : "—"}
+                    {done ? `✓ ${summary}` : editable ? t("home.log.tapToAdd") : "—"}
                   </span>
                 </span>
                 {editable && (
@@ -776,9 +786,9 @@ export default function DailyLogCard({ log, onChange, editable, restDay, dayLabe
       </div>
 
       <p style={{ fontSize: 18, color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
-        Choose what appears here — meals, medicines, your own trackers —{" "}
+        {t("home.log.chooseHere")}{" "}
         <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
-          from Settings
+          {t("home.log.fromSettings")}
         </Link>
         .
       </p>

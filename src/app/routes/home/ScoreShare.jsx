@@ -6,10 +6,14 @@
 
    The share sheet defaults to private. The mock circle is empty on
    purpose — the Circle row must read as a door ("if there's someone
-   you'd like…"), never as a gap. Community sharing is score-level only. */
+   you'd like…"), never as a gap. Community sharing is score-level only.
+
+   All copy lives in locales/ under home.score.*; badge names resolve
+   from home.score.badges.*. */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import { BADGES, SHARE_LINK_MOCK } from "./homeMock.js";
 
 function nextBadge(totalPoints) {
@@ -37,8 +41,8 @@ function ShareRow({ icon, title, sub, onClick }) {
         borderRadius: 16,
         border: `2px solid ${C.warmGray}`,
         background: C.white,
-        fontFamily: FONTS.sans,
-        textAlign: "left",
+        fontFamily: "inherit",
+        textAlign: "start",
         cursor: "pointer",
       }}
     >
@@ -56,6 +60,7 @@ function ShareRow({ icon, title, sub, onClick }) {
 }
 
 function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
+  const { t, meta } = useI18n();
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -73,7 +78,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
     } catch {
       /* clipboard unavailable — the toast still explains what the link does */
     }
-    onToast("Link copied. It shows your score only, and stops working after 7 days.");
+    onToast(t("home.score.share.toastLink"));
     onClose();
   };
 
@@ -93,7 +98,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Share today"
+        aria-label={t("home.score.shareToday")}
         style={{
           width: "min(100%, 600px)",
           maxHeight: "88vh",
@@ -107,7 +112,7 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
         <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
           <h2
             style={{
-              fontFamily: FONTS.serif,
+              fontFamily: meta.fonts.heading,
               fontSize: 24,
               fontWeight: 700,
               color: C.brown,
@@ -115,13 +120,13 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
               flex: 1,
             }}
           >
-            Share today
+            {t("home.score.shareToday")}
           </h2>
           <button
             ref={closeRef}
             type="button"
             onClick={onClose}
-            aria-label="Close sharing"
+            aria-label={t("home.score.share.close")}
             style={{
               width: A11Y.minTapTargetPx,
               height: A11Y.minTapTargetPx,
@@ -140,51 +145,53 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
 
         <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
           {doneCount > 0
-            ? `Today so far: ${doneCount} ${doneCount === 1 ? "log" : "logs"}, ${points} points.`
-            : "Nothing logged yet — you can still share once there is."}{" "}
-          Today stays private unless you choose otherwise.
+            ? doneCount === 1
+              ? t("home.score.share.soFarOne", { points })
+              : t("home.score.share.soFarMany", { n: doneCount, points })
+            : t("home.score.share.nothingYet")}{" "}
+          {t("home.score.share.staysPrivate")}
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <ShareRow
             icon="🏡"
-            title="My Circle"
+            title={t("home.score.share.circleTitle")}
             sub={
               circleEmpty
-                ? "If there's someone you'd like kept in the loop, you can invite them from Settings."
-                : `Send today's summary to your circle (${circleMembers.length}).`
+                ? t("home.score.share.circleEmpty")
+                : t("home.score.share.circleSend", { n: circleMembers.length })
             }
             onClick={() => {
               onToast(
                 circleEmpty
-                  ? "Invites live in Settings, whenever you'd like."
-                  : "Today's summary sent to your circle."
+                  ? t("home.score.share.toastCircleEmpty")
+                  : t("home.score.share.toastCircleSent")
               );
               onClose();
             }}
           />
           <ShareRow
             icon="🤝"
-            title="Friends on Saathban"
-            sub="Your connections see today's summary."
+            title={t("home.score.share.friendsTitle")}
+            sub={t("home.score.share.friendsSub")}
             onClick={() => {
-              onToast("Shared with your friends on Saathban.");
+              onToast(t("home.score.share.toastFriends"));
               onClose();
             }}
           />
           <ShareRow
             icon="🌳"
-            title="Community"
-            sub="Score only — never your notes, mood, or medication."
+            title={t("home.score.share.communityTitle")}
+            sub={t("home.score.share.communitySub")}
             onClick={() => {
-              onToast("Your score is up on the community board.");
+              onToast(t("home.score.share.toastCommunity"));
               onClose();
             }}
           />
           <ShareRow
             icon="🔗"
-            title="Copy a link"
-            sub="Shows your score only. The link stops working after 7 days."
+            title={t("home.score.share.linkTitle")}
+            sub={t("home.score.share.linkSub")}
             onClick={copyLink}
           />
         </div>
@@ -205,6 +212,7 @@ export default function ScoreShare({
   editable,
   circleMembers,
 }) {
+  const { t } = useI18n();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const badge = nextBadge(lifetimePoints + points);
@@ -217,7 +225,7 @@ export default function ScoreShare({
 
   return (
     <section
-      aria-label="Today's points"
+      aria-label={t("home.score.ariaPoints")}
       style={{
         background: C.green,
         borderRadius: 22,
@@ -231,7 +239,7 @@ export default function ScoreShare({
           <span
             style={{
               display: "block",
-              fontFamily: FONTS.sans,
+              fontFamily: "inherit",
               fontSize: 52,
               fontWeight: 700,
               lineHeight: 1,
@@ -241,16 +249,16 @@ export default function ScoreShare({
             {restDay ? "☾" : points}
           </span>
           <span style={{ display: "block", fontSize: 18, opacity: 0.9, marginTop: 4 }}>
-            {restDay ? "rest day" : "points today"}
+            {restDay ? t("home.score.restDayWord") : t("home.score.pointsToday")}
           </span>
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 19, lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
             {restDay
-              ? "Resting counts as looking after yourself. Everything is safe."
+              ? t("home.score.restLine")
               : doneCount === 0
-              ? "Points are for showing up, in your own way, in your own time."
-              : `${doneCount} of ${totalModules} logs today. Every one counts the same.`}
+              ? t("home.score.showUpLine")
+              : t("home.score.countLine", { n: doneCount, total: totalModules })}
           </p>
         </div>
       </div>
@@ -258,14 +266,14 @@ export default function ScoreShare({
       {badge && !restDay && (
         <div style={{ marginTop: 18 }}>
           <p style={{ fontSize: 18, margin: "0 0 8px", opacity: 0.95 }}>
-            {badge.toGo} points to your next badge, “{badge.name}”
+            {t("home.score.badgeToGo", { n: badge.toGo, name: t(badge.nameKey) })}
           </p>
           <div
             role="progressbar"
             aria-valuenow={badge.pct}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label={`Progress to the ${badge.name} badge`}
+            aria-label={t("home.score.badgeAria", { name: t(badge.nameKey) })}
             style={{
               height: 14,
               borderRadius: 7,
@@ -298,11 +306,11 @@ export default function ScoreShare({
             color: C.green,
             fontSize: 19,
             fontWeight: 700,
-            fontFamily: FONTS.sans,
+            fontFamily: "inherit",
             cursor: "pointer",
           }}
         >
-          Share today
+          {t("home.score.shareToday")}
         </button>
         {editable && (
           <button
@@ -318,11 +326,11 @@ export default function ScoreShare({
               color: restDay ? C.green : C.cream,
               fontSize: 19,
               fontWeight: 700,
-              fontFamily: FONTS.sans,
+              fontFamily: "inherit",
               cursor: "pointer",
             }}
           >
-            {restDay ? "✓ Rest day — tap to undo" : "Make it a rest day"}
+            {restDay ? t("home.score.restOn") : t("home.score.restOff")}
           </button>
         )}
       </div>
@@ -351,7 +359,7 @@ export default function ScoreShare({
             color: C.cream,
             fontSize: 18,
             lineHeight: 1.5,
-            fontFamily: FONTS.sans,
+            fontFamily: "inherit",
             padding: "14px 22px",
             borderRadius: 16,
             boxShadow: "0 6px 24px rgba(45, 36, 24, 0.35)",

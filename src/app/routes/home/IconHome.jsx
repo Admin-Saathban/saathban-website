@@ -14,12 +14,13 @@
    ════════════════════════════════════════════════ */
 
 import { useMemo, useState } from "react";
-import { COLORS as C, FONTS } from "../../../shared/tokens.js";
+import { COLORS as C } from "../../../shared/tokens.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import {
   MOCK_ICON,
   POINTS_PER_MODULE,
   characterLine,
-  greetingForHour,
+  greetingKeyForHour,
   daysAgo,
   isoDate,
 } from "./homeMock.js";
@@ -32,11 +33,8 @@ import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs } from "./logStore.js";
 import AppHeader from "../../components/AppHeader.jsx";
 
-const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+// Weekday and month names come from Intl for the active language.
+const dateLocaleFor = (lang) => (lang === "ur" ? "ur-PK" : "en-GB");
 
 const css = `
   .ih-root, .ih-root * { box-sizing: border-box; }
@@ -58,6 +56,8 @@ const css = `
 `;
 
 export default function IconHome() {
+  const { t, lang, meta } = useI18n();
+  const dateLocale = dateLocaleFor(lang);
   const { profile } = useSession();
   // RequireAuth guarantees an Icon profile here; the fallback only
   // covers the first render of edge navigations.
@@ -114,18 +114,19 @@ export default function IconHome() {
   const selectedDate = daysAgo(-selectedOffset);
   const dayLabel =
     selectedOffset === 0
-      ? "today"
+      ? t("home.todayLower")
       : selectedOffset === -1
-      ? "yesterday"
-      : WEEKDAY_LONG[selectedDate.getDay()];
+      ? t("home.yesterdayLower")
+      : selectedDate.toLocaleDateString(dateLocale, { weekday: "long" });
 
-  const line = characterLine({
+  const lineSpec = characterLine({
     moodId: todayLog.mood?.choice,
     doneCount: doneToday,
     missedDays,
     firstName,
     restDay: restToday,
   });
+  const line = t(lineSpec.key, lineSpec.vars);
 
   const updateLog = (moduleKey, value) =>
     writeEntry(isoDate(selectedDate), moduleKey, value);
@@ -138,7 +139,7 @@ export default function IconHome() {
         style={{
           minHeight: "100vh",
           background: C.bg,
-          fontFamily: FONTS.sans,
+          fontFamily: meta.fonts.body,
           color: C.textMain,
           fontSize: 18,
         }}
@@ -147,7 +148,7 @@ export default function IconHome() {
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px" }}>
         <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
-          {WEEKDAY_LONG[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}
+          {now.toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
         </p>
 
         <div className="ih-card">
@@ -160,7 +161,7 @@ export default function IconHome() {
 
         <div className="ih-card">
           <GreetingCharacter
-            greeting={greetingForHour(now.getHours())}
+            greeting={t(greetingKeyForHour(now.getHours()))}
             name={firstName}
             line={line}
           />
@@ -179,7 +180,7 @@ export default function IconHome() {
               margin: "0 0 14px",
             }}
           >
-            You're adding to {dayLabel}'s log — life happens, and later is fine.{" "}
+            {t("home.backfillNote", { day: dayLabel })}{" "}
             <button
               type="button"
               onClick={() => setSelectedOffset(0)}
@@ -191,12 +192,12 @@ export default function IconHome() {
                 color: C.green,
                 fontSize: 18,
                 fontWeight: 700,
-                fontFamily: FONTS.sans,
+                fontFamily: "inherit",
                 textDecoration: "underline",
                 cursor: "pointer",
               }}
             >
-              Back to today
+              {t("home.backToToday")}
             </button>
           </p>
         )}
@@ -209,6 +210,7 @@ export default function IconHome() {
             editable={selectedOffset >= -2}
             restDay={selectedOffset === 0 && restToday}
             dayLabel={dayLabel}
+            isToday={selectedOffset === 0}
             date={selectedDate}
           />
         </div>
@@ -226,7 +228,7 @@ export default function IconHome() {
               paddingInlineStart: 4,
             }}
           >
-            ✓ Saved on this phone — it syncs on its own once you're back online.
+            {t("home.savedOffline")}
           </p>
         )}
 

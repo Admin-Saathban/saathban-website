@@ -102,4 +102,33 @@ lanes to delete — removing them is a one-line change with no callers.
 - Build green after every batch.
 - All 44 `feedback.*` keys resolve in **both** locales (checked
   against the parsed locale objects, not by grep).
-- Slow-path pass on a throttled connection: see the round log below.
+- **Slow path, on a throttled connection** (1s latency injected per
+  request via CDP `Network.emulateNetworkConditions`, phone width,
+  against the mounted provider) — 14/14:
+
+  | Check | Result |
+  |---|---|
+  | Post appears instantly, before the round trip | pass |
+  | "Sending…" is visible for the whole slow wait | pass |
+  | Composer clears on send | pass |
+  | Toast confirms when the server does | pass |
+  | Pending mark clears on confirm | pass |
+  | New post glows and is scrolled to | pass |
+  | Offline mid-send → kind line, not a stack trace | pass |
+  | Retry offered on the failure | pass |
+  | The words come back to the composer | pass |
+  | Toast carries a live role | pass |
+  | Settings save says so | pass |
+  | Repeat saves collapse to one line (keyed) | pass |
+  | A log entry announces completion once; further taps stay quiet | pass |
+  | Button shows in-flight label AND is disabled | pass |
+  | Board post confirms + the note glows | pass |
+  | Urdu toast renders, page is RTL | pass |
+
+  Two first-run failures were the assertions, not the product: the
+  board toast needed the real reload time at 1s latency, and the
+  daily-log toast correctly stayed silent because that module was
+  already complete (it announces on completion, once).
+
+- The provider mount in AppRoot is the integration session's commit
+  (`1087405`); the layer itself and every surface are in `df70f19`.

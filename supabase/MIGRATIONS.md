@@ -21,3 +21,12 @@ the database.
 | `0014_community` | `0014_community.sql` |
 
 Everything earlier matches 1:1 by name.
+
+## Reservations
+
+A row here claims the number even before the file lands.
+
+| Number | Claimed by | For | Date |
+|---|---|---|---|
+| 0015 | (file already in folder, untracked) | `0015_document_responses_reminder_times.sql` | 2026-08-29 |
+| 0016 | outdoor lane | `0016_outdoor.sql` — places, check-ins, outings, park boards | 2026-08-29 |

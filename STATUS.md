@@ -91,6 +91,37 @@ password grants).
 | Buddy application 4269a7c6… + documents | buddy_applications / document requests + storage | CNIC fixtures live in the private bucket — purge storage too |
 | Circle membership test-fam→test-icon | circle_members | re-seeded baseline row |
 
+## Database load discipline (2026-08-29 — READ BEFORE RUNNING A SUITE)
+
+The Supabase project (`vmtbywzmqyzafbgquzjh`) is on small compute and
+goes intermittently unresponsive under concurrent load: profile-fetch
+OPTIONS hang pending, and the app sits on loading screens app-wide.
+
+**Rule: at most ONE lane runs a DB-heavy suite (smoke, games, together,
+community-social, any Playwright run) at a time.** Announce in the
+cross-session channel before starting one and when it finishes. Prefer
+a deployed preview over a local dev server while another lane is
+testing, and keep browser contexts to what the check needs.
+
+Investigated 2026-08-29, and the database is NOT the culprit:
+
+| Checked | Finding |
+|---|---|
+| `cron.job` | ONE job — `saathban_game_tick`, `* * * * *`, `select public.game_tick()`. 120 runs in 2h, **0 failures, avg 26ms, max 233ms**. Not a runaway. |
+| `cron.job_run_details` | No overlap, no growth in duration. |
+| `pg_stat_statements` | No slow app query. Heaviest app statements are polls: game_seats 2837 calls @0.7ms, game_sessions 1946 @0.6ms, game_moves 891 @8.3ms, dm_messages 562 @2.1ms. The two genuinely slow statements (`pg_timezone_names` 324ms mean, extension listing 408ms) are **dashboard/MCP tooling, not the app**. |
+| `pg_stat_activity` | max_connections 60; 16 open, 1 active, **0 idle-in-transaction, 0 lock waits**. No leak, no blocking. |
+
+So what eats it: **volume, not cost**. Every open screen polls (session
+2.5s, thread 4s, bell 6s), and several lanes each drive several browser
+contexts at once, on top of password grants — each login is a bcrypt
+verify, which is real CPU on a micro instance, and our suites log in
+many times per run. The fix is the one-suite-at-a-time rule above plus
+a compute upgrade; nothing in a migration needs undoing.
+
+If a suite fails with hangs or an empty auth response, that is this —
+re-run when the channel is clear before filing a bug.
+
 ## Round log
 - **Together/My-People/parity integration + full matrix (2026-08-29,
   tip `3d802a8`, preview `saathban-website-kfu76nujc`):** integrated

@@ -298,3 +298,36 @@ send_dm_request() requires can_use_community(); open_dm_with() for a
 circle pair deliberately does not, so an Icon-Fam pair can message
 even where community access rules would say no. Trust granted by hand
 outranks the community gate - flag if that reading is wrong.
+
+## Games platform + Daily Riddle (games lane, 2026-08-29)
+
+1. **What language are game notifications in?** Notification rows store
+   literal text; the platform has no per-user language column yet, and
+   every existing notification kind is English-only.
+   *Taken:* game notifications (invite, table ready, your turn, game
+   over) are English, matching the platform. When notifications gain
+   localization, `game_notify()` is the single place to change.
+2. **Who may open or claim a game table?** SPEC gives games no explicit
+   audience.
+   *Taken:* anyone `can_use_community()` (the community read gate) can
+   create, be invited, and claim open seats — games are social
+   furniture, not Icon-only. Open-table *posts* still require
+   `can_post_community()` (Icons + org), like every community post.
+3. **Do lapsed turns ever forfeit a game?** SPEC is silent; the brief
+   says never.
+   *Taken:* never — 3 consecutive misses flip the seat to 'away' and
+   the bot continues indefinitely; the person reclaims any time.
+   A stale active game simply finishes bot-vs-bot via the cron sweep.
+4. **Is the Daily Riddle's guess count public?** Sharing "solved in N"
+   is mild performance data.
+   *Taken:* sharing is opt-in per day via an explicit button, payload
+   carries only {date, guesses}, never the answer; nothing is shared
+   by default and history shows solved days only (no gaps, no streaks
+   broken — streak-forgiving by construction).
+5. **Puzzle day boundary:** server `current_date` (UTC), not the
+   device's local midnight — everyone in Pakistan sees the same riddle
+   with a 5-hour-early rollover.
+   *Taken:* acceptable for v1; a `Asia/Karachi` boundary would need
+   `current_date at time zone` changes in policy + RPC, one file.
+
+---

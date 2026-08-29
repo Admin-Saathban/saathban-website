@@ -1,4 +1,4 @@
-# Games platform contract (rails: `0022_games`, applied live 2026-08-29)
+# Games platform contract (rails: `0022_games` + `0022b_games_repeat_turns`, applied live 2026-08-29)
 
 The rails are live. This is the contract every game lane builds
 against. Numbering per MIGRATIONS.md: 0020 = ludo (applied first,
@@ -27,7 +27,24 @@ Ship ONE function in your migration, named `game_exec_<key>`:
 create function public.game_exec_mygame(
   p_session uuid, p_seat smallint, p_by_bot boolean, p_payload jsonb
 ) returns jsonb  -- MUST return {"move": <jsonb to record>, "winner": <bool>}
+                 -- MAY add {"again": true} — the seat keeps the turn
+                 -- (extra roll on six, pocket-and-continue); rails
+                 -- reset the clock and skip rotation (0022b)
 ```
+
+**Executors never advance the turn or touch `current_seat` /
+`turn_started_at`** — the rails rotate (or hold, on `again`) after the
+executor returns. Double-advancing is the one bug the contract exists
+to prevent.
+
+**Two-phase turns** (roll → see dice → choose piece) are fine: a
+game-owned RPC may write intermediate data into `state` WITHOUT
+advancing anything (it must verify the session is active and the
+caller holds `current_seat`, and must NOT write `game_moves`); the
+choice then arrives as a normal `play_turn(session, payload)`. One
+turn = one clock — the phases share the seat's `turn_seconds`. If no
+legal move exists, the game RPC submits `play_turn(session,
+{"pass": true})` so the pass is recorded and the turn rotates.
 
 `exec_game_move()` dispatches to it dynamically (`'game_exec_' ||
 game_key`) — **nobody edits anyone else's CASE/dispatch, ever.** Your

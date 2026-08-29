@@ -130,11 +130,13 @@ the admin sidebar now links there (see Admin).
   **fixed by the people lane (3d802a8)**: the bilingual door string
   (people.thread.pendingNote) existed all along, the render just never
   used it for non-open threads.
-- community/Thread.jsx is still routed (messages/:requestId) although
-  the canonical-thread decision makes /app/people/&lt;id&gt;/chat the one
-  DM surface — **deferred to the integration session's DM-unification
-  round** (flagged to them by the people lane; the planned fix is a
-  redirect, not an empty-state).
+- community/Thread.jsx — **resolved (integration, 1259a32; verified in
+  the file)**: it is now a pure resolver that redirects
+  messages/:requestId to the canonical /app/people/&lt;other&gt;/chat
+  (inbox fallback if unresolvable), kept routed so pre-unification
+  bell links and bookmarks survive. Nothing renders beyond a transient
+  loading line, so the original empty-state finding has no surface to
+  apply to.
 
 ### Milestones / My journey — the decision (requirement 4)
 **Badges and the journey stay Icon-only, and no other role ever sees

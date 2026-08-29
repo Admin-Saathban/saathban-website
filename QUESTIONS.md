@@ -72,3 +72,48 @@ it doesn't survive a reload and Fam can't see it. Needs a schema home
 No reports table until Community lands (build step 11). The admin
 UI's Moderation tab works against MOCK_REPORTS with the real actions
 disabled.
+
+---
+
+# Skills / Notifications / Profile lanes (overnight session)
+
+Conservative calls made building `routes/skills/`, `routes/notifications/`,
+`routes/profile/` + migration `0012_skill_interest`. Each was resolved so the
+work is complete and safe; these are the calls a reviewer may want to change.
+
+## S1. Unread badge lives in a shared file (AppHeader)
+The badge was asked for "in AppHeader", but `components/AppHeader.jsx` belongs to
+the header lane and I stage only my own paths. *Taken:* shipped
+`routes/notifications/NotificationsBell.jsx` (self-contained, refreshes on focus
+and on a `sb:notifications-read` event) plus a two-line integration snippet in
+`NOTIFICATIONS_WIRING.md`. **Question:** should the header lane add
+`<NotificationsBell/>`, or should I edit AppHeader directly in a follow-up?
+
+## S2. Strings are local, not in central locales/
+Those files are shared and carried another lane's uncommitted changes, so editing
+them would force staging work that isn't mine. *Taken:* each lane keeps a local
+bilingual `strings.js` (English + Urdu **draft**) consumed via the shared
+`useI18n()`. **Recommend:** fold into `locales/*` under `skills.*` /
+`notifications.*` / `profile.*` when convenient — and the Urdu needs the same
+native review as #4 above.
+
+## S3. Skills admin counts page location
+Put at `/app/skills/admin`, self-guarded to admins and backed by an admin-only
+RPC. **Alternative:** move under the admin lane (`/app/admin/skills`) so staff
+tools sit together.
+
+## S4. Who may express skill interest
+Allowed **any signed-in role** (interest is a demand signal; RLS ties each row to
+the person). SPEC lists Skills under the Icon home — tighten the route guard to
+`roles={["saath_icon"]}` if it should be Icon-only.
+
+## S5. Notifications: mark-read only, no user delete
+Shipped mark-one / mark-all read. The table's RLS also allows self-delete, but no
+"clear/remove" affordance was added. Add one if wanted.
+
+## S6. I reset test-icon's password, against convention #2 above
+Before finding this file's #2, an earlier lane task of mine reset test-icon to a
+different password for a browser test (it had already churned via GoTrue's
+rehash-on-login). Per #2, the fix is a dedicated `test-reset@saathban.dev`; the
+four shared accounts should be restored to `SaathTest!2026` and left alone. I did
+not re-reset it this session (the write is now permission-gated).

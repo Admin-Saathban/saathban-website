@@ -342,6 +342,19 @@ async function table({ turnSeconds = 60 } = {}) {
   return c.body;
 }
 
+/* Why did that call fail? Since 0044b the cron tick calls off a
+   pass_turn table whose log ends in consecutive passes, so a fixture
+   can be cancelled underneath a paused run. Naming the status turns
+   that from a mystery into a sentence. */
+async function why(res, id) {
+  const msg = (res.body?.message || JSON.stringify(res.body) || "").slice(0, 60);
+  if (res.ok) return msg;
+  const [row] = await host.rest(`game_sessions?select=status&id=eq.${id}`);
+  return row?.status && row.status !== "active"
+    ? `${msg} — table is ${row.status} (0044b calls off idle pass_turn tables)`
+    : msg;
+}
+
 /* Whose turn is it, and what does the board look like? */
 async function seatNow(id) {
   const [s] = await host.rest(`game_sessions?select=current_seat,status,state&id=eq.${id}`);
@@ -376,7 +389,7 @@ await runCase("B1", async () => {
     const mine = before.state.pieces.find((p) => p.owner === colour && !p.pocketed);
     const p = payloadFrom(before.state, mover, [mine.id]);
     const res = await me.rpc("play_turn", { p_session: id, p_payload: p });
-    check("B1: a clean pocket is accepted", res.ok, JSON.stringify(res.body).slice(0, 70));
+    check("B1: a clean pocket is accepted", res.ok, await why(res, id));
     const after = await seatNow(id);
     check("B1: the server keeps the turn with the scorer", after.current_seat === before.current_seat,
       `seat ${before.current_seat} → ${after.current_seat}`);
@@ -399,7 +412,7 @@ await runCase("B2", async () => {
     const theirs = before.state.pieces.find((p) => p.owner === oppColour && !p.pocketed);
     const p = payloadFrom(before.state, mover, [theirs.id]);
     const res = await me.rpc("play_turn", { p_session: id, p_payload: p });
-    check("B2: a fouling shot is accepted as a shot", res.ok, JSON.stringify(res.body).slice(0, 70));
+    check("B2: a fouling shot is accepted as a shot", res.ok, await why(res, id));
     const after = await seatNow(id);
     check("B2: the turn passes on a foul", after.current_seat !== before.current_seat,
       `seat ${before.current_seat} → ${after.current_seat}`);
@@ -430,7 +443,7 @@ await runCase("B3", async () => {
     // (b) the control: the same shot, claimed honestly, is accepted —
     //     proof the refusal above is the claim and not the shape.
     const ok = await me.rpc("play_turn", { p_session: id, p_payload: honest });
-    check("B3: the same shot claimed honestly is accepted", ok.ok, JSON.stringify(ok.body).slice(0, 60));
+    check("B3: the same shot claimed honestly is accepted", ok.ok, await why(ok, id));
     await drop(id);
   }
 });
@@ -471,7 +484,7 @@ await runCase("B4", async () => {
         endState,
       },
     });
-    check("B4: the winning shot is accepted", res.ok, JSON.stringify(res.body).slice(0, 70));
+    check("B4: the winning shot is accepted", res.ok, await why(res, id));
     const after = await seatNow(id);
     check("B4: the session is finished", after.status === "finished", after.status);
     await drop(id);

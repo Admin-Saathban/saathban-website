@@ -28,10 +28,27 @@ A row here claims the number even before the file lands.
 
 | Number | Claimed by | For | Date |
 |---|---|---|---|
-| 0015 | (file already in folder, untracked) | `0015_document_responses_reminder_times.sql` | 2026-08-29 |
-| 0016 | outdoor lane | `0016_outdoor.sql` — places, check-ins, outings, park boards | 2026-08-29 |
-| 0017 | milestones lane | `0017_milestones.sql` — badges, earned_badges, awarding trigger/RPCs, rest_day log module | 2026-08-29 |
-| 0018 | community shares lane | `0018_community_shares.sql` — post_type/ref_id/payload on community_posts for badge, score, walk, and event shares | 2026-08-29 |
-| 0019 | people/circle-DM lane | `0019_circle_dms.sql` — open_dm_with() RPC; circle members' DM requests auto-accept | 2026-08-29 |
-| 0020 | games lane | `0020_games.sql` — games registry, sessions/seats/moves/invites/chat, turn timing + bot play (pg_cron tick), daily puzzles (+30 seed), notifications.link, game_open/puzzle_result post types | 2026-08-29 |
-| NOTE | — | two 0019 files exist (`circle_dms`, `event_proposals`) — same collision as 0012; the integration session should renumber per applied order | 2026-08-29 |
+| 0015 | integration | `0015_document_responses_reminder_times.sql` — applied | 2026-08-29 |
+| 0016 | outdoor lane | `0016_outdoor.sql` — applied | 2026-08-29 |
+| 0017 | milestones lane | `0017_milestones.sql` — applied | 2026-08-29 |
+| 0018 | community shares lane | `0018_community_shares.sql` — applied | 2026-08-29 |
+| 0019 | people/circle-DM lane | `0019_circle_dms.sql` — applied | 2026-08-29 |
+| 0020 | ludo lane | `0020_ludo.sql` — **applied live 2026-08-29 07:40** (tables empty at resolution time) | 2026-08-29 |
+| 0021 | events lane | `0021_event_proposals.sql` — applied (renumbered out of the 0019 collision; applied name `event_proposals`) | 2026-08-29 |
+| 0022 | games-rails lane | `0022_games.sql` — the games platform rails, REBASED over the live 0020_ludo shape (see below) | 2026-08-29 |
+
+### 0020 collision resolution (integration session, 2026-08-29)
+
+Both the ludo and games-rails lanes claimed 0020. Per this file's rule —
+**sequence = applied order on the live project; renumber the file, not
+the database** — 0020 belongs to ludo, whose migration was applied at
+07:40 with working server-side game logic (14 functions). The rails
+lane's draft was renamed to `0022_games.sql` by the integration
+session; its DDL must be REWRITTEN as a rebase over the live shape
+before applying: game_sessions/game_seats/game_messages exist and are
+EMPTY, so the rails' preferred names are cheap column RENAMES
+(target_seats→seats_total, 'playing'→'active', turn_deadline→
+turn_started_at + house_rules.turn_seconds) plus new tables and the
+exec_game_move() registry folding the ludo_* RPCs in. Do NOT create
+those three tables again, and do NOT apply anything named 0020.
+GAMES_CONTRACT.md (games lane) carries the field mapping.

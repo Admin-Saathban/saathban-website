@@ -18,6 +18,7 @@ import {
   adminSetCheckedIn,
 } from "./eventsStore.js";
 import { Card, Pill, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
+import AdminProposals from "./AdminProposals.jsx";
 
 const BLANK = {
   title: "",
@@ -186,6 +187,10 @@ export default function AdminEvents() {
         {t("events.admin.title")}
       </h1>
       <BodyText muted>{t("events.admin.intro")}</BodyText>
+
+      {/* Community suggestions to review (migration 0019). Approving one adds
+          a published event, so refresh the events list below. */}
+      <AdminProposals onReviewed={load} />
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

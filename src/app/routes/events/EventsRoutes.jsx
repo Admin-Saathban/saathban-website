@@ -18,6 +18,7 @@ import { Screen } from "./ui.jsx";
 import EventsList from "./EventsList.jsx";
 import MyCalendar from "./MyCalendar.jsx";
 import AdminEvents from "./AdminEvents.jsx";
+import SuggestGathering from "./SuggestGathering.jsx";
 
 /* Absolute tab targets computed from the current location — relative
    links inside a splat route resolve differently across react-router
@@ -93,6 +94,10 @@ export default function EventsRoutes() {
           <Route
             path="manage"
             element={role === "admin" ? <AdminEvents /> : <Navigate to=".." replace />}
+          />
+          <Route
+            path="suggest"
+            element={role === "saath_icon" ? <SuggestGathering /> : <Navigate to=".." replace />}
           />
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>

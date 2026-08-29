@@ -10,9 +10,11 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { Link } from "react-router-dom";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { STRINGS as PROPOSAL_COPY } from "./proposalsCopy.js";
 import {
   sharedEvents,
   fetchAppEvents,
@@ -95,9 +97,10 @@ function EventCard({ ev, role, going, count, onRsvp, onCancel, busy, upcoming })
 }
 
 export default function EventsList() {
-  const { t, ts, meta } = useI18n();
+  const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const role = profile?.role;
+  const ps = PROPOSAL_COPY[lang] || PROPOSAL_COPY.en;
 
   const [events, setEvents] = useState(null); // null = loading
   const [counts, setCounts] = useState({});
@@ -164,6 +167,30 @@ export default function EventsList() {
         {t("events.list.title")}
       </h1>
       <BodyText muted>{t("events.list.intro")}</BodyText>
+
+      {/* Icons can suggest a gathering; an admin reviews it (migration 0019). */}
+      {role === "saath_icon" && (
+        <Link
+          to="suggest"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 56,
+            padding: "0 26px",
+            borderRadius: 50,
+            background: C.green,
+            color: C.cream,
+            fontSize: ts(19),
+            fontWeight: 700,
+            textDecoration: "none",
+            margin: "4px 0 8px",
+          }}
+        >
+          <span aria-hidden="true">✨</span>
+          {ps.listCta}
+        </Link>
+      )}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

@@ -8,7 +8,8 @@ Maintained by the overnight integration session. Last update:
 | Account | State |
 |---|---|
 | test-icon@saathban.dev | Icon; some daily_logs from smoke runs; sees the hub at /app/home |
-| test-fam@saathban.dev | In test-icon's circle with **can_see_mood + can_manage_reminders**; owns the "Morning walk" reminder (08:00 + 17:30, notifies the Icon) |
+| test-fam@saathban.dev | In test-icon's circle with **can_see_mood + can_manage_reminders + can_configure_daily_log** (the last added with 0033, deliberately ON so the "set up with help from Test" path is exercised; flip it to false to check the ungranted state); owns the "Morning walk" reminder (08:00 + 17:30, notifies the Icon) |
+| smoke-icon@saathban.dev / smoke-fam@saathban.dev | **Dedicated suite accounts** — in each other's circle, same password. Every check that WRITES a message or opens a table uses this pair so the test-icon ↔ test-fam thread stays clean for retesting |
 | test-buddy@saathban.dev | Application `4269a7c6…` status **active** (a community-lane suite activated it); several document requests incl. one uploaded response |
 | test-admin@saathban.dev | Support-level admin |
 

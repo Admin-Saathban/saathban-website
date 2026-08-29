@@ -1,11 +1,11 @@
 -- Cleanup for tests/games.mjs (service role / MCP execute_sql).
 -- The suite prints the session ids it created; sessions cascade to
 -- seats, moves, invites, and chat. Generic form — removes every
--- race100 test session between the test accounts, their game
+-- snakes test session between the test accounts, their game
 -- notifications, and their riddle attempts.
 
 delete from game_sessions
-where game_key = 'race100'
+where game_key = 'snakes'
   and created_by in (
     select p.id from profiles p
     join auth.users u on u.id = p.id

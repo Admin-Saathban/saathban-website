@@ -108,7 +108,7 @@ const today = new Date().toISOString().slice(0, 10);
 /* ─── 2. Invite idempotency ─── */
 let sid;
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 3, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 3, p_house_rules: HOUSE });
   sid = r.data;
   const before = (await notes(icon2, "game")).length;
   const i1 = await rpc(icon, "invite_to_game", { p_session: sid, p_invitee: icon2.id });
@@ -135,7 +135,7 @@ let sid;
 
 /* ─── 4. Accept on a table that filled meanwhile ─── */
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   const s2 = r.data;
   await rpc(icon, "invite_to_game", { p_session: s2, p_invitee: fam.id });
   await rpc(icon, "start_with_bots", { p_session: s2 }); // table fills without fam
@@ -143,14 +143,14 @@ let sid;
   const res = await rpc(fam, "respond_game_invite", { p_invite: inv.id, p_accept: true });
   check(
     "accepting a filled table: graceful {result:'filled'} + makings of a new one",
-    res.data?.result === "filled" && res.data?.game_key === "race100" && res.data?.seats_total === 2,
+    res.data?.result === "filled" && res.data?.game_key === "snakes" && res.data?.seats_total === 2,
     JSON.stringify(res.data)
   );
 }
 
 /* ─── 5. 0029c: claim consumes the caller's own pending invite ─── */
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   const s3 = r.data;
   await rpc(icon, "invite_to_game", { p_session: s3, p_invitee: fam.id });
   // Lobby is now full-by-invites (1 seat + 1 pending). Fam arrives
@@ -163,7 +163,7 @@ let sid;
 
 /* ─── 6. Join by code ─── */
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   const s4 = r.data;
   const code = (await rest(icon, "GET", `game_sessions?id=eq.${s4}&select=join_code`)).data?.[0]?.join_code;
   check("host can read the 6-digit code", /^\d{6}$/.test(code ?? ""), code);

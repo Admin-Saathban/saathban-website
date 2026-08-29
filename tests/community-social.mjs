@@ -233,14 +233,14 @@ let reqId;
     thread = { id: req.data };
   }
 
-  const sess = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: { turn_seconds: 60 } });
+  const sess = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: { turn_seconds: 60 } });
   const att = await rest(icon, "POST", "dm_messages", { request_id: thread.id, sender_id: icon.id, body: null, game_session_id: sess.data }, REP);
   check("game-attachment message accepted (null body)", att.status === 201, String(att.status));
 
   const read = await rest(fam, "GET", `dm_messages?request_id=eq.${thread.id}&select=game_session_id&order=created_at.desc&limit=1`);
   check("other participant sees the attachment", read.data?.[0]?.game_session_id === sess.data);
 
-  const famSess = await rpc(fam, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: {} });
+  const famSess = await rpc(fam, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: {} });
   const theft = await rest(icon, "POST", "dm_messages", { request_id: thread.id, sender_id: icon.id, body: null, game_session_id: famSess.data });
   check("attaching a session you're not part of refused", theft.status >= 400, String(theft.status));
 

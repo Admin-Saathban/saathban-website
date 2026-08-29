@@ -13,7 +13,7 @@ d1 as (delete from friend_requests where requester_id in (select id from t) or r
 d2 as (delete from riddle_touches where from_id in (select id from t) returning 1),
 d3 as (delete from boasts where profile_id in (select id from t) returning 1),
 d4 as (delete from code_tries where profile_id in (select id from t) returning 1),
-d5 as (delete from game_sessions where game_key = 'race100' and created_by in (select id from t) returning 1),
+d5 as (delete from game_sessions where game_key = 'snakes' and created_by in (select id from t) returning 1),
 d6 as (delete from notifications where kind in ('game','social') and profile_id in (select id from t) returning 1),
 d7 as (delete from puzzle_attempts where profile_id in (select id from t) returning 1)
 select 1;

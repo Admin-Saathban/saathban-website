@@ -40,4 +40,4 @@ with t as (
   where u.email like 'test-%@saathban.dev'
 )
 delete from game_sessions
-where game_key = 'race100' and created_by in (select id from t);
+where game_key = 'snakes' and created_by in (select id from t);

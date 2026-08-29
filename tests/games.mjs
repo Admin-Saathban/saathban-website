@@ -2,9 +2,11 @@
    Games rails suite — migrations 0022/0022b, real accounts, real RLS.
 
    Run:  node tests/games.mjs
-   Fixtures: the seeded test-* accounts (password SaathTest!2026).
-   House rules {turn_seconds: 2, target: 20} make the 60s turn timer
-   and the race finish testable in seconds.
+   Fixtures: the dedicated smoke-icon / smoke-fam pair (in each
+   others circle) plus test-buddy-pending; password SaathTest!2026.
+   Table-creating suites stay off the accounts retested by hand.
+   House rules {turn_seconds: 2} make the 60s turn timer testable in
+   seconds; Snakes & Ladders itself always finishes on an exact 100.
 
    Covers: create (seat 1 + join code), invite → notification with
    deep link → accept → AUTO-START (all players notified with a board
@@ -68,11 +70,11 @@ async function rest(user, method, path, body, headers = {}) {
 }
 const rpc = (user, fn, args) => rest(user, "POST", `rpc/${fn}`, args);
 
-const icon = await login("test-icon@saathban.dev");
-const icon2 = await login("test-icon2@saathban.dev");
+const icon = await login("smoke-icon@saathban.dev");
+const icon2 = await login("smoke-fam@saathban.dev");
 const pending = await login("test-buddy-pending@saathban.dev");
 
-const HOUSE = { turn_seconds: 2, target: 20 };
+const HOUSE = { turn_seconds: 2 };
 const createdSessions = [];
 
 const session = (u, id) =>
@@ -90,7 +92,7 @@ const gameNotes = (u) =>
 {
   const r = await rest(icon, "GET", "games?select=key,enabled&order=key");
   const keys = (r.data ?? []).map((g) => g.key);
-  check("registry readable, race100 + daily_puzzle present", keys.includes("race100") && keys.includes("daily_puzzle"), keys.join(","));
+  check("registry readable, snakes + daily_puzzle present", keys.includes("snakes") && keys.includes("daily_puzzle"), keys.join(","));
   /* Standing-aware: 0022 registered ludo disabled; the ludo lane's
      follow-up flips it when game_exec_ludo ships. Either standing is
      legitimate — assert only that the row exists. */
@@ -101,12 +103,12 @@ const gameNotes = (u) =>
 /* ─── Create: seat 1, join code, lobby ─── */
 let sid;
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   sid = r.data;
   createdSessions.push(sid);
   check("create_game_session returns a session id", typeof sid === "string" && sid.length === 36, String(r.status));
   const s = await session(icon, sid);
-  check("new session: lobby, seats_total 2, house rules kept", s?.status === "lobby" && s.seats_total === 2 && s.house_rules?.target === 20);
+  check("new session: lobby, seats_total 2, house rules kept", s?.status === "lobby" && s.seats_total === 2 && s.house_rules?.turn_seconds === 2);
   check("join code is 6 digits", /^\d{6}$/.test(s?.join_code ?? ""), s?.join_code);
   const st = await seats(icon, sid);
   check("creator holds seat 1 (1-based)", st.length === 1 && st[0].seat_no === 1 && st[0].profile_id === icon.id);
@@ -130,7 +132,12 @@ let inviteId;
 /* ─── Accept last seat → AUTO-START, everyone notified ─── */
 {
   const r = await rpc(icon2, "respond_game_invite", { p_invite: inviteId, p_accept: true });
-  check("accepting returns the session id", r.data === sid, String(r.status));
+  // respond_game_invite is v2 since 0029: jsonb {result, session_id}.
+  check(
+    "accepting returns {result:'joined'} for this session",
+    r.data?.result === "joined" && r.data?.session_id === sid,
+    JSON.stringify(r.data)
+  );
   const s = await session(icon, sid);
   check("last seat accepted → session auto-starts", s?.status === "active" && s.current_seat === 1 && !!s.turn_started_at);
   const n1 = (await gameNotes(icon)).find((x) => x.link === `/app/games/s/${sid}` && /ready/i.test(x.title));
@@ -205,7 +212,7 @@ let inviteId;
 {
   let s = await session(icon, sid);
   let guard = 0;
-  while (s?.status === "active" && guard++ < 30) {
+  while (s?.status === "active" && guard++ < 250) {
     const player = s.current_seat === 1 ? icon : icon2;
     const r = await rpc(player, "play_turn", { p_session: sid });
     if (r.status >= 400) {
@@ -219,7 +226,7 @@ let inviteId;
   check("game-over notifications with board link to all players", !!over1 && !!over2);
   const st = await seats(icon, sid);
   const winScore = st.find((x) => x.seat_no === s.winner_seat)?.score;
-  check("winner actually crossed the target", winScore >= 20, `score ${winScore}`);
+  check("winner landed exactly on 100 (the snakes rule)", winScore === 100, `score ${winScore}`);
   const late = await rpc(icon, "play_turn", { p_session: sid });
   check("no moves after the finish", late.status >= 400, String(late.status));
 }
@@ -236,7 +243,7 @@ let inviteId;
 
 /* ─── Open table: community post → claim → auto-start ─── */
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   const sid2 = r.data;
   createdSessions.push(sid2);
   const post = await rest(
@@ -248,7 +255,7 @@ let inviteId;
       body: "",
       post_type: "game_open",
       ref_id: sid2,
-      payload: { game_key: "race100", name_en: "Race to 100", name_ur: "سو تک دوڑ", seats_total: 2, seats_taken: 1 },
+      payload: { game_key: "snakes", name_en: "Snakes & Ladders", name_ur: "سانپ سیڑھی", seats_total: 2, seats_taken: 1 },
     },
     { Prefer: "return=representation" }
   );
@@ -266,7 +273,7 @@ let inviteId;
 
 /* ─── Bots: start_with_bots fills seats; ticks finish the game ─── */
 {
-  const r = await rpc(icon, "create_game_session", { p_game: "race100", p_seats: 2, p_house_rules: HOUSE });
+  const r = await rpc(icon, "create_game_session", { p_game: "snakes", p_seats: 2, p_house_rules: HOUSE });
   const sid3 = r.data;
   createdSessions.push(sid3);
   const start = await rpc(icon, "start_with_bots", { p_session: sid3 });
@@ -275,7 +282,7 @@ let inviteId;
   check("empty seat filled by a bot", st.length === 2 && st[1].is_bot === true && st[1].profile_id === null);
   let s = await session(icon, sid3);
   let guard = 0;
-  while (s?.status === "active" && guard++ < 20) {
+  while (s?.status === "active" && guard++ < 250) {
     if (s.current_seat === 1) await rpc(icon, "play_turn", { p_session: sid3 });
     else await rpc(icon, "game_tick", { p_session: sid3 });
     s = await session(icon, sid3);

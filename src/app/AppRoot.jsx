@@ -31,6 +31,11 @@ import AppSettings from "./routes/AppSettings.jsx";
 import { AuthProvider, RequireAuth } from "./lib/session.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
+import { registerAppServiceWorker } from "./lib/pwa.js";
+
+// App-shell offline caching + installability (production only; no-op
+// in dev). Module level so it runs once, and only for /app visitors.
+registerAppServiceWorker();
 
 export default function AppRoot() {
   return (
@@ -91,8 +96,16 @@ export default function AppRoot() {
           {/* Auth lane (build steps 3-5): role selection, signup, login. */}
           <Route path="auth/*" element={<AuthRoutes />} />
           {/* Language, RTL, and text size (SPEC.md, Language & accessibility).
-              LanguageProvider wraps the whole route table above. */}
-          <Route path="settings" element={<AppSettings />} />
+              LanguageProvider wraps the whole route table above.
+              Any signed-in role; no roles prop. */}
+          <Route
+            path="settings"
+            element={
+              <RequireAuth>
+                <AppSettings />
+              </RequireAuth>
+            }
+          />
           {/* Per-role dashboards land here in build step 6. */}
           <Route path="*" element={<AppHome />} />
         </Routes>

@@ -7,8 +7,8 @@
    has an account — sign-in must never confirm which emails exist.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import {
   AuthScreen,
@@ -21,6 +21,7 @@ import {
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, isValidEmail } from "../../lib/authFlow.js";
+import { rememberPostLoginPath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 
 const sectionStyle = {
@@ -34,6 +35,15 @@ const sectionStyle = {
 export default function Login() {
   const { t, meta, ts } = useI18n();
   const navigate = useNavigate();
+  const { state } = useLocation();
+
+  // RequireAuth passes the page that bounced the person here; stash it
+  // so the Complete screen can send them back after sign-in — the
+  // stash survives the magic-link email round-trip, router state
+  // doesn't.
+  useEffect(() => {
+    if (state?.from) rememberPostLoginPath(state.from);
+  }, [state]);
 
   const [magicEmail, setMagicEmail] = useState("");
   const [magicError, setMagicError] = useState("");

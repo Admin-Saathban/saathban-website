@@ -15,7 +15,7 @@ import { COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Button } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { ensureProfile } from "../../lib/authFlow.js";
-import { roleHomePath } from "../../lib/session.jsx";
+import { consumePostLoginPath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 
 const STALL_AFTER_MS = 8000;
@@ -39,7 +39,9 @@ export default function Complete() {
       try {
         const result = await ensureProfile(session);
         if (result.status === "ok") {
-          navigate(roleHomePath(result.role), { replace: true });
+          // Back to the page that bounced them here if their role may
+          // see it, else their role's home.
+          navigate(consumePostLoginPath(result.role), { replace: true });
         } else {
           navigate("/app/auth?finish=1", { replace: true });
         }

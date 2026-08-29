@@ -49,6 +49,56 @@ export function roleHomePath(role) {
   }
 }
 
+/* ── Post-login return ─────────────────────────────────────────
+   RequireAuth sends the blocked path along when it bounces someone
+   to login (state.from); the login screen stashes it here, and the
+   Complete screen / finish-mode forms consume it once the role is
+   known. sessionStorage survives the magic-link email round-trip in
+   the same browser, which router state cannot. */
+
+const FROM_KEY = "saathban.auth.from";
+
+// Areas owned by a single role. Any other /app path (settings, the
+// front door) is neutral and fine for every signed-in role; the auth
+// flow itself never qualifies — returning into it would loop.
+const ROLE_AREAS = [
+  ["/app/home", "saath_icon"],
+  ["/app/admin", "admin"],
+  ["/app/fam", "family_member"],
+  ["/app/vetting", "saath_buddy"],
+];
+
+export function rememberPostLoginPath(path) {
+  if (!path || !path.startsWith("/app") || path.startsWith("/app/auth")) return;
+  try {
+    sessionStorage.setItem(FROM_KEY, path);
+  } catch {
+    /* storage unavailable — the role home is a fine fallback */
+  }
+}
+
+function pathAllowedForRole(path, role) {
+  if (!path || !path.startsWith("/app") || path.startsWith("/app/auth")) return false;
+  const area = ROLE_AREAS.find(
+    ([prefix]) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+  return area ? area[1] === role : true;
+}
+
+/* Where to go after a successful sign-in: back to the page that
+   bounced the person here if their role may see it, else their
+   role's own home. Clears the stash either way. */
+export function consumePostLoginPath(role) {
+  let from = null;
+  try {
+    from = sessionStorage.getItem(FROM_KEY);
+    sessionStorage.removeItem(FROM_KEY);
+  } catch {
+    /* ditto */
+  }
+  return pathAllowedForRole(from, role) ? from : roleHomePath(role);
+}
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {

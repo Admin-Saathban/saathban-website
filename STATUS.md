@@ -52,6 +52,15 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 
 ## Round log
 - **Round 1 (early morning):** committed fam/circle/i18n lanes, wired
-  circle, ensureProfile retry, smoke suite added (17/17 local).
-  Preview verification: pending at time of writing — appended below
-  once checked.
+  circle per CIRCLE_WIRING.md, ensureProfile retry, smoke suite added.
+  Later in the round: vetting+fam i18n extraction committed
+  (`bc060d8`), QUESTIONS.md merged with the events lane's product
+  questions. **Preview verified: 17/17 smoke checks against
+  https://saathban-website-h8w2o8yxt-basil-farooqs-projects.vercel.app**
+  (deployment of `bc060d8`).
+- **Pending for round 2:** events lane (migration 0012 committed by
+  its lane as `e140ca8`; `routes/events/` still mid-flight),
+  `routes/notifications/` (components ready, unwired — needs an
+  AppRoot registration + probably the bell in AppHeader),
+  `routes/profile/` (stores only so far). Check whether 0012 is
+  applied to the live project before wiring events.

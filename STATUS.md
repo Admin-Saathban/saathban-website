@@ -207,6 +207,19 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**9. A declaration is not a capability — test the capability.** Two
+sibling defects, hours apart: ludo declared `bot_plays` while its
+executor raised at every bot (tables froze, the exception swallowed);
+carrom declared `pass_turn` and had no bot player, yet bots were
+seatable (tables unfinishable). Each fix guards a different proxy and
+NEITHER catches the other case — 0043 would have waved the broken
+ludo through, because ludo was declaring the right intent and failing
+to honour it. No runtime predicate can ask whether an executor works.
+A test can: `tests/bot-players.mjs` reads the registry, fills each
+table with bots, ticks it, and demands the board actually MOVE. When
+you catch yourself guarding a flag that stands in for a behaviour,
+assert the behaviour instead.
+
 **8. Prove the check can FAIL before you trust it passing.** A
 sweep of 120 locale keys first reported all 120 missing — the regex
 was wrong, not the branch. The same bug in the other direction (a

@@ -33,7 +33,9 @@ import {
   sendDmRequest,
   imageUrl,
   fetchPlacesLite,
-  shareWalk,
+  shareActivity,
+  joinActivity,
+  fetchJoins,
   joinWalk,
   fetchConnections,
 } from "./communityData.js";
@@ -90,7 +92,7 @@ function ReportForm({ onSend, onCancel }) {
 
 /* The typed share block inside a post card (migration 0018). Renders
    entirely from the payload snapshot, localized at view time. */
-function ShareBlock({ post, isIcon, own, dateLocale, onAction }) {
+function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   const { t, ts, lang } = useI18n();
   const p = post.payload || {};
   const box = {
@@ -201,6 +203,69 @@ function ShareBlock({ post, isIcon, own, dateLocale, onAction }) {
     );
   }
 
+  /* "Who's up for…?" (migration 0027): free-text activity, everything
+     else optional. The join RPC is limit-aware and closes gracefully;
+     the count shown includes only joiners (the host is implied). */
+  if (post.post_type === "activity") {
+    const when = p.starts_at ? new Date(p.starts_at) : null;
+    const past = when && when.getTime() < Date.now();
+    const count = joinInfo?.count ?? 0;
+    const mine = joinInfo?.mine ?? false;
+    const limit = p.limit ? Number(p.limit) : null;
+    const full = limit != null && count + 1 >= limit;
+    return (
+      <div style={box}>
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+          🙌 {t("community.shares.activityTitle")}
+        </p>
+        <p style={{ ...line, fontSize: ts(21), fontWeight: 700 }}>{p.activity}</p>
+        {(p.place_name || when) && (
+          <p style={line}>
+            {p.place_name}
+            {p.place_name && when && " · "}
+            {when &&
+              when.toLocaleString(dateLocale, {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+          </p>
+        )}
+        {p.note && <p style={{ ...line, color: C.textMuted }}>{p.note}</p>}
+        {count > 0 && (
+          <p style={{ ...line, color: C.textMuted, marginTop: 6 }}>
+            {count === 1
+              ? t("community.shares.activityComingOne")
+              : t("community.shares.activityComing", { n: count })}
+          </p>
+        )}
+        {past ? (
+          <p style={{ ...line, color: C.textMuted, marginTop: 8 }}>
+            {t("community.shares.activityPast")}
+          </p>
+        ) : mine ? (
+          <p style={{ ...line, fontWeight: 700, color: C.green, marginTop: 8 }}>
+            ✓ {t("community.shares.activityJoined")}
+          </p>
+        ) : full ? (
+          <p style={{ ...line, fontWeight: 600, color: C.textMuted, marginTop: 8 }}>
+            {t("community.shares.activityClosed")}
+          </p>
+        ) : (
+          !own && (
+            <div style={{ marginTop: 10 }}>
+              <PrimaryBtn onClick={() => onAction("joinActivity", post)}>
+                {t("community.shares.activityJoin")}
+              </PrimaryBtn>
+            </div>
+          )
+        )}
+      </div>
+    );
+  }
+
   /* Open game table (migration 0022): anyone eligible taps to take a
      seat; the session auto-starts when the last seat fills. */
   if (post.post_type === "game_open") {
@@ -274,6 +339,7 @@ function PostCard({
   counts,
   canWrite,
   dateLocale,
+  joinInfo,
   onToggleReaction,
   onAction,
 }) {
@@ -390,6 +456,7 @@ function PostCard({
             isIcon={isIcon}
             own={own}
             dateLocale={dateLocale}
+            joinInfo={joinInfo}
             onAction={onAction}
           />
         </div>
@@ -538,14 +605,17 @@ export default function Feed() {
   const [posting, setPosting] = useState(false);
   const fileRef = useRef(null);
 
-  // Friends tab (circle connections) + the walk share composer.
+  // Friends tab (connections) + the "Who's up for…?" composer.
   const [tab, setTab] = useState("all"); // "all" | "friends"
   const [connections, setConnections] = useState(null); // Set | null
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkPlaces, setWalkPlaces] = useState([]);
+  const [walkActivity, setWalkActivity] = useState("");
   const [walkPlaceId, setWalkPlaceId] = useState("");
   const [walkWhen, setWalkWhen] = useState("");
   const [walkNote, setWalkNote] = useState("");
+  const [walkLimit, setWalkLimit] = useState("");
+  const [joins, setJoins] = useState({}); // postId → {count, mine}
   const isIcon = profile?.role === "saath_icon";
 
   const showToast = (text, actionLabel, onAction) => {
@@ -565,18 +635,25 @@ export default function Feed() {
     }
   };
 
-  const submitWalk = async (e) => {
+  const submitActivity = async (e) => {
     e.preventDefault();
-    const place = walkPlaces.find((p) => p.id === walkPlaceId);
-    if (!place || !walkWhen) return;
+    if (!walkActivity.trim()) return;
     setError("");
     try {
-      await shareWalk(myId, place, new Date(walkWhen).toISOString(), walkNote);
+      await shareActivity(myId, {
+        activity: walkActivity,
+        place: walkPlaces.find((p) => p.id === walkPlaceId) || null,
+        startsAtIso: walkWhen ? new Date(walkWhen).toISOString() : null,
+        note: walkNote,
+        limit: walkLimit ? Number(walkLimit) : null,
+      });
       setWalkOpen(false);
+      setWalkActivity("");
       setWalkPlaceId("");
       setWalkWhen("");
       setWalkNote("");
-      showToast(t("community.shares.walkShared"));
+      setWalkLimit("");
+      showToast(t("community.shares.activityShared"));
       await load();
     } catch {
       setError(t("community.feed.postError"));
@@ -591,12 +668,15 @@ export default function Feed() {
       setCanWrite(await canPostCommunity());
       const rows = await fetchFeed();
       setPosts(rows);
-      const [a, r] = await Promise.all([
+      const joinable = rows.filter((p) => p.post_type === "walk" || p.post_type === "activity");
+      const [a, r, j] = await Promise.all([
         fetchAuthors(rows.map((p) => p.author_id)),
         fetchReactions(rows.map((p) => p.id)),
+        fetchJoins(joinable.map((p) => p.id), myId).catch(() => ({})),
       ]);
       setAuthors(a);
       setReactions(r);
+      setJoins(j);
       // Connections power the Friends tab; a failure just leaves the
       // tab empty-with-a-door rather than erroring the feed.
       fetchConnections(myId)
@@ -672,6 +752,24 @@ export default function Feed() {
         } catch {
           showToast(t("community.shares.walkJoinFailed"));
         }
+      } else if (kind === "joinActivity") {
+        try {
+          const r = await joinActivity(target.id);
+          if (r.joined) {
+            showToast(t("community.shares.activityJoined"));
+            /* Walks with a place + time also land the joiner's outing
+               on the park board (the pre-0027 behaviour), best-effort
+               and Icons-only — RLS refuses the rest. */
+            if (isIcon && target.payload?.place_id && target.payload?.starts_at) {
+              joinWalk(myId, target).catch(() => {});
+            }
+          } else {
+            showToast(t("community.shares.activityFull"));
+          }
+          await load();
+        } catch {
+          showToast(t("community.shares.walkJoinFailed"));
+        }
       } else if (kind === "claimGameSeat") {
         /* ref_id is the game session; the RPC is idempotent for
            someone already seated and auto-starts on the last seat. */
@@ -727,6 +825,23 @@ export default function Feed() {
           }}
         >
           ✉️ {t("community.feed.messagesCta")}
+        </Link>
+        <Link
+          to="connect"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: A11Y.minTapTargetPx,
+            padding: "0 18px",
+            borderRadius: 50,
+            border: `2px solid ${C.green}`,
+            color: C.green,
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          🤝 {t("community.connect.entryCta")}
         </Link>
       </div>
       <BodyText muted style={{ marginBottom: 14 }}>{t("community.feed.intro")}</BodyText>
@@ -805,7 +920,7 @@ export default function Feed() {
                   </GhostBtn>
                   {isIcon && (
                     <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
-                      🚶 {t("community.shares.walkCta")}
+                      🙌 {t("community.shares.activityCta")}
                     </GhostBtn>
                   )}
                   <PrimaryBtn type="submit" onClick={share} disabled={posting || !body.trim()}>
@@ -816,17 +931,27 @@ export default function Feed() {
 
               {walkOpen && (
                 <form
-                  onSubmit={submitWalk}
+                  onSubmit={submitActivity}
                   style={{ borderTop: `1.5px solid ${C.warmGray}`, marginTop: 14, paddingTop: 14 }}
                 >
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
-                    {t("community.shares.walkPlace")}
+                    {t("community.shares.activityLabel")}
+                    <input
+                      value={walkActivity}
+                      onChange={(e) => setWalkActivity(e.target.value)}
+                      placeholder={t("community.shares.activityPlaceholder")}
+                      maxLength={120}
+                      style={{ marginTop: 6 }}
+                    />
+                  </label>
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                    {t("community.shares.activityPlace")}
                     <select
                       value={walkPlaceId}
                       onChange={(e) => setWalkPlaceId(e.target.value)}
                       style={{ marginTop: 6 }}
                     >
-                      <option value="">…</option>
+                      <option value="">{t("community.shares.activityNoPlace")}</option>
                       {walkPlaces.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name} · {p.city}
@@ -835,7 +960,7 @@ export default function Feed() {
                     </select>
                   </label>
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
-                    {t("outdoor.place.outingWhen")}
+                    {t("community.shares.activityWhen")}
                     <input
                       type="datetime-local"
                       value={walkWhen}
@@ -853,8 +978,23 @@ export default function Feed() {
                       style={{ marginTop: 6 }}
                     />
                   </label>
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                    {t("community.shares.activityLimit")}
+                    <select
+                      value={walkLimit}
+                      onChange={(e) => setWalkLimit(e.target.value)}
+                      style={{ marginTop: 6 }}
+                    >
+                      <option value="">{t("community.shares.activityNoLimit")}</option>
+                      {[2, 3, 4, 5, 6, 8, 10].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <PrimaryBtn type="submit" onClick={submitWalk} disabled={!walkPlaceId || !walkWhen}>
+                    <PrimaryBtn type="submit" onClick={submitActivity} disabled={!walkActivity.trim()}>
                       {t("community.feed.composerCta")}
                     </PrimaryBtn>
                     <GhostBtn onClick={() => setWalkOpen(false)}>
@@ -891,6 +1031,7 @@ export default function Feed() {
                 counts={countsByPost[p.id] || {}}
                 canWrite={canWrite}
                 dateLocale={dateLocale}
+                joinInfo={joins[p.id]}
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
               />

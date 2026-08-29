@@ -331,3 +331,33 @@ outranks the community gate - flag if that reading is wrong.
    `current_date at time zone` changes in policy + RPC, one file.
 
 ---
+## Community social (games/community lane, 2026-08-29, migration 0027)
+
+1. **Does an activity's people limit include the host?** "Limit 4" for
+   a ludo table naturally means four at the table.
+   *Taken:* yes — the RPC closes joins at limit−1 joiners. Shown as a
+   plain count of who's coming; never "2 places left" pressure.
+2. **What happens to a request after a decline?** Re-requesting could
+   become pestering.
+   *Taken:* the pair stays declined and re-sends are silent no-ops —
+   the sender still sees "request sent" (same stance as blocks). A
+   fresh start requires the DECLINER to send a request the other way.
+3. **Mutual pending requests (A asks B while B has asked A):** could
+   auto-accept.
+   *Taken:* no auto-accept — the existing incoming request is left for
+   an explicit yes. One tap either way, no surprises.
+4. **Who can send/receive connection requests?** The button says
+   Saath-Icons and search returns Icons only, but the rails gate is
+   `can_use_community()` both sides.
+   *Taken:* any community member may send (a Fam member can ask to
+   connect with an Icon); the discovery UI searches Icons only.
+5. **Do activity joins still write park-board outings?** Walks used
+   to create the joiner's own outing row.
+   *Taken:* joins are tracked in post_joins; when the activity has a
+   place AND time and the joiner is an Icon, the outing row is also
+   written best-effort so park boards keep their "going" counts.
+6. **DM game embeds:** only a session the sender participates in may
+   be attached (insert policy); the embed renders carrom's board —
+   other games get a link card until they ship an inline view.
+
+---

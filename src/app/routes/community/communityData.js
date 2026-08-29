@@ -214,7 +214,8 @@ export async function shareWalk(userId, place, startsAtIso, note) {
 
 /* Join = the viewer's OWN outing row for the same place and time,
    through the ordinary 0016 policies (Icons only — RLS refuses the
-   rest, so the button is only shown to Icons). */
+   rest, so the button is only shown to Icons). Kept for old 'walk'
+   posts; new activity posts join via join_activity below. */
 export async function joinWalk(userId, post) {
   const { error } = await supabase.from("outdoor_outings").insert({
     place_id: post.payload.place_id,
@@ -225,18 +226,143 @@ export async function joinWalk(userId, post) {
   if (error) throw error;
 }
 
-/* The viewer's circle connections, both directions — the Friends tab
-   filter. RLS on circle_members already scopes rows to memberships
-   the caller is part of. */
-export async function fetchConnections(userId) {
-  const { data, error } = await supabase
-    .from("circle_members")
-    .select("icon_id, member_id")
-    .or(`icon_id.eq.${userId},member_id.eq.${userId}`);
+/* ─── "Who's up for…?" activities (migration 0027) ───
+   Free-text activity; place, time, and people limit all optional and
+   frozen into the payload snapshot at creation. When a place AND time
+   are given, the host's outing also lands on the park board (the 0016
+   behaviour walks always had). */
+
+export async function shareActivity(userId, { activity, place, startsAtIso, note, limit }) {
+  let refId = null;
+  if (place && startsAtIso) {
+    const { data, error } = await supabase
+      .from("outdoor_outings")
+      .insert({
+        place_id: place.id,
+        creator_id: userId,
+        starts_at: startsAtIso,
+        note: (note || "").trim() || null,
+        visibility: "board",
+      })
+      .select("id")
+      .single();
+    if (!error) refId = data.id;
+  }
+  await createShare(userId, "activity", refId, {
+    activity: activity.trim(),
+    place_id: place?.id ?? null,
+    place_name: place?.name ?? null,
+    starts_at: startsAtIso || null,
+    note: (note || "").trim() || null,
+    limit: limit || null,
+  });
+}
+
+/* Server-enforced join: idempotent, limit-aware, closes gracefully.
+   Returns {joined, count, full}. */
+export async function joinActivity(postId) {
+  const { data, error } = await supabase.rpc("join_activity", { p_post: postId });
   if (error) throw error;
-  return new Set(
-    (data || []).map((r) => (r.icon_id === userId ? r.member_id : r.icon_id))
-  );
+  return data;
+}
+
+/* Join rows for a set of posts → { postId: {count, mine} }. */
+export async function fetchJoins(postIds, userId) {
+  if (postIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("post_joins")
+    .select("post_id, profile_id")
+    .in("post_id", postIds);
+  if (error) throw error;
+  const out = {};
+  for (const r of data || []) {
+    out[r.post_id] = out[r.post_id] || { count: 0, mine: false };
+    out[r.post_id].count++;
+    if (r.profile_id === userId) out[r.post_id].mine = true;
+  }
+  return out;
+}
+
+/* ─── Friend connections (migration 0027) ─── */
+
+export async function searchIcons(q) {
+  const term = q.trim();
+  if (!term) return [];
+  const { data, error } = await supabase
+    .from("safe_profiles")
+    .select("id, full_name, city, role")
+    .eq("role", "saath_icon")
+    .or(`full_name.ilike.%${term}%,city.ilike.%${term}%`)
+    .limit(12);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function sendFriendRequest(recipientId) {
+  const { data, error } = await supabase.rpc("send_friend_request", {
+    p_recipient: recipientId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function respondFriendRequest(requestId, accept) {
+  const { error } = await supabase.rpc("respond_friend_request", {
+    p_request: requestId,
+    p_accept: accept,
+  });
+  if (error) throw error;
+}
+
+export async function fetchFriendOverview(userId) {
+  const { data, error } = await supabase
+    .from("friend_requests")
+    .select("id, requester_id, recipient_id, status, created_at")
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = data || [];
+  return {
+    incoming: rows.filter((r) => r.recipient_id === userId && r.status === "pending"),
+    outgoing: rows.filter((r) => r.requester_id === userId && r.status === "pending"),
+    friends: rows.filter((r) => r.status === "accepted"),
+  };
+}
+
+/* The ids the caller has blocked (kind 'block') — the connect search
+   filters these out client-side; the RPC is block-silent anyway. */
+export async function fetchMyBlockedIds(userId) {
+  const { data, error } = await supabase
+    .from("user_blocks")
+    .select("blocked_id")
+    .eq("blocker_id", userId)
+    .eq("kind", "block");
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.blocked_id));
+}
+
+/* The viewer's connections, both directions — the Friends tab filter.
+   Since 0027 this is circle membership PLUS accepted friendships
+   (mirroring game_connected() on the server). RLS scopes both tables
+   to rows the caller is part of. */
+export async function fetchConnections(userId) {
+  const [{ data: circle, error: e1 }, { data: friends, error: e2 }] = await Promise.all([
+    supabase
+      .from("circle_members")
+      .select("icon_id, member_id")
+      .or(`icon_id.eq.${userId},member_id.eq.${userId}`),
+    supabase
+      .from("friend_requests")
+      .select("requester_id, recipient_id")
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+  return new Set([
+    ...(circle || []).map((r) => (r.icon_id === userId ? r.member_id : r.icon_id)),
+    ...(friends || []).map((r) => (r.requester_id === userId ? r.recipient_id : r.requester_id)),
+  ]);
 }
 
 /* ─── DMs ─── */
@@ -281,7 +407,7 @@ export async function fetchThread(requestId) {
       .maybeSingle(),
     supabase
       .from("dm_messages")
-      .select("id, sender_id, body, created_at, read_at")
+      .select("id, sender_id, body, game_session_id, created_at, read_at")
       .eq("request_id", requestId)
       .order("created_at", { ascending: true }),
   ]);
@@ -290,10 +416,15 @@ export async function fetchThread(requestId) {
   return { request: req, messages: msgs || [] };
 }
 
-export async function sendMessage(requestId, userId, body) {
-  const { error } = await supabase
-    .from("dm_messages")
-    .insert({ request_id: requestId, sender_id: userId, body: body.trim() });
+/* A message is words, a game, or both (0027). Attaching a game the
+   sender isn't part of is refused by the insert policy. */
+export async function sendMessage(requestId, userId, body, gameSessionId = null) {
+  const { error } = await supabase.from("dm_messages").insert({
+    request_id: requestId,
+    sender_id: userId,
+    body: (body || "").trim() || null,
+    game_session_id: gameSessionId,
+  });
   if (error) throw error;
 }
 

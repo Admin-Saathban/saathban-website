@@ -9,7 +9,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -21,13 +21,23 @@ import {
   markThreadRead,
   fileReport,
 } from "./communityData.js";
-import { CommunityScreen, BodyText, PrimaryBtn, Toast } from "./ui.jsx";
+import { CommunityScreen, BodyText, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
+/* The DM game embed (ask A4, migration 0027): a message may carry a
+   game_session_id and the thread renders the board inline, the
+   conversation carrying on beneath. Carrom is the first (and so far
+   only) game that starts from a thread — its controller and strings
+   are the carrom lane's. */
+import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
+import { startCarromInThread } from "../games/carrom/rails.js";
+import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
 
 export default function Thread() {
   const { requestId } = useParams();
-  const { t, ts } = useI18n();
+  const { t, ts, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
+  const carrom = CARROM[lang] || CARROM.en;
+  const [starting, setStarting] = useState(false);
 
   const [request, setRequest] = useState(undefined); // undefined loading, null missing
   const [messages, setMessages] = useState([]);
@@ -79,6 +89,23 @@ export default function Thread() {
     }
   };
 
+  /* "Play carrom": create the session + invite the other person
+     (their bell gets the rails invitation with a deep link), then
+     drop the board into the thread as a game-attachment message. */
+  const playCarrom = async () => {
+    if (!otherId || starting) return;
+    setStarting(true);
+    setError("");
+    try {
+      const sessionId = await startCarromInThread(otherId);
+      await sendMessage(requestId, myId, null, sessionId);
+      await load();
+    } catch {
+      setError(t("community.dm.gameStartFailed"));
+    }
+    setStarting(false);
+  };
+
   const reportMessage = async (m) => {
     try {
       await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
@@ -91,16 +118,32 @@ export default function Thread() {
 
   return (
     <CommunityScreen backTo="/app/community/messages" backLabel={t("community.dm.title")} width={560}>
-      <h1
+      <div
         style={{
-          fontSize: ts(24),
-          fontWeight: 700,
-          color: C.green,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
           margin: "0 0 16px",
         }}
       >
-        {otherName}
-      </h1>
+        <h1
+          style={{
+            fontSize: ts(24),
+            fontWeight: 700,
+            color: C.green,
+            margin: 0,
+            flex: 1,
+          }}
+        >
+          {otherName}
+        </h1>
+        {request && (
+          <GhostBtn disabled={starting} onClick={playCarrom}>
+            🎯 {carrom.playCarromCta}
+          </GhostBtn>
+        )}
+      </div>
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -114,7 +157,29 @@ export default function Thread() {
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === myId;
-            const moneyFlag = !mine && MONEY_PATTERN.test(m.body);
+            const moneyFlag = !mine && m.body && MONEY_PATTERN.test(m.body);
+
+            /* A game attachment renders the live board inline — full
+               width, the conversation continuing beneath. */
+            if (m.game_session_id) {
+              return (
+                <div key={m.id} style={{ alignSelf: "stretch" }}>
+                  <CarromRailsController sessionId={m.game_session_id} />
+                  <BodyText muted style={{ margin: "8px 0 0", fontSize: ts(16) }}>
+                    {carrom.startedInChat}{" "}
+                    <Link
+                      to={`/app/games/s/${m.game_session_id}`}
+                      style={{ color: C.green, fontWeight: 600 }}
+                    >
+                      {t("community.dm.gameOpenBoard")}
+                    </Link>
+                  </BodyText>
+                  {m.body && (
+                    <BodyText style={{ margin: "6px 0 0" }}>{m.body}</BodyText>
+                  )}
+                </div>
+              );
+            }
             return (
               <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "85%" }}>
                 {moneyFlag && (

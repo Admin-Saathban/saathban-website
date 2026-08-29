@@ -1174,6 +1174,7 @@ const en = {
       groupPickHint: "Which of your groups would {name} enjoy?",
       noGroups: "You're not in any groups yet — start one under Friend groups.",
       groupInvited: "Group invitation sent.",
+      blockCta: "Block this person",
     },
     list: {
       title: "My People",

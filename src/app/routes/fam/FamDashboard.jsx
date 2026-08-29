@@ -60,6 +60,8 @@ function momentLine(m, t, lang) {
     case "score": return t("fam.moments.score");
     case "walk": return t("fam.moments.walk");
     case "event": return t("fam.moments.event");
+    // Riddle share: the solve is the moment — never guess counts here.
+    case "puzzle_result": return t("fam.moments.riddle");
     default: {
       const body = (m.body || "").trim();
       return body.length > 90 ? `“${body.slice(0, 90)}…”` : body ? `“${body}”` : null;
@@ -104,17 +106,20 @@ function IconCard({ view }) {
   return (
     <Card>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10 }}>
-        <h2
-          style={{
-            fontFamily: meta.fonts.heading,
-            fontSize: ts(24),
-            fontWeight: 700,
-            color: C.green,
-            margin: 0,
-          }}
-        >
-          {view.name}
-        </h2>
+        {/* The name is the door to their unified People profile. */}
+        <Link to={`/app/people/${view.iconId}`} style={{ textDecoration: "none" }}>
+          <h2
+            style={{
+              fontFamily: meta.fonts.heading,
+              fontSize: ts(24),
+              fontWeight: 700,
+              color: C.green,
+              margin: 0,
+            }}
+          >
+            {view.name}
+          </h2>
+        </Link>
         {p.sosContact != null && (
           <Pill tone="brown">🆘 {p.sosContact === 1 ? t("fam.card.sosFirst") : t("fam.card.sosSecond")}</Pill>
         )}
@@ -346,8 +351,10 @@ export default function FamDashboard() {
       <div style={{ margin: "14px 0 6px" }}>
         <AreaCards
           cards={[
+            { to: "/app/people", emoji: "🫶", key: "hub.people" },
             { to: "/app/games", emoji: "🎲", key: "hub.games" },
             { to: "/app/events", emoji: "🎪", key: "hub.events" },
+            { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
             { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
             { to: "/app/community", emoji: "🪷", key: "hub.community" },
             { to: "/app/skills", emoji: "🌱", key: "hub.skills" },

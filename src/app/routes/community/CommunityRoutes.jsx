@@ -10,7 +10,6 @@ import AppHeader from "../../components/AppHeader.jsx";
 import Feed from "./Feed.jsx";
 import Messages from "./Messages.jsx";
 import Thread from "./Thread.jsx";
-import ConnectPage from "./ConnectPage.jsx";
 
 export default function CommunityRoutes() {
   return (
@@ -20,7 +19,8 @@ export default function CommunityRoutes() {
         <Route index element={<Feed />} />
         <Route path="messages" element={<Messages />} />
         <Route path="messages/:requestId" element={<Thread />} />
-        <Route path="connect" element={<ConnectPage />} />
+        {/* Requests moved to the unified My People inbox (people lane). */}
+        <Route path="connect" element={<Navigate to="/app/people/requests" replace />} />
         <Route path="*" element={<Navigate to="/app/community" replace />} />
       </Routes>
     </>

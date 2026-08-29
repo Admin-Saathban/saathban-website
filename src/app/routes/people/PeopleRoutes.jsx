@@ -11,6 +11,8 @@ import AppHeader from "../../components/AppHeader.jsx";
 import { COLORS as C } from "../../../shared/tokens.js";
 import PersonPage from "./PersonPage.jsx";
 import ThreadPage from "./ThreadPage.jsx";
+import PeopleList from "./PeopleList.jsx";
+import RequestsPage from "./RequestsPage.jsx";
 
 function Screen({ children }) {
   return (
@@ -33,9 +35,11 @@ export default function PeopleRoutes() {
       <AppHeader />
       <Screen>
         <Routes>
+          <Route index element={<PeopleList />} />
+          <Route path="requests" element={<RequestsPage />} />
           <Route path=":profileId" element={<PersonPage />} />
           <Route path=":profileId/chat" element={<ThreadPage />} />
-          <Route path="*" element={<Navigate to="/app" replace />} />
+          <Route path="*" element={<Navigate to="/app/people" replace />} />
         </Routes>
       </Screen>
     </>

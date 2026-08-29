@@ -40,6 +40,7 @@ const CARDS = [
   { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
   { to: "/app/history", emoji: "📖", key: "hub.history" },
   { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
+  { to: "/app/people", emoji: "🫶", key: "hub.people" },
   { to: "/app/circle", emoji: "🤝", key: "hub.circle" },
 ];
 

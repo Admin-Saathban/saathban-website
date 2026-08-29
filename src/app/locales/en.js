@@ -1351,6 +1351,10 @@ const en = {
     },
     rules: {
       title: "House rules",
+      diceCount: "Dice",
+      diceCountHint: "Two dice is the Desi table: both are thrown together and each is used separately.",
+      diceOne: "One",
+      diceTwo: "Two",
       extraRoll: "A six rolls again",
       extraRollHint: "Rolling a 6 grants another roll after your move.",
       captureFirst: "Capture before home",
@@ -1367,6 +1371,29 @@ const en = {
       someone: "A player",
       you: "you",
       turn: "their turn",
+      yourTurn: "your turn",
+      seatN: "Seat {n}",
+    },
+    dice: {
+      pick: "Pick up the {n}",
+      used: "The {n} — used",
+      wasted: "The {n} — nothing it could do",
+      wastedNote: "The {n} had nowhere to go, so it goes unused.",
+    },
+    chain: {
+      /* Sixes pile up, and three of them count for nothing at all. The
+         board says so WHILE the pile is growing — finding out
+         afterwards is no kind of rule. */
+      count: "Six number {n}",
+      holding: "Your sixes are counting. Keep going.",
+      careful: "One more six and all three are void — a fourth would bring them back.",
+      onTheEdge: "These sixes count for nothing as things stand. One more six redeems them all.",
+      voided: "Those sixes counted for nothing — the board is as it was.",
+    },
+    jota: {
+      chooseTitle: "Two of your gotis are on that square.",
+      together: "Move both together — {n} steps",
+      alone: "Move just one — {n} steps",
     },
     turn: {
       yours: "Your turn — roll the dice!",
@@ -1374,6 +1401,8 @@ const en = {
       theirs: "{name}'s turn.",
       rollCta: "Roll the dice",
       movePiece: "Move piece {n}",
+      pickDie: "Tap a die, then tap the goti it should move.",
+      pickPiece: "Tap the goti you'd like to move.",
     },
     pos: {
       yard: "in the yard",
@@ -1385,6 +1414,7 @@ const en = {
       moved: "{name} rolled {dice} and moved.",
       capture: "{name} rolled {dice} — and captured! Back to the yard.",
       skipped: "{name} rolled {dice} — no move possible, turn passed.",
+      provisional: "{name} rolled {dice} and moved — but the sixes haven't counted yet.",
     },
     finished: {
       youWon: "You brought everyone home — you won!",

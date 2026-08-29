@@ -23,6 +23,9 @@ export const DEFAULT_RULES = {
   capture_before_home: false,
   exact_home: true,
   safe_squares: "standard",
+  // One die or two. Two is the Desi table: both dice are rolled
+  // together and assigned separately, and only a DOUBLE six repeats.
+  dice_count: 1,
 };
 
 export async function createSession(targetSeats, houseRules) {
@@ -54,12 +57,31 @@ export async function roll(sessionId) {
   return data; // { dice, legal, skipped }
 }
 
-export async function move(sessionId, piece) {
+/* One die, assigned to one piece. `die` is the INDEX into state.dice,
+   not its face, so a player holding two sixes can say which one they
+   are spending. `split` chooses, for a piece standing in a pair,
+   between moving the pair together and moving this goti alone. */
+export async function move(sessionId, { piece, die = 0, split = false }) {
   const { error } = await supabase.rpc("play_turn", {
     p_session: sessionId,
-    p_payload: { piece },
+    p_payload: { piece, die, split },
   });
   if (error) throw new Error(error.message);
+}
+
+/* What one die could do — asked of the SERVER, never worked out here.
+   The executor validates every incoming move against this same array,
+   so what a person is offered and what will be accepted cannot drift
+   apart. Returns [{piece, split, to, kind}]. */
+export async function legalFor(state, seat, seats, die) {
+  const { data, error } = await supabase.rpc("ludo_desi_legal", {
+    p_state: state,
+    p_seat: seat,
+    p_seats: seats,
+    p_die: die,
+  });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function tick(sessionId) {
@@ -111,6 +133,10 @@ export async function fetchSession(sessionId) {
       pieces: Array.from({ length: session.seats_total }, () => [0, 0, 0, 0]),
       captured_by: Array.from({ length: session.seats_total }, () => false),
       rules: state.rules || session.house_rules,
+      ruleset: "desi",
+      dice_count: Number(session.house_rules?.dice_count) || 1,
+      pairs_moved: {},
+      chain: 0,
     };
   }
 

@@ -67,6 +67,11 @@ function OptionRow({ emoji, label, chosen, onClick, disabled }) {
 
 export default function NewGame() {
   const { gameKey } = useParams();
+  // Ludo is the one game here with a house rule worth asking about at
+  // setup: one die, or the two-dice Desi table. It rides house_rules,
+  // exactly as turn_seconds does, and freezes into the game state at
+  // start — so a table never changes rules mid-play.
+  const [diceCount, setDiceCount] = useState(1);
   const { t, ts, lang, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
@@ -118,7 +123,11 @@ export default function NewGame() {
     if (busy || !game || !canStart) return;
     setBusy(true);
     try {
-      const id = await createSession(game.key, seats);
+      const id = await createSession(
+        game.key,
+        seats,
+        game.key === "ludo" ? { dice_count: diceCount } : {}
+      );
       try { sessionStorage.setItem("saathban.app.freshTable", id); } catch { /* fine */ }
 
       if (mode === "people") {
@@ -219,6 +228,50 @@ export default function NewGame() {
                   }}
                 >
                   {n}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Ludo's one setup choice: how many dice. Two dice changes
+          the whole feel of the game, so it belongs here, before the
+          table exists — not buried in a menu on the board. */}
+      {game.key === "ludo" && (
+        <div style={{ marginBottom: 18 }}>
+          <BodyText style={{ fontWeight: 700, margin: "0 0 4px" }}>{t("ludo.rules.diceCount")}</BodyText>
+          <BodyText muted style={{ margin: "0 0 8px" }}>{t("ludo.rules.diceCountHint")}</BodyText>
+          <div role="radiogroup" aria-label={t("ludo.rules.diceCount")} style={{ display: "flex", gap: 10 }}>
+            {[1, 2].map((n) => {
+              const on = diceCount === n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setDiceCount(n)}
+                  style={{
+                    flex: 1,
+                    minHeight: A11Y.minTapTargetPx + 12,
+                    borderRadius: 16,
+                    border: on ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
+                    background: on ? "#eef3e8" : C.white,
+                    color: C.textMain,
+                    fontFamily: "inherit",
+                    fontSize: ts(19),
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span aria-hidden="true">{n === 2 ? "🎲🎲" : "🎲"}</span>
+                  {n === 2 ? t("ludo.rules.diceTwo") : t("ludo.rules.diceOne")}
+                  <span aria-hidden="true" style={{ color: C.green, visibility: on ? "visible" : "hidden" }}>✓</span>
                 </button>
               );
             })}

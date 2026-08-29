@@ -11,7 +11,7 @@
    tap-target floor and scale with the in-app text size.
    ════════════════════════════════════════════════ */
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
@@ -19,11 +19,20 @@ import supabase from "../lib/supabase.js";
 import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";
 
 export default function AppHeader() {
-  const { t, ts } = useI18n();
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const home = profile ? roleHomePath(profile.role) : "/app";
+  // Every inner page gets a way back without hunting for the logo:
+  // shown whenever this isn't the role's own home (/app/home/log,
+  // /app/notifications, /app/milestones…). Admin pages under the
+  // admin shell keep their sidebar instead.
+  const showBack =
+    Boolean(profile) &&
+    pathname !== home &&
+    !(profile.role === "admin" && pathname.startsWith("/app/admin"));
 
   const signOut = async () => {
     try {
@@ -71,19 +80,32 @@ export default function AppHeader() {
           gap: 12,
         }}
       >
-        <Link
-          to={home}
-          style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx }}
-        >
-          <img
-            src="/logo-extended.png"
-            alt="Saathban"
-            style={{ height: 34, width: "auto", display: "block" }}
-          />
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <Link
+            to={home}
+            style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx }}
+          >
+            <img
+              src="/logo-extended.png"
+              alt="Saathban"
+              style={{ height: 34, width: "auto", display: "block" }}
+            />
+          </Link>
+          {showBack && (
+            <Link to={home} style={{ ...controlStyle, whiteSpace: "nowrap" }}>
+              <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>
+                {meta.dir === "rtl" ? "→" : "←"}
+              </span>
+              {t("common.backToHome")}
+            </Link>
+          )}
+        </div>
 
         <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <NotificationsBell />
+          <Link to="/app/profile" style={controlStyle}>
+            {t("hub.profile")}
+          </Link>
           <Link to="/app/settings" style={controlStyle}>
             {t("settings.title")}
           </Link>

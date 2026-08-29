@@ -7,35 +7,41 @@
    creates the profile row from the stashed signup fields if it does
    not exist yet. A session with nothing stashed (assisted signup, or
    a bare sign-in link) goes to the finish-mode forms instead.
+
+   A FAILED profile fetch is never treated as "no profile": with a
+   live session it renders the loading-your-account retry state — the
+   "link expired" copy is reserved for genuinely absent sessions.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Button } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { ensureProfile } from "../../lib/authFlow.js";
-import { consumePostLoginPath } from "../../lib/session.jsx";
+import { AccountLoadError, consumePostLoginPath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 
-const STALL_AFTER_MS = 8000;
+const STALL_AFTER_MS = 12000;
 
 export default function Complete() {
   const { t, ts } = useI18n();
   const navigate = useNavigate();
-  const [stalled, setStalled] = useState(
+  // "working" | "stalled" (no session materialised) | "fetch-error"
+  // (session is live but the profile read kept failing).
+  const [phase, setPhase] = useState(() =>
     // An expired/used link comes back with an error in the URL fragment
     // instead of tokens — no point waiting for a session that won't come.
-    () => window.location.hash.includes("error=")
+    window.location.hash.includes("error=") ? "stalled" : "working"
   );
+  const sessionRef = useRef(null);
+  const doneRef = useRef(false);
 
-  useEffect(() => {
-    if (stalled) return undefined;
-    let done = false;
-
-    const finish = async (session) => {
-      if (done || !session) return;
-      done = true;
+  const finish = useCallback(
+    async (session) => {
+      if (doneRef.current || !session) return;
+      doneRef.current = true;
+      sessionRef.current = session;
       try {
         const result = await ensureProfile(session);
         if (result.status === "ok") {
@@ -43,31 +49,53 @@ export default function Complete() {
           // see it, else their role's home.
           navigate(consumePostLoginPath(result.role), { replace: true });
         } else {
+          // Definitive: authed reads found no row and nothing stashed.
           navigate("/app/auth?finish=1", { replace: true });
         }
       } catch {
-        setStalled(true);
+        // The reads failed — the account may well exist. Retry state,
+        // never the role picker, never "link expired".
+        doneRef.current = false;
+        setPhase("fetch-error");
       }
-    };
+    },
+    [navigate]
+  );
 
+  useEffect(() => {
+    if (phase === "stalled") return undefined;
     supabase.auth.getSession().then(({ data }) => finish(data.session));
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => finish(session));
 
     const timer = setTimeout(() => {
-      if (!done) setStalled(true);
+      if (!doneRef.current && !sessionRef.current) setPhase("stalled");
     }, STALL_AFTER_MS);
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timer);
     };
-  }, [stalled, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase === "stalled", finish]);
+
+  if (phase === "fetch-error") {
+    // Shares the retry screen with the guards; retry re-runs finish()
+    // against the session we already hold.
+    return (
+      <RetryWrapper
+        onRetry={async () => {
+          setPhase("working");
+          await finish(sessionRef.current);
+        }}
+      />
+    );
+  }
 
   return (
     <AuthScreen>
-      {stalled ? (
+      {phase === "stalled" ? (
         <>
           <Title>{t("auth.complete.stalled")}</Title>
           <Button type="button" onClick={() => navigate("/app/auth", { replace: true })}>
@@ -84,4 +112,10 @@ export default function Complete() {
       )}
     </AuthScreen>
   );
+}
+
+/* AccountLoadError's retry uses the session context; here we retry the
+   local finish() instead, so wrap it with our own handler. */
+function RetryWrapper({ onRetry }) {
+  return <AccountLoadError onRetryOverride={onRetry} />;
 }

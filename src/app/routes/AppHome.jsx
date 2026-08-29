@@ -9,20 +9,22 @@
 import { Link, Navigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
-import { roleHomePath, useSession } from "../lib/session.jsx";
+import { roleHomePath, useSession, AccountLoadError } from "../lib/session.jsx";
 
 /* All strings live in locales/ (appHome.* plus two reused auth keys). */
 
 export default function AppHome() {
   const { t, ts, meta } = useI18n();
-  const { session, profile, loading } = useSession();
+  const { session, profile, profileStatus, loading } = useSession();
 
-  // Signed in with a profile → straight home. Signed in without one →
-  // the finish-mode forms. Signed out → the two doors below.
+  // Signed in with a profile → straight home. A failed profile fetch
+  // is NOT "no profile" — hold with the retry state. Only a definitive
+  // absence goes to the finish-mode forms. Signed out → the doors.
   if (loading) {
     return <main style={{ minHeight: "100vh", background: C.bg }} aria-busy="true" />;
   }
   if (session && profile) return <Navigate to={roleHomePath(profile.role)} replace />;
+  if (session && profileStatus === "error") return <AccountLoadError />;
   if (session) return <Navigate to="/app/auth?finish=1" replace />;
 
   const door = (primary) => ({

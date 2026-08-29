@@ -10,11 +10,12 @@
    forms skip the credential step.
    ════════════════════════════════════════════════ */
 
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { AuthScreen, Title } from "../../components/ui.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { AccountLoadError, roleHomePath, useSession } from "../../lib/session.jsx";
 
 /* Simple warm line-art, one glyph per role. Decorative only. */
 function TeacupArt() {
@@ -82,8 +83,27 @@ const CARDS = [
 export default function RoleSelect() {
   const { t, meta, ts } = useI18n();
   const [params] = useSearchParams();
+  const { session, profile, profileStatus } = useSession();
   const finish = params.get("finish") === "1";
   const suffix = finish ? "?finish=1" : "";
+
+  /* Finish-mode belt and braces: with a session, this screen may only
+     appear once the authed profile query has DEFINITIVELY returned no
+     row. A profile that exists forwards home; a pending or failed
+     fetch never shows the signup picker to an existing account. */
+  if (finish && session) {
+    if (profile) return <Navigate to={roleHomePath(profile.role)} replace />;
+    if (profileStatus === "loading") {
+      return (
+        <AuthScreen>
+          <p role="status" aria-busy="true" style={{ fontSize: ts(20), color: C.textMuted, textAlign: "center", marginTop: 64 }}>
+            …
+          </p>
+        </AuthScreen>
+      );
+    }
+    if (profileStatus === "error") return <AccountLoadError />;
+  }
 
   return (
     <AuthScreen>

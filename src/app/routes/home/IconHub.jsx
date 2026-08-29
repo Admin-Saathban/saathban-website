@@ -26,14 +26,15 @@ import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import { awardMyBadges, fetchMyEarnedBadges } from "../../lib/points.js";
 
+/* Notifications and Settings live in the AppHeader (bell + links) —
+   the hub keeps cards for the places, not the chrome. */
 const CARDS = [
   { to: "/app/community", emoji: "🪷", key: "hub.community" },
   { to: "/app/events", emoji: "🎪", key: "hub.events" },
   { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
   { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
-  { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
+  { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
   { to: "/app/profile", emoji: "🙂", key: "hub.profile" },
-  { to: "/app/settings", emoji: "⚙️", key: "hub.settings" },
 ];
 
 export default function IconHub() {

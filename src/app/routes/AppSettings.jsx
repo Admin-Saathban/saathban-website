@@ -19,6 +19,7 @@ import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { LOCALES } from "../locales/index.js";
 import { TEXT_SIZES, useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
+import AppHeader from "../components/AppHeader.jsx";
 import {
   OPTIONAL_MODULES,
   TRACKER_TYPES,
@@ -190,6 +191,8 @@ export default function AppSettings() {
   const { profile } = useSession();
 
   return (
+    <>
+    <AppHeader />
     <main
       style={{
         minHeight: "100vh",
@@ -199,25 +202,8 @@ export default function AppSettings() {
       }}
     >
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <Link
-          to="/app"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            fontSize: ts(A11Y.minBodyPx),
-            color: C.brown,
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          {/* dir-aware arrow: ← in LTR, → in RTL, without any JS branching */}
-          <span aria-hidden="true" style={{ marginInlineEnd: 8 }}>
-            {meta.dir === "rtl" ? "→" : "←"}
-          </span>
-          {t("common.backToHome")}
-        </Link>
-
+        {/* Back affordance comes from AppHeader now (its own back link
+            was removed to avoid two identical links). */}
         <h1
           style={{
             fontFamily: meta.fonts.heading,
@@ -371,6 +357,7 @@ export default function AppSettings() {
         </Section>
       </div>
     </main>
+    </>
   );
 }
 

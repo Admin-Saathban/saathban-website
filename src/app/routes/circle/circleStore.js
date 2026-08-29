@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import supabase from "../../lib/supabase.js";
 
 const MEMBER_COLS =
-  "id, member_id, is_sos_contact, sos_order, can_see_mood, can_see_health, can_manage_reminders, location_access, created_at";
+  "id, member_id, is_sos_contact, sos_order, can_see_mood, can_see_health, can_manage_reminders, can_configure_daily_log, location_access, created_at";
 
 /* Attach display fields from safe_profiles to a set of rows keyed by
    the given id field. Names the Icon is allowed to see; nothing more. */

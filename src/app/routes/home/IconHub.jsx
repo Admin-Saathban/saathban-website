@@ -50,7 +50,7 @@ export default function IconHub() {
   const iconId = profile?.id ?? null;
   const firstName = (profile?.full_name || "").split(" ")[0];
 
-  const prefs = useIconPrefs();
+  const prefs = useIconPrefs(profile?.id);
   const { logsByDate } = useDailyLogs(iconId);
   const todayLog = logsByDate[isoDate(new Date())] || {};
   const entries = dayEntries(prefs, new Date());

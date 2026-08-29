@@ -129,6 +129,16 @@ function MemberCard({ m, sosCount, busy, actions }) {
         hint={t("circle.perms.reminders.hint")}
       />
       <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
+      {/* 0033: a distinct grant — setting the log up is not the same as
+          adding reminders. Default off like everything else. */}
+      <Toggle
+        checked={m.can_configure_daily_log}
+        busy={busy}
+        onChange={() => actions.setPermission(m.id, "can_configure_daily_log", !m.can_configure_daily_log)}
+        label={t("circle.perms.configure.label")}
+        hint={t("circle.perms.configure.hint")}
+      />
+      <div style={{ borderTop: `1px solid ${C.warmGray}` }} />
       <Segmented
         label={t("circle.perms.location.label")}
         hint={t("circle.perms.location.hint")}

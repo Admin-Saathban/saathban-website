@@ -245,6 +245,25 @@ function IconCard({ view }) {
           </Link>
         )}
       </div>
+
+      {/* Help set up their daily log — only where the Icon granted the
+          distinct can_configure_daily_log (0033). A clear section, not a
+          buried button: the person who will do this is often the one who
+          created the account at an event. */}
+      {p.configureLog && (
+        <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 14, background: C.cream, border: `1.5px solid ${C.warmGray}` }}>
+          <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, margin: "0 0 6px" }}>
+            🛠️ {t("fam.card.setupTitle", { name: first })}
+          </p>
+          <BodyText muted style={{ margin: "0 0 10px", fontSize: ts(16) }}>{t("fam.card.setupHint", { name: first })}</BodyText>
+          <Link
+            to={`icon/${view.iconId}/log-setup`}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: A11Y.minTapTargetPx, padding: "0 24px", borderRadius: 50, border: `2px solid ${C.green}`, color: C.green, background: C.white, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, textDecoration: "none" }}
+          >
+            {t("fam.card.setupCta")}
+          </Link>
+        </div>
+      )}
     </Card>
   );
 }
@@ -287,6 +306,7 @@ export default function FamDashboard() {
               seeDailyLogs: m.can_see_mood,
               seeHealth: m.can_see_health,
               manageReminders: m.can_manage_reminders,
+              configureLog: m.can_configure_daily_log,
               location: m.location_access,
             },
             today: summarize(summaries[i]),

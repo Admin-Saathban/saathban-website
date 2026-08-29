@@ -10,7 +10,7 @@
    through logStore.js for the signed-in Icon — offline-first, with a
    localStorage queue that syncs on reconnect. State is per-day: today
    and the two days behind it are editable (48-hour backfill window);
-   older days are settled. Module choices (iconPrefs) stay local.
+   older days are settled. Module choices (iconPrefs) are the Icon’s daily_log_prefs row (0033).
    ════════════════════════════════════════════════ */
 
 import { useMemo, useState } from "react";
@@ -68,7 +68,7 @@ export default function IconHome() {
     useDailyLogs(iconId);
   const [selectedOffset, setSelectedOffset] = useState(0);
 
-  const prefs = useIconPrefs();
+  const prefs = useIconPrefs(iconId);
   const logFor = (offset) => logsByDate[isoDate(daysAgo(-offset))] || {};
   const todayLog = logFor(0);
   // Rest day lives in daily_logs since 0017 gave log_module a
@@ -208,6 +208,7 @@ export default function IconHome() {
         <div className="ih-card">
           <DailyLogCard
             key={selectedOffset}
+            iconId={iconId}
             log={logFor(selectedOffset)}
             onChange={updateLog}
             editable={selectedOffset >= -2}

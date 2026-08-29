@@ -15,7 +15,7 @@
 import supabase from "./supabase.js";
 
 const MEMBER_COLUMNS =
-  "id, icon_id, member_id, is_sos_contact, sos_order, can_see_mood, can_see_health, can_manage_reminders, location_access, created_at";
+  "id, icon_id, member_id, is_sos_contact, sos_order, can_see_mood, can_see_health, can_manage_reminders, can_configure_daily_log, location_access, created_at";
 
 /* Attach safe_profiles rows (name, city…) for a list of profile ids.
    safe_profiles has no FK PostgREST can embed through, so this is a
@@ -169,7 +169,7 @@ export async function approveJoinRequest(inviteId) {
 
 /* Permission patch on one membership row — Icon only (RLS). Accepts
    any subset of: is_sos_contact, sos_order, can_see_mood,
-   can_see_health, can_manage_reminders, location_access. */
+   can_see_health, can_manage_reminders, can_configure_daily_log, location_access. */
 export async function updateMemberPermissions(membershipId, patch) {
   const { error } = await supabase
     .from("circle_members")

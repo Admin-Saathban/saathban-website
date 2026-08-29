@@ -9,6 +9,7 @@ import AppHeader from "../../components/AppHeader.jsx";
 import FamDashboard from "./FamDashboard.jsx";
 import InviteFlow from "./InviteFlow.jsx";
 import Reminders from "./Reminders.jsx";
+import LogSetup from "./LogSetup.jsx";
 
 export default function FamRoutes() {
   return (
@@ -18,6 +19,7 @@ export default function FamRoutes() {
         <Route index element={<FamDashboard />} />
         <Route path="invite" element={<InviteFlow />} />
         <Route path="icon/:iconId/reminders" element={<Reminders />} />
+        <Route path="icon/:iconId/log-setup" element={<LogSetup />} />
         <Route path="*" element={<Navigate to="/app/fam" replace />} />
       </Routes>
     </>

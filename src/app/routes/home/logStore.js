@@ -41,9 +41,21 @@ const DB_MODULES = [
 ];
 
 // mood_value: 1 (lowest) … 5 (best) — MOODS is ordered best-first.
-function moodValueFor(choice) {
-  const i = MOODS.findIndex((m) => m.id === choice);
-  return i === -1 ? null : MOODS.length - i;
+// Moods can be several at once ("content" AND "tired"); the welfare
+// column keeps the LOWEST one selected — staff outreach errs towards
+// noticing a heavy note, never towards missing it.
+function moodValueFor(value) {
+  const ids = Array.isArray(value?.choices) && value.choices.length
+    ? value.choices
+    : value?.choice ? [value.choice] : [];
+  let lowest = null;
+  for (const id of ids) {
+    const i = MOODS.findIndex((m) => m.id === id);
+    if (i === -1) continue;
+    const v = MOODS.length - i;
+    if (lowest === null || v < lowest) lowest = v;
+  }
+  return lowest;
 }
 
 const cacheKey = (iconId) => `saathban.app.dailyLogs.${iconId}`;
@@ -111,7 +123,7 @@ export function useDailyLogs(iconId) {
             log_date: op.dateIso,
             module: op.module,
             payload: op.value,
-            mood_value: op.module === "mood" ? moodValueFor(op.value?.choice) : null,
+            mood_value: op.module === "mood" ? moodValueFor(op.value) : null,
           },
           { onConflict: "icon_id,log_date,module" }
         );

@@ -412,6 +412,15 @@ const en = {
       locationSos: "Location is shared only during an SOS.",
       locationNever: "Location is never shared.",
       remindersCta: "Reminders & routines",
+      messageCta: "Message",
+    },
+    moments: {
+      label: "Moments {name} shared",
+      badge: "{emoji} Earned the “{badge}” badge",
+      score: "🌤️ A lovely day of showing up — shared their score",
+      walk: "🚶 Out and about — shared a walk",
+      event: "🎪 Going to a gathering",
+      celebrate: "Something to smile about together.",
     },
     reminders: {
       title: "Reminders for {name}",

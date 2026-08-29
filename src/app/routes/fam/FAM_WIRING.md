@@ -44,3 +44,16 @@ Urdu extraction under a `fam.*` namespace. Several strings are functions
   never whether it matched an account.
 - Reminder deletion is one tap, no confirmation maze.
 - Digit groups (code entry) are pinned `dir="ltr"` under Urdu.
+
+## Fam home upgrade (this lane) — DM surface note for the integration session
+
+The connected-person card's **Message** button links to
+`/app/people/<iconId>/chat` — the people lane's circle-thread surface
+(`open_dm_with()`, 0019). It deliberately does NOT fork a new thread UI: both
+that surface and the community `Messages/Thread` read the same 0014
+`dm_requests`/`dm_messages` tables, so if the ongoing DM-surface diagnosis
+unifies them, this button needs only its `to=` updated (one line, marked with a
+comment in FamDashboard.jsx). Shared moments are read from `community_posts`
+by author (badge/score/walk payload snapshots per SHARES_WIRING.md) — the
+person's own act of sharing is the permission; earned badges stay owner-only
+at the DB (0017) and are never queried here.

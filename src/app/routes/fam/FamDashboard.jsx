@@ -26,6 +26,7 @@ import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
 import { MOOD_BY_VALUE } from "./famCopy.js";
 import AreaCards from "../../components/AreaCards.jsx";
 import YourTurnChips from "../games/YourTurnChips.jsx";
+import { fetchSharedMoments, momentDayLabel } from "./famMoments.js";
 
 const MOOD_CLASS = ["mood", "sleep", "exercise", "diet", "water"];
 
@@ -46,6 +47,53 @@ function summarize(rows) {
       ? new Date(latest).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
       : null,
   };
+}
+
+/* One shared moment → a warm one-liner. Badge/score/walk cards read
+   their 0018 payload snapshot; text posts show a short excerpt. */
+function momentLine(m, t, lang) {
+  switch (m.post_type) {
+    case "badge": {
+      const name = (lang === "ur" ? m.payload?.name_ur : m.payload?.name_en) || m.payload?.name_en || "";
+      return t("fam.moments.badge", { emoji: m.payload?.emoji || "🏅", badge: name });
+    }
+    case "score": return t("fam.moments.score");
+    case "walk": return t("fam.moments.walk");
+    case "event": return t("fam.moments.event");
+    default: {
+      const body = (m.body || "").trim();
+      return body.length > 90 ? `“${body.slice(0, 90)}…”` : body ? `“${body}”` : null;
+    }
+  }
+}
+
+/* Celebration, never monitoring: this strip shows ONLY what the person
+   chose to share with the whole community (their posts — the badge/
+   score/walk share cards included). Earned badges are owner-only at
+   the DB; a share is the one lawful window. No moments → no strip, no
+   gap implied. */
+function SharedMoments({ view }) {
+  const { t, ts, lang } = useI18n();
+  const first = view.name.split(" ")[0];
+  const moments = view.moments || [];
+  if (moments.length === 0) return null;
+  return (
+    <div style={{ background: "#fdf6ec", border: `1px solid ${C.warmGray}`, borderRadius: 14, padding: "12px 16px", marginBottom: 14 }}>
+      <p style={{ fontSize: ts(15), fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.greenMuted, margin: "0 0 8px" }}>
+        🎉 {t("fam.moments.label", { name: first })}
+      </p>
+      {moments.map((m) => {
+        const line = momentLine(m, t, lang);
+        if (!line) return null;
+        return (
+          <BodyText key={m.id} style={{ margin: "0 0 6px" }}>
+            {line}
+            <span style={{ color: C.textMuted, fontSize: ts(15) }}> · {momentDayLabel(m.created_at, t)}</span>
+          </BodyText>
+        );
+      })}
+    </div>
+  );
 }
 
 function IconCard({ view }) {
@@ -138,33 +186,60 @@ function IconCard({ view }) {
       )}
 
       {/* Location standing — stated in words either way; never a map */}
-      <BodyText muted style={{ fontSize: ts(16), marginBottom: 18 }}>
+      <BodyText muted style={{ fontSize: ts(16), marginBottom: 14 }}>
         {p.location === "sos_only" ? t("fam.card.locationSos") : t("fam.card.locationNever")}
       </BodyText>
 
-      {/* Reminders — the button exists only where the Icon granted it.
-          No locked-state teaser: an ungranted power is simply absent. */}
-      {p.manageReminders && (
+      {/* Shared moments — celebration of what they chose to share */}
+      <SharedMoments view={view} />
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* Message — the circle-people DM thread (0019 open_dm_with via
+            the people lane's surface; see FAM_WIRING.md — not a fork). */}
         <Link
-          to={`icon/${view.iconId}/reminders`}
+          to={`/app/people/${view.iconId}/chat`}
           style={{
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            minHeight: A11Y.minTapTargetPx,
-            padding: "0 24px",
+            gap: 8,
+            minHeight: 56,
+            padding: "0 26px",
             borderRadius: 50,
-            border: `2px solid ${C.green}`,
-            color: C.green,
-            background: C.white,
-            fontSize: ts(A11Y.minBodyPx),
+            background: C.green,
+            color: C.cream,
+            fontSize: ts(19),
             fontWeight: 600,
             textDecoration: "none",
           }}
         >
-          ⏰ {t("fam.card.remindersCta")}
+          💬 {t("fam.card.messageCta")}
         </Link>
-      )}
+
+        {/* Reminders — the button exists only where the Icon granted it.
+            No locked-state teaser: an ungranted power is simply absent. */}
+        {p.manageReminders && (
+          <Link
+            to={`icon/${view.iconId}/reminders`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 24px",
+              borderRadius: 50,
+              border: `2px solid ${C.green}`,
+              color: C.green,
+              background: C.white,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            ⏰ {t("fam.card.remindersCta")}
+          </Link>
+        )}
+      </div>
     </Card>
   );
 }
@@ -186,14 +261,18 @@ export default function FamDashboard() {
           fetchMyPendingRequests(),
         ]);
         const today = localIsoDate();
-        const summaries = await Promise.all(
-          memberships.map((m) =>
-            fetchTodayLogs(m.icon_id, today).catch(() => [])
-          )
-        );
+        const [summaries, moments] = await Promise.all([
+          Promise.all(
+            memberships.map((m) => fetchTodayLogs(m.icon_id, today).catch(() => []))
+          ),
+          Promise.all(
+            memberships.map((m) => fetchSharedMoments(m.icon_id).catch(() => []))
+          ),
+        ]);
         if (cancelled) return;
         setViews(
           memberships.map((m, i) => ({
+            moments: moments[i],
             membershipId: m.id,
             iconId: m.icon_id,
             name: m.icon_profile.full_name,
@@ -243,7 +322,23 @@ export default function FamDashboard() {
         {t("fam.dashboard.intro")}
       </BodyText>
 
-      {/* Fam plays too: chips when a table waits on them. */}
+      {error && (
+        <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
+          ⚠ {t(error)}
+        </BodyText>
+      )}
+
+      {/* The care cards stay UP TOP — the people come first. */}
+      <SectionLabel>{t("fam.dashboard.connectedLabel")}</SectionLabel>
+      {views === null ? (
+        <BodyText muted role="status">…</BodyText>
+      ) : views.length === 0 ? (
+        <BodyText muted>{t("fam.dashboard.emptyCircle")}</BodyText>
+      ) : (
+        views.map((v) => <IconCard key={v.membershipId} view={v} />)
+      )}
+
+      {/* Fam plays too: chips when a table waits on them, beside Games. */}
       <YourTurnChips />
 
       {/* Every role's home surfaces everything the role can reach —
@@ -260,21 +355,6 @@ export default function FamDashboard() {
           ]}
         />
       </div>
-
-      {error && (
-        <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {t(error)}
-        </BodyText>
-      )}
-
-      <SectionLabel>{t("fam.dashboard.connectedLabel")}</SectionLabel>
-      {views === null ? (
-        <BodyText muted role="status">…</BodyText>
-      ) : views.length === 0 ? (
-        <BodyText muted>{t("fam.dashboard.emptyCircle")}</BodyText>
-      ) : (
-        views.map((v) => <IconCard key={v.membershipId} view={v} />)
-      )}
 
       {pending.length > 0 && (
         <>

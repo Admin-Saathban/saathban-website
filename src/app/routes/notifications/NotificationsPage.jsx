@@ -11,7 +11,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { STRINGS, relativeTime } from "./strings.js";
+import { STRINGS, KIND_EMOJI, relativeTime } from "./strings.js";
 import { fetchNotifications, markRead, markAllRead, announceRead } from "./data.js";
 
 export default function NotificationsPage() {
@@ -111,6 +111,13 @@ export default function NotificationsPage() {
                     padding: "16px 18px",
                   }}
                 >
+                  {/* Where it's from: emoji + a worded kind label, so a
+                      game invite never looks like a document request. */}
+                  {s.kinds[n.kind] && (
+                    <p style={{ fontSize: ts(14), fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.greenMuted, margin: "0 0 6px" }}>
+                      <span aria-hidden="true">{KIND_EMOJI[n.kind] || "🔔"}</span> {s.kinds[n.kind]}
+                    </p>
+                  )}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                     {isUnread && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ts(14), fontWeight: 700, color: C.green }}>

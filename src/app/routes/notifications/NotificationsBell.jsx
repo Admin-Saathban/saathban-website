@@ -37,9 +37,13 @@ export default function NotificationsBell() {
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     window.addEventListener(NOTIFICATIONS_READ_EVENT, refresh);
+    // A notification that arrives while the tab sits open and focused
+    // used to stay invisible until the next blur/refocus — poll gently.
+    const timer = window.setInterval(refresh, 60000);
     return () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener(NOTIFICATIONS_READ_EVENT, refresh);
+      window.clearInterval(timer);
     };
   }, [refresh]);
 

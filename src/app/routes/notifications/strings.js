@@ -25,6 +25,20 @@ export const STRINGS = {
     loadError: "We couldn't load your notifications just now. Please try again.",
     justNow: "Just now",
     ago: (s) => `${s} ago`,
+    kinds: {
+      general: "Saathban",
+      broadcast: "Announcement",
+      document_request: "Your application",
+      document_response: "Application review",
+      question_reply: "Your question",
+      reminder: "Reminder",
+      milestone: "Milestone",
+      game: "Games",
+      group: "Groups",
+      social: "Friends",
+      dm: "Message",
+      circle: "My Circle",
+    },
   },
   ur: {
     // ⚠ Urdu draft — pending native review.
@@ -39,7 +53,39 @@ export const STRINGS = {
     loadError: "اس وقت آپ کی اطلاعات نہیں کھل سکیں۔ براہِ کرم دوبارہ کوشش کریں۔",
     justNow: "ابھی ابھی",
     ago: (s) => `${s} پہلے`,
+    kinds: {
+      general: "ساتھ بن",
+      broadcast: "اعلان",
+      document_request: "آپ کی درخواست",
+      document_response: "درخواست کا جائزہ",
+      question_reply: "آپ کا سوال",
+      reminder: "یاد دہانی",
+      milestone: "سنگِ میل",
+      game: "کھیل",
+      group: "گروپ",
+      social: "دوست",
+      dm: "پیغام",
+      circle: "میرا حلقہ",
+    },
   },
+};
+
+/* One emoji per kind — a visual anchor beside the label, never the
+   only signal (the label carries the words). Unknown kinds fall back
+   to the bell. */
+export const KIND_EMOJI = {
+  general: "🕊️",
+  broadcast: "📣",
+  document_request: "📄",
+  document_response: "📄",
+  question_reply: "💬",
+  reminder: "⏰",
+  milestone: "🏅",
+  game: "🎲",
+  group: "🧑‍🤝‍🧑",
+  social: "🌸",
+  dm: "💬",
+  circle: "🤝",
 };
 
 /* Relative time, language-neutral units resolved by the caller's copy.

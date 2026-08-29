@@ -1,8 +1,7 @@
 # Carrom — status & wiring notes
 
-Turn-based carrom for the games rails. **The core AND the rails DB integration
-are built and verified live.** One cross-lane piece remains: the inline board
-embed inside a DM thread (needs the community DM lane's hook). Details below.
+Turn-based carrom for the games rails. **Complete: the core, the rails DB
+integration, AND the DM chat-transform are all live.** Details below.
 
 ## ✅ Rails integration landed (0022 rails + 0024_carrom)
 
@@ -23,17 +22,19 @@ embed inside a DM thread (needs the community DM lane's hook). Details below.
   rails emitted invitation / table-ready / your-turn / game-over notifications
   to both players. Repeat-turn (`again`) is honoured by `0022b`.
 
-## Remaining: the DM chat-transform embed (cross-lane)
+## ✅ DM chat-transform landed (games/community lane, 0027 — commit 4cdca32)
 
-`rails.startCarromInThread(opponentId)` creates the session + invites — the
-carrom half is done. Rendering `<CarromRailsController sessionId=…/>` **inline in
-a DM thread** with the conversation continuing beneath needs the community DM
-lane (`routes/community/`) to allow an embedded game view: a message/attachment
-type carrying a `game_session_id` that the thread renders. Filed as ask A4;
-`carromCopy.playCarromCta` / `.startedInChat` are the strings. Also: the games
-shell (`routes/games/`, rails lane's) registers the route that mounts
-`<CarromRailsController/>` at `/app/games/s/<id>` — deep links already point
-there (notification `link`).
+Ask A4 is live. `dm_messages` gained `game_session_id` (0027 — a body-or-game
+check; the insert policy only accepts a session the sender can view). The
+community Thread's header carries a **"Play carrom"** button that runs
+`rails.startCarromInThread(opponentId)` and drops an attachment message; the
+Thread renders `<CarromRailsController sessionId=…/>` **inline**, conversation
+continuing beneath, with `carromCopy.startedInChat` as the caption and a fallback
+link to `/app/games/s/<id>`. Verified by the games lane (screenshot with a live
+board between test-icon and test-fam; `tests/community-social.mjs` covers the RLS
+negatives — attaching someone else's session → 403). The games shell also mounts
+`<CarromRailsController/>` at `/app/games/s/<id>`, where notification deep links
+point. Nothing left on the carrom side.
 
 ---
 

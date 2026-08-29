@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Intro, Button } from "../../components/ui.jsx";
+import AppHeader from "../../components/AppHeader.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { roleHomePath } from "../../lib/session.jsx";
@@ -52,24 +53,24 @@ export default function Welcome() {
     };
   }, [navigate]);
 
-  if (!who) return <AuthScreen> </AuthScreen>;
+  if (!who) {
+    return (
+      <>
+        <AppHeader />
+        <AuthScreen showHeader={false}> </AuthScreen>
+      </>
+    );
+  }
 
   const isBuddy = who.role === "saath_buddy";
   const body = isBuddy
     ? t("auth.welcome.bodyBuddy")
     : t("auth.welcome.bodyFam", { icon: ROLE_DISPLAY.saath_icon });
 
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      /* already gone — fine */
-    }
-    navigate("/app/auth", { replace: true });
-  };
-
   return (
-    <AuthScreen>
+    <>
+      <AppHeader />
+      <AuthScreen showHeader={false}>
       <p
         style={{
           fontSize: ts(16),
@@ -84,32 +85,19 @@ export default function Welcome() {
       </p>
       <Title>{t("auth.welcome.title", { name: who.name })}</Title>
       <Intro>{body}</Intro>
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        {/* The vetting application is the Buddy's actual next step
-            (VETTING_WIRING.md: this screen is its entry point). */}
-        {isBuddy && (
-          <Button
-            type="button"
-            onClick={() => navigate("/app/vetting")}
-            style={{ width: "auto", padding: "0 40px" }}
-          >
-            {t("auth.welcome.startVetting")}
-          </Button>
-        )}
+      {/* The vetting application is the Buddy's actual next step
+          (VETTING_WIRING.md: this screen is its entry point).
+          Sign out and Settings now live in the AppHeader above. */}
+      {isBuddy && (
         <Button
           type="button"
-          onClick={signOut}
-          style={{
-            width: "auto",
-            padding: "0 40px",
-            ...(isBuddy
-              ? { background: "transparent", color: C.green, border: `2px solid ${C.green}` }
-              : {}),
-          }}
+          onClick={() => navigate("/app/vetting")}
+          style={{ width: "auto", padding: "0 40px" }}
         >
-          {t("auth.welcome.signOut")}
+          {t("auth.welcome.startVetting")}
         </Button>
-      </div>
-    </AuthScreen>
+      )}
+      </AuthScreen>
+    </>
   );
 }

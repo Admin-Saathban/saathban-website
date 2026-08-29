@@ -1,47 +1,66 @@
-/* /app — the front door while per-role dashboards (build step 6) are
-   still to come. Successful auth lands here (Complete.jsx navigates to
-   "/app"), so this page must link onward to everything that exists:
-   the auth flows and the three working areas. Replaced by real
-   role-aware routing when session handling lands. */
+/* /app — the front door. Two doors only: sign in, or join.
 
-import { Link } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../shared/tokens.js";
+   Anyone already signed in with a profile is taken straight to their
+   role's home — this is what makes the installed PWA (start_url /app)
+   open into the app rather than a landing page. There is no admin
+   presence here or anywhere in public auth: admins use the normal
+   login form and land at /app/admin by role. */
 
-const AREAS = [
-  {
-    to: "/app/home",
-    title: "Saath-Icon home",
-    desc: "Calendar strip, daily log, points and sharing — on sample data.",
-  },
-  {
-    to: "/app/fam",
-    title: "Saath-Fam",
-    desc: "Connected Icons, invites, and reminders — on sample data.",
-  },
-  {
-    to: "/app/settings",
-    title: "Settings",
-    desc: "Language (English / اردو), text size, and the RTL flip.",
-  },
-  {
-    to: "/app/admin",
-    title: "Admin",
-    desc: "Buddy review queue and moderation — on sample data.",
-  },
-];
+import { Link, Navigate } from "react-router-dom";
+import { COLORS as C, A11Y } from "../../shared/tokens.js";
+import { useI18n } from "../lib/i18n.jsx";
+import { roleHomePath, useSession } from "../lib/session.jsx";
+
+/* ⚠ TEMPORARY hardcoded English — the locales files are owned by
+   another lane right now. i18n lane: move to en.js/ur.js under
+   appHome.* and swap to t(). "Sign in" and "Back to saathban.com"
+   already reuse existing keys below. */
+const STRINGS = {
+  tagline: "Timeless Togetherness",
+  welcome: "Good company, close at hand. Sign in, or join us.",
+  join: "Join Saathban",
+};
 
 export default function AppHome() {
+  const { t, ts, meta } = useI18n();
+  const { session, profile, loading } = useSession();
+
+  // Signed in with a profile → straight home. Signed in without one →
+  // the finish-mode forms. Signed out → the two doors below.
+  if (loading) {
+    return <main style={{ minHeight: "100vh", background: C.bg }} aria-busy="true" />;
+  }
+  if (session && profile) return <Navigate to={roleHomePath(profile.role)} replace />;
+  if (session) return <Navigate to="/app/auth?finish=1" replace />;
+
+  const door = (primary) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+    padding: "0 36px",
+    borderRadius: 50,
+    background: primary ? C.green : C.white,
+    border: `2px solid ${C.green}`,
+    color: primary ? C.cream : C.green,
+    fontSize: ts(A11Y.minBodyPx),
+    fontWeight: 600,
+    textDecoration: "none",
+  });
+
   return (
     <main
       style={{
         minHeight: "100vh",
         background: C.bg,
-        fontFamily: FONTS.sans,
         color: C.textMain,
-        padding: "48px 20px 64px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
       }}
     >
-      <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+      <div style={{ maxWidth: 560, textAlign: "center" }}>
         <img
           src="/logo-extended.png"
           alt="Saathban"
@@ -50,26 +69,25 @@ export default function AppHome() {
 
         <h1
           style={{
-            fontFamily: FONTS.serif,
-            fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+            fontFamily: meta.fonts.heading,
+            fontSize: "calc(clamp(1.8rem, 4vw, 2.6rem) * var(--sb-text-scale, 1))",
             fontWeight: 700,
             color: C.green,
             lineHeight: 1.2,
             marginBottom: 12,
           }}
         >
-          Timeless Togetherness
+          {STRINGS.tagline}
         </h1>
 
         <p
           style={{
-            fontSize: A11Y.minBodyPx,
-            lineHeight: 1.7,
+            fontSize: ts(A11Y.minBodyPx),
             color: C.textMuted,
-            marginBottom: 28,
+            marginBottom: 32,
           }}
         >
-          Welcome. Create an account or sign in to get started.
+          {STRINGS.welcome}
         </p>
 
         <div
@@ -78,81 +96,21 @@ export default function AppHome() {
             gap: 14,
             justifyContent: "center",
             flexWrap: "wrap",
-            marginBottom: 44,
+            marginBottom: 32,
           }}
         >
-          <Link to="/app/auth" style={btn(true)}>
-            Get started
+          <Link to="/app/auth/login" style={door(true)}>
+            {t("auth.roleSelect.signIn")}
           </Link>
-          <Link to="/app/auth/login" style={btn(false)}>
-            Sign in
+          <Link to="/app/auth" style={door(false)}>
+            {STRINGS.join}
           </Link>
         </div>
 
-        <div style={{ textAlign: "start" }}>
-          {AREAS.map((a) => (
-            <Link
-              key={a.to}
-              to={a.to}
-              style={{
-                display: "block",
-                background: C.white,
-                border: `2px solid ${C.warmGray}`,
-                borderRadius: 16,
-                padding: "16px 20px",
-                marginBottom: 12,
-                textDecoration: "none",
-                color: C.textMain,
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  fontFamily: FONTS.serif,
-                  fontSize: 21,
-                  fontWeight: 700,
-                  color: C.green,
-                  marginBottom: 2,
-                }}
-              >
-                {a.title}
-              </span>
-              <span style={{ fontSize: A11Y.minBodyPx, color: C.textMuted }}>
-                {a.desc}
-              </span>
-            </Link>
-          ))}
-        </div>
-
-        <a
-          href="/"
-          style={{
-            display: "inline-block",
-            marginTop: 20,
-            fontSize: A11Y.minBodyPx,
-            color: C.textMuted,
-          }}
-        >
-          Back to saathban.com
+        <a href="/" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
+          {t("auth.roleSelect.backToSite")}
         </a>
       </div>
     </main>
   );
-}
-
-function btn(primary) {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: A11Y.minTapTargetPx,
-    padding: "0 32px",
-    borderRadius: 50,
-    background: primary ? C.green : C.white,
-    border: `2px solid ${C.green}`,
-    color: primary ? C.cream : C.green,
-    fontSize: A11Y.minBodyPx,
-    fontWeight: 600,
-    textDecoration: "none",
-  };
 }

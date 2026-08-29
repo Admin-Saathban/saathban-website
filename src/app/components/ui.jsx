@@ -18,7 +18,7 @@ import supabase from "../lib/supabase.js";
    toggle. Direction and the language's font stack come from the
    LanguageProvider wrapper; sizes here follow the text size control
    through ts() / the --sb-text-scale variable. */
-export function AuthScreen({ children, width = 620 }) {
+export function AuthScreen({ children, width = 620, showHeader = true }) {
   const { lang, setLang, ts } = useI18n();
   const other = lang === "en" ? "ur" : "en";
 
@@ -55,6 +55,9 @@ export function AuthScreen({ children, width = 620 }) {
       `}</style>
 
       <div style={{ maxWidth: width, margin: "0 auto" }}>
+        {/* showHeader={false} when the screen brings its own chrome
+            (e.g. AppHeader on signed-in screens). */}
+        {showHeader && (
         <header
           style={{
             display: "flex",
@@ -94,6 +97,7 @@ export function AuthScreen({ children, width = 620 }) {
             {LOCALES[other].meta.label}
           </button>
         </header>
+        )}
 
         {children}
       </div>

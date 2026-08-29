@@ -18,6 +18,14 @@ import { useSession } from "../../lib/session.jsx";
 import { MOODS } from "../home/homeMock.js";
 import {
   fetchMonthLogs,
+  fetchRecentLogs,
+  recentMonthKeys,
+  moodByMonth,
+  dailySeries,
+  presenceByDay,
+  pointsByMonth,
+  moduleSummary,
+  monthKeyOf,
   fetchMyProgress,
   fetchBadgeDefinitions,
   fetchMyEarnedBadges,
@@ -26,6 +34,13 @@ import {
   sleepHoursNumber,
 } from "./historyData.js";
 import { HistoryScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
+import {
+  MoodMonths,
+  DailyBars,
+  PresenceHeat,
+  PointsLine,
+  ModuleSummaries,
+} from "./JourneyVisuals.jsx";
 
 const iso = (y, m, d) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -43,6 +58,7 @@ export default function JourneyPage() {
   const [badges, setBadges] = useState([]);
   const [defs, setDefs] = useState({});
   const [error, setError] = useState("");
+  const [recent, setRecent] = useState(null); // the last six months of logs
 
   useEffect(() => {
     let alive = true;
@@ -53,6 +69,18 @@ export default function JourneyPage() {
       alive = false;
     };
   }, [profile.id, ym]);
+
+  /* The longer view: six months in one query, aggregated on the
+     client. Same own-rows-only rule as everything else here. */
+  useEffect(() => {
+    let alive = true;
+    fetchRecentLogs(profile.id, 6)
+      .then((rows) => alive && setRecent(rows))
+      .catch(() => alive && setRecent([]));
+    return () => {
+      alive = false;
+    };
+  }, [profile.id]);
 
   useEffect(() => {
     let alive = true;
@@ -309,6 +337,41 @@ export default function JourneyPage() {
       <SectionLabel>{t("history.trends.title")}</SectionLabel>
       <BodyText muted>🔒 {t("history.trends.privacy")}</BodyText>
       <Trends logs={logs} daysInMonth={daysInMonth} moodFace={moodFace} t={t} ts={ts} lang={lang} />
+
+      {/* ── The longer view: six auto-drawn pictures of your own
+             record. Same privacy as everything above — these are
+             built from your rows alone. ── */}
+      {recent && (
+        <>
+          <MoodMonths data={moodByMonth(recent, recentMonthKeys(6))} dateLocale={dateLocale} />
+          <DailyBars
+            title={t("history.visuals.sleepTitle")}
+            series={dailySeries(recent, "sleep", (p) => sleepHoursNumber(p.hours))}
+            max={12}
+            unitKey="history.visuals.unitHours"
+            emptyKey="history.visuals.sleepEmpty"
+            tone={C.olive}
+            dateLocale={dateLocale}
+          />
+          <DailyBars
+            title={t("history.visuals.waterTitle")}
+            series={dailySeries(recent, "water", (p) =>
+              p.glasses == null || p.glasses === "" ? null : Number(p.glasses)
+            )}
+            max={10}
+            unitKey="history.visuals.unitGlasses"
+            emptyKey="history.visuals.waterEmpty"
+            tone="#5b86b5"
+            dateLocale={dateLocale}
+          />
+          <PresenceHeat presence={presenceByDay(recent)} />
+          <PointsLine data={pointsByMonth(recent, recentMonthKeys(6))} dateLocale={dateLocale} />
+          <ModuleSummaries
+            summary={moduleSummary(recent, monthKeyOf(iso(ym.y, ym.m, 1)))}
+            monthName={monthLabel}
+          />
+        </>
+      )}
     </HistoryScreen>
   );
 }
@@ -440,7 +503,7 @@ function Trends({ logs, daysInMonth, moodFace, t, ts }) {
     <>
       <Card>
         <p style={{ fontSize: ts(19), fontWeight: 700, margin: "0 0 8px" }}>
-          {t("history.trends.mood")}
+          {t("history.trends.moodDaily")}
         </p>
         {moods.length < 2 ? (
           <BodyText muted style={{ margin: 0 }}>
@@ -479,46 +542,6 @@ function Trends({ logs, daysInMonth, moodFace, t, ts }) {
         )}
       </Card>
 
-      <Card>
-        <p style={{ fontSize: ts(19), fontWeight: 700, margin: "0 0 8px" }}>
-          {t("history.trends.sleep")}
-        </p>
-        {sleeps.length === 0 ? (
-          <BodyText muted style={{ margin: 0 }}>
-            {t("history.trends.empty")}
-          </BodyText>
-        ) : (
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            role="img"
-            aria-label={t("history.trends.sleep")}
-            style={{ width: "100%", height: "auto", display: "block" }}
-          >
-            {sleeps.map((s) => {
-              const barH = (Math.min(s.h, 12) / 12) * (H - 34);
-              return (
-                <g key={s.d}>
-                  <title>{t("history.trends.sleepBar", { d: s.d, h: s.h })}</title>
-                  <rect
-                    x={x(s.d) - 8}
-                    y={H - 22 - barH}
-                    width="16"
-                    height={barH}
-                    rx="6"
-                    fill={C.olive}
-                  />
-                  <text x={x(s.d)} y={H - 26 - barH} textAnchor="middle" fontSize="13" fill={C.textMuted}>
-                    {s.h}
-                  </text>
-                  <text x={x(s.d)} y={H - 4} textAnchor="middle" fontSize="12" fill={C.textMuted}>
-                    {s.d}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        )}
-      </Card>
     </>
   );
 }

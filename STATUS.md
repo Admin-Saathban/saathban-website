@@ -152,6 +152,53 @@ Until then Cancel is honest read as "leave this table"; the table
 stays open, which is harmless because a lobby table is only
 reachable by its code or an invite.
 
+## Working agreements (learned the hard way, 2026-08-29)
+
+Several sessions share one working tree and one database here. Every
+rule below was written after something actually broke — none is
+theoretical, and each names the failure it prevents.
+
+**1. A green local build proves nothing about origin.** Vite builds
+the WORKING TREE; a dev server serves the working tree; only a build
+from a clean checkout answers "can origin build this". Integration
+broke origin by wiring a route to `NewGame.jsx` while that file was
+still untracked — the local build passed, every build from git
+failed. Run `git ls-files <path>` before wiring an import, and verify
+in the isolated worktree before pushing.
+
+**2. Say which tree you verified against.** "Verified" against a dev
+server and "verified" against origin are different claims, and they
+diverged today. State which one you mean when you report a run.
+
+**3. `git commit -- <pathspec>` ignores your index.** It commits the
+working tree at those paths, silently discarding hunk-level staging —
+this swept one lane's locale keys into another lane's commit twice.
+Pathspec ONLY when you own every changed line in those files; for
+shared files (locales above all), stage hunks and commit with NO
+pathspec. Never `git add -A`.
+
+**4. The channel holds one DB-heavy suite at a time.** The holder's
+own release is the authoritative event — if they hand it to you
+directly, it is yours; the registrar is a convenience, not a gate.
+Announcing your own intent is NOT taking it, and silence is not a
+release.
+
+**5. Don't change a function while another lane is measuring it —
+and don't measure while another lane holds the channel.** Both
+produce a result that describes nothing, which is worse than no
+result because it looks like evidence.
+
+**6. Verify the claim, don't relay it.** Read the LIVE function or
+constraint rather than the migration file that was supposed to create
+it. This caught a board map that had to match SQL exactly, confirmed
+a partial index a whole design rested on, and disproved a dice bug
+that three plausible arguments supported.
+
+**7. Test the row, not the return value.** A function that reports
+success while changing nothing passes a return-value assertion. Check
+the seat is gone, the flag is set, the write was refused BY THE
+DATABASE.
+
 ## Round log
 - **Carrom/dispatch bugs + Snakes & Ladders (2026-08-29, `262fda7`, preview `saathban-website-ped79l9r9`):** user retest found 🎯 in a DM leading to a Race-to-100-looking screen and one session rendering blank. Causes and fixes: (a) SessionPage rendered the generic reference board for ANY game key — now dispatches carrom → CarromRailsController, ludo → its own screen once ACTIVE (the lobby stays on the rails, which owns the invite card/picker/code), else the reference board; (b) the DM inline embed had no lobby state, so the invitee saw a dead board and every DM table stayed in the lobby — the embed now offers "Take my seat" in-thread and shows the host a waiting line; (c) the "blank" session was a NON-PARTICIPANT view on a pre-3699012 deploy (RLS correctly returns no row) — it now reads "This table is private to its players", and a loading-or-failed session says so with a retry instead of a bare page; (d) bell poll 60s → 6s with visibility/focus refresh. **Race to 100 → Snakes & Ladders** (0035 applied): registry key race100 → snakes, both languages, existing sessions migrated, `game_exec_snakes()` with classic rules (server dice, ladders/snakes via `snakes_board_jump()`, exact roll needed for 100), SVG board in the brand palette with the move narrated in words. **Hygiene:** 40 junk messages purged from the real test-icon ↔ test-fam thread; the smoke suite now writes as dedicated `smoke-icon`/`smoke-fam` accounts (seeded, in each other's circle) so retest threads stay clean. Verified on the preview as both players: snakes create → invite → accept → auto-start → roll → both sides see the new cell; ludo lands on the ludo board and records a roll; carrom board inline for both, striker drag → play_turn. Ludo's one FAIL line in my run was a bad assertion (ludo legitimately has a Roll button), not a product bug.
 - **Together/My-People/parity integration + full matrix (2026-08-29,

@@ -70,6 +70,25 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
 ## Round log
+- **Fam home + My journey round (2026-08-29):** pushed
+  `10522b9..051fea3` — `41049c8` (fam full home: per-person Message →
+  people thread, shared-moments strip, care cards above nav cards) and
+  `051fea3` (My journey at /app/history: calendar, presence, badges,
+  trends). Preview `saathban-website-3mw55bysf` — 19/19 smoke plus
+  deployed spot-checks (fam care card with mood + Message + reminders
+  + moments strip; /app/history renders; outdoor city chips live).
+  Note: the outdoor lane's `ce24f5e` was ALREADY carried in the
+  previous `10522b9` push (it sat under my commit in the shared tree)
+  — its "not pushed" handoff note was stale; nothing extra to do.
+  **Baseline drift found and fixed:** `circle_members` was completely
+  empty (some lane's cleanup wiped it — likely a one-tap-removal
+  test), so the fam home showed the empty connect state. Restored the
+  documented row (test-fam in test-icon's circle, can_see_mood +
+  can_manage_reminders + SOS contact); the "Morning walk" reminder had
+  survived. Outdoor's "chai and carrom" activity at Model Town Park +
+  test-fam's join stay as demo data. login simplification (`a11e388`)
+  and activities (`cf37311`) also confirmed pushed/live — the two
+  "integrate when they land" items are closed.
 - **Live-preview bug round (user testing):** (a) /app/games WAS
   reachable but undiscoverable — the Games/Groups cards existed only
   locally (uncommitted new-file pathspec miss); now committed for all

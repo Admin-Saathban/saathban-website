@@ -213,6 +213,13 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     const mine = joinInfo?.mine ?? false;
     const limit = p.limit ? Number(p.limit) : null;
     const full = limit != null && count + 1 >= limit;
+    const rsvp = !!p.rsvp;
+    const countLine =
+      count === 1
+        ? t(rsvp ? "community.shares.activityConfirmedOne" : "community.shares.activityComingOne")
+        : t(rsvp ? "community.shares.activityConfirmed" : "community.shares.activityComing", {
+            n: count,
+          });
     return (
       <div style={box}>
         <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
@@ -235,11 +242,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
         )}
         {p.note && <p style={{ ...line, color: C.textMuted }}>{p.note}</p>}
         {count > 0 && (
-          <p style={{ ...line, color: C.textMuted, marginTop: 6 }}>
-            {count === 1
-              ? t("community.shares.activityComingOne")
-              : t("community.shares.activityComing", { n: count })}
-          </p>
+          <p style={{ ...line, color: C.textMuted, marginTop: 6 }}>{countLine}</p>
         )}
         {past ? (
           <p style={{ ...line, color: C.textMuted, marginTop: 8 }}>
@@ -257,7 +260,9 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
           !own && (
             <div style={{ marginTop: 10 }}>
               <PrimaryBtn onClick={() => onAction("joinActivity", post)}>
-                {t("community.shares.activityJoin")}
+                {rsvp
+                  ? `✋ ${t("community.shares.activityRsvpJoin")}`
+                  : t("community.shares.activityJoin")}
               </PrimaryBtn>
             </div>
           )
@@ -611,10 +616,14 @@ export default function Feed() {
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkPlaces, setWalkPlaces] = useState([]);
   const [walkActivity, setWalkActivity] = useState("");
+  // Free-text place; the id rides along only when a known outdoor
+  // place was tapped from the suggestions (park boards need it).
+  const [walkPlaceText, setWalkPlaceText] = useState("");
   const [walkPlaceId, setWalkPlaceId] = useState("");
   const [walkWhen, setWalkWhen] = useState("");
   const [walkNote, setWalkNote] = useState("");
   const [walkLimit, setWalkLimit] = useState("");
+  const [walkRsvp, setWalkRsvp] = useState(false);
   const [joins, setJoins] = useState({}); // postId → {count, mine}
   const isIcon = profile?.role === "saath_icon";
 
@@ -642,17 +651,21 @@ export default function Feed() {
     try {
       await shareActivity(myId, {
         activity: walkActivity,
-        place: walkPlaces.find((p) => p.id === walkPlaceId) || null,
+        placeText: walkPlaceText,
+        placeId: walkPlaceId || null,
         startsAtIso: walkWhen ? new Date(walkWhen).toISOString() : null,
         note: walkNote,
         limit: walkLimit ? Number(walkLimit) : null,
+        rsvp: walkRsvp,
       });
       setWalkOpen(false);
       setWalkActivity("");
+      setWalkPlaceText("");
       setWalkPlaceId("");
       setWalkWhen("");
       setWalkNote("");
       setWalkLimit("");
+      setWalkRsvp(false);
       showToast(t("community.shares.activityShared"));
       await load();
     } catch {
@@ -756,7 +769,13 @@ export default function Feed() {
         try {
           const r = await joinActivity(target.id);
           if (r.joined) {
-            showToast(t("community.shares.activityJoined"));
+            showToast(
+              t(
+                target.payload?.rsvp
+                  ? "community.shares.activityRsvpJoined"
+                  : "community.shares.activityJoined"
+              )
+            );
             /* Walks with a place + time also land the joiner's outing
                on the park board (the pre-0027 behaviour), best-effort
                and Icons-only — RLS refuses the rest. */
@@ -944,21 +963,77 @@ export default function Feed() {
                       style={{ marginTop: 6 }}
                     />
                   </label>
-                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                  <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 8 }}>
                     {t("community.shares.activityPlace")}
-                    <select
-                      value={walkPlaceId}
-                      onChange={(e) => setWalkPlaceId(e.target.value)}
+                    <input
+                      value={walkPlaceText}
+                      onChange={(e) => {
+                        setWalkPlaceText(e.target.value);
+                        setWalkPlaceId(""); // typing means it's no longer a picked place
+                      }}
+                      placeholder={t("community.shares.activityPlacePh")}
+                      maxLength={120}
                       style={{ marginTop: 6 }}
-                    >
-                      <option value="">{t("community.shares.activityNoPlace")}</option>
-                      {walkPlaces.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} · {p.city}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
+                  {/* Tappable suggestions: common answers first, then
+                      matching outdoor places (those carry an id so the
+                      outing reaches the park board). Free text always
+                      wins — these only fill the field. */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                    {[
+                      t("community.shares.placePark"),
+                      t("community.shares.placeHome"),
+                      t("community.shares.placeCall"),
+                    ]
+                      .filter(
+                        (c) =>
+                          !walkPlaceText.trim() ||
+                          c.toLowerCase().includes(walkPlaceText.trim().toLowerCase())
+                      )
+                      .map((c) => (
+                        <GhostBtn
+                          key={c}
+                          onClick={() => {
+                            setWalkPlaceText(c);
+                            setWalkPlaceId("");
+                          }}
+                          style={{ minHeight: A11Y.minTapTargetPx, padding: "0 14px" }}
+                        >
+                          {c}
+                        </GhostBtn>
+                      ))}
+                    {walkPlaces
+                      .filter(
+                        (p) =>
+                          !walkPlaceText.trim() ||
+                          `${p.name} ${p.city}`
+                            .toLowerCase()
+                            .includes(walkPlaceText.trim().toLowerCase())
+                      )
+                      .slice(0, 5)
+                      .map((p) => (
+                        <GhostBtn
+                          key={p.id}
+                          onClick={() => {
+                            setWalkPlaceText(p.name);
+                            setWalkPlaceId(p.id);
+                          }}
+                          aria-pressed={walkPlaceId === p.id}
+                          style={
+                            walkPlaceId === p.id
+                              ? {
+                                  minHeight: A11Y.minTapTargetPx,
+                                  padding: "0 14px",
+                                  borderColor: C.green,
+                                }
+                              : { minHeight: A11Y.minTapTargetPx, padding: "0 14px" }
+                          }
+                        >
+                          🌳 {p.name} · {p.city}
+                        </GhostBtn>
+                      ))}
+                  </div>
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
                     {t("community.shares.activityWhen")}
                     <input
@@ -992,6 +1067,44 @@ export default function Feed() {
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      fontSize: ts(A11Y.minBodyPx),
+                      fontWeight: 600,
+                      marginBottom: 14,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={walkRsvp}
+                      onChange={(e) => setWalkRsvp(e.target.checked)}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        minHeight: 0,
+                        marginTop: 2,
+                        accentColor: C.green,
+                        flex: "0 0 auto",
+                      }}
+                    />
+                    <span>
+                      {t("community.shares.rsvpLabel")}
+                      <span
+                        style={{
+                          display: "block",
+                          fontWeight: 400,
+                          color: C.textMuted,
+                          fontSize: ts(16),
+                        }}
+                      >
+                        {t("community.shares.rsvpHint")}
+                      </span>
+                    </span>
                   </label>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <PrimaryBtn type="submit" onClick={submitActivity} disabled={!walkActivity.trim()}>

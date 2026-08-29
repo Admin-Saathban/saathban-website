@@ -168,14 +168,19 @@ export async function unblock(userId, targetId, kind) {
    so it stays visible even when the referenced row isn't. */
 
 export async function createShare(userId, type, refId, payload, body = "") {
-  const { error } = await supabase.from("community_posts").insert({
-    author_id: userId,
-    body,
-    post_type: type,
-    ref_id: refId,
-    payload,
-  });
+  const { data, error } = await supabase
+    .from("community_posts")
+    .insert({
+      author_id: userId,
+      body,
+      post_type: type,
+      ref_id: refId,
+      payload,
+    })
+    .select("id")
+    .single();
   if (error) throw error;
+  return data.id;
 }
 
 export async function fetchPlacesLite() {
@@ -226,19 +231,26 @@ export async function joinWalk(userId, post) {
   if (error) throw error;
 }
 
-/* ─── "Who's up for…?" activities (migration 0027) ───
-   Free-text activity; place, time, and people limit all optional and
-   frozen into the payload snapshot at creation. When a place AND time
-   are given, the host's outing also lands on the park board (the 0016
-   behaviour walks always had). */
+/* ─── "Who's up for…?" activities (migrations 0027/0028) ───
+   Free-text activity; place, time, people limit, and the RSVP choice
+   all optional and frozen into the payload snapshot at creation.
+   The place is FREE TEXT — placeId is set only when the host tapped a
+   known outdoor place from the suggestions, and only then (plus a
+   time) does the host's outing also land on the park board (the 0016
+   behaviour walks always had). After posting, announce_activity()
+   tells the author's connections (best-effort — the post stands
+   either way). */
 
-export async function shareActivity(userId, { activity, place, startsAtIso, note, limit }) {
+export async function shareActivity(
+  userId,
+  { activity, placeText, placeId, startsAtIso, note, limit, rsvp }
+) {
   let refId = null;
-  if (place && startsAtIso) {
+  if (placeId && startsAtIso) {
     const { data, error } = await supabase
       .from("outdoor_outings")
       .insert({
-        place_id: place.id,
+        place_id: placeId,
         creator_id: userId,
         starts_at: startsAtIso,
         note: (note || "").trim() || null,
@@ -248,14 +260,21 @@ export async function shareActivity(userId, { activity, place, startsAtIso, note
       .single();
     if (!error) refId = data.id;
   }
-  await createShare(userId, "activity", refId, {
+  const postId = await createShare(userId, "activity", refId, {
     activity: activity.trim(),
-    place_id: place?.id ?? null,
-    place_name: place?.name ?? null,
+    place_id: placeId || null,
+    place_name: (placeText || "").trim() || null,
     starts_at: startsAtIso || null,
     note: (note || "").trim() || null,
     limit: limit || null,
+    rsvp: !!rsvp,
   });
+  try {
+    await supabase.rpc("announce_activity", { p_post: postId });
+  } catch {
+    /* best-effort — the post stands even if the announcement fails */
+  }
+  return postId;
 }
 
 /* Server-enforced join: idempotent, limit-aware, closes gracefully.

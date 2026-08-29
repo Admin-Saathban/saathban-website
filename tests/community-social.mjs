@@ -252,6 +252,46 @@ let reqId;
   }
 }
 
+/* ─── 0028: RSVP wording, full-notification, creation announce ─── */
+{
+  // icon's connections at this point: fam (circle) + icon2 (friend,
+  // accepted above).
+  const r = await rest(
+    icon,
+    "POST",
+    "community_posts",
+    {
+      author_id: icon.id,
+      body: "",
+      post_type: "activity",
+      payload: { activity: "Ludo, confirmations please", place_name: "My home", limit: 2, rsvp: true },
+    },
+    REP
+  );
+  const rsvpPost = r.data?.[0];
+
+  const notAuthor = await rpc(icon2, "announce_activity", { p_post: rsvpPost.id });
+  check("only the author can announce", notAuthor.status >= 400, String(notAuthor.status));
+
+  const ann = await rpc(icon, "announce_activity", { p_post: rsvpPost.id });
+  check("announce notifies the author's connections", ann.data >= 2, `sent ${ann.data}`);
+  const inv2 = (await socialNotes(icon2)).find((n) => /invitation from/i.test(n.title));
+  const invFam = (await socialNotes(fam)).find((n) => /invitation from/i.test(n.title));
+  check("both a friend and a circle member received it", !!inv2 && !!invFam);
+  const annAgain = await rpc(icon, "announce_activity", { p_post: rsvpPost.id });
+  check("re-announcing is a silent no-op", annAgain.data === 0, `sent ${annAgain.data}`);
+
+  const j = await rpc(icon2, "join_activity", { p_post: rsvpPost.id });
+  check("RSVP join succeeds and fills (limit 2 incl. host)", j.data?.joined === true && j.data?.full === true, JSON.stringify(j.data));
+  const coming = (await socialNotes(icon)).find((n) => /I'm coming/i.test(n.body));
+  check("author's notification uses the \"I'm coming\" wording", !!coming, coming?.body ?? "none");
+  const fullNote = (await socialNotes(icon)).find((n) => /invitation is full/i.test(n.title));
+  check("the filling join also tells the host it's full", !!fullNote);
+
+  // Free-text place with no place_id: payload carries the words only.
+  check("free-text place rides the payload without a place_id", rsvpPost.payload.place_name === "My home" && !rsvpPost.payload.place_id);
+}
+
 console.log(`\nposts created (for cleanup): ${[actPost?.id, pastPost?.id, openPost?.id].join(", ")}`);
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nall green");
 process.exit(failures ? 1 : 0);

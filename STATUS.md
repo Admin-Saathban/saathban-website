@@ -252,6 +252,17 @@ it. This caught a board map that had to match SQL exactly, confirmed
 a partial index a whole design rested on, and disproved a dice bug
 that three plausible arguments supported.
 
+**11. A crash before the cleanup is a SILENT skip — isolate every
+case.** A suite threw on its fourth case, so cases five and six, all
+the drops, and the final leaves-nothing-live assertion never ran. The
+litter it left went unreported not because the check was wrong but
+because the check never executed, and an early exit looks like a
+shorter run rather than a missing one. Run each case inside a guard so
+a throw is reported as a failed check instead of taking the rest of
+the suite and its cleanup with it. Two failures stacked here — a
+cleanup convention that did not clean, and a crash that hid it — and
+either alone would have been visible.
+
 **10. A cleanup that is not verified is not a cleanup.** A suite
 deleted its fixtures with `DELETE /game_sessions?id=eq.<id>` and
 checked the response was ok. That table has ONE policy — SELECT only —

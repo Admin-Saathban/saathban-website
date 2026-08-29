@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Dev-only preview for the milestones lane (MILESTONES_WIRING.md §4):
+     the route is not yet registered in AppRoot, so this page mounts
+     MilestonesRoutes standalone. Real backend — sign in at /app/auth
+     first; the session is shared via localStorage on this origin.
+     Not referenced by any route; never reaches the production bundle. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Milestones preview — Saathban</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./preview.jsx"></script>
+  </body>
+</html>

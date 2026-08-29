@@ -343,8 +343,13 @@ export default function FamDashboard() {
         views.map((v) => <IconCard key={v.membershipId} view={v} />)
       )}
 
-      {/* Fam plays too: chips when a table waits on them, beside Games. */}
-      <YourTurnChips />
+      {/* Fam plays too: chips when a table waits on them. A first-timer
+          needs the word "Games" before "Your move — Carrom" (thumb test):
+          the label rides :has() so it appears only when chips render. */}
+      <style>{`.fam-chips:has(a)::before{content:var(--chips-label);display:block;font-weight:700;margin:0 0 6px;color:${C.textMuted}}`}</style>
+      <div className="fam-chips" style={{ "--chips-label": `"🎲 ${t("hub.games")}:"`, fontSize: ts(16) }}>
+        <YourTurnChips />
+      </div>
 
       {/* Every role's home surfaces everything the role can reach —
           Fam takes part in games, events, groups, community, skills. */}
@@ -377,27 +382,42 @@ export default function FamDashboard() {
         </>
       )}
 
-      <Card style={{ textAlign: "center" }}>
-        <BodyText muted>{t("fam.dashboard.inviteHint")}</BodyText>
-        <Link
-          to="invite"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 56,
-            padding: "0 28px",
-            borderRadius: 50,
-            background: C.green,
-            color: C.cream,
-            fontSize: ts(19),
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          {t("fam.dashboard.inviteCta")}
-        </Link>
-      </Card>
+      {/* The connect door is My People's zero-connections empty state —
+          with connections on screen, the My People tile above already
+          leads onward, so only a quiet line keeps the invite flow reachable
+          (thumb test: no duplicate card). */}
+      {(views || []).length === 0 ? (
+        <Card style={{ textAlign: "center" }}>
+          <BodyText muted>{t("fam.dashboard.inviteHint")}</BodyText>
+          <Link
+            to="invite"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 56,
+              padding: "0 28px",
+              borderRadius: 50,
+              background: C.green,
+              color: C.cream,
+              fontSize: ts(19),
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            {t("fam.dashboard.inviteCta")}
+          </Link>
+        </Card>
+      ) : (
+        <div style={{ textAlign: "center", marginTop: 6 }}>
+          <Link
+            to="invite"
+            style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.brown, fontWeight: 600, fontSize: ts(A11Y.minBodyPx), textDecoration: "underline" }}
+          >
+            {t("fam.dashboard.inviteCta")}
+          </Link>
+        </div>
+      )}
     </FamScreen>
   );
 }

@@ -10,6 +10,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
 import GamesHome from "./GamesHome.jsx";
 import SessionPage from "./SessionPage.jsx";
+import NewGame from "./NewGame.jsx";
 import PuzzlePage from "./PuzzlePage.jsx";
 
 export default function GamesRoutes() {
@@ -18,6 +19,9 @@ export default function GamesRoutes() {
       <AppHeader />
       <Routes>
         <Route index element={<GamesHome />} />
+        {/* The one-screen setup: pick people or bots, then Start.
+            The board itself is the waiting room from there on. */}
+        <Route path="new/:gameKey" element={<NewGame />} />
         <Route path="s/:sessionId" element={<SessionPage />} />
         <Route path="puzzle" element={<PuzzlePage />} />
         <Route path="*" element={<Navigate to="/app/games" replace />} />

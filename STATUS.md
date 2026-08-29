@@ -123,6 +123,30 @@ a compute upgrade; nothing in a migration needs undoing.
 If a suite fails with hangs or an empty auth response, that is this —
 re-run when the channel is clear before filing a bug.
 
+## Known gap: "Cancel" on a game waiting room (2026-08-29)
+
+The new one-screen setup (entry-flow lane) has a **Cancel** that
+navigates away but leaves the table joinable — there is no cancel
+RPC. Flagged honestly by that lane; deliberately NOT invented
+mid-round, because it is a schema decision on a surface two lanes
+are rebuilding. Owner: integration (take 0037 when it is done).
+
+What makes it non-trivial, so nobody repeats the analysis:
+`game_sessions_status_check` allows only lobby/active/finished, so
+there is no "cancelled" state to move to, and each obvious route
+costs something.
+
+| Option | Cost |
+|---|---|
+| DELETE the session (host-only, lobby-only, refuse if another human is seated) | Cascades to seats, invites and moves — and `dm_messages.game_session_id` is ON DELETE CASCADE (0029d), so cancelling a carrom table started in a DM **deletes that chat message**. An invite notification already sent then deep-links to a missing session, which today renders "This table is private to its players" — misleading for a table that was called off. |
+| Widen the CHECK to add `cancelled` | Touches every status filter (join_by_code, claim_open_seat, invite/respond, the cron tick) — each must exclude it — plus new copy ("this table was called off") on the session page. |
+
+Recommendation: the second, done properly, with the deep-link copy —
+the first quietly destroys a message in someone else's conversation.
+Until then Cancel is honest read as "leave this table"; the table
+stays open, which is harmless because a lobby table is only
+reachable by its code or an invite.
+
 ## Round log
 - **Carrom/dispatch bugs + Snakes & Ladders (2026-08-29, `262fda7`, preview `saathban-website-ped79l9r9`):** user retest found 🎯 in a DM leading to a Race-to-100-looking screen and one session rendering blank. Causes and fixes: (a) SessionPage rendered the generic reference board for ANY game key — now dispatches carrom → CarromRailsController, ludo → its own screen once ACTIVE (the lobby stays on the rails, which owns the invite card/picker/code), else the reference board; (b) the DM inline embed had no lobby state, so the invitee saw a dead board and every DM table stayed in the lobby — the embed now offers "Take my seat" in-thread and shows the host a waiting line; (c) the "blank" session was a NON-PARTICIPANT view on a pre-3699012 deploy (RLS correctly returns no row) — it now reads "This table is private to its players", and a loading-or-failed session says so with a retry instead of a bare page; (d) bell poll 60s → 6s with visibility/focus refresh. **Race to 100 → Snakes & Ladders** (0035 applied): registry key race100 → snakes, both languages, existing sessions migrated, `game_exec_snakes()` with classic rules (server dice, ladders/snakes via `snakes_board_jump()`, exact roll needed for 100), SVG board in the brand palette with the move narrated in words. **Hygiene:** 40 junk messages purged from the real test-icon ↔ test-fam thread; the smoke suite now writes as dedicated `smoke-icon`/`smoke-fam` accounts (seeded, in each other's circle) so retest threads stay clean. Verified on the preview as both players: snakes create → invite → accept → auto-start → roll → both sides see the new cell; ludo lands on the ludo board and records a roll; carrom board inline for both, striker drag → play_turn. Ludo's one FAIL line in my run was a bad assertion (ludo legitimately has a Roll button), not a product bug.
 - **Together/My-People/parity integration + full matrix (2026-08-29,

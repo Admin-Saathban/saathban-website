@@ -19,12 +19,17 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
-import { useDailyLogs } from "./logStore.js";
+import { useDailyLogs , DB_MODULES } from "./logStore.js";
 import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
-import { greetingKeyForHour, isoDate, POINTS_PER_MODULE } from "./homeMock.js";
+import { greetingKeyForHour, isoDate } from "./homeMock.js";
 import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
-import { awardMyBadges, fetchMyEarnedBadges } from "../../lib/points.js";
+import {
+  awardMyBadges,
+  fetchMyEarnedBadges,
+  fetchMyProgress,
+  estimatePointsToday,
+} from "../../lib/points.js";
 import YourTurnChips from "../games/YourTurnChips.jsx";
 
 /* Notifications, Settings, and My profile live in the AppHeader —
@@ -57,6 +62,25 @@ export default function IconHub() {
   const done = entries.filter((e) => isEntryDone(e, todayLog)).length;
 
   const [reminders, setReminders] = useState([]);
+  /* The same server-owned figure the log screen shows — the hub must
+     not quote a different number for the same day. */
+  const [progress, setProgress] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetchMyProgress()
+      .then((p) => alive && setProgress(p))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const pointsToday =
+    progress?.points_today ??
+    estimatePointsToday(entries, todayLog, {
+      cap: progress?.daily_cap ?? 60,
+      isDone: isEntryDone,
+      durableModules: DB_MODULES,
+    });
   const [unseenBadges, setUnseenBadges] = useState(0);
 
   // Celebration hook: catch-up award, then count unseen celebrations —
@@ -173,7 +197,7 @@ export default function IconHub() {
               </span>
               <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
                 {done > 0
-                  ? t("hub.logSummary", { done, total: entries.length, points: done * POINTS_PER_MODULE })
+                  ? t("hub.logSummary", { done, total: entries.length, points: pointsToday })
                   : t("hub.logEmpty")}
               </span>
             </span>

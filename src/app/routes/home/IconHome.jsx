@@ -13,12 +13,11 @@
    older days are settled. Module choices (iconPrefs) are the Icon’s daily_log_prefs row (0033).
    ════════════════════════════════════════════════ */
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import {
   MOCK_ICON,
-  POINTS_PER_MODULE,
   characterLine,
   greetingKeyForHour,
   daysAgo,
@@ -30,8 +29,9 @@ import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import ScoreShare from "./ScoreShare.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
-import { useDailyLogs } from "./logStore.js";
+import { useDailyLogs, DB_MODULES } from "./logStore.js";
 import { pushToast } from "../../lib/feedback.jsx";
+import { fetchMyProgress, estimatePointsToday } from "../../lib/points.js";
 import AppHeader from "../../components/AppHeader.jsx";
 
 // Weekday and month names come from Intl for the active language.
@@ -80,7 +80,31 @@ export default function IconHome() {
     writeEntry(isoDate(new Date()), "rest_day", { on: !restToday });
   const todayEntries = dayEntries(prefs, new Date());
   const doneToday = todayEntries.filter((e) => isEntryDone(e, todayLog)).length;
-  const pointsToday = doneToday * POINTS_PER_MODULE;
+
+  /* Today's figure comes from the server, which owns the rule (one
+     award per source, all trackers counting once, capped). The old
+     entries × 10 could read higher than the record would ever credit
+     — and a number that settles lower later costs trust in all of
+     them. The cap itself is never shown. */
+  const [progress, setProgress] = useState(null);
+  const refreshProgress = useCallback(() => {
+    fetchMyProgress().then(setProgress).catch(() => {});
+  }, []);
+  useEffect(() => {
+    refreshProgress();
+  }, [refreshProgress]);
+  // When the queue drains, the server has the day's rows: ask again.
+  useEffect(() => {
+    if (pendingCount === 0) refreshProgress();
+  }, [pendingCount, refreshProgress]);
+
+  const pointsToday =
+    progress?.points_today ??
+    estimatePointsToday(todayEntries, todayLog, {
+      cap: progress?.daily_cap ?? 60,
+      isDone: isEntryDone,
+      durableModules: DB_MODULES,
+    });
 
   // Something logged on a given day — server rows and local writes alike.
   const anyLoggedOn = (offset) => {
@@ -263,7 +287,7 @@ export default function IconHome() {
             points={pointsToday}
             doneCount={doneToday}
             totalModules={todayEntries.length}
-            lifetimePoints={lifetimePoints ?? 0}
+            lifetimePoints={progress?.points ?? lifetimePoints ?? 0}
             restDay={restToday}
             onToggleRest={toggleRest}
             editable

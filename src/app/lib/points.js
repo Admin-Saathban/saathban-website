@@ -12,11 +12,44 @@ import supabase from "./supabase.js";
 export const POINTS_PER_LOG = 10;
 export const ARC_TARGET_DAYS = 100; // the 100-day arc — lifetime, never resets
 
-/* { points, presence_days, current_streak } for the caller. */
+/* { points, presence_days, current_streak, points_today, daily_cap }
+   for the caller (0039 added the last two).
+
+   points_today is what the server will actually credit today — the
+   screen renders it rather than re-deriving the rule, so the number
+   can never read higher than the record. daily_cap is for LOGIC only
+   and is never displayed: a visible ceiling turns participation into
+   a target, which is precisely what this scoring refuses to be
+   (POINTS.md). */
 export async function fetchMyProgress() {
   const { data, error } = await supabase.rpc("my_progress");
   if (error) throw new Error(error.message);
-  return data || { points: 0, presence_days: 0, current_streak: 0 };
+  return data || { points: 0, presence_days: 0, current_streak: 0, points_today: 0, daily_cap: 60 };
+}
+
+/* When the server figure is unavailable (offline, or the first paint
+   before it lands), an honest local estimate of the SAME rule: one
+   award per durable module, all of a day's trackers counting once,
+   never above the cap. Never the old entries × 10, which counted
+   each tracker separately and read higher than the truth. */
+export function estimatePointsToday(entries, log, { cap = 60, isDone, durableModules } = {}) {
+  const durable = durableModules ? new Set(durableModules) : null;
+  let sources = 0;
+  let anyTracker = false;
+  for (const entry of entries) {
+    if (!isDone(entry, log)) continue;
+    if (entry.kind === "tracker") {
+      anyTracker = true; // however many, they are one row and one award
+      continue;
+    }
+    // Only entries that actually become a daily_logs row may count. A
+    // UI-only module would put the old over-counting bug back, just at
+    // first paint instead of always.
+    if (durable && !durable.has(entry.id)) continue;
+    sources += 1;
+  }
+  if (anyTracker) sources += 1;
+  return Math.min(sources * POINTS_PER_LOG, cap);
 }
 
 /* All badge definitions, in display order. Content in EN + UR. */

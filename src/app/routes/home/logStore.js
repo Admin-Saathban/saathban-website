@@ -12,10 +12,13 @@
    'online', and shortly after each write. Reload mid-outage and
    nothing is lost.
 
-   Custom trackers (an iconPrefs feature) are NOT in the log_module
-   enum, so tracker entries persist only in the device cache; they sync
-   nothing until the schema grows a place for them. Built-in modules
-   are the durable record.
+   Custom trackers used to live only in the device cache, which meant
+   the home screen counted them for points the server would never
+   credit. Since 0039 the enum has a 'tracker' value: every tracker on
+   a day folds into ONE durable row (module='tracker'), so the day
+   earns one flat award however many trackers exist or how often they
+   are tapped. The unique (icon_id, log_date, module) key makes that a
+   database fact — a replayed offline queue cannot double it.
 
    Date-window notes (the DB trigger speaks server/UTC dates, the UI
    speaks local dates):
@@ -34,11 +37,19 @@ import { MOODS, POINTS_PER_MODULE, isoDate, daysAgo } from "./homeMock.js";
 
 // The modules migration 0006 knows (public.log_module). Anything else
 // (tracker:<id> keys) is device-local.
-const DB_MODULES = [
+export const DB_MODULES = [
   "mood", "sleep", "medication", "exercise", "diet", "water",
   "blood_pressure", "blood_sugar", "weight", "pain",
   "rest_day", // 0017: resting IS participation
+  "tracker",  // 0039: all of a day's custom trackers, folded into one row
 ];
+
+/* Does this tracker entry count as done? Mirrors isEntryDone in
+   DailyLogCard, kept local so the store has no UI import. */
+function trackerDone(v) {
+  if (!v) return false;
+  return !!v.done || (v.count || 0) > 0 || !!(v.note || "").trim();
+}
 
 // mood_value: 1 (lowest) … 5 (best) — MOODS is ordered best-first.
 // Moods can be several at once ("content" AND "tired"); the welfare
@@ -155,14 +166,37 @@ export function useDailyLogs(iconId) {
   /* The one write path. key is a module id or "tracker:<id>". */
   const writeEntry = useCallback(
     (dateIso, key, value) => {
-      const next = {
-        ...logsByDate,
-        [dateIso]: { ...(logsByDate[dateIso] || {}), [key]: value },
-      };
+      const day = { ...(logsByDate[dateIso] || {}), [key]: value };
+      const next = { ...logsByDate, [dateIso]: day };
       persistLogs(next);
-      if (!iconId || !DB_MODULES.includes(key)) return; // tracker → cache only
+      if (!iconId) return;
+
       const queue = readJson(queueKey(iconId), {});
-      queue[`${dateIso}|${key}`] = { dateIso, module: key, value };
+      const isTracker = key.startsWith("tracker:");
+      if (isTracker) {
+        /* Every tracker on this day summarised into the single
+           'tracker' row: the ids that were completed, and the day's
+           values for the record. One row, one award — the day's
+           second tracker adds nothing, by design. */
+        const done = Object.entries(day)
+          .filter(([k, v]) => k.startsWith("tracker:") && trackerDone(v))
+          .map(([k]) => k.slice("tracker:".length));
+        if (done.length === 0) {
+          // Nothing completed any more: drop the pending write rather
+          // than claiming participation that was undone.
+          delete queue[`${dateIso}|tracker`];
+        } else {
+          queue[`${dateIso}|tracker`] = {
+            dateIso,
+            module: "tracker",
+            value: { done, entries: Object.fromEntries(Object.entries(day).filter(([k]) => k.startsWith("tracker:"))) },
+          };
+        }
+      } else if (DB_MODULES.includes(key)) {
+        queue[`${dateIso}|${key}`] = { dateIso, module: key, value };
+      } else {
+        return; // not a durable module and not a tracker: cache only
+      }
       writeJson(queueKey(iconId), queue);
       setPendingCount(Object.keys(queue).length);
       scheduleFlush();

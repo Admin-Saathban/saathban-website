@@ -102,6 +102,9 @@ export default function AdminLayout() {
     { to: "questions", label: "Questions", count: openQuestions },
     { to: "broadcasts", label: "Broadcasts", count: 0 },
     { to: "moderation", label: "Moderation", count: openReportCount },
+    // The milestone-message desk lives outside the admin shell
+    // (shared route with the Icon view — 0017).
+    { to: "/app/milestones", label: "Milestones", count: 0 },
   ];
 
   return (
@@ -221,7 +224,14 @@ export default function AdminLayout() {
         <div style={{ marginTop: "auto", padding: "18px 10px 0" }}>
           <a
             href="/app"
-            style={{ color: C.sage, fontSize: 15, textDecoration: "none" }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: A11Y.minTapTargetPx,
+              color: C.sage,
+              fontSize: 15,
+              textDecoration: "none",
+            }}
           >
             ← Back to the app
           </a>

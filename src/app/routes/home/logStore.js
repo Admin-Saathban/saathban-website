@@ -37,6 +37,7 @@ import { MOODS, POINTS_PER_MODULE, isoDate, daysAgo } from "./homeMock.js";
 const DB_MODULES = [
   "mood", "sleep", "medication", "exercise", "diet", "water",
   "blood_pressure", "blood_sugar", "weight", "pain",
+  "rest_day", // 0017: resting IS participation
 ];
 
 // mood_value: 1 (lowest) … 5 (best) — MOODS is ordered best-first.

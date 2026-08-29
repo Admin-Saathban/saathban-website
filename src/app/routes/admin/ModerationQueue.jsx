@@ -22,6 +22,13 @@ const KIND_LABEL = {
   post: "Community post",
   comment: "Comment",
   dm_message: "Direct message",
+  park_board: "Park board",
+};
+
+const HIDE_TABLE = {
+  post: "community_posts",
+  comment: "post_comments",
+  park_board: "park_board_messages",
 };
 
 async function fetchReports() {
@@ -87,10 +94,12 @@ export default function ModerationQueue() {
     }
   };
 
-  /* Soft-hide the reported post or comment where it lives. */
+  /* Soft-hide the reported content where it lives (QUESTIONS.md O7:
+     park-board messages hide the same way as posts and comments). */
   const hideContent = async (report) => {
     setError("");
-    const table = report.target_kind === "post" ? "community_posts" : "post_comments";
+    const table = HIDE_TABLE[report.target_kind];
+    if (!table) return;
     try {
       const { data: me } = await supabase.auth.getUser();
       const { error: err } = await supabase
@@ -155,7 +164,7 @@ export default function ModerationQueue() {
               {open.map((r) => {
                 const age = hoursAgo(r.created_at);
                 const overdue = age >= 24;
-                const canHide = r.target_kind === "post" || r.target_kind === "comment";
+                const canHide = Boolean(HIDE_TABLE[r.target_kind]);
                 return (
                   <div
                     key={r.id}

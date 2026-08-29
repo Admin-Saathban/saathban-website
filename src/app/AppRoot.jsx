@@ -42,6 +42,7 @@ import SkillsRoutes from "./routes/skills/SkillsRoutes.jsx";
 import NotificationsRoutes from "./routes/notifications/NotificationsRoutes.jsx";
 import ProfileRoutes from "./routes/profile/ProfileRoutes.jsx";
 import BuddyHome from "./routes/buddy/BuddyHome.jsx";
+import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 
 // App-shell offline caching + installability (production only; no-op
@@ -159,6 +160,17 @@ export default function AppRoot() {
             <Route path="broadcasts" element={<BroadcastsPage />} />
             <Route path="moderation" element={<ModerationQueue />} />
           </Route>
+          {/* Milestones (0017): Icons get points, badges and
+              celebrations; admins get the message desk on the same
+              path. */}
+          <Route
+            path="milestones/*"
+            element={
+              <RequireAuth roles={["saath_icon", "admin"]}>
+                <MilestonesRoutes />
+              </RequireAuth>
+            }
+          />
           {/* Saath-Buddy home: live pipeline status, matched-Icons
               placeholder, documents channel (0015). */}
           <Route

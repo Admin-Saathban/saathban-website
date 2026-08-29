@@ -56,7 +56,7 @@ const css = `
 `;
 
 export default function IconHome() {
-  const { t, lang, meta } = useI18n();
+  const { t, ts, lang, meta } = useI18n();
   const dateLocale = dateLocaleFor(lang);
   const { profile } = useSession();
   // RequireAuth guarantees an Icon profile here; the fallback only
@@ -67,13 +67,16 @@ export default function IconHome() {
   const { logsByDate, writeEntry, status, pendingCount, lifetimePoints } =
     useDailyLogs(iconId);
   const [selectedOffset, setSelectedOffset] = useState(0);
-  // Rest day is a gentle UI state, not a daily_logs module — it stays
-  // per-session until the schema gives it a home.
-  const [restToday, setRestToday] = useState(false);
 
   const prefs = useIconPrefs();
   const logFor = (offset) => logsByDate[isoDate(daysAgo(-offset))] || {};
   const todayLog = logFor(0);
+  // Rest day lives in daily_logs since 0017 gave log_module a
+  // 'rest_day' value — resting IS participation (presence, points and
+  // streaks all count it server-side).
+  const restToday = !!todayLog.rest_day?.on;
+  const toggleRest = () =>
+    writeEntry(isoDate(new Date()), "rest_day", { on: !restToday });
   const todayEntries = dayEntries(prefs, new Date());
   const doneToday = todayEntries.filter((e) => isEntryDone(e, todayLog)).length;
   const pointsToday = doneToday * POINTS_PER_MODULE;
@@ -141,13 +144,13 @@ export default function IconHome() {
           background: C.bg,
           fontFamily: meta.fonts.body,
           color: C.textMain,
-          fontSize: 18,
+          fontSize: ts(18),
         }}
       >
       <style>{css}</style>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px" }}>
-        <p style={{ fontSize: 18, color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
+        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
           {now.toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
         </p>
 
@@ -170,7 +173,7 @@ export default function IconHome() {
         {selectedOffset < 0 && (
           <p
             style={{
-              fontSize: 18,
+              fontSize: ts(18),
               lineHeight: 1.5,
               color: C.brown,
               background: "rgba(255,255,255,0.7)",
@@ -190,7 +193,7 @@ export default function IconHome() {
                 border: "none",
                 padding: "0 4px",
                 color: C.green,
-                fontSize: 18,
+                fontSize: ts(18),
                 fontWeight: 700,
                 fontFamily: "inherit",
                 textDecoration: "underline",
@@ -221,7 +224,7 @@ export default function IconHome() {
           <p
             role="status"
             style={{
-              fontSize: 18,
+              fontSize: ts(18),
               lineHeight: 1.5,
               color: C.textMuted,
               margin: "-8px 0 14px",
@@ -239,7 +242,7 @@ export default function IconHome() {
             totalModules={todayEntries.length}
             lifetimePoints={lifetimePoints ?? 0}
             restDay={restToday}
-            onToggleRest={() => setRestToday((r) => !r)}
+            onToggleRest={toggleRest}
             editable
             circleMembers={MOCK_ICON.circleMembers}
           />

@@ -65,6 +65,22 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Email onboarding blocked on custom SMTP (QUESTIONS.md #3).
 
 ## Round log
+- **Outdoor + Milestones round:** Outdoor registration verified (rode
+  along in 7152295). Milestones wired: milestones/* registered
+  (Icons + admins), hub gains a Milestones card with the celebration
+  hook (award catch-up on hub load; the card turns 🎉 "Something to
+  celebrate!" while unseen badges exist — one is deliberately left
+  unseen on test-icon so the next visit celebrates), AdminLayout gains
+  a Milestones desk link. Rest day adopted onto the log (M2/#5
+  closed): the toggle now writes a rest_day daily_logs row via
+  logStore and survives reloads — presence/points/streaks count it
+  server-side. Moderation queue handles park_board reports (O7):
+  proper label + one-tap Hide for park_board_messages.
+  QUESTIONS sweep O1–O10, M1–M6: all reviewed; O7 and M2 actioned
+  (this round); O9's dedicated fixture test-buddy-pending@saathban.dev
+  is part of the baseline; the rest are recorded decisions needing no
+  code. Two in-flight quality-lane syntax breaks fixed/absorbed at the
+  seam (Thread.jsx comment-in-expression; PlaceView.jsx self-fixed).
 - **Morning priority round:** all lanes registered in AppRoot
   (events, skills, notifications + header bell, profile; community,
   circle, outdoor were already in). New **Icon hub** at /app/home

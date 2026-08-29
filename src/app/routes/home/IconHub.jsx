@@ -24,11 +24,13 @@ import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import { greetingKeyForHour, isoDate, POINTS_PER_MODULE } from "./homeMock.js";
 import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
+import { awardMyBadges, fetchMyEarnedBadges } from "../../lib/points.js";
 
 const CARDS = [
   { to: "/app/community", emoji: "🪷", key: "hub.community" },
   { to: "/app/events", emoji: "🎪", key: "hub.events" },
   { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
+  { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
   { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
   { to: "/app/profile", emoji: "🙂", key: "hub.profile" },
   { to: "/app/settings", emoji: "⚙️", key: "hub.settings" },
@@ -48,6 +50,26 @@ export default function IconHub() {
 
   const [reminders, setReminders] = useState([]);
   const [hasCircle, setHasCircle] = useState(false);
+  const [unseenBadges, setUnseenBadges] = useState(0);
+
+  // Celebration hook: catch-up award, then count unseen celebrations —
+  // the Milestones card announces them; the screen itself plays them.
+  useEffect(() => {
+    if (!iconId) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        await awardMyBadges();
+        const earned = await fetchMyEarnedBadges();
+        if (alive) setUnseenBadges(earned.filter((b) => !b.seen_at).length);
+      } catch {
+        /* the hub never blocks on the celebration count */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [iconId]);
 
   useEffect(() => {
     if (!iconId) return undefined;
@@ -212,12 +234,34 @@ export default function IconHub() {
             {(hasCircle
               ? [...CARDS.slice(0, 3), { to: "/app/circle", emoji: "🤝", key: "hub.circle" }, ...CARDS.slice(3)]
               : CARDS
-            ).map((c) => (
-              <Link key={c.to} to={c.to} style={{ ...cardStyle, minHeight: 96, flexDirection: "column", justifyContent: "center", gap: 6, textAlign: "center" }}>
-                <span aria-hidden="true" style={{ fontSize: 30 }}>{c.emoji}</span>
-                <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700 }}>{t(c.key)}</span>
-              </Link>
-            ))}
+            ).map((c) => {
+              const celebrating = c.key === "hub.milestones" && unseenBadges > 0;
+              return (
+                <Link
+                  key={c.to}
+                  to={c.to}
+                  style={{
+                    ...cardStyle,
+                    minHeight: 96,
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: 6,
+                    textAlign: "center",
+                    ...(celebrating ? { border: `2.5px solid ${C.green}` } : {}),
+                  }}
+                >
+                  <span aria-hidden="true" style={{ fontSize: 30 }}>
+                    {celebrating ? "🎉" : c.emoji}
+                  </span>
+                  <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700 }}>{t(c.key)}</span>
+                  {celebrating && (
+                    <span style={{ fontSize: ts(15), color: C.green, fontWeight: 700 }}>
+                      {t("hub.celebrate")}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </main>

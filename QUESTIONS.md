@@ -361,3 +361,23 @@ outranks the community gate - flag if that reading is wrong.
    other games get a link card until they ship an inline view.
 
 ---
+## The together layer (games/community lane, 2026-08-29, 0029 series)
+
+1. **Can a host re-invite someone who declined?** Not for that table —
+   the declined invite stands and re-invites are silent no-ops (the
+   anti-pestering stance requests use everywhere). A fresh table is a
+   fresh ask.
+2. **May you nudge before solving the riddle yourself?** No — the
+   strip only exists post-solve, and the server enforces it, keeping
+   the pre-solve veil airtight (no contacting a solved friend to fish
+   for the answer; person_warmth got the same veil in 0029b).
+3. **What counts as "connected" for games now?** Circle ∪ accepted
+   friends ∪ fellow group members — one definition (connections_of),
+   widened at the plug point 0025 documented.
+4. **Code-guess rate limit:** 12 tries per 5 minutes per account,
+   server-side; wrong, expired, and finished codes are one identical
+   kind answer.
+5. **Boast wording is English** (platform notification convention);
+   the badge boast deep-links to the booster's people-profile.
+
+---

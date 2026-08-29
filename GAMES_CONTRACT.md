@@ -100,6 +100,34 @@ seats_taken}`, ref_id = session id) and `'puzzle_result'` (payload
 `{puzzle_date, guesses}` — never the answer). Cards render in the
 community lane's feed.
 
+## The together layer (0029/0029b/0029c/0029d)
+
+- **Connections, one definition**: `connections_of(p)` (internal) =
+  circle ∪ accepted friends ∪ fellow group members, deduped
+  (circle > friend > group label), eligibility- and block-filtered.
+  `game_connected()` widened to match; `game_people()` exposes the
+  caller's own list for pickers — never show-then-fail.
+- **Invites v2**: `invite_to_game` is idempotent (same invite back,
+  one notification ever). `respond_game_invite` returns jsonb
+  `{result: 'joined'|'filled'|'declined', session_id, …}` — 'filled'
+  is graceful and carries game_key/seats_total for a start-again;
+  declines quietly notify the host (block-checked, transition-only).
+  `claim_open_seat` consumes the caller's own pending invite (0029c).
+- **`join_by_code(p_code)`** → `{result: 'joined'|'filled'|'no_table'}`,
+  rate-limited 12/5min server-side; wrong ≡ expired ≡ finished.
+- **Riddle together**: `riddle_people(p_date)` (count-only before the
+  caller solves; named solved/not-solved after — never answers or
+  guess counts), `riddle_touch(p_to, p_date, 'cheer'|'nudge',
+  p_sticker?)` → `{sent}` with a one-per-person-per-day cap ({sent:
+  false}, not an error). `person_warmth(p_profile)` → celebration
+  facts for a connection ({solved_today: bool|NULL-until-caller-
+  solves, badges this week}) — deliberately nothing comparable.
+- **`boast_to_people(kind, ref, payload)`**: share your OWN
+  badge/riddle/win to connections, deduped by the `boasts` table so
+  retries never re-notify. HARD LINES for every consumer: no ordered
+  lists by points, no side-by-side counts, no "ahead of you".
+- 0029d: `dm_messages.game_session_id` now ON DELETE CASCADE.
+
 ## Per-lane status
 
 - **Ludo (0020, live)**: your data survived 0022 (seats/current_seat

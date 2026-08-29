@@ -1,5 +1,7 @@
 /* Games home: my tables (your-turn first), the Daily Riddle door,
-   and the registry of games with a create-a-table flow. */
+   join-by-code, and the registry with a PEOPLE-FIRST create flow —
+   the picker comes before any form (0029: family at one table, not
+   adjacent features). */
 
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,8 +13,11 @@ import {
   fetchMySessions,
   fetchMyAttempts,
   createSession,
+  inviteToGame,
+  joinByCode,
   puzzleToday,
 } from "../../lib/games.js";
+import PeoplePicker from "./PeoplePicker.jsx";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
 function gameName(g, lang) {
@@ -32,10 +37,14 @@ export default function GamesHome() {
   const [solvedToday, setSolvedToday] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
   const [loadError, setLoadError] = useState(false);
-  const [creating, setCreating] = useState(null); // game key with the seats picker open
-  const [seats, setSeats] = useState(2);
+  const [creating, setCreating] = useState(null); // game key with the people picker open
+  const [picked, setPicked] = useState([]); // chosen people, in tap order
+  const [extraSeats, setExtraSeats] = useState(0); // bot/open seats past the people
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeMsg, setCodeMsg] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -65,15 +74,49 @@ export default function GamesHome() {
   const tables = sessions.filter((s) => byKey[s.game_key]?.kind === "turns");
   const turnGames = games.filter((g) => g.kind === "turns");
 
+  /* People first: seats = you + everyone you tapped + any extra
+     seats you left for bots or the community. Invites go out the
+     moment the table exists (server-idempotent — a retry can't
+     double-invite anyone). */
   const startTable = async (game) => {
+    if (busy) return;
     setBusy(true);
     try {
+      const seats = Math.min(
+        game.max_seats,
+        Math.max(game.min_seats, picked.length + 1 + extraSeats)
+      );
       const id = await createSession(game.key, seats);
+      for (const p of picked.slice(0, seats - 1)) {
+        try {
+          await inviteToGame(id, p.id);
+        } catch {
+          /* one refused invite must not strand the table */
+        }
+      }
       navigate(`/app/games/s/${id}`);
     } catch {
       setToast(t("games.actionError"));
       setBusy(false);
     }
+  };
+
+  const submitCode = async (e) => {
+    e.preventDefault();
+    if (busy || code.replace(/\D/g, "").length < 6) return;
+    setBusy(true);
+    setCodeMsg("");
+    try {
+      const r = await joinByCode(code);
+      if (r.result === "joined") {
+        navigate(`/app/games/s/${r.session_id}`);
+        return;
+      }
+      setCodeMsg(t(r.result === "filled" ? "games.code.filled" : "games.code.noTable"));
+    } catch {
+      setCodeMsg(t("games.code.slow"));
+    }
+    setBusy(false);
   };
 
   return (
@@ -101,6 +144,52 @@ export default function GamesHome() {
             {t("games.home.openCta")}
           </PrimaryBtn>
         </div>
+      </Card>
+
+      {/* Join by code — prominent, large digits, LTR-pinned so the
+          six digits read the same under Urdu. */}
+      <Card>
+        {!codeOpen ? (
+          <GhostBtn onClick={() => setCodeOpen(true)} aria-expanded={false}>
+            🔢 {t("games.code.cta")}
+          </GhostBtn>
+        ) : (
+          <form onSubmit={submitCode}>
+            <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 4px" }}>
+              {t("games.code.title")}
+            </p>
+            <BodyText muted>{t("games.code.hint")}</BodyText>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={7}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))}
+              aria-label={t("games.code.title")}
+              dir="ltr"
+              style={{
+                fontSize: ts(30),
+                letterSpacing: "0.35em",
+                textAlign: "center",
+                fontWeight: 800,
+                marginBottom: 12,
+              }}
+            />
+            {codeMsg && (
+              <BodyText role="status" style={{ color: C.brown, fontWeight: 600 }}>
+                {codeMsg}
+              </BodyText>
+            )}
+            <PrimaryBtn
+              type="submit"
+              onClick={submitCode}
+              disabled={busy || code.replace(/\D/g, "").length < 6}
+            >
+              {t("games.code.go")}
+            </PrimaryBtn>
+          </form>
+        )}
       </Card>
 
       {/* My tables */}
@@ -167,38 +256,75 @@ export default function GamesHome() {
             </BodyText>
           ) : creating === g.key ? (
             <div>
-              <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, margin: "0 0 8px" }}>
-                {t("games.create.seatsLabel")}
+              {/* PEOPLE FIRST — the picker before any form. */}
+              <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 2px" }}>
+                {t("games.picker.title")}
               </p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                {Array.from(
-                  { length: g.max_seats - g.min_seats + 1 },
-                  (_, i) => g.min_seats + i
-                ).map((n) => (
-                  <GhostBtn
-                    key={n}
-                    aria-pressed={seats === n}
-                    onClick={() => setSeats(n)}
-                    style={
-                      seats === n
-                        ? { borderColor: C.green, background: C.green, color: C.cream }
-                        : undefined
-                    }
-                  >
-                    {n}
-                  </GhostBtn>
-                ))}
+              <BodyText muted>{t("games.picker.intro")}</BodyText>
+              <PeoplePicker
+                states={Object.fromEntries(picked.map((p) => [p.id, "picked"]))}
+                maxPick={g.max_seats - 1}
+                pickedCount={picked.length}
+                onToggle={(p) =>
+                  setPicked((cur) =>
+                    cur.some((x) => x.id === p.id)
+                      ? cur.filter((x) => x.id !== p.id)
+                      : [...cur, p]
+                  )
+                }
+              />
+              {/* Then bots / open seats as the explicit fallback. */}
+              {picked.length + 1 < g.max_seats && (
+                <div style={{ marginTop: 12 }}>
+                  <BodyText muted style={{ marginBottom: 6 }}>
+                    {t("games.picker.botNote")}
+                  </BodyText>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {Array.from(
+                      { length: g.max_seats - Math.max(g.min_seats, picked.length + 1) + 1 },
+                      (_, i) => i
+                    ).map((n) => (
+                      <GhostBtn
+                        key={n}
+                        aria-pressed={extraSeats === n}
+                        onClick={() => setExtraSeats(n)}
+                        style={
+                          extraSeats === n
+                            ? { borderColor: C.green, background: C.green, color: C.cream }
+                            : undefined
+                        }
+                      >
+                        +{n}
+                      </GhostBtn>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+                <PrimaryBtn disabled={busy} onClick={() => startTable(g)}>
+                  {picked.length === 0
+                    ? t("games.picker.continueNone")
+                    : picked.length === 1
+                      ? t("games.picker.continueOne")
+                      : t("games.picker.continueCta", { n: picked.length })}
+                </PrimaryBtn>
+                <GhostBtn
+                  onClick={() => {
+                    setCreating(null);
+                    setPicked([]);
+                    setExtraSeats(0);
+                  }}
+                >
+                  {t("outdoor.place.formCancel")}
+                </GhostBtn>
               </div>
-              <BodyText muted>{t("games.create.seatsHint")}</BodyText>
-              <PrimaryBtn disabled={busy} onClick={() => startTable(g)}>
-                {t("games.create.cta")}
-              </PrimaryBtn>
             </div>
           ) : (
             <GhostBtn
               onClick={() => {
                 setCreating(g.key);
-                setSeats(g.min_seats);
+                setPicked([]);
+                setExtraSeats(0);
               }}
             >
               {t("games.home.playCta")}

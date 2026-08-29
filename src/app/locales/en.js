@@ -1420,6 +1420,9 @@ const en = {
       solved: "Solved — lovely. A new riddle arrives at midnight.",
       shareCta: "Share with the community",
       shared: "Shared — your neighbours will see you cracked it.",
+      gated: "The riddle opens once your volunteering application is through — it'll be waiting.",
+      shareIconOnly:
+        "Sharing to the community feed is a Saath-Icon thing — your people still see your solve in the strip below.",
       historyTitle: "Riddles past",
       historySolvedIn: "Solved in {n}",
       historyOpen: "Still open to guesses",

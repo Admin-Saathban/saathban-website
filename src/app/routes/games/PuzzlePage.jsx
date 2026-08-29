@@ -8,7 +8,15 @@ import { useEffect, useState } from "react";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { fetchPuzzle, fetchMyAttempts, guessPuzzle, puzzleToday } from "../../lib/games.js";
+import {
+  fetchPuzzle,
+  fetchMyAttempts,
+  guessPuzzle,
+  puzzleToday,
+  riddlePeople,
+  riddleTouch,
+  boastToPeople,
+} from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
@@ -25,8 +33,16 @@ export default function PuzzlePage() {
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
   const [toast, setToast] = useState("");
+  const [together, setTogether] = useState(null); // riddle_people() view
+  const [gated, setGated] = useState(false); // ineligible (e.g. pending buddy)
 
   const today = puzzleToday();
+
+  const loadTogether = () => {
+    riddlePeople(today)
+      .then(setTogether)
+      .catch(() => setTogether(null)); // strip is a bonus, never a blocker
+  };
 
   useEffect(() => {
     let alive = true;
@@ -35,12 +51,21 @@ export default function PuzzlePage() {
         if (!alive) return;
         setPuzzle(p);
         setAttempts(a);
-        setLoadError(!p);
+        /* No riddle rows under RLS usually means the community gate,
+           not a missing riddle — explain gently, never a bare error
+           (parity rule: ineligible states explain themselves). */
+        if (!p && (profile.role === "saath_buddy" || profile.is_paused)) {
+          setGated(true);
+        } else {
+          setLoadError(!p);
+        }
       })
       .catch(() => alive && setLoadError(true));
+    loadTogether();
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id]);
 
   const todayAttempt = attempts.find((a) => a.puzzle_date === today);
@@ -61,6 +86,34 @@ export default function PuzzlePage() {
       const r = await guessPuzzle(today, guess.trim());
       setResult(r);
       setGuess("");
+      if (r.correct) loadTogether(); // the named strip unlocks on solve
+    } catch {
+      setToast(t("games.actionError"));
+    }
+    setBusy(false);
+  };
+
+  const touch = async (person, kind) => {
+    setBusy(true);
+    try {
+      const r = await riddleTouch(person.id, kind, kind === "cheer" ? "👏" : null, today);
+      setToast(
+        r.sent
+          ? t(kind === "cheer" ? "games.puzzle.together.cheerToast" : "games.puzzle.together.nudgeToast")
+          : t("games.puzzle.together.capToast")
+      );
+      loadTogether();
+    } catch {
+      setToast(t("games.actionError"));
+    }
+    setBusy(false);
+  };
+
+  const boastRiddle = async () => {
+    setBusy(true);
+    try {
+      await boastToPeople("riddle", today);
+      setToast(t("games.puzzle.together.boastToast"));
     } catch {
       setToast(t("games.actionError"));
     }
@@ -90,7 +143,8 @@ export default function PuzzlePage() {
         🧩 {t("games.puzzle.title")}
       </h1>
       <BodyText muted>{t("games.puzzle.intro")}</BodyText>
-      {loadError && <BodyText role="alert">{t("games.loadError")}</BodyText>}
+      {gated && <BodyText style={{ fontWeight: 600 }}>{t("games.puzzle.gated")}</BodyText>}
+      {loadError && !gated && <BodyText role="alert">{t("games.loadError")}</BodyText>}
 
       {puzzle && (
         <Card>
@@ -153,12 +207,121 @@ export default function PuzzlePage() {
             </>
           )}
 
-          {canShare && (
-            <PrimaryBtn disabled={busy} onClick={share} style={{ marginTop: 8 }}>
-              {t("games.puzzle.shareCta")}
-            </PrimaryBtn>
+          {solved && !canShare && !shared && !(profile.role === "saath_icon" || profile.is_org) && (
+            <BodyText muted style={{ marginTop: 8, fontSize: ts(16) }}>
+              {t("games.puzzle.shareIconOnly")}
+            </BodyText>
           )}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+            {canShare && (
+              <PrimaryBtn disabled={busy} onClick={share}>
+                {t("games.puzzle.shareCta")}
+              </PrimaryBtn>
+            )}
+            {solved && (together?.people?.length ?? 0) > 0 && (
+              <GhostBtn disabled={busy} onClick={boastRiddle}>
+                📣 {t("games.puzzle.together.boastCta")}
+              </GhostBtn>
+            )}
+          </div>
         </Card>
+      )}
+
+      {/* ── Your people today (0029) ──────────────────────────────
+          Pre-solve: a count only — no names, no answer-fishing.
+          Post-solve: the strip — solved/not-solved, NEVER answers or
+          guess counts. Zero connections: warm own-framing, no lonely
+          empty grid. */}
+      {together && !together.solved && (
+        <BodyText muted style={{ fontWeight: 600 }}>
+          🧑‍🤝‍🧑{" "}
+          {together.solved_count === 0
+            ? t("games.puzzle.together.countNone")
+            : together.solved_count === 1
+              ? t("games.puzzle.together.countOne")
+              : t("games.puzzle.together.countLine", { n: together.solved_count })}
+        </BodyText>
+      )}
+      {together?.solved && (together.people?.length ?? 0) === 0 && (
+        <BodyText muted style={{ fontWeight: 600 }}>
+          🌱 {t("games.puzzle.together.aloneLine")}
+        </BodyText>
+      )}
+      {together?.solved && (together.people?.length ?? 0) > 0 && (
+        <>
+          <SectionLabel>{t("games.puzzle.together.title")}</SectionLabel>
+          <Card>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {together.people.map((p) => (
+                <li
+                  key={p.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 0",
+                    borderBottom: `1px solid ${C.warmGray}`,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: p.solved ? C.green : C.warmGray,
+                      color: C.cream,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                      fontWeight: 700,
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    {(p.name || "?").trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 120 }}>
+                    <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700 }}>
+                      {p.name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: ts(15),
+                        fontWeight: 600,
+                        color: p.solved ? C.green : C.textMuted,
+                      }}
+                    >
+                      {p.solved
+                        ? `✓ ${t("games.puzzle.together.solvedTag")}`
+                        : t("games.puzzle.together.notYetTag")}
+                    </span>
+                  </span>
+                  {p.solved ? (
+                    p.cheered ? (
+                      <span style={{ fontSize: ts(16), fontWeight: 700, color: C.green }}>
+                        👏 ✓
+                      </span>
+                    ) : (
+                      <GhostBtn disabled={busy} onClick={() => touch(p, "cheer")}>
+                        👏 {t("games.puzzle.together.cheerCta")}
+                      </GhostBtn>
+                    )
+                  ) : p.nudged ? (
+                    <span style={{ fontSize: ts(16), fontWeight: 700, color: C.olive }}>
+                      🕊️ ✓
+                    </span>
+                  ) : (
+                    <GhostBtn disabled={busy} onClick={() => touch(p, "nudge")}>
+                      🕊️ {t("games.puzzle.together.nudgeCta")}
+                    </GhostBtn>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </>
       )}
 
       {attempts.length > 0 && (

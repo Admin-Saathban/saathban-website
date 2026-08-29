@@ -102,13 +102,76 @@ export async function inviteToGame(sessionId, inviteeId) {
   if (error) throw error;
 }
 
+/* v2 (0029): returns {result: 'joined'|'filled'|'declined',
+   session_id, …}. 'filled' means the table completed while the invite
+   sat — graceful, with enough info to start a fresh table. */
 export async function respondInvite(inviteId, accept) {
   const { data, error } = await supabase.rpc("respond_game_invite", {
     p_invite: inviteId,
     p_accept: accept,
   });
   if (error) throw error;
-  return data; // session id
+  return data;
+}
+
+/* ── The together layer (0029) ────────────────────────────────────── */
+
+/* The caller's invitable connections — circle ∪ friends ∪ group
+   co-members, deduped, eligibility- and block-filtered SERVER-side so
+   the picker can never show someone and then fail. */
+export async function gamePeople() {
+  const { data, error } = await supabase.rpc("game_people");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* {result: 'joined'|'filled'|'no_table', session_id?}. Rate-limited
+   server-side; a wrong code is indistinguishable from an expired one. */
+export async function joinByCode(code) {
+  const { data, error } = await supabase.rpc("join_by_code", { p_code: code });
+  if (error) throw error;
+  return data;
+}
+
+/* Before the caller solves: {solved:false, solved_count}. After:
+   {solved:true, people:[{id,name,how,solved,cheered,nudged}]} —
+   never answers, never guess counts. */
+export async function riddlePeople(date = puzzleToday()) {
+  const { data, error } = await supabase.rpc("riddle_people", { p_date: date });
+  if (error) throw error;
+  return data;
+}
+
+/* One cheer + one nudge per person per riddle day (server-enforced).
+   Returns {sent} — false means the cap already spoke for you. */
+export async function riddleTouch(toId, kind, sticker = null, date = puzzleToday()) {
+  const { data, error } = await supabase.rpc("riddle_touch", {
+    p_to: toId,
+    p_date: date,
+    p_kind: kind,
+    p_sticker: sticker,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/* Celebration facts about ONE connection — {solved_today, badges}.
+   No counts, no points, nothing comparable. */
+export async function personWarmth(profileId) {
+  const { data, error } = await supabase.rpc("person_warmth", { p_profile: profileId });
+  if (error) throw error;
+  return data;
+}
+
+/* Share your OWN moment with your people. Retry-proof server-side. */
+export async function boastToPeople(kind, refKey, payload = {}) {
+  const { data, error } = await supabase.rpc("boast_to_people", {
+    p_kind: kind,
+    p_ref: refKey,
+    p_payload: payload,
+  });
+  if (error) throw error;
+  return data; // people notified (0 on a repeat tap)
 }
 
 export async function claimOpenSeat(sessionId) {
@@ -142,6 +205,18 @@ export async function gameTick(sessionId = null) {
 export async function reclaimSeat(sessionId) {
   const { error } = await supabase.rpc("reclaim_seat", { p_session: sessionId });
   if (error) throw error;
+}
+
+/* Pending invites on one session (both sides may read theirs; the
+   host sees all they sent — feeds the lobby picker's "Asked" state). */
+export async function fetchSessionInvites(sessionId) {
+  const { data, error } = await supabase
+    .from("game_invites")
+    .select("id, invitee_id, inviter_id, seat_no, status")
+    .eq("session_id", sessionId)
+    .eq("status", "pending");
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function fetchMyInvites(profileId) {

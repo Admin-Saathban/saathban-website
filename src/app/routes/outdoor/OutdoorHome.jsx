@@ -1,24 +1,40 @@
-﻿/* ════════════════════════════════════════════════
-   Outdoor — /app/outdoor. A clean list grouped by city and area
-   (SPEC.md; no map API in v1). Each place shows how many people the
-   CALLER may know are there right now — the count is personal by
-   construction, because RLS only returns check-ins this account is
-   allowed to see.
+/* ════════════════════════════════════════════════
+   Outdoor — /app/outdoor. One city at a time (SPEC.md; no map API in
+   v1): the list opens on the signed-in person's own city, with chips
+   to visit another — never a flat all-cities dump. Each place shows
+   how many people the CALLER may know are there right now (personal
+   by construction — RLS only returns check-ins this account may see)
+   and how many happenings — planned outings plus "who's up
+   for…?" invitations — are on today or upcoming.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { useSession } from "../../lib/session.jsx";
 import { TYPE_ICONS } from "./outdoorCopy.js";
-import { canUseCommunity, fetchPlaces, fetchLiveCheckins } from "./outdoorData.js";
+import {
+  canUseCommunity,
+  fetchPlaces,
+  fetchLiveCheckins,
+  fetchUpcomingOutingsAll,
+  fetchPlacedActivities,
+  activityIsCurrent,
+  dropMirroredOutings,
+} from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
+
+const cityKey = (profileId) => `saathban.app.outdoorCity.${profileId || "anon"}`;
 
 export default function OutdoorHome() {
   const { t, ts, meta } = useI18n();
+  const { profile } = useSession();
   const [access, setAccess] = useState(null);
   const [places, setPlaces] = useState([]);
   const [liveCounts, setLiveCounts] = useState({});
+  const [happeningCounts, setHappeningCounts] = useState({});
+  const [city, setCity] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -35,6 +51,38 @@ export default function OutdoorHome() {
         const counts = {};
         for (const ci of live) counts[ci.place_id] = (counts[ci.place_id] || 0) + 1;
         setLiveCounts(counts);
+
+        // Open on this person's own city: their remembered choice first,
+        // then the city on their profile, then the first city we have.
+        const cities = [...new Set(rows.map((p) => p.city))];
+        let remembered = "";
+        try {
+          remembered = localStorage.getItem(cityKey(profile?.id)) || "";
+        } catch {
+          /* storage unavailable — fall through */
+        }
+        setCity(
+          cities.includes(remembered) ? remembered
+            : cities.includes(profile?.city) ? profile.city
+            : cities[0] || ""
+        );
+
+        // Happening badges are best-effort — the list stands without them.
+        try {
+          const [outingsAll, activities] = await Promise.all([
+            fetchUpcomingOutingsAll(),
+            fetchPlacedActivities(),
+          ]);
+          if (cancelled) return;
+          const h = {};
+          for (const o of dropMirroredOutings(outingsAll, activities))
+            h[o.place_id] = (h[o.place_id] || 0) + 1;
+          for (const a of activities.filter((p) => activityIsCurrent(p)))
+            h[a.payload.place_id] = (h[a.payload.place_id] || 0) + 1;
+          setHappeningCounts(h);
+        } catch {
+          /* badges only */
+        }
       } catch {
         if (!cancelled) {
           setError(t("outdoor.home.loadError"));
@@ -45,14 +93,24 @@ export default function OutdoorHome() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [profile?.id]);
 
-  // city → area → places
-  const byCity = {};
+  const cities = [...new Set(places.map((p) => p.city))];
+  const pickCity = (c) => {
+    setCity(c);
+    try {
+      localStorage.setItem(cityKey(profile?.id), c);
+    } catch {
+      /* remembering is optional */
+    }
+  };
+
+  // area → places, for the selected city only
+  const byArea = {};
   for (const p of places) {
-    byCity[p.city] = byCity[p.city] || {};
-    byCity[p.city][p.area] = byCity[p.city][p.area] || [];
-    byCity[p.city][p.area].push(p);
+    if (p.city !== city) continue;
+    byArea[p.area] = byArea[p.area] || [];
+    byArea[p.area].push(p);
   }
 
   return (
@@ -83,24 +141,52 @@ export default function OutdoorHome() {
           <BodyText muted style={{ margin: 0 }}>{t("outdoor.home.noAccess")}</BodyText>
         </Card>
       ) : (
-        Object.entries(byCity).map(([city, areas]) => (
-          <div key={city}>
-            <h2
-              style={{
-                fontFamily: meta.fonts.heading,
-                fontSize: ts(25),
-                fontWeight: 700,
-                color: C.brown,
-                margin: "26px 0 4px",
-              }}
+        <>
+          {cities.length > 1 && (
+            <div
+              role="group"
+              aria-label={t("outdoor.home.cityChips")}
+              style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 6 }}
             >
-              {city}
-            </h2>
-            {Object.entries(areas).map(([area, list]) => (
+              {cities.map((c) => {
+                const on = c === city;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => pickCity(c)}
+                    style={{
+                      minHeight: A11Y.minTapTargetPx,
+                      padding: "0 20px",
+                      borderRadius: 50,
+                      border: `2px solid ${on ? C.green : C.warmGray}`,
+                      background: on ? C.green : C.white,
+                      color: on ? C.cream : C.textMain,
+                      fontSize: ts(A11Y.minBodyPx),
+                      fontWeight: 600,
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {on ? `✓ ${c}` : c}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {Object.keys(byArea).length === 0 ? (
+            <Card>
+              <BodyText muted style={{ margin: 0 }}>{t("outdoor.home.emptyCity")}</BodyText>
+            </Card>
+          ) : (
+            Object.entries(byArea).map(([area, list]) => (
               <div key={area}>
                 <SectionLabel>{area}</SectionLabel>
                 {list.map((p) => {
                   const n = liveCounts[p.id] || 0;
+                  const h = happeningCounts[p.id] || 0;
                   return (
                     <Link
                       key={p.id}
@@ -137,14 +223,21 @@ export default function OutdoorHome() {
                             {n === 1 ? t("outdoor.home.hereNowOne") : t("outdoor.home.hereNowMany", { n })}
                           </span>
                         )}
+                        {h > 0 && (
+                          <span style={{ display: "block", fontSize: ts(16), color: C.brown, fontWeight: 600 }}>
+                            {h === 1
+                              ? t("outdoor.home.happeningOne")
+                              : t("outdoor.home.happeningMany", { n: h })}
+                          </span>
+                        )}
                       </span>
                     </Link>
                   );
                 })}
               </div>
-            ))}
-          </div>
-        ))
+            ))
+          )}
+        </>
       )}
     </OutdoorScreen>
   );

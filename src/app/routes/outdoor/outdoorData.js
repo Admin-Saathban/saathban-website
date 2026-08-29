@@ -6,6 +6,14 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+// "Who's up for…" writes delegate to the community lane's own store so
+// there is exactly ONE authority for the activity payload shape
+// (0027/0028: payload.activity/place_id/place_name/starts_at/limit/rsvp;
+// a timed+placed activity also mirrors an outing row, linked by ref_id).
+import {
+  shareActivity as communityShareActivity,
+  joinActivity as communityJoinActivity,
+} from "../community/communityData.js";
 
 export async function canUseCommunity() {
   const { data, error } = await supabase.rpc("can_use_community");
@@ -107,6 +115,74 @@ export async function cancelOuting(outingId) {
     .eq("id", outingId);
   if (error) throw error;
 }
+
+/* All upcoming outings across every place — the list's happening
+   badges. RLS trims to what this viewer may see, so counts stay
+   personal exactly like the here-now counts. */
+export async function fetchUpcomingOutingsAll() {
+  const { data, error } = await supabase
+    .from("outdoor_outings")
+    .select("id, place_id, starts_at")
+    .is("canceled_at", null)
+    .gt("starts_at", new Date().toISOString());
+  if (error) throw error;
+  return data || [];
+}
+
+/* "Who's up for…" posts linked to any place (0027). Read-only here;
+   the payload keys come from the community writer above. */
+export async function fetchPlacedActivities() {
+  const { data, error } = await supabase
+    .from("community_posts")
+    .select("id, author_id, post_type, ref_id, payload, created_at")
+    .in("post_type", ["walk", "activity"])
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data || []).filter((p) => p.payload && p.payload.place_id);
+}
+
+/* "Today's / upcoming": a timed activity counts until it starts (and a
+   grace hour after); a timeless "who's up for chai?" counts for 24h
+   from posting — an open invitation is a today-happening. */
+export function activityIsCurrent(post, now = Date.now()) {
+  const s = post.payload?.starts_at;
+  if (s) {
+    const t = new Date(s).getTime();
+    return t > now - 60 * 60 * 1000;
+  }
+  return new Date(post.created_at).getTime() > now - 24 * 60 * 60 * 1000;
+}
+
+/* Join counts + whether I'm among them, for a set of activity posts.
+   post_joins is community-readable (0027), so counts are honest. */
+export async function fetchActivityJoins(postIds, myId) {
+  if (!postIds.length) return { counts: {}, mine: new Set() };
+  const { data, error } = await supabase
+    .from("post_joins")
+    .select("post_id, profile_id")
+    .in("post_id", postIds);
+  if (error) throw error;
+  const counts = {};
+  const mine = new Set();
+  for (const j of data || []) {
+    counts[j.post_id] = (counts[j.post_id] || 0) + 1;
+    if (j.profile_id === myId) mine.add(j.post_id);
+  }
+  return { counts, mine };
+}
+
+/* A timed+placed activity also creates a mirror outing row, linked by
+   the post's ref_id (0028). Drop the mirrors so one plan never counts
+   or lists twice. */
+export function dropMirroredOutings(outings, activities) {
+  const mirrored = new Set(activities.map((p) => p.ref_id).filter(Boolean));
+  return outings.filter((o) => !mirrored.has(o.id));
+}
+
+export const startActivityHere = (userId, args) => communityShareActivity(userId, args);
+export const joinPlacedActivity = (postId) => communityJoinActivity(postId);
 
 export async function fetchBoard(placeId) {
   const { data, error } = await supabase

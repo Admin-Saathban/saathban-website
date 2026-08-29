@@ -30,6 +30,12 @@ import {
   reportBoardMessage,
   blockAuthor,
   unblockAuthor,
+  fetchPlacedActivities,
+  activityIsCurrent,
+  fetchActivityJoins,
+  dropMirroredOutings,
+  startActivityHere,
+  joinPlacedActivity,
 } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, Toast } from "./ui.jsx";
 
@@ -86,10 +92,18 @@ export default function PlaceView() {
   const [outings, setOutings] = useState([]);
   const [board, setBoard] = useState([]);
   const [boardBody, setBoardBody] = useState("");
+  const [activities, setActivities] = useState([]);
+  const [joins, setJoins] = useState({ counts: {}, mine: new Set() });
+  const [startOpen, setStartOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [planWhen, setPlanWhen] = useState("");
   const [planNote, setPlanNote] = useState("");
   const [planVis, setPlanVis] = useState("connections");
+  const [actOpen, setActOpen] = useState(false);
+  const [actWhat, setActWhat] = useState("");
+  const [actWhen, setActWhen] = useState("");
+  const [actNote, setActNote] = useState("");
+  const [actLimit, setActLimit] = useState("");
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
@@ -102,25 +116,33 @@ export default function PlaceView() {
 
   const load = useCallback(async () => {
     try {
-      const [places, live, my, outs, msgs] = await Promise.all([
+      const [places, live, my, outs, msgs, acts] = await Promise.all([
         fetchPlaces(),
         fetchLiveCheckins(),
         myId ? myLiveCheckin(myId) : null,
         fetchOutings(placeId),
         fetchBoard(placeId),
+        fetchPlacedActivities(),
       ]);
       const p = places.find((x) => x.id === placeId) || null;
       setPlace(p);
       const hereNow = live.filter((ci) => ci.place_id === placeId);
       setHere(hereNow);
       setMine(my && my.place_id === placeId ? my : null);
-      setOutings(outs);
+      // A timed activity mirrors an outing row — show it once, as the
+      // activity (which carries the join button).
+      const outsClean = dropMirroredOutings(outs, acts);
+      setOutings(outsClean);
+      const actsHere = acts.filter((a) => a.payload.place_id === placeId && activityIsCurrent(a));
+      setActivities(actsHere);
+      setJoins(await fetchActivityJoins(actsHere.map((a) => a.id), myId));
       setBoard(msgs);
       setNames(
         await fetchAuthors([
           ...hereNow.map((x) => x.profile_id),
-          ...outs.map((x) => x.creator_id),
+          ...outsClean.map((x) => x.creator_id),
           ...msgs.map((x) => x.author_id),
+          ...actsHere.map((x) => x.author_id),
         ])
       );
     } catch {
@@ -164,6 +186,45 @@ export default function PlaceView() {
       setPlanOpen(false);
       setPlanWhen("");
       setPlanNote("");
+      await load();
+    } catch {
+      setError(t("outdoor.place.checkinFailed"));
+    }
+  };
+
+  const doJoin = async (a) => {
+    setError("");
+    try {
+      const res = await joinPlacedActivity(a.id);
+      setJoins((j) => {
+        const mine = new Set(j.mine);
+        if (res.joined) mine.add(a.id);
+        return { counts: { ...j.counts, [a.id]: res.count }, mine };
+      });
+      if (!res.joined && res.full) showToast(t("outdoor.place.actFullToast"));
+    } catch {
+      setError(t("outdoor.place.joinFailed"));
+    }
+  };
+
+  const saveActivity = async (e) => {
+    e.preventDefault();
+    if (!actWhat.trim()) return;
+    setError("");
+    try {
+      await startActivityHere(myId, {
+        activity: actWhat,
+        placeId,
+        placeText: place.name,
+        startsAtIso: actWhen ? new Date(actWhen).toISOString() : null,
+        note: actNote,
+        limit: actLimit ? Number(actLimit) : null,
+      });
+      setActOpen(false);
+      setActWhat("");
+      setActWhen("");
+      setActNote("");
+      setActLimit("");
       await load();
     } catch {
       setError(t("outdoor.place.checkinFailed"));
@@ -316,9 +377,85 @@ export default function PlaceView() {
             </div>
           )}
 
-          {/* Planned outings */}
-          <SectionLabel>{t("outdoor.place.outingsLabel")}</SectionLabel>
-          {outings.length === 0 && <BodyText muted>{t("outdoor.place.noOutings")}</BodyText>}
+          {/* Happening here — "who's up for…?" invitations + planned
+              outings, the same happenings the list badge counted. */}
+          <SectionLabel>{t("outdoor.place.happeningLabel")}</SectionLabel>
+          {outings.length === 0 && activities.length === 0 && (
+            <BodyText muted>{t("outdoor.place.happeningEmpty")}</BodyText>
+          )}
+          {activities.map((a) => {
+            const count = joins.counts[a.id] || 0;
+            const joined = joins.mine.has(a.id);
+            const full = !!a.payload.limit && count >= a.payload.limit;
+            return (
+              <Card key={a.id} style={{ padding: 16, border: `1.5px solid ${C.sage}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <BodyText style={{ margin: 0, flex: "1 1 220px" }}>
+                    <strong>{firstNameOf(names[a.author_id])}</strong>
+                    {" — "}
+                    {/* legacy 'walk' posts (pre-0027) carry no activity text */}
+                    {t("outdoor.place.actWho", { what: a.payload.activity || t("outdoor.place.actWalk") })}
+                    {a.payload.starts_at && (
+                      <span style={{ display: "block", color: C.textMuted }}>
+                        🕐{" "}
+                        {new Date(a.payload.starts_at).toLocaleString(dateLocale, {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                    {a.payload.note && (
+                      <span style={{ display: "block", color: C.textMuted }}>{a.payload.note}</span>
+                    )}
+                    {(count > 0 || a.payload.limit) && (
+                      <span style={{ display: "block", fontSize: ts(16), fontWeight: 600, color: C.greenMuted }}>
+                        {count === 1
+                          ? t("outdoor.place.actOneIn")
+                          : count > 1
+                            ? t("outdoor.place.actManyIn", { n: count })
+                            : ""}
+                        {a.payload.limit
+                          ? `${count > 0 ? " · " : ""}${t("outdoor.place.actLimitOf", { n: a.payload.limit })}`
+                          : ""}
+                      </span>
+                    )}
+                  </BodyText>
+                  {a.author_id === myId ? (
+                    <span
+                      style={{
+                        fontSize: ts(16),
+                        fontWeight: 700,
+                        color: C.greenMuted,
+                        padding: "8px 14px",
+                      }}
+                    >
+                      {t("outdoor.place.actYours")}
+                    </span>
+                  ) : joined ? (
+                    <span
+                      style={{
+                        fontSize: ts(A11Y.minBodyPx),
+                        fontWeight: 700,
+                        color: C.green,
+                        padding: "8px 14px",
+                      }}
+                    >
+                      ✓ {t("outdoor.place.actJoined")}
+                    </span>
+                  ) : full ? (
+                    <GhostBtn disabled aria-disabled="true">
+                      {t("outdoor.place.actFull")}
+                    </GhostBtn>
+                  ) : (
+                    <PrimaryBtn onClick={() => doJoin(a)}>{t("outdoor.place.actJoin")}</PrimaryBtn>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
           {outings.map((o) => (
             <Card key={o.id} style={{ padding: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -344,8 +481,7 @@ export default function PlaceView() {
               </div>
             </Card>
           ))}
-          {isIcon &&
-            (planOpen ? (
+          {isIcon && planOpen && (
               <Card>
                 <form onSubmit={savePlan}>
                   <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
@@ -376,11 +512,97 @@ export default function PlaceView() {
                   </div>
                 </form>
               </Card>
+          )}
+
+          {/* "Ask who's up for…?" — an open invitation pre-filled with
+              this place; writes through the community lane's own store. */}
+          {isIcon && actOpen && (
+            <Card>
+              <form onSubmit={saveActivity}>
+                <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                  {t("outdoor.place.actWhatLabel")}
+                  <input
+                    value={actWhat}
+                    onChange={(e) => setActWhat(e.target.value)}
+                    placeholder={t("outdoor.place.actWhatPh")}
+                    maxLength={120}
+                    style={{ marginTop: 6 }}
+                  />
+                </label>
+                <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                  {t("outdoor.place.actWhenLabel")}
+                  <input
+                    type="datetime-local"
+                    value={actWhen}
+                    onChange={(e) => setActWhen(e.target.value)}
+                    style={{ marginTop: 6 }}
+                  />
+                </label>
+                <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                  {t("outdoor.place.outingNote")}
+                  <input
+                    value={actNote}
+                    onChange={(e) => setActNote(e.target.value)}
+                    placeholder={t("outdoor.place.outingNotePh")}
+                    maxLength={300}
+                    style={{ marginTop: 6 }}
+                  />
+                </label>
+                <label style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 600, marginBottom: 14 }}>
+                  {t("outdoor.place.actLimitLabel")}
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={2}
+                    max={50}
+                    value={actLimit}
+                    onChange={(e) => setActLimit(e.target.value)}
+                    style={{ marginTop: 6 }}
+                  />
+                </label>
+                <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+                  <PrimaryBtn type="submit" onClick={saveActivity} disabled={!actWhat.trim()}>
+                    {t("outdoor.place.actSave")}
+                  </PrimaryBtn>
+                  <GhostBtn onClick={() => setActOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
+                </div>
+              </form>
+            </Card>
+          )}
+
+          {/* Start something here — an Icon can initiate at any moment. */}
+          {isIcon && !planOpen && !actOpen && (
+            startOpen ? (
+              <Card style={{ border: `2px solid ${C.green}` }}>
+                <BodyText style={{ fontWeight: 700 }}>{t("outdoor.place.startTitle")}</BodyText>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <GhostBtn
+                    onClick={() => {
+                      setStartOpen(false);
+                      setPlanOpen(true);
+                    }}
+                    style={{ borderColor: C.green, color: C.green, minHeight: 56 }}
+                  >
+                    🗓️ {t("outdoor.place.planCta")}
+                  </GhostBtn>
+                  <GhostBtn
+                    onClick={() => {
+                      setStartOpen(false);
+                      setActOpen(true);
+                    }}
+                    style={{ borderColor: C.green, color: C.green, minHeight: 56 }}
+                  >
+                    🙋 {t("outdoor.place.actCta")}
+                  </GhostBtn>
+                  <GhostBtn onClick={() => setStartOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
+                </div>
+              </Card>
             ) : (
-              <GhostBtn onClick={() => setPlanOpen(true)} style={{ borderColor: C.green, color: C.green }}>
-                🗓️ {t("outdoor.place.planCta")}
-              </GhostBtn>
-            ))}
+              <PrimaryBtn onClick={() => setStartOpen(true)} style={{ minHeight: 60, width: "100%" }}>
+                ✨ {t("outdoor.place.startCta")}
+              </PrimaryBtn>
+            )
+          )}
 
           {/* Park board — open chat, guards one tap away. */}
           <SectionLabel>{t("outdoor.place.boardLabel")}</SectionLabel>

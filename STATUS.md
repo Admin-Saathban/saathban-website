@@ -71,7 +71,52 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - Groups lane (0026) will extend community_reports kinds — add its kinds to ModerationQueue KIND_LABEL/HIDE_TABLE on integration.
 - Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
 
-## Pre-launch test-data purge list
+## Pre-launch test-data purge — THERE IS NOW A SCRIPT
+
+**`scripts/purge-test-data.mjs`** — dry run by default, `--execute`
+to run it, needs `SUPABASE_SERVICE_ROLE_KEY` (deleting an account
+touches the auth schema, which the anon key cannot).
+
+```
+node scripts/purge-test-data.mjs                 # show what would go
+SUPABASE_SERVICE_ROLE_KEY=... node scripts/purge-test-data.mjs --execute
+```
+
+The list below is no longer maintained by hand — the script holds it,
+and the volume is why: at the last count 16 accounts, **51 game
+sessions and 30,247 move rows**, 334 notifications, 23 cancelled
+sessions on smoke-icon alone, plus posts, DMs, logs and fixtures.
+That is past the size where a person reliably clears it by hand the
+night before launch.
+
+**The safety property**: this database holds REAL accounts beside the
+test ones (`hr@saathban.com`, `saathban@gmail.com`,
+`tahirsajeel2002@gmail.com`). The script deletes only from an explicit
+allow-list of addresses — never a pattern like `%@saathban.dev`, never
+"everything except". Meeting an account on neither list, it STOPS and
+prints it rather than guessing. Adding a test account means adding it
+to `PURGE_EMAILS`; that friction is deliberate. Verified 2026-08-29:
+the lists reconcile against the live 16 with nothing unaccounted and
+no real address on the purge list.
+
+Nearly everything cascades from `profiles.id`, so deleting the account
+takes its logs, seats, messages, notifications and memberships with
+it. Ownerless fixtures (the "Chai Reunion — Model Town" event, the
+"Sticker Test Group") are named and removed explicitly. The script
+then RE-READS to confirm the accounts are gone and no rows still point
+at the deleted ids — agreement 10, because a delete that removed
+nothing looks exactly like one that worked.
+
+**Not automated, do by hand in the dashboard afterwards:** empty the
+`cnic` bucket (identity documents — the most sensitive thing here),
+`dm-images`, and `voice-notes`. Storage is not covered by the cascade.
+
+Still worth doing before launch, beyond the data: fix the email
+template redirect, add the production domain to the redirect
+allow-list, revisit Site URL, and have the Urdu reviewed by a native
+speaker.
+
+### The old hand-maintained inventory (kept for reference)
 
 Everything below is dev fixture data in project `vmtbywzmqyzafbgquzjh`
 and must be purged (or the DB reset wholesale) before real accounts

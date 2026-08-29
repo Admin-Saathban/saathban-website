@@ -64,7 +64,23 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - SOS: deferred by design (SPEC — PWA push limits).
 - Email onboarding blocked on custom SMTP (QUESTIONS.md #3).
 
+## Integration queue
+- Wire carrom's DM inline-board when the community lane lands that piece (GAMES_CONTRACT_ASKS.md A4 + CARROM_WIRING.md).
+- Groups lane (0026) will extend community_reports kinds — add its kinds to ModerationQueue KIND_LABEL/HIDE_TABLE on integration.
+- Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
+
 ## Round log
+- **Magic-link + game-invite round:** traced the root-landing magic
+  links to the customized email template using redirect_to={{ .SiteURL }}
+  instead of {{ .RedirectTo }} (edge logs show the clicked link's
+  redirect_to = bare origin); shipped a root-landing safety net in
+  main.jsx (tokens on / forward to /app/auth/complete) and verified
+  THREE real minted-token signups end to end — correct-path link lands
+  the hub; broken-template-shaped link now recovers via the deployed
+  net (was dying on the marketing root). Applied 0025: game invites
+  accept any CONNECTED Icon/Fam/ACTIVE Buddy (circle either direction
+  today; friends/matching plug into game_connected()), invitee standing
+  checked at invite AND accept. Registrar: 0026 reserved for groups.
 - **Outdoor + Milestones round:** Outdoor registration verified (rode
   along in 7152295). Milestones wired: milestones/* registered
   (Icons + admins), hub gains a Milestones card with the celebration

@@ -6,7 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { BodyText, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
-import { STICKERS, isStickerBody } from "../../people/peopleStore.js";
+import { isStickerBody } from "../../people/peopleStore.js";
+import StickerPicker from "../../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../../assets/stickers/stickers.jsx";
 import { SEAT_COLORS } from "./board.js";
 import { fetchChat, sendChat } from "./ludoRails.js";
 
@@ -72,7 +74,8 @@ export default function ChatPanel({ sessionId, myId, seats }) {
             {messages.map((m) => {
               const seat = seatOf(m.sender_id);
               const mine = m.sender_id === myId;
-              const sticker = isStickerBody(m.body);
+              const svgSticker = parseStickerRef(m.body);
+              const sticker = !svgSticker && isStickerBody(m.body);
               return (
                 <div
                   key={m.id}
@@ -99,21 +102,25 @@ export default function ChatPanel({ sessionId, myId, seats }) {
                         {seat?.name || t("ludo.seat.someone")}
                       </BodyText>
                     )}
-                    <div
-                      style={{
-                        display: "inline-block",
-                        padding: sticker ? "2px 6px" : "8px 14px",
-                        borderRadius: 14,
-                        background: sticker ? "transparent" : mine ? C.green : C.white,
-                        border: sticker || mine ? "none" : `1px solid ${C.warmGray}`,
-                        color: mine ? C.cream : C.textMain,
-                        fontSize: sticker ? ts(44) : ts(A11Y.minBodyPx),
-                        lineHeight: sticker ? 1.1 : 1.5,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {m.body}
-                    </div>
+                    {svgSticker ? (
+                      <Sticker id={svgSticker} size={96} style={{ maxWidth: "100%" }} />
+                    ) : (
+                      <div
+                        style={{
+                          display: "inline-block",
+                          padding: sticker ? "2px 6px" : "8px 14px",
+                          borderRadius: 14,
+                          background: sticker ? "transparent" : mine ? C.green : C.white,
+                          border: sticker || mine ? "none" : `1px solid ${C.warmGray}`,
+                          color: mine ? C.cream : C.textMain,
+                          fontSize: sticker ? ts(44) : ts(A11Y.minBodyPx),
+                          lineHeight: sticker ? 1.1 : 1.5,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {m.body}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -122,35 +129,11 @@ export default function ChatPanel({ sessionId, myId, seats }) {
           </div>
 
           {stickersOpen && (
-            <div
-              role="group"
-              aria-label={t("ludo.chat.stickers")}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(52px, 1fr))",
-                gap: 4,
-                marginBottom: 10,
-              }}
-            >
-              {STICKERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => send(s)}
-                  aria-label={`${t("ludo.chat.stickers")}: ${s}`}
-                  style={{
-                    minHeight: A11Y.minTapTargetPx,
-                    fontSize: 30,
-                    background: "transparent",
-                    border: "none",
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
+            <div style={{ marginBottom: 10 }}>
+              <StickerPicker
+                label={t("ludo.chat.stickers")}
+                onPick={(id) => send(stickerRef(id))}
+              />
             </div>
           )}
 

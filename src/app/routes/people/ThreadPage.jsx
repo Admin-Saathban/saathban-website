@@ -16,8 +16,9 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { BodyText, GhostBtn, PrimaryBtn } from "../circle/ui.jsx";
+import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {
-  STICKERS,
   isStickerBody,
   fetchPerson,
   openDmWith,
@@ -30,7 +31,8 @@ import {
 const POLL_MS = 5000;
 
 function Bubble({ msg, mine, ts }) {
-  const sticker = isStickerBody(msg.body);
+  const svgSticker = parseStickerRef(msg.body);
+  const sticker = !svgSticker && isStickerBody(msg.body);
   return (
     <div
       style={{
@@ -39,21 +41,25 @@ function Bubble({ msg, mine, ts }) {
         marginBottom: 8,
       }}
     >
-      <div
-        style={{
-          maxWidth: "82%",
-          padding: sticker ? "6px 10px" : "10px 16px",
-          borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-          background: sticker ? "transparent" : mine ? C.green : C.white,
-          border: sticker ? "none" : mine ? "none" : `1.5px solid ${C.warmGray}`,
-          color: mine ? C.cream : C.textMain,
-          fontSize: sticker ? ts(56) : ts(A11Y.minBodyPx),
-          lineHeight: sticker ? 1.1 : 1.5,
-          overflowWrap: "anywhere",
-        }}
-      >
-        {msg.body}
-      </div>
+      {svgSticker ? (
+        <Sticker id={svgSticker} size={104} style={{ maxWidth: "100%" }} />
+      ) : (
+        <div
+          style={{
+            maxWidth: "82%",
+            padding: sticker ? "6px 10px" : "10px 16px",
+            borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+            background: sticker ? "transparent" : mine ? C.green : C.white,
+            border: sticker ? "none" : mine ? "none" : `1.5px solid ${C.warmGray}`,
+            color: mine ? C.cream : C.textMain,
+            fontSize: sticker ? ts(56) : ts(A11Y.minBodyPx),
+            lineHeight: sticker ? 1.1 : 1.5,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {msg.body}
+        </div>
+      )}
     </div>
   );
 }
@@ -194,42 +200,13 @@ export default function ThreadPage() {
         <div ref={endRef} />
       </div>
 
-      {/* Sticker picker */}
+      {/* Sticker picker — the shared Saathban set */}
       {pickerOpen && (
-        <div
-          role="group"
-          aria-label={t("people.thread.stickersLabel")}
-          style={{
-            background: C.white,
-            border: `1.5px solid ${C.warmGray}`,
-            borderRadius: 18,
-            padding: 10,
-            marginBottom: 12,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(56px, 1fr))",
-            gap: 6,
-          }}
-        >
-          {STICKERS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => send(s)}
-              aria-label={`${t("people.thread.stickersLabel")}: ${s}`}
-              style={{
-                minHeight: 56,
-                minWidth: A11Y.minTapTargetPx,
-                fontSize: 34,
-                background: "transparent",
-                border: `1.5px solid transparent`,
-                borderRadius: 12,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              {s}
-            </button>
-          ))}
+        <div style={{ marginBottom: 12 }}>
+          <StickerPicker
+            label={t("people.thread.stickersLabel")}
+            onPick={(id) => send(stickerRef(id))}
+          />
         </div>
       )}
 

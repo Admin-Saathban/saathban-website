@@ -1,237 +1,203 @@
 /* ════════════════════════════════════════════════
    Urdu strings — اردو
 
-   ⚠ PLACEHOLDERS. Every value wrapped in TODO() below is NOT yet
-   translated — it renders as "[UR] <english>" so untranslated text
-   is impossible to miss in the app. The named Urdu owner on the
-   Saathban team (SPEC.md, Language & accessibility) replaces each
-   TODO("…") with the real Urdu string, e.g.:
+   ⚠ STATUS: drafted, pending native review. Every string below is a
+   real Urdu draft (no [UR] placeholders remain), but the named Urdu
+   owner on the Saathban team (SPEC.md, Language & accessibility) must
+   review before launch — register, warmth, and regional word choice
+   are editorial calls a native speaker signs off on.
 
-       title: TODO("Settings"),   →   title: "ترتیبات",
+   Register and tone rules applied throughout:
+   - Always آپ, never تم — seniors are the honoured users.
+   - Warm and dignified, nothing clinical, nothing childish.
+   - Natural spoken Urdu over stiff literal translation.
+   - Technical terms with no natural Urdu stay in common transliterated
+     form: ای میل، ایپ، پاس ورڈ، سائن اِن، لنک، ڈیوائس.
+   - Kept concise — Nastaliq runs long and wraps.
 
-   To find everything still untranslated:  grep TODO src/app/locales/ur.js
-
-   Notes for the translator:
+   Notes for future keys:
    - Structure must mirror en.js exactly — same keys, same nesting.
      If a key is missing here the app silently falls back to English.
-   - Text renders in Noto Nastaliq Urdu, right-to-left. Layouts flip
-     automatically; write natural Urdu, not layout-aware Urdu.
-   - Same copy rules as English (SPEC.md, Principles): warm, never
-     clinical, never patronising, never audience-assuming.
+   - New untranslated keys use TODO("english") so they render as
+     "[UR] english" and are impossible to miss. Find them with:
+     grep TODO src/app/locales/ur.js
    - {curly} placeholders are variables filled in by the app — keep
      them in the string, positioned wherever Urdu grammar wants them.
    ════════════════════════════════════════════════ */
 
+// eslint-disable-next-line no-unused-vars
 const TODO = (english) => `[UR] ${english}`;
 
 const ur = {
   common: {
-    appName: TODO("Saathban"),
-    backToHome: TODO("Back to home"),
-    remove: TODO("Remove"),
+    appName: "ساتھ بن",
+    backToHome: "مرکزی صفحے پر واپس",
+    remove: "ہٹائیں",
   },
 
   settings: {
-    title: TODO("Settings"),
+    title: "ترتیبات",
 
     dailyLog: {
-      title: TODO("Your daily log"),
-      hint: TODO(
-        "Choose what appears on your home page each day. Everything here is yours to switch on or off — nothing is required."
-      ),
-      moodAlways: TODO(
-        "Mood is always part of your log — it's how your companion knows what kind of day to keep you company through."
-      ),
+      title: "آپ کا روزنامچہ",
+      hint: "چنیں کہ آپ کے صفحۂ اول پر روز کیا نظر آئے۔ ہر چیز آپ کے اختیار میں ہے — کچھ بھی لازمی نہیں۔",
+      moodAlways:
+        "مزاج ہمیشہ روزنامچے کا حصہ رہتا ہے — اسی سے آپ کے ساتھی کو خبر ہوتی ہے کہ آج آپ کا دن کیسا ہے۔",
       modules: {
-        mood: TODO("Mood"),
-        sleep: TODO("Sleep"),
-        medication: TODO("Medicines"),
-        exercise: TODO("Movement"),
-        diet: TODO("Meals"),
-        water: TODO("Water"),
+        mood: "مزاج",
+        sleep: "نیند",
+        medication: "دوائیں",
+        exercise: "چلنا پھرنا",
+        diet: "کھانا",
+        water: "پانی",
       },
       meds: {
-        title: TODO("Your medicines"),
-        hint: TODO(
-          "List each medicine with its dose and when you take it. They become a simple tick-off list on your log — a record with reminders, never an alarm to depend on."
-        ),
-        namePlaceholder: TODO("Medicine name"),
-        dosePlaceholder: TODO("Dose"),
-        timePlaceholder: TODO("When"),
-        addCta: TODO("Add medicine"),
+        title: "آپ کی دوائیں",
+        hint: "ہر دوا کا نام، خوراک اور وقت لکھ دیں۔ یہ روزنامچے میں نشان لگانے کی سادہ فہرست بن جائے گی — یاد دہانی ساتھ ہے، مگر صرف اسی پر بھروسا نہ کریں۔",
+        namePlaceholder: "دوا کا نام",
+        dosePlaceholder: "خوراک",
+        timePlaceholder: "کب",
+        addCta: "دوا شامل کریں",
       },
       diet: {
-        title: TODO("Your meals list"),
-        hint: TODO(
-          "These are the meals and foods you like to keep track of. Add your own, remove any — it's your list."
-        ),
-        addPlaceholder: TODO("Add a meal or food"),
-        addCta: TODO("Add"),
+        title: "آپ کے کھانوں کی فہرست",
+        hint: "جن کھانوں کا آپ حساب رکھنا چاہیں۔ اپنی مرضی سے شامل کریں یا ہٹائیں — فہرست آپ کی ہے۔",
+        addPlaceholder: "کوئی کھانا شامل کریں",
+        addCta: "شامل کریں",
       },
       trackers: {
-        title: TODO("Your own trackers"),
-        hint: TODO(
-          "Anything else you'd like to keep an eye on — watering the plants, a phone call, an evening walk. It appears on your log like everything else."
-        ),
-        namePlaceholder: TODO("What would you like to track?"),
+        title: "آپ کے اپنے معمولات",
+        hint: "جو بھی آپ دیکھتے رہنا چاہیں — پودوں کو پانی، کسی کو فون، شام کی سیر۔ یہ بھی روزنامچے میں باقی چیزوں کی طرح نظر آئے گا۔",
+        namePlaceholder: "آپ کس چیز کا حساب رکھنا چاہیں گے؟",
         types: {
-          yesno: TODO("Done / not done"),
-          count: TODO("A count"),
-          note: TODO("A note"),
+          yesno: "ہوا / نہیں ہوا",
+          count: "گنتی",
+          note: "ایک نوٹ",
         },
-        everyDay: TODO("Every day"),
-        someDays: TODO("Some days"),
-        addCta: TODO("Add tracker"),
+        everyDay: "ہر روز",
+        someDays: "کچھ دن",
+        addCta: "معمول شامل کریں",
       },
     },
 
     language: {
-      title: TODO("Language"),
-      hint: TODO("Choose the language Saathban speaks with you in."),
+      title: "زبان",
+      hint: "وہ زبان چنیں جس میں ساتھ بن آپ سے بات کرے۔",
     },
 
     textSize: {
-      title: TODO("Text size"),
-      hint: TODO(
-        "Make everything in the app bigger. This is separate from your phone's own text size setting."
-      ),
+      title: "لکھائی کا سائز",
+      hint: "ایپ کی ہر چیز بڑی کر لیں۔ یہ آپ کے فون کی اپنی ترتیب سے الگ ہے۔",
       sizes: {
-        standard: TODO("Standard"),
-        large: TODO("Large"),
-        larger: TODO("Larger"),
-        largest: TODO("Largest"),
+        standard: "معیاری",
+        large: "بڑا",
+        larger: "اور بڑا",
+        largest: "سب سے بڑا",
       },
     },
 
     preview: {
-      title: TODO("Preview"),
-      hint: TODO("This is how the app will look with your choices."),
-      heading: TODO("A morning at the park"),
-      body: TODO(
-        "The weather is lovely today. Gulshan Park is ten minutes away, and the walking track is shaded until noon."
-      ),
-      button: TODO("Sounds good"),
-      scriptSampleLabel: TODO("Urdu script sample"),
+      title: "نمونہ",
+      hint: "آپ کی چنی ہوئی ترتیبات کے ساتھ ایپ ایسی دکھائی دے گی۔",
+      heading: "پارک میں ایک صبح",
+      body: "آج موسم بہت خوشگوار ہے۔ گلشن پارک دس منٹ کے فاصلے پر ہے، اور واکنگ ٹریک دوپہر تک سائے میں رہتا ہے۔",
+      button: "بہت خوب",
+      scriptSampleLabel: "اردو رسم الخط کا نمونہ",
     },
   },
 
   auth: {
     common: {
-      notMe: TODO("This isn't me — start over"),
-      optional: TODO("optional"),
-      signedInAs: TODO("You're signed in as {email}."),
-      fullNameLabel: TODO("Your full name"),
-      emailLabel: TODO("Email address"),
-      phoneLabel: TODO("Phone number"),
-      cityLabel: TODO("City"),
-      cityHint: TODO(
-        "Helps us point you to what's happening nearby. You can add or change this any time."
-      ),
-      countryLabel: TODO("Country"),
-      relationshipLabel: TODO("Who they are to you"),
-      relationshipHint: TODO(
-        "For example: my mother, my uncle, a dear neighbour."
-      ),
-      languagesLabel: TODO("Languages you speak"),
-      languagesHint: TODO(
-        "Separate with commas — for example: Urdu, Punjabi, English."
-      ),
-      passwordLabel: TODO("Password"),
-      passwordHint: TODO("At least 8 characters."),
-      errorName: TODO("Please tell us your name."),
-      errorEmail: TODO(
-        "That email address doesn't look complete — please check it."
-      ),
-      errorPassword: TODO("Please choose a password of at least 8 characters."),
-      errorGeneric: TODO("Something went wrong on our side. Please try again."),
-      finishCta: TODO("All set — take me in"),
+      notMe: "یہ میں نہیں ہوں — دوبارہ شروع کریں",
+      optional: "اختیاری",
+      signedInAs: "آپ {email} کے طور پر سائن اِن ہیں۔",
+      fullNameLabel: "آپ کا پورا نام",
+      emailLabel: "ای میل پتہ",
+      phoneLabel: "فون نمبر",
+      cityLabel: "شہر",
+      cityHint: "تاکہ ہم آپ کو قریب کی سرگرمیوں کی خبر دے سکیں۔ اسے آپ کبھی بھی بدل سکتے ہیں۔",
+      countryLabel: "ملک",
+      relationshipLabel: "وہ آپ کے کیا لگتے ہیں",
+      relationshipHint: "مثلاً: میری والدہ، میرے چچا، کوئی عزیز ہمسایہ۔",
+      languagesLabel: "آپ کون سی زبانیں بولتے ہیں",
+      languagesHint: "کوما لگا کر لکھیں — مثلاً: اردو، پنجابی، انگریزی۔",
+      passwordLabel: "پاس ورڈ",
+      passwordHint: "کم از کم 8 حروف۔",
+      errorName: "براہِ کرم اپنا نام لکھیں۔",
+      errorEmail: "یہ ای میل پتہ مکمل نہیں لگتا — ذرا دیکھ لیں۔",
+      errorPassword: "براہِ کرم کم از کم 8 حروف کا پاس ورڈ چنیں۔",
+      errorGeneric: "ہماری طرف سے کچھ گڑبڑ ہو گئی۔ براہِ کرم دوبارہ کوشش کریں۔",
+      finishCta: "سب تیار — مجھے اندر لے چلیں",
     },
 
     roleSelect: {
-      title: TODO("How will you be part of Saathban?"),
-      finishTitle: TODO("Welcome! Tell us who you are, and you're all set."),
-      cardIcon: TODO(
-        "This is my place — community, activity, and good company."
-      ),
-      cardBuddy: TODO("I'd like to volunteer my time and companionship."),
-      cardFam: TODO("I'm here alongside a parent or someone dear to me."),
-      haveAccount: TODO("Already have an account?"),
-      signIn: TODO("Sign in"),
-      backToSite: TODO("Back to saathban.com"),
+      title: "آپ ساتھ بن کا حصہ کیسے بنیں گے؟",
+      finishTitle: "خوش آمدید! بس یہ بتا دیں کہ آپ کون ہیں، اور کام مکمل۔",
+      cardIcon: "یہ میری اپنی جگہ ہے — رونق، سرگرمی اور اچھا ساتھ۔",
+      cardBuddy: "میری خواہش ہے کہ اپنا وقت اور ساتھ رضاکارانہ طور پر دوں۔",
+      cardFam: "میں اپنے والدین یا کسی عزیز کے ساتھ یہاں ہوں۔",
+      haveAccount: "پہلے سے اکاؤنٹ ہے؟",
+      signIn: "سائن اِن کریں",
+      backToSite: "saathban.com پر واپس",
     },
 
     icon: {
-      title: TODO("Let's get you set up"),
-      intro: TODO("Just a few details — everything else can wait."),
-      emailHint: TODO(
-        "We'll email you a link. Opening it signs you in — no password to remember."
-      ),
-      cta: TODO("Email me my sign-in link"),
+      title: "آئیے آپ کا اکاؤنٹ بنا لیں",
+      intro: "بس چند باتیں — باقی سب بعد میں بھی ہو سکتا ہے۔",
+      emailHint:
+        "ہم آپ کو ایک لنک ای میل کریں گے۔ اسے کھولتے ہی آپ سائن اِن ہو جائیں گے — کوئی پاس ورڈ یاد رکھنے کی ضرورت نہیں۔",
+      cta: "میرا سائن اِن لنک ای میل کریں",
     },
 
     fam: {
-      title: TODO("Create your account"),
-      intro: TODO(
-        "A few details so we can connect you well — wherever in the world you are."
-      ),
-      cta: TODO("Email me my sign-in link"),
+      title: "اپنا اکاؤنٹ بنائیں",
+      intro: "چند تفصیلات تاکہ ہم آپ کو اچھی طرح جوڑ سکیں — آپ دنیا میں کہیں بھی ہوں۔",
+      cta: "میرا سائن اِن لنک ای میل کریں",
     },
 
     buddy: {
-      title: TODO("Create your volunteer account"),
-      intro: TODO(
-        "Becoming a {buddy} starts with an application and an interview — the care we take is part of the promise. First, your account; then we'll walk you through the rest."
-      ),
-      cta: TODO("Create my account"),
+      title: "اپنا رضاکار اکاؤنٹ بنائیں",
+      intro:
+        "{buddy} بننے کا آغاز ایک درخواست اور انٹرویو سے ہوتا ہے — یہی احتیاط ہمارے وعدے کا حصہ ہے۔ پہلے آپ کا اکاؤنٹ، پھر ہم قدم قدم پر آپ کے ساتھ ہیں۔",
+      cta: "میرا اکاؤنٹ بنائیں",
     },
 
     login: {
-      title: TODO("Welcome back"),
-      magicTitle: TODO("Sign in with an email link"),
-      magicHint: TODO("For {icon} and {fam} accounts — no password needed."),
-      magicCta: TODO("Email me a sign-in link"),
-      passwordTitle: TODO("Sign in with your password"),
-      passwordHint: TODO("For {buddy} volunteers."),
-      passwordCta: TODO("Sign in"),
-      forgot: TODO("Forgotten your password?"),
-      badCredentials: TODO(
-        "That email and password don't match. Please try again."
-      ),
-      newHere: TODO("New to Saathban?"),
-      getStarted: TODO("Get started"),
+      title: "خوش آمدید",
+      magicTitle: "ای میل لنک سے سائن اِن کریں",
+      magicHint: "{icon} اور {fam} اکاؤنٹس کے لیے — پاس ورڈ کی ضرورت نہیں۔",
+      magicCta: "مجھے سائن اِن لنک ای میل کریں",
+      passwordTitle: "پاس ورڈ سے سائن اِن کریں",
+      passwordHint: "{buddy} رضاکاروں کے لیے۔",
+      passwordCta: "سائن اِن کریں",
+      forgot: "پاس ورڈ بھول گئے؟",
+      badCredentials: "یہ ای میل اور پاس ورڈ آپس میں نہیں ملتے۔ براہِ کرم دوبارہ کوشش کریں۔",
+      newHere: "ساتھ بن پر نئے ہیں؟",
+      getStarted: "شروع کریں",
     },
 
     checkEmail: {
-      title: TODO("Check your email"),
-      bodyMagic: TODO(
-        "We've sent a sign-in link to {email}. Open the email on this device and tap the link — that's all there is to it."
-      ),
-      bodyConfirm: TODO(
-        "We've sent a confirmation link to {email}. Tap it to finish creating your account."
-      ),
-      resend: TODO("Send it again"),
-      resent: TODO("Sent — give it a minute to arrive."),
+      title: "اپنی ای میل دیکھیں",
+      bodyMagic:
+        "ہم نے {email} پر سائن اِن لنک بھیج دیا ہے۔ ای میل اسی ڈیوائس پر کھولیں اور لنک پر ٹیپ کریں — بس اتنا ہی کافی ہے۔",
+      bodyConfirm: "ہم نے {email} پر تصدیقی لنک بھیجا ہے۔ اکاؤنٹ مکمل کرنے کے لیے اس پر ٹیپ کریں۔",
+      resend: "دوبارہ بھیجیں",
+      resent: "بھیج دیا — پہنچنے میں ایک آدھ منٹ لگ سکتا ہے۔",
     },
 
     complete: {
-      working: TODO("Signing you in…"),
-      stalled: TODO(
-        "That link didn't work — it may have expired. Links only stay valid for a little while."
-      ),
-      stalledCta: TODO("Start again"),
+      working: "آپ کو سائن اِن کیا جا رہا ہے…",
+      stalled: "یہ لنک نہیں چلا — شاید اس کی مدت گزر چکی ہے۔ لنک تھوڑی دیر ہی کارآمد رہتے ہیں۔",
+      stalledCta: "دوبارہ شروع کریں",
     },
 
     reset: {
-      requestTitle: TODO("Reset your password"),
-      requestHint: TODO(
-        "Tell us your email and we'll send a link to choose a new one."
-      ),
-      requestCta: TODO("Email me a reset link"),
-      requestSent: TODO(
-        "If that email has an account, a reset link is on its way."
-      ),
-      setTitle: TODO("Choose a new password"),
-      setCta: TODO("Save my password"),
+      requestTitle: "پاس ورڈ دوبارہ ترتیب دیں",
+      requestHint: "اپنی ای میل بتائیں، ہم نیا پاس ورڈ چننے کا لنک بھیج دیں گے۔",
+      requestCta: "مجھے ری سیٹ لنک ای میل کریں",
+      requestSent: "اگر اس ای میل پر اکاؤنٹ ہے تو ری سیٹ لنک روانہ ہو چکا ہے۔",
+      setTitle: "نیا پاس ورڈ چنیں",
+      setCta: "میرا پاس ورڈ محفوظ کریں",
     },
   },
 };

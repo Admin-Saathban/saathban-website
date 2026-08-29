@@ -19,21 +19,8 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { roleHomePath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 
-/* ⚠ TEMPORARY hardcoded English. The locales/ files are owned by
-   another active session, so these strings could not be added there.
-   i18n lane: move these to en.js + ur.js under auth.welcome.* and
-   swap the lookups to t(). Keys and copy are ready to lift as-is. */
-const STRINGS = {
-  title: "Welcome, {name}",
-  bodyBuddy:
-    "Your account is ready. The next step — your volunteer application — will open from here soon.",
-  bodyFam:
-    "Your account is ready. This is where staying close to your Saath-Icon's world will begin.",
-  signOut: "Sign out",
-};
-
 export default function Welcome() {
-  const { ts } = useI18n();
+  const { t, ts } = useI18n();
   const navigate = useNavigate();
   const [who, setWho] = useState(null); // { name, role }
 
@@ -67,7 +54,10 @@ export default function Welcome() {
 
   if (!who) return <AuthScreen> </AuthScreen>;
 
-  const body = who.role === "saath_buddy" ? STRINGS.bodyBuddy : STRINGS.bodyFam;
+  const isBuddy = who.role === "saath_buddy";
+  const body = isBuddy
+    ? t("auth.welcome.bodyBuddy")
+    : t("auth.welcome.bodyFam", { icon: ROLE_DISPLAY.saath_icon });
 
   const signOut = async () => {
     try {
@@ -92,11 +82,34 @@ export default function Welcome() {
       >
         {ROLE_DISPLAY[who.role]}
       </p>
-      <Title>{STRINGS.title.replace("{name}", who.name)}</Title>
+      <Title>{t("auth.welcome.title", { name: who.name })}</Title>
       <Intro>{body}</Intro>
-      <Button type="button" onClick={signOut} style={{ width: "auto", padding: "0 40px" }}>
-        {STRINGS.signOut}
-      </Button>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        {/* The vetting application is the Buddy's actual next step
+            (VETTING_WIRING.md: this screen is its entry point). */}
+        {isBuddy && (
+          <Button
+            type="button"
+            onClick={() => navigate("/app/vetting")}
+            style={{ width: "auto", padding: "0 40px" }}
+          >
+            {t("auth.welcome.startVetting")}
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={signOut}
+          style={{
+            width: "auto",
+            padding: "0 40px",
+            ...(isBuddy
+              ? { background: "transparent", color: C.green, border: `2px solid ${C.green}` }
+              : {}),
+          }}
+        >
+          {t("auth.welcome.signOut")}
+        </Button>
+      </div>
     </AuthScreen>
   );
 }

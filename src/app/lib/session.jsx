@@ -40,7 +40,10 @@ export function roleHomePath(role) {
       return "/app/home";
     case "admin":
       return "/app/admin";
-    // Saath-Buddy and Saath-Fam until their dashboards land (step 6):
+    case "family_member":
+      return "/app/fam";
+    // Saath-Buddy keeps the welcome landing (which links to the
+    // vetting application) until a real Buddy dashboard exists:
     default:
       return "/app/auth/welcome";
   }

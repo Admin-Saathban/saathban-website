@@ -14,6 +14,11 @@ const AREAS = [
     desc: "Calendar strip, daily log, points and sharing — on sample data.",
   },
   {
+    to: "/app/fam",
+    title: "Saath-Fam",
+    desc: "Connected Icons, invites, and reminders — on sample data.",
+  },
+  {
     to: "/app/settings",
     title: "Settings",
     desc: "Language (English / اردو), text size, and the RTL flip.",

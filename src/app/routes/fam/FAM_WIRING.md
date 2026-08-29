@@ -1,8 +1,11 @@
 # Fam lane — wiring notes
 
-This folder is self-contained: mock data only, no Supabase calls, no edits to
-any file outside `src/app/routes/fam/`. Whoever runs the next seam pass wires
-it up as follows.
+> **Status: WIRED.** `/app/fam/*` is registered in `AppRoot.jsx` behind
+> `RequireAuth roles={["family_member"]}`, `roleHomePath()` sends the role
+> here, and the `/app` front door links it. Section 1 below is applied;
+> sections 2–3 remain as the i18n and Supabase contracts.
+
+This folder is self-contained: mock data only, no Supabase calls.
 
 ## 1. Route registration (AppRoot.jsx)
 

@@ -1,8 +1,9 @@
 # Wiring `/app/vetting`
 
-This folder is self-contained and **not yet registered** in the router, to
-avoid touching `AppRoot.jsx` while other lanes are mid-flight there.
-Whoever owns AppRoot next: registration is two lines.
+> **Status: WIRED.** The route is registered in `AppRoot.jsx` behind
+> `RequireAuth roles={["saath_buddy"]}`, and the Buddy welcome screen
+> (`routes/auth/Welcome.jsx`) links here as the entry point. The sections
+> below remain as the data contract for the Supabase swap.
 
 ## Route registration
 

@@ -190,6 +190,16 @@ const en = {
       setTitle: "Choose a new password",
       setCta: "Save my password",
     },
+
+    welcome: {
+      title: "Welcome, {name}",
+      bodyBuddy:
+        "Your account is ready. The next step is your volunteer application — it takes a little while, and it's the care we promised.",
+      bodyFam:
+        "Your account is ready. This is where staying close to your {icon}'s world will begin.",
+      startVetting: "Start my application",
+      signOut: "Sign out",
+    },
   },
 };
 

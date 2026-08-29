@@ -28,35 +28,75 @@ import IconHome from "./routes/home/IconHome.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
 import AppSettings from "./routes/AppSettings.jsx";
+import { AuthProvider, RequireAuth } from "./lib/session.jsx";
+import VettingForm from "./routes/vetting/VettingForm.jsx";
+import FamRoutes from "./routes/fam/FamRoutes.jsx";
 
 export default function AppRoot() {
   return (
     <LanguageProvider>
-      {/* The marketing site loads its own fonts inside its own components,
-          so /app has to ask for them itself. */}
-      <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
+      <AuthProvider>
+        {/* The marketing site loads its own fonts inside its own components,
+            so /app has to ask for them itself. */}
+        <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
 
-      <Routes>
-        <Route index element={<AppHome />} />
-        {/* Saath-Icon home (build step 9) — UI on mock data until the
-            auth + data layer lands. */}
-        <Route path="home/*" element={<IconHome />} />
-        {/* Admin (build step 8) — Buddy review queue first, then the
-            rest. UI on mock data until auth + Supabase wiring lands. */}
-        <Route path="admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="buddies" replace />} />
-          <Route path="buddies" element={<BuddyQueue />} />
-          <Route path="buddies/:id" element={<BuddyApplication />} />
-          <Route path="moderation" element={<ModerationQueue />} />
-        </Route>
-        {/* Auth lane (build steps 3-5): role selection, signup, login. */}
-        <Route path="auth/*" element={<AuthRoutes />} />
-        {/* Language, RTL, and text size (SPEC.md, Language & accessibility).
-            LanguageProvider now wraps the whole route table above. */}
-        <Route path="settings" element={<AppSettings />} />
-        {/* Per-role dashboards land here in build step 6. */}
-        <Route path="*" element={<AppHome />} />
-      </Routes>
+        <Routes>
+          <Route index element={<AppHome />} />
+          {/* Saath-Icon home (build step 9) — UI on mock data until the
+              auth + data layer lands. Icons only; RLS stays the real
+              security boundary, this guard is navigation. */}
+          <Route
+            path="home/*"
+            element={
+              <RequireAuth roles={["saath_icon"]}>
+                <IconHome />
+              </RequireAuth>
+            }
+          />
+          {/* Admin (build step 8) — Buddy review queue first, then the
+              rest. UI on mock data until Supabase wiring lands. */}
+          <Route
+            path="admin"
+            element={
+              <RequireAuth roles={["admin"]}>
+                <AdminLayout />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<Navigate to="buddies" replace />} />
+            <Route path="buddies" element={<BuddyQueue />} />
+            <Route path="buddies/:id" element={<BuddyApplication />} />
+            <Route path="moderation" element={<ModerationQueue />} />
+          </Route>
+          {/* Saath-Buddy vetting application (build step 8, applicant
+              side). The RPC re-checks the role server-side; this guard
+              is navigation. */}
+          <Route
+            path="vetting"
+            element={
+              <RequireAuth roles={["saath_buddy"]}>
+                <VettingForm />
+              </RequireAuth>
+            }
+          />
+          {/* Saath-Fam dashboard, invites, reminders (routes/fam). */}
+          <Route
+            path="fam/*"
+            element={
+              <RequireAuth roles={["family_member"]}>
+                <FamRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Auth lane (build steps 3-5): role selection, signup, login. */}
+          <Route path="auth/*" element={<AuthRoutes />} />
+          {/* Language, RTL, and text size (SPEC.md, Language & accessibility).
+              LanguageProvider wraps the whole route table above. */}
+          <Route path="settings" element={<AppSettings />} />
+          {/* Per-role dashboards land here in build step 6. */}
+          <Route path="*" element={<AppHome />} />
+        </Routes>
+      </AuthProvider>
     </LanguageProvider>
   );
 }

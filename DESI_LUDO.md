@@ -88,9 +88,26 @@ skipped session.
 turn, with nothing in the UI to say why.** 0042d has the executor roll for
 itself when the caller is a bot.
 
-The general shape is worth carrying to the other games: *a two-phase turn
-(roll, then move) has to have an answer for the player who cannot be
-authenticated.*
+The general shape is worth carrying to the other games — and lane -42, asked
+this question of carrom and snakes, found the sharper form of it (0043):
+
+> **Anywhere the system can seat a player that cannot act, it must refuse
+> rather than seat them.**
+
+The freeze arrives identically whether the bot cannot be *authenticated* (ludo,
+above) or simply has no logic to run: `start_with_bots` would seat bots at
+carrom, which has no bot player at all, and the turn then ping-ponged forever
+between a person and a chair that could never take a shot. Four such tables
+existed, three of them active, two of them already reported as "broken".
+
+**Neither check catches the other, and that is the part worth remembering.**
+0043 guards on `timeout_style = 'pass_turn'`, which is a declaration of what
+`game_tick` should *do* — not proof that the executor actually handles
+`by_bot`. Ludo is `bot_plays` and always was, including for the whole time its
+executor raised `'Roll first'` at every bot: 0043's guard would have waved it
+straight through. And 0042d says nothing about carrom. They are siblings, and
+the honest conclusion is that a third sibling is found by asking a different
+question again, not by trusting either guard to be the general one.
 
 ## Verified
 

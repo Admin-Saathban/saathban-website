@@ -32,6 +32,7 @@ import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
 import AppSettings from "./routes/AppSettings.jsx";
 import { AuthProvider, RequireAuth } from "./lib/session.jsx";
+import FeedbackProvider from "./lib/feedback.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
@@ -131,6 +132,10 @@ export default function AppRoot() {
   return (
     <LanguageProvider>
       <AuthProvider>
+        {/* Global feedback: one toast host for the whole app, mounted
+            inside Auth + Language + the router (FEEDBACK_WIRING.md).
+            Inert until a surface pushes — an empty store renders null. */}
+        <FeedbackProvider>
         {/* The marketing site loads its own fonts inside its own components,
             so /app has to ask for them itself. */}
         <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
@@ -354,6 +359,7 @@ export default function AppRoot() {
           {/* Per-role dashboards land here in build step 6. */}
           <Route path="*" element={<AppHome />} />
         </Routes>
+        </FeedbackProvider>
       </AuthProvider>
     </LanguageProvider>
   );

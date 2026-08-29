@@ -148,7 +148,14 @@ for (const [email, label, home, foreign] of ROLES) {
     .first();
   if ((await moodHeader.getAttribute("aria-expanded")) === "false") await moodHeader.click();
   // First mood option (whatever the locale calls it).
-  await page.locator('button[aria-pressed]').filter({ hasText: "😄" }).first().click();
+  // The mood control is a multi-select chip group since 0033 (role=
+  // checkbox + aria-checked); accept the older aria-pressed shape too
+  // so this check tests persistence, not one lane's markup choice.
+  await page
+    .locator('[role="checkbox"], button[aria-pressed]')
+    .filter({ hasText: "😄" })
+    .first()
+    .click();
   await page.waitForTimeout(2500); // debounce (700ms) + upsert
   await ctx.close();
 
@@ -331,7 +338,9 @@ for (const [email, label, home, foreign] of ROLES) {
     // a wrong guess is still a pass for the MECHANISM if the guess
     // count moves — but assert the solve to catch RPC regressions.
     await page.fill("form input", "clock");
-    await page.locator("form button").last().click();
+    // Submit explicitly: the form also carries "A hint, please", so
+    // .last() clicked the hint and never sent the guess.
+    await page.locator('form button[type="submit"], form button:has-text("Try it")').first().click();
     await page.waitForTimeout(2400);
     check(
       "riddle: guess submits and solves",
@@ -340,19 +349,22 @@ for (const [email, label, home, foreign] of ROLES) {
   }
   const strip = await page.evaluate(() => document.body.innerText);
   check("riddle: people strip shows a connection", strip.includes("Test Icon"));
-  const cheer = page.locator('button:has-text("Shabash")');
+  // Post-solve the strip offers a one-tap gesture per person: Shabash
+  // to someone who has solved, a gentle invite to someone who has not.
+  // Either is the affordance; which one depends on the day, so accept both.
+  const cheer = page.locator('button:has-text("Shabash"), button:has-text("Invite them")');
   if ((await cheer.count()) > 0) {
     await cheer.first().click();
     await page.waitForTimeout(2000);
     const t1 = await page.evaluate(() => document.body.innerText);
-    check("riddle: cheer sends or caps kindly", /Shabash sent|plenty/i.test(t1), t1.slice(0, 60));
+    check("riddle: gesture sends or caps kindly", /Shabash sent|gentle word|plenty/i.test(t1), t1.slice(0, 60));
   } else {
     // Today's cheer already spent: the button yields to the 👏 ✓ mark
     // (riddle_touches cap). Either affordance passing is the check.
     check(
-      "riddle: cheer sends or caps kindly",
-      strip.includes("👏 ✓") || /plenty/i.test(strip),
-      strip.includes("👏 ✓") ? "capped: 👏 ✓" : "no cheer affordance at all"
+      "riddle: gesture sends or caps kindly",
+      strip.includes("👏 ✓") || strip.includes("🕊️ ✓") || /plenty/i.test(strip),
+      strip.includes("👏 ✓") || strip.includes("🕊️ ✓") ? "already reached out today" : "no cheer or invite affordance at all"
     );
   }
   await ctx.close();
@@ -401,6 +413,33 @@ for (const [email, label, home, foreign] of ROLES) {
     after.match(/[^\n]*(room|is in|list)[^\n]*/)?.[0]?.slice(0, 70) || placeTxt.slice(0, 70)
   );
   await famCtx.close();
+}
+
+// 9. Fam-assisted daily-log setup (0033): the Fam dashboard offers the
+//    "help set up their log" door for a granted member, the route
+//    renders the shared panel, and an UNGRANTED member is told plainly
+//    instead of being shown a form they cannot use.
+{
+  const famSess = await login("test-fam@saathban.dev");
+  const { ctx, page } = await pageFor(browser, famSess);
+  const home = await goto(page, "/app/fam", 2200);
+  const link = page.locator('a[href*="log-setup"]');
+  check("fam: log-setup door on the dashboard", (await link.count()) > 0, home.slice(0, 60));
+
+  // The Icon whose log this Fam may configure — read from the link the
+  // dashboard itself renders, so the check never hardcodes an id.
+  const href = (await link.count()) ? await link.first().getAttribute("href") : "";
+  const iconId = (href.match(/icon\/([0-9a-f-]{36})\/log-setup/) || [])[1];
+  if (iconId) {
+    const body = await goto(page, `/app/fam/icon/${iconId}/log-setup`, 2600);
+    // Granted (baseline: can_configure_daily_log = true) → the panel.
+    // Ungranted → the plain "hasn't asked for help" line, never a form.
+    const granted = body.includes("Help set up") || body.includes("daily log");
+    const refusedKindly = body.includes("hasn't asked for help") || body.includes("hasn’t asked for help");
+    check("fam: log-setup renders the panel or a kind refusal", granted || refusedKindly, body.slice(0, 80));
+    check("fam: log-setup never shows a dead page", body.trim().length > 60 && page.errors.length === 0, page.errors.join(" | "));
+  }
+  await ctx.close();
 }
 
 await browser.close();

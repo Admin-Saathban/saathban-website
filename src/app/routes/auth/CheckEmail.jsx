@@ -18,7 +18,7 @@ import supabase from "../../lib/supabase.js";
 const RESEND_COOLDOWN_S = 30;
 
 export default function CheckEmail() {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const navigate = useNavigate();
   const { state } = useLocation();
   const email = state?.email;
@@ -61,7 +61,7 @@ export default function CheckEmail() {
     <AuthScreen>
       <Title>{t("auth.checkEmail.title")}</Title>
 
-      <p style={{ fontSize: 20, margin: "0 0 28px" }}>
+      <p style={{ fontSize: ts(20), margin: "0 0 28px" }}>
         {t(kind === "confirm" ? "auth.checkEmail.bodyConfirm" : "auth.checkEmail.bodyMagic", {
           email,
         })}
@@ -76,7 +76,7 @@ export default function CheckEmail() {
         aria-live="polite"
         style={{
           textAlign: "center",
-          fontSize: A11Y.minBodyPx,
+          fontSize: ts(A11Y.minBodyPx),
           color: C.greenMuted,
           fontWeight: 600,
           minHeight: 28,

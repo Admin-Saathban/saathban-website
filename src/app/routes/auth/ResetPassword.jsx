@@ -24,7 +24,7 @@ import { isValidEmail } from "../../lib/authFlow.js";
 import supabase from "../../lib/supabase.js";
 
 export default function ResetPassword() {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const navigate = useNavigate();
 
   const [hasSession, setHasSession] = useState(null); // null = still checking
@@ -129,7 +129,7 @@ export default function ResetPassword() {
             aria-live="polite"
             style={{
               textAlign: "center",
-              fontSize: A11Y.minBodyPx,
+              fontSize: ts(A11Y.minBodyPx),
               color: C.greenMuted,
               fontWeight: 600,
               minHeight: 28,

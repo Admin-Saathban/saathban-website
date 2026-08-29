@@ -80,7 +80,7 @@ const CARDS = [
 ];
 
 export default function RoleSelect() {
-  const { t, meta } = useI18n();
+  const { t, meta, ts } = useI18n();
   const [params] = useSearchParams();
   const finish = params.get("finish") === "1";
   const suffix = finish ? "?finish=1" : "";
@@ -115,7 +115,7 @@ export default function RoleSelect() {
                 style={{
                   display: "block",
                   fontFamily: meta.fonts.heading,
-                  fontSize: 23,
+                  fontSize: ts(23),
                   fontWeight: 700,
                   color: C.green,
                   marginBottom: 4,
@@ -126,7 +126,7 @@ export default function RoleSelect() {
               <span
                 style={{
                   display: "block",
-                  fontSize: A11Y.minBodyPx,
+                  fontSize: ts(A11Y.minBodyPx),
                   color: C.textMuted,
                 }}
               >
@@ -138,7 +138,7 @@ export default function RoleSelect() {
       </div>
 
       {!finish && (
-        <p style={{ textAlign: "center", fontSize: A11Y.minBodyPx, marginTop: 32 }}>
+        <p style={{ textAlign: "center", fontSize: ts(A11Y.minBodyPx), marginTop: 32 }}>
           {t("auth.roleSelect.haveAccount")}{" "}
           <Link to="login" style={{ color: C.brown, fontWeight: 600 }}>
             {t("auth.roleSelect.signIn")}
@@ -149,7 +149,7 @@ export default function RoleSelect() {
       <p style={{ textAlign: "center", marginTop: 8 }}>
         <a
           href="/"
-          style={{ fontSize: A11Y.minBodyPx, color: C.textMuted }}
+          style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}
         >
           {t("auth.roleSelect.backToSite")}
         </a>

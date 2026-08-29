@@ -32,7 +32,7 @@ const sectionStyle = {
 };
 
 export default function Login() {
-  const { t, meta } = useI18n();
+  const { t, meta, ts } = useI18n();
   const navigate = useNavigate();
 
   const [magicEmail, setMagicEmail] = useState("");
@@ -46,13 +46,13 @@ export default function Login() {
 
   const h2Style = {
     fontFamily: meta.fonts.heading,
-    fontSize: 22,
+    fontSize: ts(22),
     fontWeight: 700,
     color: C.green,
     margin: "0 0 4px",
   };
   const hintStyle = {
-    fontSize: A11Y.minBodyPx,
+    fontSize: ts(A11Y.minBodyPx),
     color: C.textMuted,
     margin: "0 0 18px",
   };
@@ -162,7 +162,7 @@ export default function Login() {
         </div>
       </section>
 
-      <p style={{ textAlign: "center", fontSize: A11Y.minBodyPx, marginTop: 12 }}>
+      <p style={{ textAlign: "center", fontSize: ts(A11Y.minBodyPx), marginTop: 12 }}>
         {t("auth.login.newHere")}{" "}
         <Link to="/app/auth" style={{ color: C.brown, fontWeight: 600 }}>
           {t("auth.login.getStarted")}

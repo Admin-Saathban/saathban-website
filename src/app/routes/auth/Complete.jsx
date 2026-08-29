@@ -20,7 +20,7 @@ import supabase from "../../lib/supabase.js";
 const STALL_AFTER_MS = 8000;
 
 export default function Complete() {
-  const { t } = useI18n();
+  const { t, ts } = useI18n();
   const navigate = useNavigate();
   const [stalled, setStalled] = useState(
     // An expired/used link comes back with an error in the URL fragment
@@ -71,7 +71,7 @@ export default function Complete() {
       ) : (
         <p
           role="status"
-          style={{ fontSize: 22, color: C.textMuted, textAlign: "center", marginTop: 64 }}
+          style={{ fontSize: ts(22), color: C.textMuted, textAlign: "center", marginTop: 64 }}
         >
           {t("auth.complete.working")}
         </p>

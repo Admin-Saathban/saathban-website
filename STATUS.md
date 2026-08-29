@@ -129,7 +129,11 @@ The new one-screen setup (entry-flow lane) has a **Cancel** that
 navigates away but leaves the table joinable — there is no cancel
 RPC. Flagged honestly by that lane; deliberately NOT invented
 mid-round, because it is a schema decision on a surface two lanes
-are rebuilding. Owner: integration (take 0038 when it is done — 0037 went to the circle-defaults change).
+are rebuilding. **Owner: the games/entry-flow lane (saathban-website-38), migration
+0038** — transferred 2026-08-29 when their user assigned the same
+work; integration had not started it. The analysis below stands as
+the brief, and the recommended option (widen the CHECK, never
+delete) is the one being built.
 
 What makes it non-trivial, so nobody repeats the analysis:
 `game_sessions_status_check` allows only lobby/active/finished, so

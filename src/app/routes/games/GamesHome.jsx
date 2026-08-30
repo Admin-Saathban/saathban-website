@@ -40,6 +40,27 @@ export default function GamesHome() {
   const [opening, setOpening] = useState(null);
   const openTable = async (key) => {
     if (opening) return;
+
+    /* §8.2 — ONE GAME AT A TIME IS ANSWERED BY THE TABLE ITSELF.
+
+       This used to raise a card explaining the rule: three stacked
+       outlined boxes of prose where a game should be. The rule is
+       right — a table with empty seats is a promise to somebody — but
+       explaining it in front of the game was the wrong place to say
+       so, and it was the first thing a person saw when they tried to
+       play.
+
+       So a tap while you already have a live table takes you TO that
+       table. It is the honest answer to "start a game" when you are
+       already in one, it is instant, and the way out is the door on
+       the table, which asks warmly and hands your seat to a bot. The
+       collision is handled where the collision is. */
+    const mine = liveSessionOf(await fetchMySessions(profile.id).catch(() => []));
+    if (mine) {
+      navigate(mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`);
+      return;
+    }
+
     setOpening(key);
     try {
       navigate(await openQuickTable(key));
@@ -224,7 +245,12 @@ export default function GamesHome() {
   return (
     <GamesScreen>
       <h1 style={{ fontSize: ts(30), margin: "0 0 6px", color: C.brown }}>{t("games.title")}</h1>
-      <BodyText muted>{t("games.intro")}</BodyText>
+      {/* §9: "One line of text maximum on the whole screen." The
+          heading is the screen's name and stays; the paragraph
+          underneath it — "A table is always open — play with
+          neighbours, or let the bots keep you company" — was the
+          product explaining itself to somebody who had already
+          arrived. The tables below say it by existing. */}
       {loadError && <BodyText role="alert">{t("games.loadError")}</BodyText>}
 
       {blockedBy && (

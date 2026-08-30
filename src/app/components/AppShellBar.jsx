@@ -35,6 +35,9 @@ import { useLocation } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import BottomBar, { BAR_HEIGHT } from "./BottomBar.jsx";
 import useBuddyActive from "./useBuddyActive.js";
+import MoreDrawer, { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
+import { useDrawer } from "./Drawer.jsx";
+import { MotionStyles } from "./motion.jsx";
 
 const HIDDEN_PREFIXES = ["/app/auth", "/app/admin", "/app/g/", "/app/join/"];
 
@@ -47,6 +50,11 @@ export default function AppShellBar() {
   const { pathname } = useLocation();
   const role = profile?.role;
   const buddyActive = useBuddyActive(role);
+
+  /* Called unconditionally, above the `hidden` early return: a hook
+     behind a condition is a hook that changes count between renders. */
+  const { open: moreOpen, openDrawer: openMore, closeDrawer: closeMore } =
+    useDrawer(MORE_DRAWER_ID);
 
   const hidden =
     !profile ||
@@ -71,5 +79,19 @@ export default function AppShellBar() {
 
   if (hidden) return null;
 
-  return <BottomBar role={role} buddyActive={buddyActive} />;
+  return (
+    <>
+      {/* The motion vocabulary, injected once for the whole app. Per
+         component would let a lane adopt half of it, which is how
+         five different transitions happened in the first place. */}
+      <MotionStyles />
+      <BottomBar
+        role={role}
+        buddyActive={buddyActive}
+        drawerOpen={moreOpen}
+        onOpenDrawer={openMore}
+      />
+      <MoreDrawer open={moreOpen} onClose={closeMore} role={role} buddyActive={buddyActive} />
+    </>
+  );
 }

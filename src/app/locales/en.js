@@ -1470,6 +1470,10 @@ const en = {
   },
   calendar: {
     title: "Your calendar",
+    /* The live count on §6's Calendar row. Never shown at zero — a
+       nought beside a person's day is a small unkindness carrying no
+       information. */
+    thingsToday: "{n} today",
     today: "Today",
     tomorrow: "Tomorrow",
     add: "Put something in",

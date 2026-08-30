@@ -86,6 +86,14 @@ export const MOTION_CSS = `
   from { transform: scale(0.25) translate(38%, 38%); opacity: 0; }
   to   { transform: none; opacity: 1; }
 }
+@keyframes sb-grow-bl {
+  from { transform: scale(0.25) translate(-38%, 38%); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes sb-grow-tl {
+  from { transform: scale(0.25) translate(-38%, -38%); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
 @keyframes sb-grow-tr {
   from { transform: scale(0.25) translate(38%, -38%); opacity: 0; }
   to   { transform: none; opacity: 1; }
@@ -100,13 +108,17 @@ export const MOTION_CSS = `
                  transform-origin: bottom right; }
 .sb-drawer-tr  { animation: sb-grow-tr ${TIMING.drawerOpen}ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
                  transform-origin: top right; }
+.sb-drawer-bl  { animation: sb-grow-bl ${TIMING.drawerOpen}ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
+                 transform-origin: bottom left; }
+.sb-drawer-tl  { animation: sb-grow-tl ${TIMING.drawerOpen}ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
+                 transform-origin: top left; }
 .sb-drawer-dim { animation: sb-drawer-dim-in ${TIMING.drawerOpen}ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   /* Instant, not merely calmer. The container still appears — it just
      does not travel, scale or bounce to get there. */
   .sb-full-right, .sb-full-left,
-  .sb-drawer-br, .sb-drawer-tr, .sb-drawer-dim {
+  .sb-drawer-br, .sb-drawer-tr, .sb-drawer-bl, .sb-drawer-tl, .sb-drawer-dim {
     animation: none !important;
   }
 }

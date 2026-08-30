@@ -39,10 +39,59 @@ import { barItems } from "./navItems.js";
    asserting the key was present would have called this shipped. */
 export const BAR_HEIGHT = 92;
 
-export default function BottomBar({ role, buddyActive = true }) {
+export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpenDrawer }) {
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
+
+  /* Every item is shaped the same whether it navigates or opens a
+     drawer — the pill, the icon, the label and the tap target must
+     not depend on which. Sharing the style between a NavLink and a
+     button is what stops More drifting into looking like a different
+     kind of control from the four beside it. */
+  const itemStyle = (isActive) => ({
+    flex: "0 1 auto",
+    minWidth: 0,
+    paddingInline: 9,
+    minHeight: A11Y.minTapTargetPx,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingBlock: "8px 6px",
+    borderRadius: 16,
+    border: "none",
+    textDecoration: "none",
+    fontFamily: "inherit",
+    cursor: "pointer",
+    /* THE FILLED PILL. */
+    background: isActive ? C.green : "transparent",
+    color: isActive ? C.cream : C.textMain,
+    fontWeight: isActive ? 800 : 600,
+  });
+
+  const Inside = ({ item }) => (
+    <>
+      <span aria-hidden="true" style={{ fontSize: 21, lineHeight: 1 }}>
+        {item.emoji}
+      </span>
+      <span
+        style={{
+          fontSize: ts(15),
+          lineHeight: 2.45,
+          maxWidth: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontWeight: "inherit",
+          color: "inherit",
+        }}
+      >
+        {t(item.key)}
+      </span>
+    </>
+  );
 
   return (
     <nav
@@ -63,81 +112,35 @@ export default function BottomBar({ role, buddyActive = true }) {
         boxShadow: "0 -2px 12px rgba(74,58,34,0.08)",
       }}
     >
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          style={({ isActive }) => ({
-            /* SIZED TO THE WORD, NOT TO AN EQUAL SHARE.
+      {items.map((item) =>
+        /* MORE IS A BUTTON, NOT A LINK (§6). It opens the drawer over
+           where you already are. Going to a whole screen to choose a
+           screen is exactly what §6 deletes — and a NavLink would also
+           mark itself active and steal the pill from the tab you are
+           actually on, which is a small lie about where you are.
 
-               Five equal shares of 390px is 74px each, and "Community"
-               needs 85 — so it was ellipsed to "Comm…" while Home sat
-               in 74px using 43 and More used 37. Four labels had
-               between 20 and 37px of slack each and the fifth was
-               being cut, because the layout had decided in advance
-               that all words are the same length.
-
-               Content-sized items with the spare distributed between
-               them fit all five with room over: 265px of words in a
-               390px bar. It shrinks rather than clips if a future
-               language needs more than there is. */
-            flex: "0 1 auto",
-            minWidth: 0,
-            paddingInline: 9,
-            minHeight: A11Y.minTapTargetPx,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 3,
-            paddingBlock: "8px 6px",
-            borderRadius: 16,
-            textDecoration: "none",
-            /* THE FILLED PILL. */
-            background: isActive ? C.green : "transparent",
-            color: isActive ? C.cream : C.textMain,
-            fontWeight: isActive ? 800 : 600,
-          })}
-        >
-          {({ isActive }) => (
-            <>
-              <span aria-hidden="true" style={{ fontSize: 21, lineHeight: 1 }}>
-                {item.emoji}
-              </span>
-              {/* 18px is the floor everywhere else in the app, and a
-                  five-item bar at 390px gives each label 74px. The
-                  label is allowed to be 16px HERE and only here,
-                  because it sits under an icon that repeats it and is
-                  never the only thing carrying the meaning — and
-                  because shrinking it is what keeps the words rather
-                  than replacing them with icons alone, which §3
-                  forbids outright. */}
-              <span
-                style={{
-                  fontSize: ts(15),
-                  /* MEASURED, NOT EYEBALLED. At 15px the Urdu
-                     labels need a 30px line box and 1.5 gave them
-                     22.5, so overflow:hidden was shearing 7px off
-                     every one of them — the tails of گھر and کھیل
-                     specifically. 2.1 clears the descender with a
-                     little to spare; the Latin labels are unaffected,
-                     since they never came near the ceiling. */
-                  lineHeight: 2.45,
-                  maxWidth: "100%",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  fontWeight: "inherit",
-                  color: "inherit",
-                }}
-              >
-                {t(item.key)}
-              </span>
-            </>
-          )}
-        </NavLink>
-      ))}
+           SIZED TO THE WORD, NOT TO AN EQUAL SHARE. Five equal shares
+           of 390px is 74px each, and "Community" needed 85 — it was
+           ellipsed to "Comm…" while Home used 43 of its 74. Content
+           sizing fits all five with room over, and shrinks rather than
+           clips if a language needs more than there is. */
+        item.drawer ? (
+          <button
+            key={item.to}
+            type="button"
+            onClick={onOpenDrawer}
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(drawerOpen)}
+            style={itemStyle(Boolean(drawerOpen))}
+          >
+            <Inside item={item} />
+          </button>
+        ) : (
+          <NavLink key={item.to} to={item.to} end={item.end} style={({ isActive }) => itemStyle(isActive)}>
+            <Inside item={item} />
+          </NavLink>
+        )
+      )}
     </nav>
   );
 }

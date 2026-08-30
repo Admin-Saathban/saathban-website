@@ -27,7 +27,13 @@ import { roleHomePath } from "../lib/session.jsx";
 export function barItems(role, { buddyActive = true } = {}) {
   const home = { to: roleHomePath(role), key: "hub.home", emoji: "🏠", end: true };
   const games = { to: "/app/games", key: "hub.games", emoji: "🎲" };
-  const more = { to: "/app/more", key: "hub.more", emoji: "☰" };
+/* More is no longer a destination — NAVIGATION_SPEC §6 makes it a
+   drawer. It keeps a `to` so /app/more still resolves for a
+   bookmark or a deep link, but `drawer` is what the bar reads: the
+   bar renders this one as a button that opens the panel rather than
+   as a NavLink that navigates away from where you are. Going to a
+   whole other screen to pick a screen is the thing §6 removes. */
+  const more = { to: "/app/more", key: "hub.more", emoji: "☰", drawer: "more" };
 
   if (role === "saath_icon") {
     /* §1 merged Home and Community into one screen, so a Community

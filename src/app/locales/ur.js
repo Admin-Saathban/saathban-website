@@ -1384,6 +1384,7 @@ const ur = {
   },
   calendar: {
     title: "آپ کا کیلنڈر",
+    thingsToday: "آج {n}",
     today: "آج",
     tomorrow: "کل",
     add: "کچھ شامل کریں",

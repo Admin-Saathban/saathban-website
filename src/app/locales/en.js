@@ -1957,10 +1957,6 @@ const en = {
       /* §17 — the fourth seat option. "Send a link" is for the
          person who is not on Saathban yet. */
       fillLinkNote: "They'll sign up and land straight in this seat.",
-      /* §17's own strings. Every refusal gets its own sentence,
-         because "somebody got there first" and "this link is too old"
-         are different things to a person holding a phone. */
-      seatLinkGroup: "",
       /* The faces sheet behind the person choice. */
       sheet: {
         title: "Who is playing?",

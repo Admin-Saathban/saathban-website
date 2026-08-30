@@ -43,7 +43,10 @@ import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
 import PublicResult from "./routes/games/PublicResult.jsx";
 import ClaimSeat from "./routes/games/ClaimSeat.jsx";
+import CalendarPage from "./routes/calendar/CalendarPage.jsx";
 import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
+import HelloInvite from "./routes/people/HelloInvite.jsx";
+import { readPendingInvite, clearPendingInvite } from "./lib/invites.js";
 import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
@@ -157,6 +160,18 @@ function PendingJoinRedirect() {
   useEffect(() => {
     if (done.current || !profile) return;
     if (pathname.startsWith("/app/join") || pathname.startsWith("/app/seat")) return;
+    if (pathname.startsWith("/app/hello")) return;
+    /* §7 — an invitation tapped before there was an account. It keeps
+       its OWN stash: stashPendingJoin() runs its argument through
+       digitsOnly(), which is right for a six-digit table code and
+       would erase a letters-and-digits invite code entirely. */
+    const invite = readPendingInvite();
+    if (invite) {
+      done.current = true;
+      clearPendingInvite();
+      navigate(`/app/hello/${invite}`, { replace: true });
+      return;
+    }
     const code = readPendingJoin();
     if (!code) return;
     done.current = true;
@@ -219,11 +234,28 @@ export default function AppRoot() {
               the way back. It is the same join_by_code RPC as the typed
               code, so the gates and rate limits are unchanged. */}
           <Route path="join/:code" element={<JoinByLink />} />
+          {/* §7 — a personal invitation. Outside RequireAuth for the
+              same reason join/:code is: the person it was sent to may
+              have no account yet. It connects nobody; it resolves who
+              invited them and hands over to that profile. */}
+          <Route path="hello/:code" element={<HelloInvite />} />
           {/* §17 — a seat held by a link. Outside RequireAuth for the
               same reason join/:code is: the person it was sent to may
               not have an account yet, and a sign-in wall on the link
               defeats the option entirely. */}
           <Route path="seat/:token" element={<ClaimSeat />} />
+          {/* §13 — every role gets a calendar holding what is relevant
+              to them. The filtering is by kind (entryActions), and the
+              database is the real boundary underneath: calendar_entries
+              are owner-only, so no role can read another's notes. */}
+          <Route
+            path="calendar"
+            element={
+              <RequireAuth>
+                <CalendarPage />
+              </RequireAuth>
+            }
+          />
           {/* The public result of a finished game — OUTSIDE RequireAuth,
               like join/:code above, because the whole point is a link
               someone can open with no account. The component never

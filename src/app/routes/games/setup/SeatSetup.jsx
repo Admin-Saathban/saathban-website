@@ -236,6 +236,11 @@ export default function SeatSetup({
   const { t, ts } = useI18n();
   const [seats, setSeats] = useState(Math.max(2, minSeats));
   const [diceCount, setDiceCount] = useState(1);
+  /* ON, because the alternative is asking a person to confirm the one
+     thing the rules had already decided. Off is for anyone who would
+     rather move every goti with their own hand, and that is a real
+     preference rather than a fallback. */
+  const [autoOnlyMove, setAutoOnlyMove] = useState(true);
   /* colours[seat] = index into SEAT_COLORS. You are seat 0 and start
      on green; the rest take what is left, in order, and can be
      changed. */
@@ -456,13 +461,77 @@ export default function SeatSetup({
         </>
       )}
 
+      {/* ── One less thing to tap ──────────────────────────────────
+             A turn with exactly one legal move is not a decision. This
+             is the switch for people who would rather make it anyway,
+             and it is a switch rather than a checkbox because the rest
+             of this screen is things you touch. ── */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={autoOnlyMove}
+        onClick={() => setAutoOnlyMove((v) => !v)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: "100%",
+          minHeight: A11Y.minTapTargetPx,
+          padding: "12px 14px",
+          marginBottom: 20,
+          borderRadius: 16,
+          border: `2px solid ${autoOnlyMove ? C.green : "#E3D9C6"}`,
+          background: autoOnlyMove ? "#F2FAF4" : C.white,
+          cursor: "pointer",
+          textAlign: "start",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            flex: "0 0 auto",
+            width: 52,
+            height: 30,
+            borderRadius: 15,
+            background: autoOnlyMove ? C.green : "#D8CDB8",
+            position: "relative",
+            transition: "background 160ms",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: 3,
+              insetInlineStart: autoOnlyMove ? 25 : 3,
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              background: C.white,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+              transition: "inset-inline-start 160ms",
+            }}
+          />
+        </span>
+        <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+          {t("games.setup.autoOnlyMove")}
+        </span>
+      </button>
+
       {extras}
 
       {/* ── Start ── */}
       <button
         type="button"
         disabled={busy}
-        onClick={() => onStart({ seats, diceCount, colours: colours.slice(0, seats), fill: fill.slice(0, seats) })}
+        onClick={() =>
+          onStart({
+            seats,
+            diceCount,
+            colours: colours.slice(0, seats),
+            fill: fill.slice(0, seats),
+            autoOnlyMove,
+          })
+        }
         style={{
           display: "block",
           margin: "0 auto",

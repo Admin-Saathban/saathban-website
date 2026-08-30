@@ -1434,7 +1434,6 @@ const en = {
       choose: "You rolled {dice} — choose a piece.",
       theirs: "{name}'s turn.",
       rollCta: "Roll the dice",
-      movePiece: "Move piece {n}",
       pickDie: "Tap a die, then tap the goti it should move.",
       pickPiece: "Tap the goti you'd like to move.",
       autoPlayed: "Only one move was possible — played it for you.",

@@ -90,12 +90,6 @@ function rolledText(last) {
   return last.dice != null ? String(last.dice) : "";
 }
 
-function pieceWhere(p, t) {
-  if (p === 0) return t("ludo.pos.yard");
-  if (p <= 51) return t("ludo.pos.track", { n: p });
-  if (p <= 56) return t("ludo.pos.column");
-  return t("ludo.pos.home");
-}
 
 export default function LudoSession() {
   const { sessionId } = useParams();
@@ -335,6 +329,64 @@ export default function LudoSession() {
     }
     setChooser({ piece: i, opts: mine });
   };
+
+  /* ── WHEN THERE IS ONLY ONE MOVE, PLAY IT ──────────────────────
+     A turn with exactly one legal move is not a decision, it is a
+     prompt to confirm what the rules already decided. Asking a person
+     to tap a goti to be told the only thing that could happen is the
+     kind of ceremony that makes an app feel like paperwork.
+
+     ONE legal move means one across ALL the dice still in hand, not
+     one for the die that happens to be picked up — otherwise a two
+     dice turn would auto-play while the other die still had choices
+     in it, and take the decision away rather than skip a non-decision.
+
+     Fires once per roll: autoPlayed remembers the dice it acted on,
+     so a re-render, a refetch or a realtime echo cannot play a second
+     move. It never fires while the jota chooser is open, because that
+     IS a real choice, and never for anyone but the player whose turn
+     it is.
+
+     House rule, on by default, and the player can switch it off if
+     they would rather move every goti themselves. */
+  const autoPlayed = useRef(null);
+  const [autoNote, setAutoNote] = useState(false);
+  /* Read off `game` rather than the `rules` const below it. Hooks
+     have to sit above this component's early returns and `rules` is
+     declared after them, so touching it here is a temporal dead zone
+     error that blanks the whole board — which is exactly what it did.
+     Same expression as `rules`, evaluated where it is safe. */
+  const autoMove =
+    (game?.status === "lobby"
+      ? game?.house_rules
+      : game?.state?.rules || game?.house_rules)?.auto_only_move !== false;
+  useEffect(() => {
+    if (!autoMove || !myTurnNow || busy || rolling || chooser) return;
+    const dice = Array.isArray(game?.state?.dice) ? game.state.dice : null;
+    if (!dice) return;
+    const all = [];
+    dice.forEach((d, i) => {
+      if (d.used || d.wasted) return;
+      (optionsByDie[i] || []).forEach((o) => all.push({ die: i, ...o }));
+    });
+    if (all.length !== 1) return;
+    const key = `${game.id}:${diceKey}`;
+    if (autoPlayed.current === key) return;
+    autoPlayed.current = key;
+    const only = all[0];
+    setAutoNote(true);
+    act(() => move(game.id, { piece: only.piece, die: only.die, split: only.split }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionsByDie, myTurnNow, busy, rolling, chooser, autoMove, diceKey]);
+
+  /* Said out loud, briefly. A board that moves by itself with no
+     explanation is a board that has glitched, as far as the person
+     watching it knows. */
+  useEffect(() => {
+    if (!autoNote) return undefined;
+    const id = window.setTimeout(() => setAutoNote(false), 2600);
+    return () => window.clearTimeout(id);
+  }, [autoNote]);
 
   const [soundOpen, setSoundOpen] = useState(false);
 
@@ -742,6 +794,11 @@ export default function LudoSession() {
               {spendable > 1 ? t("ludo.turn.pickDie") : t("ludo.turn.pickPiece")}
             </BodyText>
           )}
+          {autoNote && (
+            <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: C.green }}>
+              {t("ludo.turn.autoPlayed")}
+            </BodyText>
+          )}
           {isMyTurn && deadDice.length > 0 && (
             <BodyText muted role="status" style={{ margin: "6px 0 0", textAlign: "center" }}>
               {t("ludo.dice.wastedNote", { n: deadDice.map((d) => d.v).join(", ") })}
@@ -796,9 +853,20 @@ export default function LudoSession() {
             </Card>
           )}
 
-          {/* The honest ≥48px targets. The board is the nice way to
-              play; these are the way that never depends on how many
-              pixels a goti happens to be. */}
+          {/* The roll button is the one honest ≥48px target left, and
+              it stays. The MOVE LIST that used to sit under it is
+              gone: "Move piece 1 · step 10 of 51" is the engine
+              talking to itself, and a step count out of 51 is a debug
+              log, not a game. The board says all of it better — the
+              gotis that can move glow, and you tap the one you mean.
+
+              That list was also the fallback for anyone who could not
+              reliably hit a goti on a phone, which is a real concern
+              and not one to wave away. It is answered where it should
+              have been answered in the first place: the goti's hit
+              target is r=42 in board units, about 50 CSS px at phone
+              width and larger than the token it surrounds, so §10's
+              48px floor is met by the thing you actually tap. */}
           {isMyTurn && !hasDice && !chooser && (
             <PrimaryBtn
               onClick={doRoll}
@@ -807,40 +875,6 @@ export default function LudoSession() {
             >
               🎲 {t("ludo.turn.rollCta")}
             </PrimaryBtn>
-          )}
-          {isMyTurn && hasDice && !chooser && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-              {[...new Set(options.map((o) => o.piece))].map((i) => {
-                const p = Number(state.pieces?.[game.current_seat]?.[i] ?? 0);
-                return (
-                  <GhostBtn
-                    key={i}
-                    disabled={busy}
-                    onClick={() => tapPiece(i)}
-                    style={{ justifyContent: "flex-start", borderColor: C.green, color: C.textMain }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: "50%",
-                        background: SEAT_COLORS[game.current_seat],
-                        color: C.cream,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 700,
-                        marginInlineEnd: 10,
-                      }}
-                    >
-                      {game.current_seat + 1}
-                    </span>
-                    {t("ludo.turn.movePiece", { n: i + 1 })} · {pieceWhere(p, t)}
-                  </GhostBtn>
-                );
-              })}
-            </div>
           )}
         </>
       )}

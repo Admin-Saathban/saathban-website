@@ -46,8 +46,23 @@ export const MOTION_CSS = `
   from { transform: translateX(0); }
   to   { transform: translateX(100%); }
 }
+/* THE SAME CURVE components/motion.jsx USES, and that is the point.
+
+   Both files implement §2's full-screen container — .sb-full-right
+   there, .sb-push here — at the same 220ms, but with DIFFERENT easing:
+   this was cubic-bezier(0.16, 0.84, 0.44, 1) against their
+   (0.22, 1, 0.36, 1). Same duration, visibly different arrival. So
+   opening Messages moved unlike opening Saved, which is precisely the
+   thing MOTION_SPEC was written to stop: "five lanes each invented
+   their own transition."
+
+   Converged on theirs rather than the reverse because that file
+   declares itself the owner of full-screen arrival and four screens
+   already use it, against two here. The two class names are still a
+   redundancy worth merging — noted to that lane — but a person can no
+   longer SEE the difference, which is the half that mattered. */
 .sb-push {
-  animation: sb-push-in-right ${MOTION.pushIn}ms cubic-bezier(0.16, 0.84, 0.44, 1) both;
+  animation: sb-push-in-right ${MOTION.pushIn}ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform;
 }
 /* RTL: Urdu reads right-to-left, so "from the side you touched" is the

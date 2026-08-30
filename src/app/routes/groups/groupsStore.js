@@ -334,10 +334,22 @@ export async function updateGroup(groupId, fields) {
 
 /* ── §7.5 reports raised inside this group ── */
 export async function fetchGroupReports(groupId) {
+  /* §7.5 is "reports raised INSIDE this group", which is not the same
+     as reports ABOUT the group. Matching only target_id = groupId
+     caught the second and missed the first — so a member reporting a
+     post in the group would never appear on the screen whose entire
+     job is to show it. The post ids come first, then the reports
+     against either them or the group itself. */
+  const { data: posts } = await supabase
+    .from("group_posts").select("id").eq("group_id", groupId);
+  const ids = [groupId, ...(posts || []).map((p) => p.id)];
+
   const { data, error } = await supabase
     .from("community_reports")
-    .select("id, target_kind, target_id, target_excerpt, reason, status, created_at")
-    .eq("target_id", groupId)
+    // 0078 added the media columns; a reported voice note would
+    // otherwise render as a silent row with nothing to judge.
+    .select("id, target_kind, target_id, target_excerpt, reason, status, created_at, target_media_bucket, target_media_path, target_media_kind")
+    .in("target_id", ids)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];

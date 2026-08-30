@@ -43,6 +43,7 @@ import {
   fetchJoinRequests, respondJoinRequest,
   setCoAdmin, removeMember, updateGroup, fetchGroupReports,
 } from "./groupsStore.js";
+import ReportedMedia from "../admin/ReportedMedia.jsx";
 
 export default function GroupManage() {
   const { id } = useParams();
@@ -287,10 +288,25 @@ export default function GroupManage() {
           <BodyText muted style={{ margin: 0 }}>{t("groups.manage.noReports")}</BodyText>
         ) : (
           reports.map((r) => (
-            <div key={r.id} style={row}>
+            <div key={r.id} style={{ ...row, alignItems: "flex-start" }}>
               <span style={{ flex: 1, minWidth: 0, fontSize: ts(16) }}>
                 {r.target_excerpt || r.target_kind}
                 {r.reason ? ` — ${r.reason}` : ""}
+                {/* A reported voice note is otherwise a silent row with
+                    nothing to judge. Only post-audio is offered here:
+                    report-evidence holds copies of reported DM audio and
+                    is admins-only (0078), and a group admin is not
+                    necessarily a platform admin — rendering a player
+                    that cannot sign its own URL would be a control that
+                    fails in the hand. A DM has no business on a
+                    group-scoped screen in any case. */}
+                {r.target_media_path && r.target_media_bucket === "post-audio" && (
+                  <ReportedMedia
+                    bucket={r.target_media_bucket}
+                    path={r.target_media_path}
+                    kind={r.target_media_kind}
+                  />
+                )}
               </span>
               <Pill tone={r.status === "open" ? "brown" : "green"}>{r.status}</Pill>
             </div>

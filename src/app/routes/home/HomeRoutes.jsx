@@ -17,7 +17,7 @@ import FirstRun from "../onboarding/FirstRun.jsx";
 import { useSession } from "../../lib/session.jsx";
 
 export default function HomeRoutes() {
-  const { profile } = useSession();
+  const { profile, profileStatus } = useSession();
   /* PRODUCT_DECISIONS §2 — the first three screens.
 
      A GATE, NOT A ROUTE. It sits in front of the whole home area
@@ -31,6 +31,10 @@ export default function HomeRoutes() {
      that gap is a person tapping "Skip for now" and watching the same
      screen sit there. */
   const [justOnboarded, setJustOnboarded] = useState(false);
+  /* Nothing renders until the profile has actually answered: "not
+     loaded yet" and "already onboarded" are different states, and
+     treating them alike shows the wrong screen for a beat. */
+  if (profileStatus === "loading") return null;
   if (profile && !profile.settings?.onboarded_at && !justOnboarded) {
     return <FirstRun profile={profile} onDone={() => setJustOnboarded(true)} />;
   }

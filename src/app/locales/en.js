@@ -1437,6 +1437,26 @@ const en = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
+    /* Setting the table. Almost every string here is an aria-label —
+       the screen itself is pictures, and these are what a screen
+       reader says in their place. */
+    setup: {
+      addSeat: "Add a player",
+      removeSeat: "Remove this player",
+      colour: {
+        green: "Green",
+        red: "Red",
+        blue: "Blue",
+        yellow: "Yellow",
+      },
+      fill: {
+        person: "Someone you know",
+        bot: "The computer",
+        open: "Anyone from the community",
+      },
+      diceCaptionOne: "One die, the way it has always been played.",
+      diceCaption: "Two dice — the Desi table.",
+    },
     new: {
       hint: "Who are you playing?",
       players: "Players",

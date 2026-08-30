@@ -1412,6 +1412,23 @@ const ur = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
+    setup: {
+      addSeat: "ایک کھلاڑی شامل کریں",
+      removeSeat: "یہ کھلاڑی ہٹا دیں",
+      colour: {
+        green: "ہرا",
+        red: "لال",
+        blue: "نیلا",
+        yellow: "پیلا",
+      },
+      fill: {
+        person: "کوئی اپنا",
+        bot: "کمپیوٹر",
+        open: "برادری میں سے کوئی بھی",
+      },
+      diceCaptionOne: "ایک پانسہ، جیسے ہمیشہ سے کھیلا جاتا ہے۔",
+      diceCaption: "دو پانسے — دیسی میز۔",
+    },
     new: {
       hint: "آپ کس کے ساتھ کھیلیں گے؟",
       players: "کھلاڑی",

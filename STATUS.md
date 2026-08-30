@@ -354,6 +354,30 @@ committing to continuously — a rebase for a byline would cost everyone
 more than it is worth. Where a commit carries another lane's work,
 it is recorded here instead.
 
+**A DENYLIST IS NOT A CHECK.** Two of the sweeps below happened despite
+the author running a "is any of this someone else's?" grep first. Both
+greps searched for a fixed list of foreign markers — `gameFeel`,
+`sound`, `QuickChat`, `Arrow` — and both returned zero, and zero was
+read as "this diff is all mine". It is not: it means the diff contains
+none of the four things you happened to think of. `towerHere` was not
+on the list, so it passed.
+
+The check that works is the opposite shape. Enumerate what YOU changed
+and refuse to stage anything that is not on that list — which is what
+`git apply --cached` on a filtered set of hunks does, and why the one
+lane that used it caught its own mistake instead of shipping it. An
+allowlist fails closed. A denylist fails silently, and it fails most
+often on the files you know best, because those are the ones you skip
+the tooling for.
+
+- **`510aab5`** (games lane) also contains the LUDO-TABLE lane's
+  tower-spread change in `LudoBoard.jsx` — widening the lean between
+  seats from 15 to 26 units when a jota is on the square, so a guest
+  goti does not land on top of the tower. Swept in by a whole-file
+  `git add`, after a denylist grep that searched for four foreign
+  markers and did not include `towerHere`. Content intact; the owning
+  lane asked that it not be moved.
+
 - **`62d8126`** (games lane) also contains the CARROM lane's work: the
   rewritten Timeouts paragraph and the `by_bot` note in
   GAMES_CONTRACT.md. Swept in by a whole-file `git add` on the most

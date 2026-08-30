@@ -246,3 +246,103 @@ export async function sendChat(sessionId, body) {
   });
   if (error) throw new Error(error.message);
 }
+
+/* ════════════════════════════════════════════════
+   CHANGING THE TABLE AT THE TABLE — §8, migrations 0092/0093.
+
+   Everything the old setup form asked, asked again at the board by
+   tapping the thing itself. All four refuse server-side once a die
+   has been thrown (game_table_is_soft), so nothing here needs to
+   guess whether it is still allowed — it asks, and the board hides
+   the taps it knows will fail.
+   ════════════════════════════════════════════════ */
+
+/* Is this table still soft — set, but not yet played? */
+export async function tableIsSoft(sessionId) {
+  const { data, error } = await supabase.rpc("game_table_is_soft", { p_session: sessionId });
+  if (error) return false;
+  return data === true;
+}
+
+/* Name, house rules and seat count. Send only what changed. */
+export async function reformTable(sessionId, { seats, houseRules, title } = {}) {
+  const { error } = await supabase.rpc("game_reform_table", {
+    p_session: sessionId,
+    p_seats: seats ?? null,
+    p_house_rules: houseRules ?? null,
+    p_title: title ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/* Sit in a different corner. On a ludo board the colour IS the seat
+   — blue, red, yellow, green, in that order, always — so this is
+   what the setup form's colour circles were really choosing. */
+export async function takeSeat(sessionId, seat) {
+  const { error } = await supabase.rpc("game_take_seat", {
+    p_session: sessionId,
+    p_seat: seat + 1, // seat 0..3 → seat_no 1..4
+  });
+  if (error) throw new Error(error.message);
+}
+
+/* Ask one person to one seat. The bot holds it until they arrive. */
+export async function inviteToSeat(sessionId, profileId, seat) {
+  const { data, error } = await supabase.rpc("game_invite_to_seat", {
+    p_session: sessionId,
+    p_invitee: profileId,
+    p_seat: seat + 1,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/* Who has been asked, and to which seat — this is what puts
+   "waiting for {name}" IN THE SEAT rather than in a list somewhere
+   else on the screen (§8). Seat numbers come back 0-based like every
+   other seat number the components see. */
+export async function fetchSeatInvites(sessionId) {
+  const { data, error } = await supabase
+    .from("game_invites")
+    .select("id, seat_no, invitee_id")
+    .eq("session_id", sessionId)
+    .eq("status", "pending");
+  if (error || !data?.length) return [];
+
+  /* THE NAME COMES FROM safe_profiles, NOT FROM AN EMBED.
+
+     profiles!game_invites_invitee_id_fkey(full_name) is the obvious
+     way to write this and it returns invitee: null — RLS on
+     profiles refuses one person reading another's row, quietly and
+     with a 200. The seat then had no name to wait for, so the badge
+     never rendered and "waiting for {name}" looked unbuilt.
+
+     safe_profiles is the view the rest of this file already reads
+     names through (fetchSession does the same, two queries, for the
+     same reason). One more round trip; one fewer silent null. */
+  const ids = [...new Set(data.map((r) => r.invitee_id).filter(Boolean))];
+  let names = new Map();
+  if (ids.length) {
+    const { data: people } = await supabase
+      .from("safe_profiles")
+      .select("id, full_name")
+      .in("id", ids);
+    names = new Map((people || []).map((p) => [p.id, p.full_name]));
+  }
+  return data.map((r) => ({
+    id: r.id,
+    seat: (r.seat_no ?? 1) - 1,
+    name: names.get(r.invitee_id) || null,
+  }));
+}
+
+/* People this person may ask: the games rails' own list, which
+   already answers "connected, and allowed to play". */
+export async function fetchAskable() {
+  const { data, error } = await supabase.rpc("game_people");
+  if (error) return [];
+  return (data || []).map((p) => ({
+    id: p.id ?? p.profile_id,
+    name: p.full_name ?? p.name ?? null,
+  }));
+}

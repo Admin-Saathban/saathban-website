@@ -2553,8 +2553,25 @@ const en = {
       safeStandard: "Standard",
       safeNone: "None",
     },
+    /* §8 — changing the table AT the table. Every one of these is
+       the label on a tap that used to be a field on a form. */
     table: {
       botTookOver: "{names} stepped away — a bot is playing their seat.",
+      seatTitle: "{colour} seat",
+      seatTap: "{who} — change this seat",
+      sitHere: "Sit here",
+      askSomeone: "Ask someone to this seat",
+      noOneYet: "Nobody to ask just yet. The bots are decent company, and this table will still be here when there is someone.",
+      howMany: "How many playing",
+      waitingFor: "waiting for {name}",
+      waiting: "waiting",
+      nameIt: "Name this table",
+      nameLabel: "The name of this table",
+      oneDie: "Play with one die",
+      twoDice: "Play with two dice",
+      back: "Back",
+      done: "Done",
+      failed: "That did not go through.",
     },
     seat: {
       botHasSeat: "BOT",

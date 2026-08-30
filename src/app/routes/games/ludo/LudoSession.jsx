@@ -22,6 +22,8 @@ import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
+import { tableIsSoft, reformTable, fetchSeatInvites } from "./ludoRails.js";
+import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
 import { GAME } from "../gameSurface.js";
 import InfoPanel from "../../../components/InfoPanel.jsx";
@@ -111,6 +113,18 @@ export default function LudoSession() {
      options come from the SERVER (ludo_desi_legal) — the same array
      the move RPC validates against — so the board can never offer
      something that would then be refused. */
+  /* §8 — IS THIS TABLE STILL SOFT? Set, but not yet played: the
+     window in which its seats, its name, its size and its dice can
+     still be changed by tapping them. The server owns the answer
+     (game_table_is_soft) and refuses the writes regardless; this
+     only decides whether to OFFER the taps, because a control that
+     is going to be refused should not be drawn.
+
+     It starts false, so a table mid-game never flashes its editing
+     affordances for one render while the answer is in flight. */
+  const [soft, setSoft] = useState(false);
+  const [seatSheet, setSeatSheet] = useState(null);
+  const [seatInvites, setSeatInvites] = useState([]);
   const [pickedDie, setPickedDie] = useState(0);
   /* Options for EVERY die still in hand, keyed by its index. Knowing
      about the other one matters: a die with nothing it can do is a
@@ -147,9 +161,24 @@ export default function LudoSession() {
      followed. Only an id that APPEARS afterwards moves you. */
   const rematchOnArrival = useRef(undefined);
 
+
+  /* The soft window and who is being waited for. Re-read whenever
+     the board reloads: the window closes on the FIRST ROLL, which
+     may be a bot's, and a stale `true` would leave a tap on screen
+     that the server has already begun refusing. */
+  const softClosed = useRef(false);
+  const refreshTable = async () => {
+    const isSoft = await tableIsSoft(sessionId);
+    if (!isSoft) softClosed.current = true;
+    setSoft(isSoft);
+    setSeatInvites(isSoft ? await fetchSeatInvites(sessionId) : []);
+  };
   const load = async () => {
     const g = await fetchSession(sessionId);
     setGame(g);
+    /* Ask until it is settled. The window only ever closes, so
+       one 'no' is final and the polling stops paying for it. */
+    if (!softClosed.current) refreshTable();
     const seen = g?.rematch_id ?? null;
     if (rematchOnArrival.current === undefined) {
       rematchOnArrival.current = seen;
@@ -168,6 +197,7 @@ export default function LudoSession() {
        of what its rematch was — and either follow a rematch it should
        not, or refuse to follow one it should. */
     rematchOnArrival.current = undefined;
+    softClosed.current = false;
     load().catch(() => setError("ludo.errors.load"));
     timer = setInterval(async () => {
       try {
@@ -715,6 +745,44 @@ export default function LudoSession() {
     : null;
   const last = state.last;
 
+  /* §8 — WHAT MAY BE TAPPED, and by whom.
+
+     Anyone at the table may take an empty seat (it is their own
+     colour they are choosing). Only the person who opened it may
+     re-size it, rename it, change the dice or ask someone else
+     in — those change the table for everybody at it. The server
+     draws exactly this line; this is the same line drawn in
+     pixels so nobody taps into a refusal. */
+  const editable = soft && playing && !!mySeatRow;
+  /* THE CLOCK IS HELD, SO NO CLOCK IS DRAWN (0094). Before the
+     first roll, at a table holding nobody but bots, the server
+     does not take the opening turn — the person is still setting
+     the table. A ring emptying over that would be the clock that
+     lies, twice warned against in this file: it would count to
+     zero and nothing would happen. Both conditions are the
+     server's, restated here rather than guessed. */
+  const clockHeld =
+    soft && seats.every((x) => x.is_bot || x.profile_id === myId);
+  const iAmHost = game.created_by === myId;
+  /* name-by-seat, for "waiting for {name}" in the seat itself. */
+  const pendingBySeat = {};
+  for (const inv of seatInvites) {
+    if (inv.name) pendingBySeat[inv.seat] = inv.name;
+  }
+  const platePins = {
+    onTapSeat: editable ? (seat) => setSeatSheet(seat) : undefined,
+    pendingBySeat,
+    spareDie: diceCount === 2,
+    onToggleSpare:
+      editable && iAmHost
+        ? () =>
+            act(async () => {
+              await reformTable(game.id, { houseRules: { dice_count: diceCount === 2 ? 1 : 2 } });
+              await load();
+            })
+        : undefined,
+  };
+
   return (
     <>
       {/* saath-tumble and every other games animation now live in
@@ -799,22 +867,18 @@ export default function LudoSession() {
              the width beside it is empty. A table's name costs nothing
              THERE, so §1 keeps its board and D1 keeps its name. An
              unnamed table renders the row exactly as before. */
-          game.title && (
-            <p
-              style={{
-                fontSize: ts(A11Y.minBodyPx),
-                fontWeight: 700,
-                color: C.greenMuted,
-                margin: 0,
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {game.title}
-            </p>
-          )
+          /* §8: THE NAME IS THE FIELD. Tapping it turns it into
+             one, while the table is still soft; after that it is
+             the same line of text it always was. A table with no
+             name shows the invitation to give it one only to the
+             person who opened it — to everyone else an unnamed
+             table is simply unnamed, and the row stays empty. */
+          <TableName
+            sessionId={game.id}
+            title={game.title}
+            editable={editable && iAmHost}
+            onChanged={load}
+          />
         )}
         {/* LEAVING LIVES UP HERE NOW, during play. It is a door, not
             an action of the game, and down in the action row it was a
@@ -877,6 +941,20 @@ export default function LudoSession() {
       </div>
 
       {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
+
+      {/* §8: tapped a seat. Everything in here is about that seat. */}
+      {seatSheet != null && (
+        <SeatSheet
+          sessionId={game.id}
+          seat={seatSheet}
+          row={seats.find((x) => x.seat === seatSheet)}
+          seats={seats}
+          seatsTotal={game.target_seats}
+          iAmHost={iAmHost}
+          onClose={() => setSeatSheet(null)}
+          onChanged={load}
+        />
+      )}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -996,8 +1074,9 @@ export default function LudoSession() {
             canRoll={isMyTurn && !hasDice && !busy && !rolling}
             onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
             rolling={rolling}
-            secondsLeft={secondsLeft}
+            secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
+            {...platePins}
           />
           </div>
 
@@ -1151,8 +1230,9 @@ export default function LudoSession() {
             canRoll={isMyTurn && !hasDice && !busy && !rolling}
             onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
             rolling={rolling}
-            secondsLeft={secondsLeft}
+            secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
+            {...platePins}
           />
 
           <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>

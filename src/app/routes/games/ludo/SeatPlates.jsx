@@ -287,7 +287,113 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
   );
 }
 
-function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie, remaining, seconds, rolling, compact }) {
+
+/* ── THE SPARE DIE (§8) ────────────────────────────────────────
+   One die or two used to be a pair of radio pills on a form. It is
+   a die now: a ghost of a second one, sitting where the second one
+   would sit, next to the first. Tap it and it is there; tap it
+   again and it is gone.
+
+   It only exists while the table is soft — before anybody has
+   rolled — because after that the dice on the table are the dice
+   of a game in progress and a spare beside them would be a lie
+   about what the next roll will do. */
+function SpareDie({ on, onToggle, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        width: 44,
+        height: 44,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        cursor: "pointer",
+        /* Present but plainly not thrown yet. The solid state is
+           still under full opacity of the real dice beside it, so
+           the eye reads it as a setting rather than a result. */
+        opacity: on ? 0.85 : 0.3,
+      }}
+    >
+      <DieFace value={on ? 2 : 5} size={30} ink={on ? "#2F2A24" : "#6E6152"} />
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          right: 0,
+          bottom: 1,
+          minWidth: 17,
+          height: 17,
+          borderRadius: 9,
+          background: on ? C.green : "rgba(255,255,255,0.85)",
+          color: on ? C.cream : "#2F2A24",
+          fontSize: 13,
+          fontWeight: 900,
+          lineHeight: "17px",
+          textAlign: "center",
+        }}
+      >
+        {on ? "\u2212" : "+"}
+      </span>
+    </button>
+  );
+}
+
+/* The seat as a tap target. Without a handler it renders nothing of
+   its own — mid-game a plate is a plate, and a control that does
+   nothing is worse than no control. */
+function SeatTap({ onTap, seat, row, children }) {
+  const { t } = useI18n();
+  if (!onTap) return children;
+  const who = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
+  return (
+    <button
+      type="button"
+      onClick={() => onTap(seat)}
+      aria-label={t("ludo.table.seatTap", { who })}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        margin: 0,
+        display: "inline-flex",
+        cursor: "pointer",
+        borderRadius: "50%",
+        /* A dashed ring says "this can be changed" without adding a
+           word to a screen that is trying to be a board. */
+        outline: `2px dashed ${GAME.controlEdge}`,
+        outlineOffset: 2,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+function Plate({
+  seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie,
+  remaining, seconds, rolling, compact,
+  /* §8: tapping the seat itself. Given only while the table is
+     soft, so a plate mid-game is exactly what it always was. */
+  onTapSeat,
+  /* Someone has been asked to this seat and has not answered yet.
+     { name } — the waiting is IN THE SEAT, which is the whole
+     point: a table that says who it is holding a place for is a
+     table, and a list of pending invitations somewhere else is
+     paperwork. */
+  pending,
+  /* One die or two, on my own plate only. */
+  spareDie,
+  onToggleSpare,
+}) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   const colour = SEAT_COLORS[seat];
@@ -325,6 +431,13 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         boxShadow: isTurn ? `0 2px 14px ${colour}33` : "none",
       }}
     >
+      {/* THE SEAT IS THE BUTTON (§8). Wrapping the avatar rather
+          than the whole plate is deliberate: the plate already
+          contains buttons — the dice — and a button inside a
+          button is invalid, un-tappable on some browsers and
+          unreadable to a screen reader. The face is also the
+          thing a person points at when they mean that seat. */}
+      <SeatTap onTap={onTapSeat} seat={seat} row={row}>
       <Avatar
         compact={compact}
         name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
@@ -341,6 +454,7 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
             : t("ludo.ring.theirs", { name, n: seconds })
         }
       />
+      </SeatTap>
 
       <span
         style={{
@@ -355,11 +469,15 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         <span
           dir="auto"
           style={
+            /* Crowded: my own name steps aside for my own turn line,
+               and again for the spare die (§8) — at 390px the avatar,
+               the name, a spare and a roll die do not fit, and a name
+               ellipsed to "T…" is worse than one read aloud. */
             /* Crowded: my own name steps aside for my own turn line.
                Off-screen rather than removed — the name is still read
                aloud, it just stops competing for 60px the dice and the
                instruction need more. */
-            isMe && dice && dice.length > 1
+            isMe && ((dice && dice.length > 1) || onToggleSpare)
               ? {
                   position: "absolute",
                   width: 1,
@@ -382,9 +500,40 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
                 }
           }
         >
-          {name}
+          {/* A seat kept for somebody carries THEIR name, not the
+              name of the bot minding it (§8). */}
+          {pending || name}
           {isMe ? ` (${t("ludo.seat.you")})` : ""}
         </span>
+        {/* §8: "waiting happens on the board, with 'waiting for
+            {name}' in the seat". A bot is holding the place and
+            playing it, so the game does not stall while somebody
+            decides — but the seat says whose it is meant to be. */}
+        {pending && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignSelf: align === "end" ? "flex-end" : "flex-start",
+              alignItems: "center",
+              marginTop: 2,
+              padding: "1px 7px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.16)",
+              color: GAME.ink,
+              fontSize: ts(13),
+              fontWeight: 800,
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            /* One word on the plate, the whole sentence to a screen
+               reader — the space is short, the meaning is not. */
+            aria-label={t("ludo.table.waitingFor", { name: pending })}
+          >
+            {t("ludo.table.waiting")}
+          </span>
+        )}
         {takenOver && (
           <span
             style={{
@@ -518,6 +667,10 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
       )}
       {/* Nothing rolled yet: the empty die is the roll button, and only
           for the person whose turn it is. */}
+      {/* §8: one die or two, tapped rather than filled in. */}
+      {onToggleSpare && (
+        <SpareDie on={!!spareDie} onToggle={onToggleSpare} label={t(spareDie ? "ludo.table.oneDie" : "ludo.table.twoDice")} />
+      )}
       {dice && dice.length === 0 && isTurn && (
         <SeatDie
           value={null}
@@ -561,6 +714,11 @@ export default function SeatPlates({
      rather than a number. Omit both and no ring is drawn. */
   secondsLeft,
   turnSeconds,
+  /* §8, all three only while the table is soft. */
+  onTapSeat,
+  pendingBySeat,
+  spareDie,
+  onToggleSpare,
 }) {
   const wanted = where === "top" ? [0, 1] : [3, 2]; // TL,TR above · BL,BR below
   const plates = wanted.map((corner) => {
@@ -624,6 +782,14 @@ export default function SeatPlates({
               compact={compact}
               remaining={seat === currentSeat ? remaining : null}
               seconds={seat === currentSeat ? secondsLeft : null}
+              onTapSeat={onTapSeat}
+              pending={pendingBySeat ? pendingBySeat[seat] : null}
+              spareDie={spareDie}
+              onToggleSpare={
+                onToggleSpare && seats.find((s) => s.seat === seat)?.profile_id === myId
+                  ? onToggleSpare
+                  : undefined
+              }
             />
           )}
         </div>

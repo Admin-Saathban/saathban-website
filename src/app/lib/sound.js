@@ -30,12 +30,13 @@
 
 const STORE_KEY = "saathban.app.sound";
 
-/* Sound is OFF-BY-DEFAULT only for the ambient bed. Effects are on:
-   a silent board feels broken, and the mute control is one tap away.
+/* Effects are ON by default: a silent board feels broken, and the
+   mute control is one tap away. (There is no longer a background bed
+   for anything to be off-by-default about — see §7 below.)
    Volume defaults to 0.7 rather than 1.0 so the first sound a person
    ever hears is gentle — it is easier to turn something up than to
    forgive it for being loud once. */
-const DEFAULTS = { volume: 0.7, muted: false, ambient: false, haptics: true };
+const DEFAULTS = { volume: 0.7, muted: false, haptics: true };
 
 let prefs = { ...DEFAULTS };
 let loaded = false;
@@ -51,7 +52,10 @@ function loadPrefs() {
       prefs = {
         volume: typeof saved.volume === "number" ? Math.min(1, Math.max(0, saved.volume)) : DEFAULTS.volume,
         muted: !!saved.muted,
-        ambient: !!saved.ambient,
+        /* The old ambient flag is deliberately NOT read back. A person
+           who once switched the bed on has it sitting in their
+           localStorage, and reading it would be the only way the
+           deleted feature could return. */
         haptics: saved.haptics !== false,
       };
     }
@@ -74,8 +78,6 @@ export function setSoundPrefs(patch) {
     /* preference won't survive the session; the sound still obeys it now */
   }
   if (ctx && master) master.gain.value = prefs.muted ? 0 : prefs.volume;
-  if (prefs.ambient && !prefs.muted) startAmbient();
-  else stopAmbient();
   for (const fn of listeners) fn({ ...prefs });
   return { ...prefs };
 }
@@ -122,29 +124,61 @@ export function unlockSound() {
   if (!c) return;
   if (c.state === "suspended") c.resume().catch(() => {});
   unlocked = true;
-  if (prefs.ambient && !prefs.muted) startAmbient();
 }
 
 export function isSoundReady() {
   return !!ctx && unlocked && ctx.state === "running";
 }
 
+/* EVERYTHING STOPS, NOW.
+
+   §7: "Audio must stop when the game screen unmounts. Sound currently
+   continues after leaving a game. This is a lifecycle bug: the audio
+   graph is not tied to the component's teardown."
+
+   It was. Effects were fired as one-shot nodes that outlive whatever
+   scheduled them, so a capture flourish begun the instant you tapped
+   Leave went on playing over the games list. Suspending the context
+   is the only thing that catches sounds already in flight — stopping
+   sources one by one races them.
+
+   Called on unmount, on route change and on tab-hide. Idempotent, and
+   safe before any sound has ever played. */
+export function stopAllSound() {
+  if (!ctx) return;
+  try {
+    if (master) {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(0, ctx.currentTime);
+    }
+    ctx.suspend().catch(() => {});
+  } catch {
+    /* an already-closed context is the state we wanted anyway */
+  }
+}
+
+/* And the way back, for the next game screen that mounts. */
+export function resumeSound() {
+  if (!ctx || !unlocked) return;
+  try {
+    if (master) master.gain.value = prefs.muted ? 0 : prefs.volume;
+    ctx.resume().catch(() => {});
+  } catch {
+    /* nothing to resume */
+  }
+}
+
 /* Leaving the tab silences everything. This is also the honest half
    of "respect the silent switch": iOS WebAudio plays straight through
    the hardware mute switch and gives us no way to read it, so the
    controls we DO have — an explicit mute, a conservative default
-   volume, ambient off unless asked, and silence the moment the page
-   is out of sight — have to carry that weight instead. */
+   volume, and silence the moment the page is out of sight — have to
+   carry that weight instead. */
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (!ctx) return;
-    if (document.hidden) {
-      stopAmbient();
-      ctx.suspend().catch(() => {});
-    } else if (unlocked) {
-      ctx.resume().catch(() => {});
-      if (prefs.ambient && !prefs.muted) startAmbient();
-    }
+    if (document.hidden) stopAllSound();
+    else resumeSound();
   });
 }
 
@@ -451,66 +485,21 @@ export function playHopRun(count, spacingMs = 190) {
   }
 }
 
-/* ── ambient bed ───────────────────────────────── */
+/* ── background music: DELETED ─────────────────────────────────
 
-let ambientNodes = null;
+   GAMES_BACKLOG A5 asked for a loopable ambient bed, off by default.
+   It was built: a tanpura-ish drone, three detuned sines, very quiet,
+   nobody's default. GAMES_IMMERSION_SPEC §7 cancels A5 outright —
+   "the owner's ruling is that it should not exist. Remove the
+   feature, its toggle and its assets."
 
-/* A tanpura-ish drone: two detuned sines a fifth apart, drifting.
-   Very quiet, no rhythm, nothing that repeats on a loop you could
-   notice. OFF unless someone asks for it — background music is a
-   thing people either love or find intolerable, and we do not get to
-   decide which they are. */
-function startAmbient() {
-  if (ambientNodes) return;
-  const c = ensureCtx();
-  if (!c || c.state !== "running") return;
-  const g = c.createGain();
-  g.gain.value = 0;
-  g.gain.linearRampToValueAtTime(0.055, c.currentTime + 3);
+   So it is gone rather than switched off, and that distinction is the
+   instruction. A feature that merely defaults to off is still a
+   feature: it has a toggle somebody can find, a preference that
+   persists, code that runs on every unlock and every visibility
+   change, and a way to come back by accident. There is now no bed to
+   start, so nothing has to remember not to start it.
 
-  const lp = c.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 900;
+   stopAllSound() below is the replacement for what stopAmbient() used
+   to be called for. */
 
-  const voices = [146.83, 220, 293.66].map((f, i) => {
-    const o = c.createOscillator();
-    o.type = "sine";
-    o.frequency.value = f * (1 + (i - 1) * 0.0012); // a hair out of tune, like a real string
-    const vg = c.createGain();
-    vg.gain.value = i === 0 ? 0.5 : 0.24;
-    o.connect(vg);
-    vg.connect(lp);
-    o.start();
-    return o;
-  });
-
-  /* one slow breath across the whole bed */
-  const lfo = c.createOscillator();
-  lfo.frequency.value = 0.06;
-  const lfoGain = c.createGain();
-  lfoGain.gain.value = 0.018;
-  lfo.connect(lfoGain);
-  lfoGain.connect(g.gain);
-  lfo.start();
-
-  lp.connect(g);
-  g.connect(master);
-  ambientNodes = { voices, lfo, g };
-}
-
-function stopAmbient() {
-  if (!ambientNodes || !ctx) return;
-  const { voices, lfo, g } = ambientNodes;
-  ambientNodes = null;
-  try {
-    g.gain.cancelScheduledValues(ctx.currentTime);
-    g.gain.setValueAtTime(g.gain.value, ctx.currentTime);
-    g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
-    for (const o of voices) o.stop(ctx.currentTime + 0.9);
-    lfo.stop(ctx.currentTime + 0.9);
-  } catch {
-    /* already stopped */
-  }
-}
-
-export { startAmbient, stopAmbient };

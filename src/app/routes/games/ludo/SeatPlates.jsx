@@ -308,7 +308,12 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         alignItems: "center",
         gap: compact ? 7 : 9,
         minWidth: 0,
-        padding: compact ? "2px 8px" : "6px 10px",
+        /* Shrinkable: the name gives way before anything is pushed
+           off the screen. The dice do not shrink — they are what a
+           player is trying to read. */
+        flex: "0 1 auto",
+        overflow: "hidden",
+        padding: compact ? "2px 6px" : "6px 8px",
         borderRadius: 16,
         background: isTurn ? "#fffdf5" : "transparent",
         border: isTurn ? `2px solid ${colour}` : "2px solid transparent",
@@ -528,11 +533,14 @@ export default function SeatPlates({
   return (
     <div
       style={{
+        boxSizing: "border-box",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         gap: 8,
-        maxWidth: 560,
+        width: "100%",
+        maxWidth: "min(560px, 100%)",
+        overflow: "hidden",
         /* Tight to the board. The reference screenshots put the
            avatars within a few pixels of the board's edge, and that
            closeness is what makes them read as sitting AT it. */

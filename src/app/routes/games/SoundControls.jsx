@@ -225,14 +225,11 @@ export function SoundPanel({ onClose }) {
         </div>
       )}
 
-      <ToggleRow
-        ts={ts}
-        label={t("games.sound.ambient")}
-        hint={t("games.sound.ambientHint")}
-        on={prefs.ambient && !silent}
-        disabled={silent}
-        onChange={(on) => update({ ambient: on })}
-      />
+      {/* The background-music toggle is gone with the feature it
+          controlled (GAMES_IMMERSION_SPEC §7 cancels GAMES_BACKLOG
+          A5). A switch for something that no longer exists is worse
+          than either having the feature or not: it promises a thing
+          and then does nothing. */}
 
       <ToggleRow
         ts={ts}

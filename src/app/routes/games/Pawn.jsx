@@ -127,7 +127,22 @@ export default function Pawn({
   const gid = `sb-goti-${idx}`;
   const s = r / 15; // everything below is drawn for r = 15 and scaled
 
-  const worn = mark ?? (piece === null ? null : defaultMark(piece));
+  /* §5: NUMBERS OFF THE FACE.
+
+     I put them there, and argued for them: the owner could not tell
+     which of their four gotis was which, and a numeral answers that
+     directly. GAMES_IMMERSION_SPEC §5 overrules it — "numbers make
+     the board a diagram" — and having looked at the two side by side
+     that is right. Four numbered discs read as counters in a
+     spreadsheet; four crowned discs read as pieces. The original
+     complaint was really that the pieces were TINY and
+     indistinguishable from each other, and size, gloss and the yard
+     position answer it without printing anything.
+
+     A caller may still pass an explicit mark — a player's chosen
+     emoji, when there is somewhere to store that — and it draws
+     exactly as before. What has gone is the automatic numeral. */
+  const worn = mark ?? null;
   /* An emoji repainted in the ink colour becomes a silhouette; a digit
      left unpainted vanishes on a dark token. So the two are drawn
      differently, and which one this is decides itself. */
@@ -204,6 +219,19 @@ export default function Pawn({
           point is that it is readable without leaning in. Haloed
           against its own gloss — dark halo on a light token, light on
           a dark one — so it holds whichever seat it belongs to. */}
+      {/* The crown, when nothing else is worn. Small, centred, in the
+          seat's own deep tone on the white face — an ornament rather
+          than a label. */}
+      {showSeat && !worn && (
+        <path
+          d="M -5.4 2.2 L -6.4 -4.6 L -2.9 -1.4 L 0 -5.6 L 2.9 -1.4 L 6.4 -4.6 L 5.4 2.2 Z"
+          fill={deep}
+          stroke={deep}
+          strokeWidth="0.7"
+          strokeLinejoin="round"
+          opacity="0.92"
+        />
+      )}
       {showSeat && worn && (
         <text
           x="0"

@@ -317,9 +317,18 @@ const CELL = 40; // viewBox units per grid cell
    a heavier thing on the board and the size is one more way of saying
    so besides the ring. A goti HOME is smaller: it is finished, and
    four finished pieces should not shout over a live board. */
-const GOTI_R = 11.5;
-const JOTA_R = 12.6;
-const HOME_R = 8.4;
+/* §5: "they should span most of their cell and slightly overflow it,
+   the way a physical piece sits proud of a square." Pawn draws a
+   token to roughly 1.8x the r it is handed, so 12.6 spans about 45
+   units across a 40-unit cell — proud of it by a little over a tenth
+   on each side, which is what a real goti does when you put it down.
+
+   LUDO_MOTION_SPEC §2's 0.8-of-a-cell figure is explicitly raised by
+   GAMES_IMMERSION_SPEC §5; it was measured from a reference whose
+   board is less dense than ours. */
+const GOTI_R = 12.6;
+const JOTA_R = 13.8;
+const HOME_R = 9;
 const SIZE = 15 * CELL;
 /* One square of travel. The user could not follow a move at all, so
    this is deliberately unhurried: a goti crossing eight squares takes
@@ -925,18 +934,31 @@ export default function LudoBoard({
               on a div around the board (LudoSession, 38b07df) and
               inherit, so nothing is plumbed through props. Table
               themes own the surface; seats own their own colours. */}
-          {/* §1: TRACK CELLS ARE WHITE WITH THIN DARK GRIDLINES —
-              "high contrast, easy for old eyes. Not tinted, not
-              textured." They were a cream gradient, which is warmer
-              and is the wrong trade here: a goti has to be findable
-              on this surface at arm's length by someone whose sight
-              is the reason the whole app exists. White loses a little
-              warmth and wins the contrast, and the warmth has plenty
-              of other places to live on this board — the frame, the
-              zones, the paper behind it all. */}
+          {/* §4 (which SUPERSEDES the flat-white instruction I built
+              to last time — see the amendment at the top of
+              LUDO_MOTION_SPEC §1): warm off-white, a gentle bevel and
+              a soft inner shadow, so the track reads as RECESSED
+              rather than printed.
+
+              The contrast argument that produced flat white was not
+              wrong, it was aimed at the wrong pair of things. What an
+              older eye needs is a big value step between the CELL and
+              the GOTI standing on it — and a slightly darker, warmer,
+              recessed cell under a glossy saturated token is a bigger
+              step than pure white under the same token. Flat white
+              only maximised the contrast between the cell and the
+              gridline, which nobody is trying to read. */}
           <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
-            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FCFCFB)" />
+            <stop offset="0%" stopColor="var(--sb-table-cell, #EFE7DA)" />
+            <stop offset="42%" stopColor="var(--sb-table-cell, #F8F3EA)" />
+            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FBF8F2)" />
+          </linearGradient>
+          {/* The recess itself: dark along the top and left inside
+              edges, the way a pressed groove catches light. */}
+          <linearGradient id="sb-recess" x1="0.1" y1="0" x2="0.35" y2="1">
+            <stop offset="0%" stopColor="#6B5A3E" stopOpacity="0.20" />
+            <stop offset="38%" stopColor="#6B5A3E" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.55" />
           </linearGradient>
           {/* the gentle press: a soft dark line inside the top edge */}
           <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
@@ -1130,9 +1152,9 @@ export default function LudoBoard({
                    follows gives it its dimension instead, and the
                    colour stays the arm's own, unmixed. */
                 fill={safeSeat >= 0 ? SEAT_COLORS[safeSeat] : "url(#sb-cell)"}
-                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #3A342A)"}
+                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #5A4C39)"}
                 strokeWidth={safeSeat >= 0 ? 1.8 : 0.9}
-                strokeOpacity={safeSeat >= 0 ? 1 : 0.55}
+                strokeOpacity={safeSeat >= 0 ? 1 : 0.5}
               />
               {/* The bevel, over every cell: a highlight along the top
                   edge and a shadow along the bottom. Drawn as an
@@ -1147,6 +1169,20 @@ export default function LudoBoard({
                 fill="url(#sb-bevel)"
                 pointerEvents="none"
               />
+              {/* §4: and the recess, on the plain cells. The coloured
+                  ones already carry their own sheen and would only be
+                  muddied by a second one. */}
+              {safeSeat < 0 && (
+                <rect
+                  x={c * CELL + 1}
+                  y={r * CELL + 1}
+                  width={CELL - 2}
+                  height={CELL - 2}
+                  rx={6}
+                  fill="url(#sb-recess)"
+                  pointerEvents="none"
+                />
+              )}
               {/* and a sheen on the coloured ones, which is what turns
                   a flat square into something with a surface */}
               {safeSeat >= 0 && (
@@ -1203,6 +1239,10 @@ export default function LudoBoard({
                   stroke={SEAT_DEEP[safeSeat]}
                   strokeWidth={1.6}
                   paintOrder="stroke"
+                  /* §4: a slight emboss. One dark edge below and to
+                     the right is the whole trick — the eye reads a
+                     shape with a shadow under it as raised. */
+                  style={{ filter: "drop-shadow(0.5px 1px 0.5px rgba(0,0,0,0.45))" }}
                   aria-hidden="true"
                 >
                   ★
@@ -1230,7 +1270,7 @@ export default function LudoBoard({
                 width={CELL - 2}
                 height={CELL - 2}
                 rx={6}
-                fill={SEAT_COLORS[seat]}
+                fill={`url(#sb-arm-${seat})`}
                 stroke={SEAT_DEEP[seat]}
                 strokeWidth={1}
               />

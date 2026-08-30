@@ -26,6 +26,7 @@ import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.j
 import { GAME } from "../gameSurface.js";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
+import { stopAllSound, resumeSound } from "../../../lib/sound.js";
 import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
@@ -606,6 +607,22 @@ export default function LudoSession() {
         : t("ludo.undo.why.error")
     );
   };
+
+  /* §7: THE GAME TAKES ITS SOUND WITH IT WHEN IT GOES.
+
+     Effects are fired as one-shot nodes that outlive whatever
+     scheduled them, so a capture flourish begun the instant somebody
+     tapped Leave carried on playing over the games list. Suspending
+     the audio context on unmount is the only thing that catches
+     sounds already in flight — stopping sources one at a time races
+     them and loses.
+
+     Resumed on mount for the next table, so leaving one game and
+     opening another is not silent. */
+  useEffect(() => {
+    resumeSound();
+    return () => stopAllSound();
+  }, []);
 
   const [soundOpen, setSoundOpen] = useState(false);
 

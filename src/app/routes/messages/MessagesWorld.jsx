@@ -130,10 +130,22 @@ export default function MessagesWorld() {
   return (
     <div
       dir={meta.dir}
+      data-world="messages"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 60,
+        /* ABOVE THE APP'S BOTTOM BAR, which is also fixed and also sat
+           at 60 — same layer, and it mounts after the routes, so it won
+           and drew its five tabs across the bottom of the world. §2 is
+           explicit that the app's five tabs do not exist in here, and
+           the text assertions all passed while a screenshot showed
+           Home / Games / Friend groups / Out & about / More along the
+           foot of Messages.
+
+           65 rather than 100: the composer (70) and the sheets (80/90)
+           must still open over this. If the navigation lane ever raises
+           the bar, this has to rise with it — noted to them. */
+        zIndex: 65,
         background: C.bg,
         color: C.textMain,
         display: "flex",

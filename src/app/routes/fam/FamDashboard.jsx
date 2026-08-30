@@ -25,7 +25,6 @@ import {
 import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
 import { MOOD_BY_VALUE } from "./famCopy.js";
 import PersonCard from "./PersonCard.jsx";
-import AreaCards from "../../components/AreaCards.jsx";
 import YourTurnChips from "../games/YourTurnChips.jsx";
 import { fetchSharedMoments, momentDayLabel } from "./famMoments.js";
 
@@ -327,21 +326,9 @@ export default function FamDashboard() {
         <YourTurnChips />
       </div>
 
-      {/* Every role's home surfaces everything the role can reach —
-          Fam takes part in games, events, groups, community, skills. */}
-      <div style={{ margin: "14px 0 6px" }}>
-        <AreaCards
-          cards={[
-            { to: "/app/people", emoji: "🫶", key: "hub.people" },
-            { to: "/app/games", emoji: "🎲", key: "hub.games" },
-            { to: "/app/events", emoji: "🎪", key: "hub.events" },
-            { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
-            { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
-            { to: "/app/community", emoji: "🪷", key: "hub.community" },
-            { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
-          ]}
-        />
-      </div>
+      {/* The card grid is gone (§3) — the bottom bar carries Home,
+          Messages and Games, and everything else is one tap into
+          More. */}
 
       {pending.length > 0 && (
         <>

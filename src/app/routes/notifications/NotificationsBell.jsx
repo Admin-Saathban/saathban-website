@@ -13,7 +13,8 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useDrawer } from "../../components/Drawer.jsx";
+import { NOTIFICATIONS_DRAWER_ID } from "../../components/NotificationsDrawer.jsx";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STRINGS } from "./strings.js";
@@ -21,6 +22,11 @@ import { fetchUnreadCount, NOTIFICATIONS_READ_EVENT } from "./data.js";
 
 export default function NotificationsBell() {
   const { lang, ts } = useI18n();
+  /* NAVIGATION_SPEC §7 — the bell opens a DRAWER now, growing from
+     itself, rather than navigating to a page. The open state lives in
+     history (see Drawer.jsx), so this button only has to ask for it.
+     The drawer itself is mounted by AppHeader, beside this. */
+  const { open, openDrawer } = useDrawer(NOTIFICATIONS_DRAWER_ID);
   const s = STRINGS[lang] || STRINGS.en;
   const [count, setCount] = useState(0);
 
@@ -58,8 +64,11 @@ export default function NotificationsBell() {
   const label = count > 0 ? `${s.bellLabel}, ${s.unreadLabel(count)}` : s.bellLabel;
 
   return (
-    <Link
-      to="/app/notifications"
+    <button
+      type="button"
+      onClick={openDrawer}
+      aria-haspopup="dialog"
+      aria-expanded={open}
       aria-label={label}
       style={{
         position: "relative",
@@ -69,7 +78,9 @@ export default function NotificationsBell() {
         minHeight: A11Y.minTapTargetPx,
         minWidth: A11Y.minTapTargetPx,
         color: C.brown,
-        textDecoration: "none",
+        border: "none",
+        background: "none",
+        cursor: "pointer",
         fontSize: ts(22),
       }}
     >
@@ -98,6 +109,6 @@ export default function NotificationsBell() {
           {count > 9 ? "9+" : count}
         </span>
       )}
-    </Link>
+    </button>
   );
 }

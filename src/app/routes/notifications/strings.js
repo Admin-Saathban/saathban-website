@@ -22,6 +22,19 @@ export const STRINGS = {
     unread: "unread",
     unreadLabel: (n) => `${n} unread`,
     bellLabel: "Notifications",
+    /* NAVIGATION_SPEC §7 — the report chain. Silence after reporting
+       a neighbour is its own discomfort, so this is the destination
+       AUDIT_11 flagged people/ThreadPage.jsx's report as needing. */
+    seeAll: "See all notifications",
+    reportsTitle: "What you reported",
+    reportsNone: "You have not reported anything.",
+    reportRef: "Reference {ref}",
+    /* Never "pending". A person is waiting on a person, and the word
+       for that is not a queue position. */
+    reportOpen: "Someone at Saathban is looking at this",
+    reportResolved: "Acted on",
+    reportDismissed: "Looked at, nothing needed",
+    reportKind: { post: "A post", comment: "A comment", dm_message: "A message" },
     loadError: "We couldn't load your notifications just now. Please try again.",
     justNow: "Just now",
     ago: (s) => `${s} ago`,
@@ -50,6 +63,14 @@ export const STRINGS = {
     unread: "غیر پڑھی",
     unreadLabel: (n) => `${n} غیر پڑھی`,
     bellLabel: "اطلاعات",
+    seeAll: "تمام اطلاعات دیکھیں",
+    reportsTitle: "آپ نے کیا رپورٹ کیا",
+    reportsNone: "آپ نے کچھ رپورٹ نہیں کیا۔",
+    reportRef: "حوالہ {ref}",
+    reportOpen: "ساتھ بن میں کوئی اسے دیکھ رہا ہے",
+    reportResolved: "کارروائی ہو گئی",
+    reportDismissed: "دیکھ لیا، کچھ ضروری نہیں تھا",
+    reportKind: { post: "ایک بات", comment: "ایک تبصرہ", dm_message: "ایک پیغام" },
     loadError: "اس وقت آپ کی اطلاعات نہیں کھل سکیں۔ براہِ کرم دوبارہ کوشش کریں۔",
     justNow: "ابھی ابھی",
     ago: (s) => `${s} پہلے`,

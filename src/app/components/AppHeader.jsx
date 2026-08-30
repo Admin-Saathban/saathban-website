@@ -26,12 +26,19 @@ import Logo from "./Logo.jsx";
 import HeaderAvatar from "./HeaderAvatar.jsx";
 import MessagesButton from "./MessagesButton.jsx";
 import SearchButton from "./SearchButton.jsx";
+import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDrawer.jsx";
+import { useDrawer } from "./Drawer.jsx";
 
 export default function AppHeader() {
   const { t, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
   const { pathname, key: locationKey } = useLocation();
+  /* §7's drawer is mounted HERE rather than in the app shell,
+     because the bell is here and the shell is absent on several
+     screens that still draw a header. A bell that opens nothing on
+     the admin shell would be a new dead control. */
+  const { open: notifOpen, closeDrawer: closeNotif } = useDrawer(NOTIFICATIONS_DRAWER_ID);
 
   const home = profile ? roleHomePath(profile.role) : "/app";
   /* A way back on every inner page, except the admin shell, which has
@@ -48,6 +55,7 @@ export default function AppHeader() {
   const goBack = () => (hasHistory ? navigate(-1) : navigate(home));
 
   return (
+    <>
     <header
       className="sb-header"
       style={{
@@ -118,5 +126,12 @@ export default function AppHeader() {
         </nav>
       </div>
     </header>
+      {/* OUTSIDE THE HEADER ELEMENT, DELIBERATELY. The header is
+         sticky with a z-index, which makes it a stacking context —
+         a position:fixed child of it is ordered WITHIN that context,
+         so the drawer at z 71 would have painted underneath the
+         bottom bar at z 60 and the dim would not have covered it. */}
+      <NotificationsDrawer open={notifOpen} onClose={closeNotif} />
+    </>
   );
 }

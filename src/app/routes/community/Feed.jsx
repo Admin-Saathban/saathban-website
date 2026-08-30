@@ -200,7 +200,11 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
         </p>
         <div style={{ marginTop: 10 }}>
           <Link
-            to="/app/events"
+            /* TONIGHT §3.1 — /app/events redirects to /app/outdoor
+               (§12's merge), so this button returned the reader to the
+               feed's neighbour instead of the gathering. The list that
+               renders is /app/events/all. */
+            to="/app/events/all"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -899,7 +903,19 @@ export default function Feed() {
         {access === true && (
           <>
             <Link
-              to="messages"
+              /* ABSOLUTE. This was to="messages", which resolves against whatever
+
+                 route the Feed is mounted under. That was right while the Feed
+
+                 lived only at /app/community; now that it also renders on Home it
+
+                 resolved to /app/home/messages, which does not exist, and the link
+
+                 silently fell back to Home. A relative link inside a component that
+
+                 can be mounted in two places is a link that works in one of them. */
+
+              to="/app/community/messages"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -916,7 +932,7 @@ export default function Feed() {
               ✉️ {t("community.feed.messagesCta")}
             </Link>
             <Link
-              to="connect"
+              to="/app/community/connect"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

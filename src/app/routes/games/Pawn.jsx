@@ -1,22 +1,42 @@
 /* ════════════════════════════════════════════════
-   A goti — the real playing piece, not a coloured dot.
+   A goti — the real playing piece, and the main object on its square.
 
-   Drawn as a pawn seen slightly from above: a round head, a waisted
-   body, a wide base, and one soft highlight so it reads as an object
-   sitting ON the board rather than a mark printed on it. The shape
-   alone tells you it's a piece; the colour tells you whose.
+   IT USED TO BE A DOT IN A BOX. A waisted pawn about half a cell wide,
+   with the SEAT number set 6px tall against its foot. Two complaints
+   from the user, both fair: the pieces are too small to be the thing
+   you look at, and you cannot tell which of your four you are about to
+   move. The second was worse than it sounds, because the numeral was
+   the SEAT — the same digit on all four of your gotis — so it answered
+   a question nobody was asking while the real one went unanswered.
 
-   Colour is never the only signal (a house rule everywhere in this
-   app): each goti carries its seat's numeral on the base, small and
-   quiet — enough to settle "which of these is mine?" for anyone who
-   can't rely on the four hues.
+   So: a round token, wide enough to dominate its cell, carrying a big
+   numeral that says WHICH PIECE THIS IS. LUDO_UI_SPEC §6 asks for
+   glossy round tokens with a highlight and a drop shadow, "pieces you
+   could pick up", and is explicit that our stacks must read better
+   than the reference's pin-shaped ones. A disc stacks legibly; a pawn
+   silhouette does not.
 
-   GLOSS. The piece is lit from the upper left: a gradient down the
-   body from a paler crown to a deeper foot, a bright specular on the
-   head, and a soft contact shadow on the square beneath. Flat colour
-   read as a sticker printed on the board; this reads as an object
-   resting on it, which is the difference between a board you look at
-   and a board you play.
+   IDENTITY IS THE MARK, NEVER THE COLOUR. Colour is the seat and only
+   the seat — the four hues are assigned at setup and a player keeps
+   theirs — so the mark is what separates your four from each other. It
+   defaults to the piece's number, drawn nearly the width of the token,
+   and any short string can be passed instead: a player's own emoji,
+   once there is somewhere to store that choice. The mark is a
+   parameter here and nothing else. The picker and its storage belong
+   to whoever owns player preferences, and this file does not care
+   which string it is handed.
+
+   DEPTH. A side wall in the seat's deep tone beneath a domed top, a
+   bright specular up and left, an inset turned ring, and a two-part
+   contact shadow — tight and dark where the token touches, soft and
+   wide around it. Flat colour read as a sticker printed on the board.
+   This reads as an object resting on it, which is the whole difference
+   between a board you look at and a board you want to touch.
+
+   A MOOD IS A BADGE, NOT THE FACE OF THE TOKEN. Identity outranks
+   expression: the numeral holds the middle and a worried or smug face
+   sits in a small badge at the shoulder, so a reaction can never cost
+   you the ability to tell your gotis apart.
 
    The gradients are defined inline, with an id per SEAT rather than
    per instance. A document ends up with several identical definitions
@@ -26,10 +46,12 @@
    silently turns black when one forgets.
    ════════════════════════════════════════════════ */
 
-import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
+import { SEAT_COLORS, SEAT_INK, SEAT_LIGHT, SEAT_DEEP } from "./seatColors.js";
 
-/* cx, cy: centre of the square the piece stands on.
-   r: roughly the radius it should occupy. */
+/* What a goti wears when nobody has chosen anything: its own number.
+   Not the seat's — the seat is the colour. */
+export const defaultMark = (pieceIdx) => String((pieceIdx ?? 0) + 1);
+
 /* A goti's face.
 
    Two eyes and a mouth, and only ever when there is something to feel:
@@ -76,16 +98,33 @@ export default function Pawn({
   cx,
   cy,
   r = 15,
+  /* WHICH of this seat's four this is. Drives the default mark and the
+     accessible name. Null for a goti drawn outside a game — the setup
+     screen's colour swatches — where there is no piece to name. */
+  piece = null,
+  /* What is written on it. A numeral by default, but any short string
+     renders the same way, which is where a player's chosen emoji will
+     arrive without this file changing. */
+  mark = null,
   showSeat = true,
   dim = false,
   spin = 0,
   mood = null,
+  label = null,
 }) {
   const idx = seat % SEAT_COLORS.length;
   const fill = SEAT_COLORS[idx];
   const ink = SEAT_INK[idx];
+  const light = SEAT_LIGHT[idx];
+  const deep = SEAT_DEEP[idx];
   const gid = `sb-goti-${idx}`;
   const s = r / 15; // everything below is drawn for r = 15 and scaled
+
+  const worn = mark ?? (piece === null ? null : defaultMark(piece));
+  /* An emoji repainted in the ink colour becomes a silhouette; a digit
+     left unpainted vanishes on a dark token. So the two are drawn
+     differently, and which one this is decides itself. */
+  const isGlyph = !!worn && !/^[0-9]+$/.test(worn);
 
   return (
     /* A piece stands up whichever way the board is turned, so the
@@ -95,56 +134,78 @@ export default function Pawn({
       opacity={dim ? 0.45 : 1}
     >
       <defs>
-        {/* lit from the upper left: pale crown, deep foot */}
-        <linearGradient id={gid} x1="0.15" y1="0" x2="0.85" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
-          <stop offset="38%" stopColor={fill} />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.28" />
-        </linearGradient>
-        <radialGradient id={`${gid}-dome`} cx="34%" cy="28%" r="76%">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
-          <stop offset="42%" stopColor={fill} />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.34" />
+        {/* the top face, lit from the upper left */}
+        <radialGradient id={`${gid}-dome`} cx="33%" cy="27%" r="82%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
+          <stop offset="26%" stopColor={light} />
+          <stop offset="72%" stopColor={fill} />
+          <stop offset="100%" stopColor={deep} />
         </radialGradient>
+        {/* the side wall: darker at the foot, so it has real thickness */}
+        <linearGradient id={`${gid}-wall`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={fill} />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.55" />
+        </linearGradient>
       </defs>
-      {/* the contact shadow: tighter and darker under the foot than a
-          flat blob, so the piece looks like it is touching down */}
-      <ellipse cx="0.6" cy="12.6" rx="11.2" ry="3.2" fill="#00000033" />
-      <ellipse cx="0" cy="12.2" rx="7.6" ry="2.1" fill="#0000003d" />
-      {/* base */}
-      <ellipse cx="0" cy="10.5" rx="11" ry="4.2" fill={fill} />
-      <ellipse cx="0" cy="9.4" rx="11" ry="4.2" fill={`url(#${gid})`} stroke="#00000030" strokeWidth="0.8" />
-      {/* body: a waisted stem rising from the base to the collar */}
-      <path
-        d="M -7.4 9 C -6.2 3.6, -3.4 2.2, -3.1 -1.2 L 3.1 -1.2 C 3.4 2.2, 6.2 3.6, 7.4 9 Z"
-        fill={`url(#${gid})`}
-        stroke="#00000030"
-        strokeWidth="0.8"
-      />
-      {/* collar */}
-      <ellipse cx="0" cy="-1.4" rx="4.6" ry="1.7" fill={`url(#${gid})`} stroke="#00000030" strokeWidth="0.7" />
-      {/* head: a dome rather than a disc */}
-      <circle cx="0" cy="-6.2" r="5.6" fill={`url(#${gid}-dome)`} stroke="#ffffff4d" strokeWidth="0.9" />
-      {/* the specular — small, bright and off-centre, which is what
-          the eye reads as "shiny" rather than "pale" */}
-      <ellipse cx="-1.9" cy="-8" rx="2.0" ry="1.35" fill="#ffffff" opacity="0.9" transform="rotate(-25 -1.9 -8)" />
-      <ellipse cx="1.6" cy="-4.2" rx="1.5" ry="0.9" fill="#ffffff" opacity="0.28" transform="rotate(-20 1.6 -4.2)" />
-      {/* The face rides above the gloss, or the specular sits on top of
-          an eye and reads as a cataract. */}
-      <Face mood={mood} />
-      {showSeat && (
+
+      {/* CONTACT SHADOW, two parts. The wide soft one is the shade a
+          solid object gathers around itself; the tight dark one is
+          where it actually touches down. Either alone reads as blur. */}
+      <ellipse cx="0.8" cy="6.2" rx="14.4" ry="4.6" fill="#00000026" />
+      <ellipse cx="0" cy="4.8" rx="10.6" ry="2.9" fill="#00000038" />
+
+      {/* the side wall — the same disc, dropped, so the token has a
+          thickness you can see instead of being a printed circle */}
+      <circle cx="0" cy="2.6" r="13.6" fill={`url(#${gid}-wall)`} />
+      <circle cx="0" cy="2.6" r="13.6" fill="none" stroke="#00000033" strokeWidth="0.7" />
+
+      {/* the top */}
+      <circle cx="0" cy="0" r="13.6" fill={`url(#${gid}-dome)`} />
+      <circle cx="0" cy="0" r="13.6" fill="none" stroke="#00000030" strokeWidth="0.9" />
+      {/* an inset ring, the way a real token is turned on a lathe */}
+      <circle cx="0" cy="0" r="10.9" fill="none" stroke="#FFFFFF" strokeOpacity="0.34" strokeWidth="1.1" />
+      <circle cx="0" cy="0" r="10.2" fill="none" stroke="#00000022" strokeWidth="0.7" />
+
+      {/* THE MARK, nearly the width of the token, because the entire
+          point is that it is readable without leaning in. Haloed
+          against its own gloss — dark halo on a light token, light on
+          a dark one — so it holds whichever seat it belongs to. */}
+      {showSeat && worn && (
         <text
           x="0"
-          y="11.4"
+          y="0"
           textAnchor="middle"
-          fontSize="6.2"
+          dominantBaseline="central"
+          fontSize={isGlyph ? 15 : 17}
           fontWeight="800"
           fontFamily="DM Sans, sans-serif"
-          fill={ink}
+          fill={isGlyph ? undefined : ink}
+          stroke={isGlyph ? undefined : ink === "#FFFFFF" ? "#00000055" : "#FFFFFF66"}
+          strokeWidth={isGlyph ? undefined : 2.4}
+          paintOrder="stroke"
+          style={{ userSelect: "none" }}
         >
-          {seat + 1}
+          {worn}
         </text>
       )}
+
+      {/* the specular — small, bright and off-centre, which is what
+          the eye reads as "shiny" rather than "pale" */}
+      <ellipse cx="-5.2" cy="-7.4" rx="4.3" ry="2.5" fill="#ffffff" opacity="0.72" transform="rotate(-28 -5.2 -7.4)" />
+      <ellipse cx="5.6" cy="6.4" rx="3.2" ry="1.5" fill="#ffffff" opacity="0.16" transform="rotate(-20 5.6 6.4)" />
+
+      {/* MOOD, as a badge at the shoulder. It never covers the mark:
+          knowing WHICH goti this is matters more than knowing how it
+          feels about its situation. */}
+      {mood && (
+        <g transform="translate(9.6 -9.6) scale(0.66)">
+          <circle cx="0" cy="0" r="7.6" fill="#FFFDF7" stroke="#00000038" strokeWidth="1.2" />
+          <g transform="translate(0 6.4)">
+            <Face mood={mood} />
+          </g>
+        </g>
+      )}
+      {label && <title>{label}</title>}
     </g>
   );
 }

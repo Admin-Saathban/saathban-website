@@ -29,7 +29,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COLORS as C } from "../../../../shared/tokens.js";
-import { SEAT_LIGHT, SEAT_DEEP } from "../seatColors.js";
+import { SEAT_LIGHT, SEAT_DEEP, SEAT_COLOR_NAMES } from "../seatColors.js";
 import Pawn from "../Pawn.jsx";
 import {
   TRACK,
@@ -237,6 +237,23 @@ export const BOARD_MOTION_CSS = `
 `;
 
 const CELL = 40; // viewBox units per grid cell
+
+/* HOW BIG A GOTI IS.
+
+   Pawn draws its token to roughly 1.8x the r it is given, so these are
+   not radii in the cell so much as the dial for "how much of its
+   square does a piece own". The user's verdict on the old value was
+   that the pieces were dots inside boxes; GOTI_R spans a whole cell
+   and a shade over, so a goti reads as the object and the square reads
+   as where it is standing.
+
+   A JOTA is bigger again, because two gotis bound together really are
+   a heavier thing on the board and the size is one more way of saying
+   so besides the ring. A goti HOME is smaller: it is finished, and
+   four finished pieces should not shout over a live board. */
+const GOTI_R = 11.5;
+const JOTA_R = 12.6;
+const HOME_R = 8.4;
 const SIZE = 15 * CELL;
 /* One square of travel. The user could not follow a move at all, so
    this is deliberately unhurried: a goti crossing eight squares takes
@@ -526,6 +543,14 @@ function moodsOf(pieces) {
   return mood;
 }
 
+/* "Blue 3" — the name of one goti, for the screen reader and for the
+   tooltip. Colour AND number, because either alone is ambiguous: four
+   gotis share a colour, and four numbers are shared across the seats. */
+function pieceLabel(seat, i) {
+  const name = SEAT_COLOR_NAMES[seat % SEAT_COLOR_NAMES.length] || "";
+  return `${name ? name[0].toUpperCase() + name.slice(1) : "Seat " + (seat + 1)} ${i + 1}`;
+}
+
 export default function LudoBoard({
   state,
   /* The options for the die the player has picked up, straight from
@@ -628,10 +653,19 @@ export default function LudoBoard({
             <stop offset="100%" stopColor="#EFE2CB" />
           </radialGradient>
           {/* a track cell: light from above, pressed in at the top */}
+          {/* A track cell: light from above, pressed in at the top.
+
+              THE STOPS ARE THE THEME'S. Painted from --sb-table-cell
+              and --sb-table-cell-alt when a themed wrapper supplies
+              them, and from these literals when nothing does, so a
+              board outside a theme is unchanged. The variables are set
+              on a div around the board (LudoSession, 38b07df) and
+              inherit, so nothing is plumbed through props. Table
+              themes own the surface; seats own their own colours. */}
           <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="55%" stopColor="#FDFAF3" />
-            <stop offset="100%" stopColor="#F2E9D8" />
+            <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
+            <stop offset="55%" stopColor="var(--sb-table-cell, #FDFAF3)" />
+            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #F2E9D8)" />
           </linearGradient>
           {/* the gentle press: a soft dark line inside the top edge */}
           <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
@@ -671,6 +705,40 @@ export default function LudoBoard({
               <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
             </linearGradient>
           ))}
+          {/* A SHEEN. One soft white pass over the top of a surface,
+              falling off before the middle — the single cheapest thing
+              that turns flat colour into moulded plastic, because it
+              is what a curved lit surface actually does. */}
+          <linearGradient id="sb-gloss" x1="0" y1="0" x2="0.15" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
+            <stop offset="38%" stopColor="#FFFFFF" stopOpacity="0.07" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          </linearGradient>
+          {/* The same idea at a fraction of the strength, for the
+              eight stops. A 40-unit square takes far less white than a
+              240-unit yard before it stops looking like a red cell and
+              starts looking like a pink one — and the stops are the
+              cells that most need to keep their colour, because the
+              colour IS the information. */}
+          <linearGradient id="sb-gloss-cell" x1="0" y1="0" x2="0.2" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.20" />
+            <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.10" />
+          </linearGradient>
+          {/* The centre is the high point of the board — a pedestal
+              the four columns climb to — so it gets a dome of its own
+              rather than being four flat triangles. */}
+          <radialGradient id="sb-dome" cx="38%" cy="30%" r="78%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+          </radialGradient>
+          {/* Something raised casts a shadow. Used under the centre
+              and the yards, which are the two things on this board
+              that should read as sitting ON it. */}
+          <filter id="sb-raise" x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="2.4" stdDeviation="3.2" floodColor="#3A2C16" floodOpacity="0.30" />
+          </filter>
           {/* The frame: timber, lit from above. */}
           <linearGradient id="sb-frame" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#C8963F" />
@@ -700,7 +768,7 @@ export default function LudoBoard({
               height={6 * CELL - 8}
               rx={16}
               fill={SEAT_COLORS[seat]}
-              opacity={0.9}
+              filter="url(#sb-raise)"
             />
             {/* the lit face over the flat colour */}
             <rect
@@ -713,6 +781,30 @@ export default function LudoBoard({
               style={{ mixBlendMode: "multiply" }}
               opacity={0.55}
             />
+            {/* the sheen across the top of the moulding */}
+            <rect
+              x={c * CELL + 4}
+              y={r * CELL + 4}
+              width={6 * CELL - 8}
+              height={6 * CELL - 8}
+              rx={16}
+              fill="url(#sb-gloss)"
+              pointerEvents="none"
+            />
+            {/* a bright lip around the rim: the edge of a moulded
+                piece catches more light than its face */}
+            <rect
+              x={c * CELL + 5.5}
+              y={r * CELL + 5.5}
+              width={6 * CELL - 11}
+              height={6 * CELL - 11}
+              rx={14}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeOpacity={0.38}
+              strokeWidth={1.6}
+              pointerEvents="none"
+            />
             <rect
               x={(c + 1) * CELL}
               y={(r + 1) * CELL}
@@ -720,8 +812,9 @@ export default function LudoBoard({
               height={4 * CELL}
               rx={12}
               fill={C.white}
-              stroke={SEAT_COLORS[seat]}
+              stroke={SEAT_DEEP[seat]}
               strokeWidth={2}
+              filter="url(#sb-inset)"
             />
             {YARD_SPOTS.map(([sc, sr], i) => (
               <circle
@@ -757,9 +850,15 @@ export default function LudoBoard({
                    decode. That is what the gold chips failed at: they
                    were small, they were goti-shaped, and a board should
                    have exactly one goti-shaped thing on it. */
-                fill={safeSeat >= 0 ? `url(#sb-arm-${safeSeat})` : "url(#sb-cell)"}
-                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "#E2D6BE"}
-                strokeWidth={safeSeat >= 0 ? 1.6 : 1}
+                /* FLAT colour, not a gradient. A light-to-deep ramp
+                   across one 40-unit square reads as a smudge rather
+                   than a dome — it was making the eight most important
+                   cells on the board the least crisp. The sheen that
+                   follows gives it its dimension instead, and the
+                   colour stays the arm's own, unmixed. */
+                fill={safeSeat >= 0 ? SEAT_COLORS[safeSeat] : "url(#sb-cell)"}
+                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #E2D6BE)"}
+                strokeWidth={safeSeat >= 0 ? 1.8 : 1}
               />
               {/* The bevel, over every cell: a highlight along the top
                   edge and a shadow along the bottom. Drawn as an
@@ -774,21 +873,61 @@ export default function LudoBoard({
                 fill="url(#sb-bevel)"
                 pointerEvents="none"
               />
+              {/* and a sheen on the coloured ones, which is what turns
+                  a flat square into something with a surface */}
+              {safeSeat >= 0 && (
+                <>
+                  <rect
+                    x={c * CELL + 1}
+                    y={r * CELL + 1}
+                    width={CELL - 2}
+                    height={CELL - 2}
+                    rx={6}
+                    fill="url(#sb-gloss-cell)"
+                    pointerEvents="none"
+                  />
+                  {/* an inner keyline, so the stop has a crisp edge
+                      against its neighbours at arm's length */}
+                  <rect
+                    x={c * CELL + 4}
+                    y={r * CELL + 4}
+                    width={CELL - 8}
+                    height={CELL - 8}
+                    rx={4}
+                    fill="none"
+                    stroke="#FFFFFF"
+                    strokeOpacity={0.42}
+                    strokeWidth={1.2}
+                    pointerEvents="none"
+                  />
+                </>
+              )}
               {/* A WHITE STAR marks the four cells where a goti ENTERS
                   play. All eight coloured cells are stops; only these
                   four are also a door, and the star is what separates
                   them. White, because it has to read on four different
                   saturated colours. */}
               {isStart && (
+                /* ANCHORED AT THE CENTRE, NOT ON A BASELINE.
+
+                   Upright rotates the glyph about its own (x, y) to
+                   keep it the right way up, so any baseline nudge
+                   added to y gets rotated too: +7.5 below the centre
+                   became 7.5 ABOVE it at a 180° point of view, and the
+                   star climbed out of its square for three of the four
+                   seats. Anchoring on the centre with a central
+                   baseline makes the glyph land in the same place at
+                   every rotation, because the pivot IS the centre. */
                 <Upright
                   x={c * CELL + CELL / 2}
-                  y={r * CELL + CELL / 2 + 7.5}
+                  y={r * CELL + CELL / 2}
                   spin={spin}
-                  fontSize={22}
+                  dominantBaseline="central"
+                  fontSize={23}
                   fontWeight="700"
                   fill="#FFFFFF"
                   stroke={SEAT_DEEP[safeSeat]}
-                  strokeWidth={0.9}
+                  strokeWidth={1.6}
                   paintOrder="stroke"
                   aria-hidden="true"
                 >
@@ -810,21 +949,46 @@ export default function LudoBoard({
         {/* ── Home columns: each arm's middle line, in the seat's colour ── */}
         {HOME_COLUMNS.map((cells, seat) =>
           cells.map(([c, r], i) => (
-            <rect
-              key={`h-${seat}-${i}`}
-              x={c * CELL + 1}
-              y={r * CELL + 1}
-              width={CELL - 2}
-              height={CELL - 2}
-              rx={6}
-              fill={SEAT_COLORS[seat]}
-            />
+            <g key={`h-${seat}-${i}`}>
+              <rect
+                x={c * CELL + 1}
+                y={r * CELL + 1}
+                width={CELL - 2}
+                height={CELL - 2}
+                rx={6}
+                fill={SEAT_COLORS[seat]}
+                stroke={SEAT_DEEP[seat]}
+                strokeWidth={1}
+              />
+              {/* Each step of the run home is its OWN cell, lit and
+                  edged. A solid bar of colour hid how many squares
+                  were left, which is the one thing a player climbing
+                  it wants to count. */}
+              <rect
+                x={c * CELL + 1}
+                y={r * CELL + 1}
+                width={CELL - 2}
+                height={CELL - 2}
+                rx={6}
+                fill="url(#sb-gloss-cell)"
+                pointerEvents="none"
+              />
+              <rect
+                x={c * CELL + 1}
+                y={r * CELL + 1}
+                width={CELL - 2}
+                height={CELL - 2}
+                rx={6}
+                fill="url(#sb-bevel)"
+                pointerEvents="none"
+              />
+            </g>
           ))
         )}
 
         {/* ── The centre: four triangles, one per arm, meeting at home.
                Muted, because the dice sit on top of it. ── */}
-        <g opacity={0.9}>
+        <g filter="url(#sb-raise)">
           {[
             /* Wedge order follows the ring: top, right, bottom, left. */
             [`${6 * CELL},${6 * CELL} ${9 * CELL},${6 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 0],
@@ -836,11 +1000,23 @@ export default function LudoBoard({
               key={`c-${seat}`}
               points={points}
               fill={`url(#sb-zone-${seat})`}
-              opacity={0.9}
               stroke={C.white}
               strokeWidth={2}
             />
           ))}
+          {/* THE DOME. The centre is the high point of the board — the
+              place all four columns climb to — and four flat triangles
+              said nothing about that. One radial pass over the whole
+              square lifts it without touching the wedge colours. */}
+          <rect
+            x={6 * CELL}
+            y={6 * CELL}
+            width={3 * CELL}
+            height={3 * CELL}
+            rx={12}
+            fill="url(#sb-dome)"
+            pointerEvents="none"
+          />
           <rect
             x={6 * CELL + 2}
             y={6 * CELL + 2}
@@ -850,6 +1026,18 @@ export default function LudoBoard({
             fill="none"
             stroke={C.brown}
             strokeWidth={2.5}
+          />
+          {/* an inner bright rim, so the pedestal has a lip */}
+          <rect
+            x={6 * CELL + 5}
+            y={6 * CELL + 5}
+            width={3 * CELL - 10}
+            height={3 * CELL - 10}
+            rx={11}
+            fill="none"
+            stroke="#FFFFFF"
+            strokeOpacity={0.45}
+            strokeWidth={1.4}
           />
         </g>
 
@@ -1027,8 +1215,8 @@ export default function LudoBoard({
                     <ellipse
                       cx={stackX}
                       cy={rr * CELL}
-                      rx={20}
-                      ry={26}
+                      rx={23}
+                      ry={29}
                       fill="none"
                       stroke={SEAT_COLORS[seat]}
                       strokeWidth={3}
@@ -1052,7 +1240,7 @@ export default function LudoBoard({
                     className="sb-pulse"
                     cx={cx}
                     cy={cy}
-                    r={21}
+                    r={24}
                     fill="none"
                     stroke={C.brown}
                     strokeWidth={3}
@@ -1063,9 +1251,20 @@ export default function LudoBoard({
                   seat={seat}
                   cx={cx}
                   cy={cy}
-                  r={p >= 57 ? 10 : 15}
+                  /* THE GOTI DOMINATES ITS SQUARE. A token is drawn
+                     about 1.8x its r, so GOTI_R = 11.5 spans roughly
+                     41 of the 40 units in a cell: it fills the square
+                     edge to edge and slightly over, which is what
+                     makes it the object you look at rather than a dot
+                     inside a box. A jota's pair is bigger still, and
+                     a goti already home shrinks — it is finished, and
+                     four finished pieces should not crowd out the
+                     live board. */
+                  r={p >= 57 ? HOME_R : isJota ? JOTA_R : GOTI_R}
+                  piece={i}
                   spin={spin}
                   mood={moods.get(`${seat}:${i}`) || null}
+                  label={pieceLabel(seat, i)}
                 />
                 {/* HOME. A goti that has just finished takes a moment
                     about it — the one unambiguously good thing that
@@ -1084,7 +1283,13 @@ export default function LudoBoard({
                     aria-hidden="true"
                   />
                 )}
-                {canTap && <circle cx={cx} cy={cy} r={26} fill="transparent" />}
+                {/* THE HIT TARGET, and it is not decoration. With the
+                    move list gone the goti IS the only way to move, so
+                    this has to clear 48 CSS px on a phone. The board is
+                    600 viewBox units shown at ~360px, so one unit is
+                    0.6px and r=42 is an 84-unit target ≈ 50px across.
+                    Bigger than the token on purpose. */}
+                {canTap && <circle cx={cx} cy={cy} r={42} fill="transparent" />}
               </g>
             );
           })
@@ -1099,13 +1304,21 @@ export default function LudoBoard({
           const [seat] = k.split(":").map(Number);
           return (
             <g key={`fly-${k}`}>
-              <ellipse cx={cc * CELL} cy={rr * CELL + 13} rx={11} ry={3.4} fill="#00000030" />
+              <ellipse cx={cc * CELL} cy={rr * CELL + 15} rx={13} ry={4} fill="#00000030" />
               {/* It spins on the way home. Rotation about the piece's
                   OWN centre — transform-box fill-box — because a bare
                   rotate on an SVG child pivots on the viewport origin
                   and would fling it off the board. */}
               <g className="sb-tumble-home">
-                <Pawn seat={seat} cx={cc * CELL} cy={rr * CELL} r={15} spin={spin} />
+                <Pawn
+                  seat={seat}
+                  cx={cc * CELL}
+                  cy={rr * CELL}
+                  r={GOTI_R}
+                  piece={Number(k.split(":")[1])}
+                  spin={spin}
+                  label={pieceLabel(seat, Number(k.split(":")[1]))}
+                />
               </g>
             </g>
           );

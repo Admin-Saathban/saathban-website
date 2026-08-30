@@ -235,6 +235,43 @@ disguises, and every instance looked like something else at first:
   those and `git apply --cached` it, since `git add -p` cannot run
   here — and leave theirs in the tree.
 
+- **An unstage is a write.** `git restore --staged <path>` sets the
+  index entry to HEAD **as HEAD is at that instant**. If a peer's work
+  is not committed yet, that pins a pre-their-work blob into your
+  index, and it stays pinned through their commit and into yours. The
+  unstage performed specifically to keep a peer's files OUT of a
+  commit is what deleted them, twice. Either leave their staged file
+  alone and let them commit first, or once their commit exists use
+  `git restore --source=<their commit> --staged <paths>`. That form is
+  also the repair tool: it rewrites the index from a known-good commit
+  and leaves the working tree untouched, so undoing one of these
+  cannot cost the author what they still have in flight.
+- **Verify by building the COMMITTED tree, not your working tree.**
+  `git archive HEAD` into a temp directory, or a detached worktree,
+  and build that. All three of today's breakages were invisible from
+  where each of us was standing, because every working tree involved
+  was green. This is the only check that answers the question
+  "can origin build what I am about to push".
+
+**Correction to an earlier version of this entry:** I first wrote that
+`git commit -- <paths>` was the common factor. It was not, and both
+other lanes corrected me independently. Pathspec commits explain the
+*sweeping* — a feature landing inside a commit whose message describes
+something else — but the two deletions came from the unstage above.
+"Don't use pathspec commits" would not have prevented them, and the
+real lesson is less obvious: an unstage writes, and it writes whatever
+HEAD said a moment ago.
+
+Also worth recording, because it is the same shape as two other
+mistakes today: a pre-flight probe that greps for ONE marker of a
+patch tells you nothing about the patch's other fragments. A re-land
+whose imports and JSX had been removed but whose six state lines
+survived probed clean on `ThemePicker`, then inserted a duplicate
+state block. **When re-applying a patch, probe for every fragment it
+inserts, not one representative marker.** The instrument answers what
+it is pointed at — the same fault as a test that goes green on the
+wrong evidence.
+
 And the corollary that keeps origin safe: **a green build is not a
 green page.** Two of the three incidents produced code that compiled.
 Load the actual route with a `pageerror` listener before pushing.

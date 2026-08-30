@@ -360,6 +360,15 @@ six is simply the best roll, and repeating it would hand a runaway lead
 to whoever gets lucky — in a game that already has no skill in it at
 all. Turns stay even and the game stays short.
 
+**The win must be an EXACT landing, and that is checked on the ENGINE
+as well as the map.** A ladder to 100 is forbidden by the map rule
+above, but the map and the engine are guarded by different tests: a
+check that identifies the winning move only by where it ended would
+call a ladder-win legitimate if the map ever regressed. So the winning
+move is required to have LANDED on 100 with no jump involved. The two
+rules are deliberately redundant, because each is one regression away
+from being the only one left.
+
 **First to 100 ENDS the game. There are no placements.** The table
 finishes the moment someone lands exactly on 100; nobody plays on for
 second place. The winning move is the last move in the log, and every

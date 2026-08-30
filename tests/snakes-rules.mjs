@@ -56,7 +56,9 @@ const SUPA = envLocal("VITE_SUPABASE_URL");
 const ANON = envLocal("VITE_SUPABASE_ANON_KEY");
 
 let failures = 0;
+let ran = 0;
 const check = (name, ok, note = "") => {
+  ran++;
   if (!ok) failures++;
   console.log((ok ? "PASS" : "FAIL").padEnd(5), name.padEnd(58), String(note).slice(0, 92));
 };
@@ -289,6 +291,22 @@ check("every rule below had a case to judge", missing().length === 0,
     "a move after the win would mean placements continue");
   check("rule 5: the winner is the seat that reached 100",
     done.every((g) => g.moves[g.moves.length - 1].seat_no === g.session.winner_seat), "");
+  /* MIRROR. Every check above finds the winning move by `to === 100`
+     and none of them looks at `landed`, so a win CARRIED to 100 by a
+     ladder satisfies all of them: it is the last move, the seat matches
+     winner_seat, everyone else is short. Rule 3 forbids such a ladder —
+     but rule 3 guards the MAP and this guards the ENGINE, and the two
+     only cover each other if a reader notices they are related. If the
+     map ever regressed, this block would call a ladder-win legitimate
+     and the suite would stay green. So require the landing itself. */
+  check("rule 5: the win is an EXACT landing, never a lift to 100",
+    done.length > 0 && done.every((g) => {
+      const last = g.moves[g.moves.length - 1].move;
+      return last.landed === 100 && last.to === 100 && !last.via;
+    }),
+    done.length === 0
+      ? "never exercised: no game finished, so nothing was judged"
+      : `${done.length} finished game(s)`);
   check("rule 5: every other seat is left short of 100",
     done.every((g) => g.seats.filter((s) => s.seat_no !== g.session.winner_seat)
                         .every((s) => s.score < 100)), "");
@@ -346,14 +364,65 @@ check("every rule below had a case to judge", missing().length === 0,
     check("rule 7: the person obeys the board and the exact finish",
       m?.stuck ? m.to === m.from : m?.landed === m.from + m.roll && m.to === jump[m.landed],
       JSON.stringify(m).slice(0, 70));
-    const hrow = games[0]?.moves.find((r) => !r.by_bot);
+    /* Search the WHOLE trace, not games[0]. The rule is that a
+       person's turn is logged as a person's move — which game it landed
+       in is incidental, and coupling the check to the first game made
+       it fail once in roughly four runs with "no non-bot row" while
+       every other rule-7 assertion passed. Asserting there is EXACTLY
+       ONE such row is also stronger than finding any: it catches a bot
+       move mislabelled as a person's, which finding-the-first cannot. */
+    /* Keep the game and the index alongside the row: the extra-roll
+       check needs to know what came NEXT in that same game. */
+    const humanEntries = games.flatMap((g) =>
+      g.moves.map((r, i) => ({ g, r, i })).filter((x) => !x.r.by_bot)
+    );
     check("rule 7: it is logged as a person's move, not a bot's",
-      !!hrow && hrow.seat_no === humanMove.seat, hrow ? `seat ${hrow.seat_no}` : "no non-bot row");
+      humanEntries.length === 1 && humanEntries[0].r.seat_no === humanMove.seat,
+      humanEntries.length === 0
+        ? "no non-bot row anywhere in the trace"
+        : `${humanEntries.length} non-bot row(s), seat ${humanEntries[0]?.r.seat_no}`);
     check("rule 7: the person gets no extra roll either",
-      !hrow || games[0].moves.indexOf(hrow) === games[0].moves.length - 1 ||
-        games[0].moves[games[0].moves.indexOf(hrow) + 1].seat_no !== hrow.seat_no,
+      humanEntries.length === 0 ||
+        humanEntries.every((x) => x.i === x.g.moves.length - 1 || x.g.moves[x.i + 1].seat_no !== x.r.seat_no),
       "");
   }
+}
+
+/* ════ RULE 8 — invariants that must hold over EVERY move ════
+   The rules above each judge one situation. These are the statements
+   that must be true of every move ever played, and each is here
+   because its absence would let a specific wrong engine pass: a stuck
+   move that reported a jump, a log whose score disagreed with where
+   the piece ended, or a piece that went backwards without a snake
+   under it. Each is paired with a check that the case was actually
+   seen, so an unlucky trace fails as "never exercised" rather than
+   passing on an empty set. */
+{
+  const played = rows.filter((m) => !m.stuck);
+  const stuckRows = rows.filter((m) => m.stuck);
+
+  check("rule 8: a stuck move never reports a jump",
+    stuckRows.length > 0 && stuckRows.every((m) => !m.via),
+    stuckRows.length === 0 ? "never exercised: no overshoot in this trace" : `${stuckRows.length} stuck`);
+
+  check("rule 8: the move's own score always equals where it ended",
+    rows.length > 0 && rows.every((m) => m.score === m.to),
+    (rows.find((m) => m.score !== m.to) && JSON.stringify(rows.find((m) => m.score !== m.to))) || `${rows.length} moves`);
+
+  /* A net loss of ground can only ever come from a snake. Without this,
+     an engine that subtracted the roll somewhere would still satisfy
+     rule 2, which only judges moves that already declared a `via`. */
+  const back = played.filter((m) => m.to < m.from);
+  check("rule 8: any backwards movement is a snake, and nothing else",
+    back.length > 0 && back.every((m) => m.via === "snake"),
+    back.length === 0 ? "never exercised: nobody lost ground in this trace" : `${back.length} backwards`);
+
+  /* And its mirror, so the pair cannot be satisfied by an engine that
+     simply never moves anyone forward past their roll. */
+  const gained = played.filter((m) => m.to > m.from + m.roll);
+  check("rule 8: any gain beyond the roll is a ladder, and nothing else",
+    gained.length > 0 && gained.every((m) => m.via === "ladder"),
+    gained.length === 0 ? "never exercised: nobody climbed in this trace" : `${gained.length} climbs`);
 }
 
 /* A cleanup that is not verified is not a cleanup — but verify only
@@ -372,5 +441,16 @@ const left = mine.length
 check("suite leaves no live table behind", (left || []).length === 0,
   `${(left || []).length} of ${mine.length} still live`);
 
-console.log(`\n${failures} failed.`);
+/* A run that stops early prints FEWER lines and reads as shorter
+   rather than broken — the same hazard tests/carrom-rules.mjs guards
+   against. Counting the checks turns a truncated run into a failed one.
+   EXPECTED is read off a real complete run, never estimated: the guard
+   in the carrom suite caught its own author estimating by eye. */
+const EXPECTED = Number(process.env.EXPECTED_CHECKS || 47);
+if (ran < EXPECTED) {
+  failures++;
+  console.log(`FAIL  the suite ran to the end — only ${ran} of ${EXPECTED} checks ran`);
+}
+
+console.log(`\n${ran} checks, ${failures} failed.`);
 process.exit(failures ? 1 : 0);

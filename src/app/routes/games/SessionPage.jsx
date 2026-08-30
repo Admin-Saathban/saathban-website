@@ -185,8 +185,15 @@ export default function SessionPage() {
   const gameName = game ? (lang === "ur" ? game.name_ur : game.name_en) : "";
   const mySeat = session?.seats.find((s) => s.profile_id === profile.id);
   const isHost = session?.created_by === profile.id;
-  /* Seats a bot is holding, 0-based the way inviteToSeat wants. */
-  const botSeats = (session.seats || [])
+  /* Seats a bot is holding, 0-based the way inviteToSeat wants.
+
+     `session?.seats`, WITH the question mark, like the line above
+     it. I wrote `session.seats` — this runs before the session
+     has loaded, session is null then, and the whole page went
+     white with "Cannot read properties of null". The line
+     directly above uses optional chaining for exactly this
+     reason and I copied its neighbourhood without its care. */
+  const botSeats = (session?.seats || [])
     .filter((x) => x.is_bot)
     .map((x) => x.seat_no - 1);
   const [soundOpen, setSoundOpen] = useState(false);

@@ -372,9 +372,18 @@ for (const [email, label, home, foreign] of ROLES) {
   await iconPage.waitForFunction(() => /\/app\/games\/(s|ludo)\//.test(location.pathname), null, { timeout: 25000 }).catch(() => {});
   await iconPage.waitForTimeout(2500);
   check("games: tapping a game opens a table, no form", /^\/app\/games\//.test(pathOf(iconPage)), pathOf(iconPage));
+  /* SAY WHAT IS THERE, NOT WHAT IS ABSENT. This asserted that the
+     page did NOT contain the setup form's words, which a blank
+     white page satisfies perfectly — and that is exactly what it
+     did satisfy: SessionPage was crashing on its first render and
+     this check went green over the wreckage. A negative assertion
+     cannot tell an empty page from a working one. */
+  const tableTxt = await iconPage.evaluate(() => document.body.innerText || "");
+  check("games: the table renders at all", tableTxt.trim().length > 40, JSON.stringify(tableTxt.slice(0, 60)));
   check(
-    "games: and it is playable on arrival",
-    !/Name this table is required|Set the table/.test(await iconPage.evaluate(() => document.body.innerText))
+    "games: and it is a table, not a form",
+    tableTxt.length > 40 && !/Set the table/.test(tableTxt),
+    tableTxt.slice(0, 60)
   );
 
   /* Ask a person to one of the seats a bot is holding. */

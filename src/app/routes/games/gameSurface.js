@@ -22,7 +22,16 @@ export const GAME = {
   /* The table itself, and a slightly lifted centre so the surface has
      a light on it rather than being a flat rectangle of dark. */
   surface: "#241019",
-  surfaceLift: "radial-gradient(120% 80% at 50% 22%, #3A1B2B 0%, #241019 62%, #190A11 100%)",
+  /* The lit table. The two repeating layers on top are a weave,
+     not a pattern: at 3% white on a dark ground they are barely
+     nameable, and they exist so the space a square board cannot
+     fill on a tall phone reads as more table rather than as a
+     gap. Judged by eye against the reference, which fills the
+     same slack the same way. */
+  surfaceLift:
+    "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.035) 0 1.2px, transparent 1.6px) 0 0/26px 26px, " +
+    "radial-gradient(circle at 62% 68%, rgba(255,255,255,0.028) 0 1.2px, transparent 1.6px) 0 0/34px 34px, " +
+    "radial-gradient(120% 80% at 50% 22%, #3A1B2B 0%, #241019 62%, #190A11 100%)",
 
   /* Text on that surface. Warm rather than pure white — pure white on
      a dark ground glares, and these are old eyes. */

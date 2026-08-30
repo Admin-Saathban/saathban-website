@@ -1100,16 +1100,38 @@ export default function LudoBoard({
               strokeWidth={1.6}
               pointerEvents="none"
             />
+            {/* THE COURT, IN THE YARD'S OWN COLOUR, DEEPER.
+                It was C.white, and read as paper set into
+                plastic — the side-by-side against the reference
+                at 360px made it the last flat thing on the
+                board. A recess in a moulded piece is the same
+                material in shadow, so this is SEAT_DEEP with the
+                inset filter it already had. */}
             <rect
               x={(c + 1) * CELL}
               y={(r + 1) * CELL}
               width={4 * CELL}
               height={4 * CELL}
               rx={12}
-              fill={C.white}
+              fill={SEAT_DEEP[seat]}
               stroke={SEAT_DEEP[seat]}
               strokeWidth={2}
               filter="url(#sb-inset)"
+            />
+            {/* A LIP OF LIGHT ON THE TOP EDGE of the recess, so
+                the court reads as pressed IN rather than as a
+                darker sticker laid on. */}
+            <rect
+              x={(c + 1) * CELL}
+              y={(r + 1) * CELL}
+              width={4 * CELL}
+              height={4 * CELL}
+              rx={12}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeOpacity={0.22}
+              strokeWidth={1.2}
+              pointerEvents="none"
             />
             {YARD_SPOTS.map(([sc, sr], i) => (
               <circle
@@ -1118,7 +1140,11 @@ export default function LudoBoard({
                 cy={(r + sr) * CELL}
                 r={CELL * 0.38}
                 fill={SEAT_TINTS[seat]}
-                stroke={SEAT_COLORS[seat]}
+                /* Against the deep court the ring wants to be the
+                   LIGHT edge, not the dark one — a same-hue
+                   outline on a same-hue ground disappears. */
+                stroke="#FFFFFF"
+                strokeOpacity={0.5}
                 strokeWidth={1.5}
               />
             ))}

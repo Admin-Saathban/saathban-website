@@ -34,6 +34,8 @@ import {
   sleepHoursNumber,
 } from "./historyData.js";
 import { HistoryScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
+import JourneyAhead from "./JourneyAhead.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import {
   MoodMonths,
   DailyBars,
@@ -125,6 +127,23 @@ export default function JourneyPage() {
         📖 {t("history.title")}
       </h1>
       <BodyText muted>{t("history.intro")}</BodyText>
+
+      {/* §14 — a journey, not a dashboard. The header, what is close
+          enough to be worth saying, and the months as chapters come
+          FIRST; the calendar and the graphs are things to look into,
+          not the headline. */}
+      <JourneyAhead
+        progress={progress}
+        badges={badges}
+        logRows={recent}
+        onShare={(what, key) => {
+          /* §14 — every section shares itself, and every share
+             carries an optional message and lands where the result
+             lives. Until the share sheet is shared with Lane A this
+             names exactly WHAT would go, rather than pretending. */
+          pushToast(t(`history.share.pending.${what}`, { month: key || "" }), { tone: "info", key: "journey" });
+        }}
+      />
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
           ⚠ {error}
@@ -334,7 +353,23 @@ export default function JourneyPage() {
       )}
 
       {/* ── 4. Trends — the Icon's alone ────────────────────────── */}
-      <SectionLabel>{t("history.trends.title")}</SectionLabel>
+      {/* §14 — "graphs collapsed at the bottom: something to look
+          INTO, never the headline". A chart of a bad month as the
+          first thing a person sees is the failure this prevents. */}
+      <details style={{ marginTop: 18 }}>
+        <summary
+          style={{
+            minHeight: A11Y.minTapTargetPx,
+            display: "flex",
+            alignItems: "center",
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 700,
+            color: C.greenMuted,
+            cursor: "pointer",
+          }}
+        >
+          {t("history.trends.title")}
+        </summary>
       <BodyText muted>🔒 {t("history.trends.privacy")}</BodyText>
       <Trends logs={logs} daysInMonth={daysInMonth} moodFace={moodFace} t={t} ts={ts} lang={lang} />
 
@@ -372,6 +407,7 @@ export default function JourneyPage() {
           />
         </>
       )}
+      </details>
     </HistoryScreen>
   );
 }

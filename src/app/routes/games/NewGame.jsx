@@ -170,7 +170,7 @@ export default function NewGame() {
 
   const start = async (setup) => {
     if (busy || !game) return;
-    const { seats, diceCount, colours, fill, autoOnlyMove } = setup;
+    const { seats, diceCount, colours, fill, autoOnlyMove, undoOn } = setup;
 
     /* A chair set to "person" with nobody chosen is an unanswered
        question, not a table. Open that chair's sheet rather than
@@ -199,6 +199,10 @@ export default function NewGame() {
            as "on", so an old table and a new one behave the same and
            the row keeps the shape it already had. */
         if (autoOnlyMove === false) house.auto_only_move = false;
+        /* Same shape as auto-move: written only when OFF, because
+           client and server both read a missing key as on, so an old
+           table and a new one behave alike. */
+        if (undoOn === false) house.undo = false;
         /* Ludo's turn is 30 seconds, and it must be WRITTEN here rather
            than left to a default. The server's fallback is 60 —
            `coalesce((house_rules->>'turn_seconds')::int, 60)` in

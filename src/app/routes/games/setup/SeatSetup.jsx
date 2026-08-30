@@ -214,6 +214,64 @@ function DiceToy({ count, chosen, onPick, t }) {
 }
 
 /* ── The screen ────────────────────────────────────────────────── */
+/* One switch, drawn once. It was inline below for the auto-move
+   rule; §8 needs a second, and two hand-drawn switches drift apart
+   the moment one of them is tweaked. */
+function Switch({ on, onToggle, label, ts }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        width: "100%",
+        minHeight: A11Y.minTapTargetPx,
+        padding: "12px 14px",
+        marginBottom: 12,
+        borderRadius: 16,
+        border: `2px solid ${on ? C.green : "#E3D9C6"}`,
+        background: on ? "#F2FAF4" : C.white,
+        cursor: "pointer",
+        textAlign: "start",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          flex: "0 0 auto",
+          width: 52,
+          height: 30,
+          borderRadius: 15,
+          background: on ? C.green : "#D8CDB8",
+          position: "relative",
+          transition: "background 160ms",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: 3,
+            insetInlineStart: on ? 25 : 3,
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            background: C.white,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            transition: "inset-inline-start 160ms",
+          }}
+        />
+      </span>
+      <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export default function SeatSetup({
   me,
   minSeats = 2,
@@ -247,6 +305,10 @@ export default function SeatSetup({
      rather move every goti with their own hand, and that is a real
      preference rather than a fallback. */
   const [autoOnlyMove, setAutoOnlyMove] = useState(true);
+  /* §8, default ON. Taking a move back before the next player has
+     rolled is not cheating — it is the courtesy a real table gives
+     without anyone naming it. */
+  const [undoOn, setUndoOn] = useState(true);
   /* colours[seat] = index into SEAT_COLORS. You are seat 0 and start
      on green; the rest take what is left, in order, and can be
      changed. */
@@ -472,56 +534,18 @@ export default function SeatSetup({
              is the switch for people who would rather make it anyway,
              and it is a switch rather than a checkbox because the rest
              of this screen is things you touch. ── */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={autoOnlyMove}
-        onClick={() => setAutoOnlyMove((v) => !v)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          width: "100%",
-          minHeight: A11Y.minTapTargetPx,
-          padding: "12px 14px",
-          marginBottom: 20,
-          borderRadius: 16,
-          border: `2px solid ${autoOnlyMove ? C.green : "#E3D9C6"}`,
-          background: autoOnlyMove ? "#F2FAF4" : C.white,
-          cursor: "pointer",
-          textAlign: "start",
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            flex: "0 0 auto",
-            width: 52,
-            height: 30,
-            borderRadius: 15,
-            background: autoOnlyMove ? C.green : "#D8CDB8",
-            position: "relative",
-            transition: "background 160ms",
-          }}
-        >
-          <span
-            style={{
-              position: "absolute",
-              top: 3,
-              insetInlineStart: autoOnlyMove ? 25 : 3,
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              background: C.white,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-              transition: "inset-inline-start 160ms",
-            }}
-          />
-        </span>
-        <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
-          {t("games.setup.autoOnlyMove")}
-        </span>
-      </button>
+      <Switch
+        on={autoOnlyMove}
+        onToggle={() => setAutoOnlyMove((v) => !v)}
+        label={t("games.setup.autoOnlyMove")}
+        ts={ts}
+      />
+      <Switch
+        on={undoOn}
+        onToggle={() => setUndoOn((v) => !v)}
+        label={t("games.setup.undoOn")}
+        ts={ts}
+      />
 
       {extras}
 
@@ -536,6 +560,7 @@ export default function SeatSetup({
             colours: colours.slice(0, seats),
             fill: fill.slice(0, seats),
             autoOnlyMove,
+            undoOn,
           })
         }
         style={{

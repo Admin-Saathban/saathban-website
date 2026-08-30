@@ -108,6 +108,24 @@ export async function rematch(sessionId) {
   return data;
 }
 
+/* §8 UNDO. Two calls, because "can I?" and "do it" are different
+   questions with different answers a second apart — the availability
+   probe drives what is on screen, and game_undo re-checks under a
+   lock before it touches anything. Both refuse with a REASON rather
+   than a bare false, so the screen can say why instead of leaving a
+   dead button. */
+export async function undoAvailable(sessionId) {
+  const { data, error } = await supabase.rpc("game_undo_available", { p_session: sessionId });
+  if (error) return { can: false, why: "error" };
+  return data || { can: false, why: "error" };
+}
+
+export async function undoMove(sessionId) {
+  const { data, error } = await supabase.rpc("game_undo", { p_session: sessionId });
+  if (error) return { ok: false, why: "error" };
+  return data || { ok: false, why: "error" };
+}
+
 /* Session + seats + public names, normalized to Ludo's 0-based world. */
 export async function fetchSession(sessionId) {
   const [{ data: session, error: sErr }, { data: seats, error: tErr }] = await Promise.all([

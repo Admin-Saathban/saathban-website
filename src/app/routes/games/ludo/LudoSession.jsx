@@ -21,8 +21,9 @@ import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
-import { fetchSession, startSession, roll, move, tick, rematch, legalFor } from "./ludoRails.js";
+import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
+import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
@@ -526,6 +527,54 @@ export default function LudoSession() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  /* ── §8: THE MOVE YOU CAN TAKE BACK ────────────────────────────
+     The button is only on screen while the server says it is
+     available, so it is never a dead control — and the server is
+     asked rather than guessed, because the answer changes the moment
+     the next player rolls and this screen is not the one that would
+     notice.
+
+     When it is refused anyway — the answer went stale between seeing
+     the button and pressing it — the reason is explained rather than
+     announced. That is what §11's dismissing panel is for: it leaves
+     on its own, it pauses if you are still reading it, and it cannot
+     carry an action, which is right, because there is nothing left to
+     do about a move the table has already moved past. */
+  const [canUndo, setCanUndo] = useState(false);
+  const [undoNote, setUndoNote] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    if (!game?.id || game.status !== "playing") {
+      setCanUndo(false);
+      return undefined;
+    }
+    undoAvailable(game.id).then((a) => {
+      if (alive) setCanUndo(a?.can === true);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, game?.status, diceKey, game?.current_seat]);
+
+  const doUndo = async () => {
+    if (busy) return;
+    const r = await undoMove(game.id);
+    if (r?.ok) {
+      setCanUndo(false);
+      await load();
+      return;
+    }
+    /* Every refusal has a reason and every reason has a sentence. A
+       button that fails silently teaches people not to trust it. */
+    const why = r?.why || "error";
+    setUndoNote(
+      ["they_have_rolled", "not_your_move", "already_undone", "nothing_to_undo"].includes(why)
+        ? t(`ludo.undo.why.${why}`)
+        : t("ludo.undo.why.error")
+    );
+  };
 
   const [soundOpen, setSoundOpen] = useState(false);
 
@@ -1117,6 +1166,31 @@ export default function LudoSession() {
               {spendable > 1 ? t("ludo.turn.pickDie") : t("ludo.turn.pickPiece")}
             </BodyText>
           )}
+          {/* §7 puts undo beside the dice. It sits above the action
+              row rather than inside the seat plate, because the plate
+              belongs to the table's chrome and this belongs to the
+              person whose move it was. */}
+          {playing && canUndo && (
+            <GhostBtn
+              onClick={doUndo}
+              disabled={busy}
+              style={{
+                width: "100%",
+                minHeight: 52,
+                marginTop: 8,
+                borderColor: C.brown,
+                color: C.textMain,
+                flex: "0 0 auto",
+              }}
+            >
+              ↩ {t("ludo.undo.cta")}
+            </GhostBtn>
+          )}
+          <InfoPanel
+            open={!!undoNote}
+            body={undoNote || ""}
+            onClose={() => setUndoNote(null)}
+          />
           {autoNote && (
             <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: C.green }}>
               {t("ludo.turn.autoPlayed")}

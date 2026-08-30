@@ -70,16 +70,23 @@ export const MOTION_CSS = `
 @keyframes sb-dim-in { from { opacity: 0; } to { opacity: 1; } }
 .sb-dim { animation: sb-dim-in ${MOTION.sheetUp}ms ease-out both; }
 
-/* ── The §11 highlight: a coloured bar down the left edge, fading.
-      Tied to the action, never stored — see useFresh. ── */
-@keyframes sb-landed {
-  0%   { box-shadow: inset 4px 0 0 0 var(--sb-landed, #4E6E4E); }
-  70%  { box-shadow: inset 4px 0 0 0 var(--sb-landed, #4E6E4E); }
-  100% { box-shadow: inset 4px 0 0 0 rgba(0,0,0,0); }
-}
-[data-fresh="true"] {
-  animation: sb-landed 3s ease-out both;
-}
+/* ── The §11 highlight is NOT here, deliberately. ──
+
+   This file used to carry its own data-fresh="true" rule for the
+   landed-post glow. It never once fired: useFresh writes the post's
+   ID into data-fresh (so it can find the node to scroll to) and marks
+   the fresh one with a CLASS, sb-fresh. The selector could not match
+   anything, ever.
+
+   (Backticks avoided in this comment on purpose — the whole block is
+   inside a JS template literal, and a stray one ends the string.)
+
+   It was also a second copy of something feedback.jsx already does
+   properly — sbFreshGlow, 2.4s, standing down under reduced motion.
+   AUDIT_11 names useFresh as THE mechanism for §11, so the right fix
+   is one implementation rather than a corrected duplicate that can
+   drift from it. Found by a test looking for the wrong selector and
+   discovering that the code was looking for it too. */
 
 @media (prefers-reduced-motion: reduce) {
   /* §3: instant cross-fades. Nothing slides, nothing bounces. */
@@ -87,7 +94,6 @@ export const MOTION_CSS = `
     animation-duration: 1ms !important;
     animation-name: sb-dim-in !important;
   }
-  [data-fresh="true"] { animation-duration: 3s; }
 }
 `;
 

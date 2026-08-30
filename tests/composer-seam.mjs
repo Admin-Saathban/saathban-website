@@ -77,9 +77,11 @@ const order = await p.evaluate((label) => {
      inside it — the first attempt matched anything containing
      "Today", which caught a calendar strip ABOVE the composer and
      reported the order backwards. */
-  const log = all.find((e) =>
-    /Good (morning|afternoon|evening)/i.test(e.textContent || "") &&
-    e.children.length <= 6);
+  /* The DEEPEST element carrying the greeting. querySelectorAll is in
+     document order, so ancestors come first — taking the first match
+     found a wrapper starting at y=0 and reported the order backwards. */
+  const logs = all.filter((e) => /Good (morning|afternoon|evening)/i.test(e.textContent || ""));
+  const log = logs[logs.length - 1];
   if (!composer) return { ok: false, why: "composer not found" };
   if (!log) return { ok: true, why: "no log row on this account to compare against" };
   return {
@@ -96,7 +98,11 @@ await p.waitForTimeout(900);
 await p.locator("textarea").first().fill(MARK);
 await p.getByRole("button", { name: "Share", exact: true }).first().click();
 
-/* §11 — it lands ON the post, HIGHLIGHTED. useFresh clears the mark
+/* §11 — it lands ON the post, HIGHLIGHTED. The mark is the CLASS
+   .sb-fresh; data-fresh holds the post id so useFresh can find the
+   node to scroll to. Looking for [data-fresh="true"] matches nothing
+   ever — which is also what my own MOTION_CSS was doing, and is how
+   that dead rule was found. useFresh clears the mark
    after 2.6 seconds, so this is watched from the moment Share is
    pressed rather than sampled once afterwards: the first version
    looked at 4.5s, by which time a working highlight had already
@@ -104,7 +110,7 @@ await p.getByRole("button", { name: "Share", exact: true }).first().click();
 let sawFresh = 0;
 for (let i = 0; i < 24; i++) {
   await p.waitForTimeout(250);
-  const n = await p.evaluate(() => document.querySelectorAll('[data-fresh="true"]').length).catch(() => 0);
+  const n = await p.evaluate(() => document.querySelectorAll(".sb-fresh").length).catch(() => 0);
   if (n > sawFresh) sawFresh = n;
   if (sawFresh) break;
 }

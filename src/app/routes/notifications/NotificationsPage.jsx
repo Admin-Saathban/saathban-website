@@ -13,7 +13,22 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STRINGS, KIND_EMOJI, relativeTime } from "./strings.js";
-import { fetchNotifications, markRead, markAllRead, announceRead } from "./data.js";
+import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, muteNotificationKind } from "./data.js";
+
+/* Quiet by design: these are not actions most people want most of
+   the time, and a loud "MUTE" button beside every notification would
+   read as the app expecting to annoy you. */
+const muteBtn = (ts) => ({
+  minHeight: A11Y.minTapTargetPx,
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: C.textMuted,
+  fontFamily: "inherit",
+  fontSize: ts(15),
+  textDecoration: "underline",
+  cursor: "pointer",
+});
 
 export default function NotificationsPage() {
   const { lang, ts, meta } = useI18n();
@@ -21,6 +36,12 @@ export default function NotificationsPage() {
 
   const [items, setItems] = useState(null); // null = loading
   const [error, setError] = useState("");
+  /* §6.1 — which rows have just been muted, so the row can say what
+     happened in place rather than vanishing under the person's
+     finger. Keyed by notification id: the mute applies to the person
+     or the kind, but the acknowledgement belongs to the row they
+     touched. */
+  const [muted, setMuted] = useState({});
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +79,20 @@ export default function NotificationsPage() {
   };
 
   const unread = (items || []).filter((n) => !n.read_at).length;
+
+  /* Quiet, immediate, reversible. No confirm step: asking "are you
+     sure?" about something undoable is how a person learns to fear
+     buttons, and this one exists precisely so the app is easy to turn
+     down. */
+  const onMute = async (n, what) => {
+    try {
+      if (what === "person") await muteNotificationPerson(n.created_by);
+      else await muteNotificationKind(n.kind);
+      setMuted((m) => ({ ...m, [n.id]: what }));
+    } catch {
+      setError(s.muteFailed);
+    }
+  };
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
@@ -155,6 +190,49 @@ export default function NotificationsPage() {
                   {n.body && (
                     <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "8px 0 0", lineHeight: 1.6 }}>{n.body}</p>
                   )}
+                  {/* ── OUT_AND_ABOUT_SPEC §6.1 ──
+                      "Inline in the notification: mute this person and
+                       mute this kind of thing. Both reversible from
+                       Settings. A notification a person cannot stop
+                       from the place they receive it is a notification
+                       they will stop by leaving."
+
+                      Neither is a new mechanism: the person mute is the
+                      same user_blocks row the feed writes, and the kind
+                      mute is the same profiles.settings->notify override
+                      the notify settings screen edits — so "reversible
+                      from Settings" is literally true rather than a
+                      promise. Muting is quiet and needs no confirming:
+                      it is reversible, and asking "are you sure?" about
+                      a reversible thing is how a person learns to fear
+                      buttons. */}
+                  {muted[n.id] ? (
+                    <p style={{ fontSize: ts(15), color: C.textMuted, margin: "12px 0 0" }}>
+                      {muted[n.id] === "person" ? s.mutedPerson : s.mutedKind}
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
+                      {n.created_by && (
+                        <button
+                          type="button"
+                          onClick={() => onMute(n, "person")}
+                          style={muteBtn(ts)}
+                        >
+                          {s.mutePerson}
+                        </button>
+                      )}
+                      {n.kind && (
+                        <button
+                          type="button"
+                          onClick={() => onMute(n, "kind")}
+                          style={muteBtn(ts)}
+                        >
+                          {s.muteKind}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     <span style={{ fontSize: ts(15), color: C.textMuted }}>{relativeTime(n.created_at, s)}</span>
                     {isUnread && (

@@ -612,9 +612,9 @@ export default function PlaceView() {
             </Card>
           )}
 
-          {/* The ineligible state is a gentle explanation, never a
-              missing button (PARITY.md): everyone else is told plainly
-              who starts things here and that joining is theirs. */}
+          {/* The ineligible state is ONE warm line, never a paragraph
+              that reads as a closed door: who starts things here, and
+              that joining anything above is theirs. */}
           {!isIcon && (
             <BodyText muted style={{ marginTop: 4 }}>
               {t("outdoor.place.startIconOnly", { icon: ROLE_DISPLAY.saath_icon })}

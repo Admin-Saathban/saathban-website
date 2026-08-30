@@ -314,7 +314,6 @@ export default function BuddyHome() {
                   : []),
                 { to: "/app/events", emoji: "🎪", key: "hub.events" },
                 { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
-                { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
               ]}
             />
           </div>

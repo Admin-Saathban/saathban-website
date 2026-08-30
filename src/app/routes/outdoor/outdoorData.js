@@ -34,6 +34,29 @@ export async function fetchPlaces() {
 
 /* Live check-ins the caller is allowed to see, across all places —
    used for the "n here now" counts on the list. RLS trims it. */
+/* Add a place. Only an Icon may (0047), and only as themselves: the
+   INSERT policy checks created_by = auth.uid(), so passing anyone
+   else's id is refused at the database rather than trusted here. New
+   places are visible to everyone immediately — no approval queue. */
+export async function addPlace({ name, area, city, placeType, lat = null, lng = null }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("outdoor_places")
+    .insert({
+      name,
+      area,
+      city,
+      place_type: placeType,
+      lat,
+      lng,
+      created_by: user?.id,
+    })
+    .select("id, name, city, area, place_type, created_by")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function fetchLiveCheckins() {
   const { data, error } = await supabase
     .from("outdoor_checkins")

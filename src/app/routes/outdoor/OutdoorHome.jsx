@@ -25,6 +25,7 @@ import {
   dropMirroredOutings,
 } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
+import AddPlace from "./AddPlace.jsx";
 
 const cityKey = (profileId) => `saathban.app.outdoorCity.${profileId || "anon"}`;
 
@@ -267,6 +268,19 @@ export default function OutdoorHome() {
               </div>
             ))
           )}
+
+          {/* Somewhere else? The seeded list is a starting point, not
+              the world — an Icon can name their own maidan and it is
+              usable by everyone at once (0047). */}
+          <AddPlace
+            defaultCity={city}
+            onAdded={(row) => {
+              /* Straight into the list rather than a refetch: the row
+                 came back from the insert, and the person should see
+                 the place they just named without a wait. */
+              if (row) setPlaces((cur) => [...cur, row]);
+            }}
+          />
         </>
       )}
     </OutdoorScreen>

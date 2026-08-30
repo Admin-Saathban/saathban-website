@@ -339,7 +339,6 @@ export default function FamDashboard() {
             { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
             { to: "/app/community", emoji: "🪷", key: "hub.community" },
             { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
-            { to: "/app/notifications", emoji: "🔔", key: "hub.notifications" },
           ]}
         />
       </div>

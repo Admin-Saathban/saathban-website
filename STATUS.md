@@ -248,6 +248,27 @@ The rule that survives is narrower and still worth having: **a gate
 proves what it inspects.** `node --check` inspects syntax. What it
 does not inspect, only running the code will find (1c).
 
+**1e. `$?` after a pipe is the LAST command's status, not the one you
+care about.** `cmd | tail` reports tail's success, and tail almost
+always succeeds. Measured on the very fixture above:
+
+    npx vite build 2>&1 | tail -2   →  $? = 0   (tail)
+    npx vite build                  →  $? = 1   (vite)
+    piped, but ${PIPESTATUS[0]}     →  1        (vite)
+
+This is not a curiosity. Both sessions testing the 1d retraction piped
+build output through `tail` to keep it readable, both saw `EXIT CODE:
+0`, and both were one keystroke from publishing "confirmed, the build
+lets it through" — which would have re-established the false claim with
+a measurement attached to it. Read `PIPESTATUS[0]`, or run the command
+unpiped when the exit code is the answer you are after.
+
+The family 1..1e is one idea: **the instrument answers the question it
+was pointed at, which is not always the question asked.** A build
+resolves modules, `node --check` parses, a pipe reports its tail, an
+HTTP 200 says a server replied. None of them is lying; each is being
+read for more than it measures.
+
 **2. Say which tree you verified against.** "Verified" against a dev
 server and "verified" against origin are different claims, and they
 diverged today. State which one you mean when you report a run.

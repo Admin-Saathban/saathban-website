@@ -224,6 +224,30 @@ parent while the button lives in the child builds perfectly and throws
 "not defined" on the first tap. Build, run, AND check the branch —
 they each catch a different class, and none substitutes for another.
 
+**1d. `node --check` parses a file; it does not resolve the names in
+it.** A ReferenceError is not a syntax error, so a file that uses a
+variable deleted three lines earlier passes `node --check` cleanly and
+throws the moment it runs. Measured, not assumed — a two-line file whose second line calls an
+undefined identifier passes `node --check` with exit 0. This bit editing `tests/snakes-rules.mjs`: removing a coupling
+left `hrow` dangling in the next check and the syntax gate was happy.
+
+**A correction to something asserted loudly today, in case it spread:
+`vite build` DOES catch a missing named export.** It was claimed here
+and in two cross-session messages that Rollup downgrades one to a
+warning and substitutes `undefined`. That is false. A three-file
+fixture importing `{ MISSING }` from a module that does not export it
+fails with "MISSING is not exported by" and **exit code 1**. The
+episode that prompted the claim — `SeatSetup` naming
+`SEAT_COLOR_NAMES` while `seatColors.js` seemed not to export it —
+turns out never to have existed as a commit: `be433de` added the
+import and the export together, and the green build I took as evidence
+had already picked up both. An inference from one green build, not a
+gate failing.
+
+The rule that survives is narrower and still worth having: **a gate
+proves what it inspects.** `node --check` inspects syntax. What it
+does not inspect, only running the code will find (1c).
+
 **2. Say which tree you verified against.** "Verified" against a dev
 server and "verified" against origin are different claims, and they
 diverged today. State which one you mean when you report a run.

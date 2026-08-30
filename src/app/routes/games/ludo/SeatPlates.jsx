@@ -406,7 +406,19 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         {isTurn && (
           <span
             style={
-              compact
+              /* CROWDED, so the words move rather than being clipped.
+                 On my own two-dice plate the avatar, the turn line and
+                 two dice do not fit at 390px, and "your turn" was
+                 rendering as "y… t…", which is worse than absent.
+
+                 It goes off-screen, not away, and §10's rule that
+                 whose-turn is said in WORDS is still kept twice over:
+                 the ring's own aria-label reads "Your turn — 12
+                 seconds left", and the instruction under the board
+                 says "Tap a die, then tap the goti it should move" in
+                 full width, light on the table. The dice stay,
+                 because they are the thing being read. */
+              compact || (isMe && dice && dice.length > 1)
                 ? {
               position: "absolute",
               width: 1,

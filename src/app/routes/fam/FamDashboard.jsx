@@ -23,6 +23,7 @@ import {
   hoursLeft,
 } from "../../lib/circle.js";
 import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
+import OwnDay from "./OwnDay.jsx";
 import { MOOD_BY_VALUE } from "./famCopy.js";
 import PersonCard from "./PersonCard.jsx";
 import YourTurnChips from "../games/YourTurnChips.jsx";
@@ -175,6 +176,31 @@ function IconCard({ view }) {
           💬 {t("fam.card.messageCta")}
         </Link>
 
+        {/* Play — §10 lists it beside Message as a plain verb, and it is
+            the one action here that is purely for the pleasure of it.
+            A Fam member's games ARE family games (§10), so this goes to
+            the thread where a table between the two of them is started
+            rather than to the open community tables they cannot join. */}
+        <Link
+          to={`/app/people/${view.iconId}/chat`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: A11Y.minTapTargetPx,
+            padding: "0 24px",
+            borderRadius: 50,
+            border: `2px solid ${C.green}`,
+            color: C.green,
+            background: C.white,
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          🎲 {t("fam.card.playCta")}
+        </Link>
+
         {/* Reminders — the button exists only where the Icon granted it.
             No locked-state teaser: an ungranted power is simply absent. */}
         {p.manageReminders && (
@@ -306,6 +332,16 @@ export default function FamDashboard() {
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
           ⚠ {t(error)}
         </BodyText>
+      )}
+
+      {/* §10 reciprocity: their own day sits among the things to act on,
+          above the people, because it is part of the liveliness rather
+          than an afterthought underneath the caring. */}
+      {views && views.length > 0 && (
+        <OwnDay
+          iconId={views[0].iconId}
+          iconName={(views[0].name || "").split(" ")[0]}
+        />
       )}
 
       {/* The care cards stay UP TOP — the people come first. */}

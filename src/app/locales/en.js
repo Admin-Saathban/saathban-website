@@ -464,6 +464,18 @@ const en = {
   },
 
   fam: {
+    /* §10 reciprocity — the Fam member's own day, on their own home,
+       among the things to act on rather than in a section of its own. */
+    ownDay: {
+      title: "Your day",
+      mood_great: "Great",
+      mood_good: "Good",
+      mood_ok: "Alright",
+      mood_low: "Low",
+      mood_hard: "Hard",
+      shareWith: "Let {name} see how my day is going",
+      note: "Yours to keep, and yours to share or not.",
+    },
     dashboard: {
       greeting: "Assalam-o-alaikum, {name}",
       intro: "Here's how everyone you're connected with is doing.",
@@ -495,6 +507,7 @@ const en = {
       privateHealth: "Health entries stay between {name} and Saathban.",
       locationSos: "Location is shared only during an SOS.",
       locationNever: "Location is never shared.",
+      playCta: "Play",
       remindersCta: "Reminders & routines",
       messageCta: "Message",
       setupTitle: "Help set up {name}’s daily log",
@@ -1727,6 +1740,7 @@ const en = {
       settingNote: "Chairs out, board open. One moment.",
       start: "Khelte hain!",
       startNote: "The table is set — good luck, everyone.",
+      countdownBanner: "Your first game starts in…",
       captureOwn: "You sent one home!",
       captureTheirs: "One of yours goes home.",
       leaveCta: "Leave the table",

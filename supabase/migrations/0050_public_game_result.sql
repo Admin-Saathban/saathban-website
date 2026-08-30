@@ -1,6 +1,8 @@
 -- ════════════════════════════════════════════════
--- PROPOSED — not applied. Awaiting a number from the registrar.
--- Rename to <nnnn>_public_game_result.sql when one is assigned.
+-- 0050 — applied 2026-08-30. Registered in supabase/MIGRATIONS.md.
+-- 0050 was claimed for the rewards table and released the same day when
+-- themes went derived; the registrar asked for it to be reused rather than
+-- left as a hole in the sequence. A3 stickers will take the next number.
 --
 -- GAMES_BACKLOG A1: "Public result page at /app/g/<id>, openable with
 -- no account: the card, who played, and a 'Play Ludo on Saathban'

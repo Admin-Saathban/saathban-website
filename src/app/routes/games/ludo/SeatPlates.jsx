@@ -1,42 +1,46 @@
 /* ════════════════════════════════════════════════
-   The four players, sitting at the four corners.
+   The players, sitting at the table — LUDO_UI_SPEC.md §1–§3.
 
    Each plate goes OUTSIDE the board, at the corner of the yard that
    belongs to that seat — so once the board rotates to your point of
    view (your yard nearest you, bottom-left), your own plate follows it
    down to the bottom-left too. You always sit in the same place.
 
-   Whose turn it is is said four ways now: a heavy ring, the word
-   "turn" under the name, the plate's own raised weight, and a quiet
-   "thinking…" while the table waits on them. Never the glow alone.
+   THE COUNTDOWN LIVES ON THE PERSON. A ring sweeps round the active
+   player's avatar as their turn runs out, and there is no separate
+   timer bar anywhere on the page (§2). Three reasons, all from the
+   spec: you always know whose turn it is because the clock is drawn on
+   them, it costs no vertical space on a phone, and it reads at a
+   glance for somebody who cannot parse a number quickly.
 
-   A plate can also carry that player's OWN DIE, beside their face —
-   your die next to your name, theirs next to theirs, so the table
-   reads as four people rather than one shared tray. The active
-   player's die is bright and carries an arrow cue; everyone else's is
-   dimmed and inert. Tapping your own die rolls it; tapping anyone
-   else's does nothing, which is the point. In two-dice mode both of
-   that player's dice sit together at their corner.
+   The ring is driven by a prop that changes once a second, NOT by a
+   CSS animation. That is why §10's "reduced-motion: rings still show
+   progress" costs nothing here — there is no animation to suppress,
+   so a person who asked for less motion still gets the whole clock.
 
-   Placement is a MODE, not a decision baked in here: passing no dice
-   renders the plates exactly as before, for the centre-tray layout.
+   Whose turn it is is said five ways: the ring, a heavy border, the
+   plate's raised weight, the word under the name, and a quiet
+   "thinking…" while the table waits. Never the glow alone (§10).
+
+   A plate carries that player's OWN DIE, beside their face — the
+   spec settles this: dice sit next to their owner, never in the
+   board's middle (§3). The active player's die is bright and carries
+   a BOUNCING ARROW so a first-time player is never left wondering
+   what to do next (§4); everyone else's is dimmed and inert. Only
+   your own die is a button, so the table never invites a tap it will
+   refuse.
    ════════════════════════════════════════════════ */
 
 import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
-import { DieFace } from "./Dice.jsx";
-
-/* The board's corners, clockwise from top-left. Seat 0's yard is at
-   top-left, seat 1's at bottom-left, seat 2's bottom-right, seat 3's
-   top-right — so this is where each seat sits before any rotation. */
-const CORNER_OF_SEAT = [0, 3, 2, 1];
-
-/* After the board turns by `spin` degrees, a corner moves round by
-   spin/90 places. */
-export function screenCorner(seat, spin) {
-  return (CORNER_OF_SEAT[seat] + Math.round(spin / 90) + 8) % 4;
-}
+/* The seat→corner geometry lives in a plain module so a test can
+     import it without a browser — see seatCorners.js for why it needs
+     one. screenCorner is re-exported here because callers have always
+     imported it from this file. */
+export { screenCorner } from "./seatCorners.js";
+import { screenCorner as cornerFor } from "./seatCorners.js";
+import Die, { DieFace } from "./Dice.jsx";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -44,12 +48,114 @@ function initialOf(name) {
   return [...s][0].toUpperCase();
 }
 
-/* One die at a corner. Bright and arrow-cued when it is that
-   player's turn, dim and inert otherwise. Only your own die is a
-   button — tapping someone else's does nothing at all, so the board
-   never invites a tap it will refuse. */
-function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label }) {
+/* ── The avatar, wrapped in its turn ring ──────────────────────────
+   `remaining` is 0..1 — the share of the turn still left. The ring
+   EMPTIES clockwise as the turn runs down, so a full ring means a
+   whole turn in hand and a bare one means seconds.
+
+   The ring only exists while it is that player's turn: a ring drawn
+   on everyone would be four clocks, three of them lying. */
+function Avatar({ name, colour, ink, isTurn, remaining, seconds, label }) {
   const { t, ts } = useI18n();
+  const size = isTurn ? 60 : 44;
+  const r = size / 2 - 3;
+  const circumference = 2 * Math.PI * r;
+  const left = Math.max(0, Math.min(1, remaining ?? 1));
+  /* Under about a fifth of the turn the ring changes COLOUR and the
+     seconds are said out loud in the label — never colour alone. */
+  const urgent = isTurn && left <= 0.2;
+
+  return (
+    <span
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        width: size,
+        height: size,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {isTurn && remaining != null && (
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          role="timer"
+          aria-label={label}
+          style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="#DCD2C2"
+            strokeWidth={5}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={urgent ? C.brown : C.green}
+            strokeWidth={5}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - left)}
+          />
+        </svg>
+      )}
+      <span
+        aria-hidden="true"
+        style={{
+          width: size - 20,
+          height: size - 20,
+          borderRadius: "50%",
+          background: colour,
+          color: ink,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 800,
+          fontSize: ts(isTurn ? 21 : 18),
+          border: `2px solid ${C.white}`,
+          /* The active player is brighter and larger; everyone else
+             recedes (§2). Dimming is never the ONLY signal. */
+          opacity: isTurn ? 1 : 0.72,
+        }}
+      >
+        {initialOf(name)}
+      </span>
+      {isTurn && urgent && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            bottom: -4,
+            fontSize: ts(12),
+            fontWeight: 800,
+            color: C.brown,
+            background: C.white,
+            borderRadius: 8,
+            padding: "0 4px",
+            lineHeight: 1.3,
+          }}
+        >
+          {seconds}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/* ── One die at a corner ───────────────────────────────────────────
+   Bright and arrow-cued when it is that player's turn, dim and inert
+   otherwise. Only your own die is a button — tapping someone else's
+   does nothing at all, which is the point. */
+function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, rolling }) {
+  const { ts } = useI18n();
   const live = active && mine && canRoll;
   const body = (
     <span
@@ -68,12 +174,22 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label })
       }}
     >
       {value ? (
-        <DieFace value={value} size={34} ink={spent ? C.textMuted : C.brown} />
+        <span
+          style={{
+            lineHeight: 0,
+            animation: rolling ? "saath-tumble 0.42s linear infinite" : undefined,
+          }}
+        >
+          <DieFace value={value} size={34} ink={spent ? C.textMuted : C.brown} />
+        </span>
       ) : (
         <span aria-hidden="true" style={{ fontSize: ts(20) }}>🎲</span>
       )}
       {spent && (
-        <span aria-hidden="true" style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(13), fontWeight: 800, color: C.green }}>
+        <span
+          aria-hidden="true"
+          style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(13), fontWeight: 800, color: C.green }}
+        >
           ✓
         </span>
       )}
@@ -92,7 +208,6 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label })
       type="button"
       onClick={onRoll}
       aria-label={label}
-      className="sb-die-cue"
       style={{
         position: "relative",
         background: "none",
@@ -107,25 +222,31 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label })
       }}
     >
       {body}
-      {/* the arrow cue: "this one, now" */}
+      {/* THE BOUNCING ARROW (§4). The spec is relentless about this
+          and so are we: when it is your turn and you have not rolled,
+          something on this screen is pointing at the thing to press.
+          It stops bouncing under reduced motion but does not vanish —
+          the arrow is the instruction, the bounce is only emphasis. */}
       <span
+        className="sb-die-arrow"
         aria-hidden="true"
         style={{
           position: "absolute",
-          top: -14,
-          fontSize: ts(15),
+          top: -18,
+          fontSize: ts(19),
           color: colour,
           fontWeight: 900,
           lineHeight: 1,
+          filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))",
         }}
       >
-        ▾
+        ▼
       </span>
     </button>
   );
 }
 
-function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
+function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie, remaining, seconds, rolling }) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   const colour = SEAT_COLORS[seat];
@@ -138,31 +259,28 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
         gap: 9,
         minWidth: 0,
         padding: "6px 10px",
-        borderRadius: 14,
+        borderRadius: 16,
         background: isTurn ? "#fffdf5" : "transparent",
         border: isTurn ? `2px solid ${colour}` : "2px solid transparent",
-        boxShadow: isTurn ? `0 0 0 4px ${colour}22` : "none",
+        boxShadow: isTurn ? `0 2px 10px ${colour}2e` : "none",
       }}
     >
-      <span
-        aria-hidden="true"
-        style={{
-          flexShrink: 0,
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          background: colour,
-          color: SEAT_INK[seat],
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: 800,
-          fontSize: ts(19),
-          border: `2px solid ${C.white}`,
-        }}
-      >
-        {initialOf(row?.is_bot ? t("ludo.seat.bot") : row?.name)}
-      </span>
+      <Avatar
+        name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
+        colour={colour}
+        ink={SEAT_INK[seat]}
+        isTurn={isTurn}
+        remaining={remaining}
+        seconds={seconds}
+        label={
+          seconds == null
+            ? t("ludo.seat.turn")
+            : isMe
+            ? t("ludo.ring.yours", { n: seconds })
+            : t("ludo.ring.theirs", { name, n: seconds })
+        }
+      />
+
       <span style={{ minWidth: 0, textAlign: align === "end" ? "end" : "start" }}>
         <span
           dir="auto"
@@ -179,7 +297,14 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
           {name}
           {isMe ? ` (${t("ludo.seat.you")})` : ""}
         </span>
-        <span style={{ display: "block", fontSize: ts(14), color: isTurn ? colour : C.textMuted, fontWeight: isTurn ? 700 : 400 }}>
+        <span
+          style={{
+            display: "block",
+            fontSize: ts(14),
+            color: isTurn ? colour : C.textMuted,
+            fontWeight: isTurn ? 700 : 400,
+          }}
+        >
           {isTurn
             ? isMe
               ? t("ludo.seat.yourTurn")
@@ -199,31 +324,33 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
         )}
       </span>
 
-      {/* This player's own die (or dice), beside their face. */}
+      {/* This player's own dice, beside their face (§3). In two-dice
+          mode both sit here together, and this is also where you
+          CHOOSE which one to spend — the choice used to live in the
+          board's middle tray, which the spec removed. */}
       {dice && dice.length > 0 && (
-        <span style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+        <span style={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
           {dice.map((d, i) => (
-            <SeatDie
+            <Die
               key={i}
               value={d.v}
-              spent={d.spent}
-              active={isTurn}
-              mine={isMe}
-              canRoll={canRoll}
-              colour={colour}
-              onRoll={onRoll}
+              size={40}
+              state={d.state}
               label={
-                canRoll
-                  ? t("ludo.turn.yours")
+                d.state === "used"
+                  ? t("ludo.dice.used", { n: d.v })
+                  : d.state === "wasted"
+                  ? t("ludo.dice.wasted", { n: d.v })
                   : t("ludo.dice.pick", { n: d.v })
               }
+              onClick={isMe && onPickDie && d.state === "ready" ? () => onPickDie(i) : undefined}
             />
           ))}
         </span>
       )}
       {/* Nothing rolled yet: the empty die is the roll button, and only
           for the person whose turn it is. */}
-      {dice && dice.length === 0 && (
+      {dice && dice.length === 0 && isTurn && (
         <SeatDie
           value={null}
           active={isTurn}
@@ -231,16 +358,18 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
           canRoll={canRoll}
           colour={colour}
           onRoll={onRoll}
-          label={t("ludo.turn.yours")}
+          rolling={rolling && isMe}
+          label={t("ludo.turn.rollCta")}
         />
       )}
     </div>
   );
 }
 
-/* `where` is "top" or "bottom": the row of two plates above or below
-   the board. On a phone the board is the full width, so the corners
-   live in a row of their own rather than floating over it. */
+/* `where` is "top" or "bottom": the row of plates above or below the
+   board. On a phone the board is the full width, so the corners live
+   in a row of their own rather than floating over it — the spec's
+   "opponent strip above, you below" (§1) is the same arrangement. */
 export default function SeatPlates({
   where,
   seats,
@@ -248,20 +377,33 @@ export default function SeatPlates({
   spin,
   currentSeat,
   myId,
-  /* Dice at the corners — omit entirely for the centre-tray layout.
-     diceFor(seat) → [{ v, spent }] | [] | null */
+  /* diceFor(seat) → [{ v, spent }] | [] */
   diceFor,
   onRoll,
   canRoll,
+  /* Two-dice mode: tapping one of your own rolled dice chooses which
+     to spend. Only ever offered on your own plate. */
+  onPickDie,
+  rolling,
+  /* The turn clock, for the ring. `secondsLeft` counts down and
+     `turnSeconds` is the whole turn, so the ring can show a share
+     rather than a number. Omit both and no ring is drawn. */
+  secondsLeft,
+  turnSeconds,
 }) {
   const wanted = where === "top" ? [0, 1] : [3, 2]; // TL,TR above · BL,BR below
   const plates = wanted.map((corner) => {
     for (let seat = 0; seat < seatsInPlay; seat++) {
-      if (screenCorner(seat, spin) === corner) return seat;
+      if (cornerFor(seat, spin) === corner) return seat;
     }
     return null;
   });
   if (plates.every((p) => p === null)) return null;
+
+  const remaining =
+    secondsLeft != null && turnSeconds
+      ? Math.max(0, Math.min(1, secondsLeft / turnSeconds))
+      : null;
 
   return (
     <div
@@ -271,11 +413,19 @@ export default function SeatPlates({
         alignItems: "center",
         gap: 8,
         maxWidth: 560,
-        margin: where === "top" ? "0 auto 8px" : "8px auto 0",
+        margin: where === "top" ? "0 auto 10px" : "10px auto 0",
       }}
     >
       {plates.map((seat, i) => (
-        <div key={i} style={{ flex: "1 1 0", minWidth: 0, display: "flex", justifyContent: i === 0 ? "flex-start" : "flex-end" }}>
+        <div
+          key={i}
+          style={{
+            flex: seat != null ? "1 1 0" : "0 0 0",
+            minWidth: 0,
+            display: "flex",
+            justifyContent: i === 0 ? "flex-start" : "flex-end",
+          }}
+        >
           {seat != null && (
             <Plate
               seat={seat}
@@ -286,6 +436,10 @@ export default function SeatPlates({
               dice={diceFor ? diceFor(seat) : null}
               onRoll={onRoll}
               canRoll={!!canRoll && seat === currentSeat}
+              onPickDie={onPickDie}
+              rolling={rolling}
+              remaining={seat === currentSeat ? remaining : null}
+              seconds={seat === currentSeat ? secondsLeft : null}
             />
           )}
         </div>

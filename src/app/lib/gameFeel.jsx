@@ -319,9 +319,12 @@ export const GAME_MOTION_CSS = `
   0%, 100% { opacity: 0.35; }
   50%      { opacity: 1; }
 }
-@keyframes saath-die-cue {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
+@keyframes saath-die-bounce {
+  0%, 100%  { transform: translateY(-2px); }
+  35%       { transform: translateY(-9px); }
+  55%       { transform: translateY(0); }
+  70%       { transform: translateY(-4px); }
+  85%       { transform: translateY(0); }
 }
 @keyframes saath-cell-flash {
   0%   { opacity: 0.85; }
@@ -339,9 +342,12 @@ export const GAME_MOTION_CSS = `
 }
 /* "thinking…" — a slow breath, not a spinner. */
 .sb-think { animation: saath-think 1.6s ease-in-out infinite; }
-/* The arrow over the active player's die: a small nudge, once a
-   second, saying "this one, now". */
-.sb-die-cue > span:last-child { animation: saath-die-cue 1.1s ease-in-out infinite; }
+/* The arrow over the active player's die: it BOUNCES, because it is
+   an instruction rather than a decoration (LUDO_UI_SPEC §4). Under
+   reduced motion it stops bouncing and stays put — the arrow is the
+   instruction, the bounce is only emphasis, and suppressing the whole
+   thing would take away the answer along with the animation. */
+.sb-die-arrow { animation: saath-die-bounce 1.25s ease-in-out infinite; }
 /* A capture: the square flashes and fades. */
 .sb-cell-flash { animation: saath-cell-flash 0.65s ease-out 1 forwards; }
 .sb-ceremony { animation: saath-ceremony-in 0.25s ease-out 1; }
@@ -351,7 +357,7 @@ export const GAME_MOTION_CSS = `
      one rule, and it cannot be defeated by source order. */
   .sb-shake, .sb-nudge, .sb-hop, .sb-win-pop, .sb-confetti-piece,
   [style*="saath-tumble"], .sb-tumbling,
-  .sb-think, .sb-die-cue > span:last-child, .sb-cell-flash, .sb-ceremony {
+  .sb-think, .sb-die-arrow, .sb-cell-flash, .sb-ceremony {
     animation: none !important;
   }
   /* A bubble must still disappear without motion, or a remark would

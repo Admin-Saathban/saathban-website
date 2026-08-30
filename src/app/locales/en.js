@@ -1468,21 +1468,45 @@ const en = {
        or ludo table, in the register they'd say them in. Sent as
        ordinary chat messages, so they need no schema of their own. */
     quick: {
-      open: "Say something",
+      open: "Chat",
       close: "Close",
       hint: "Tap to send — it goes straight to the table.",
+      emojiOpen: "Emoji",
+      emojiHint: "Tap a face to send it to the table.",
       phrases: {
         wah: "Wah! 🎉",
         shabash: "Shabash! 👏",
-        naaInsafi: "Naa insafi! 😤",
+        achhaKhela: "Achha khela",
+        naaInsafi: "Naa-insafi! 😤",
         kyaChaal: "Kya chaal thi!",
+        meriBaari: "Meri baari",
+        oho: "Oho! 😅",
         phirMilenge: "Phir milenge 🙏",
-        chaloJaldi: "Chalo, jaldi karo 😄",
-        meriBaari: "Meri baari!",
-        acha: "Acha acha, samajh gaya",
-        bachGaya: "Bach gaya! 😅",
-        khelteHain: "Khelte hain!",
+        jeetayRaho: "Jeetay raho",
+        chaloPhir: "Chalo phir",
       },
+    },
+
+    /* §2 — the turn clock, said in words for anyone who cannot see the
+       ring sweeping round the avatar. */
+    ring: {
+      yours: "Your turn — {n} seconds left",
+      theirs: "{name}'s turn — {n} seconds left",
+    },
+
+    /* §8 — the end of a game. No coins, no rank, no leaderboard (§9):
+       what is celebrated is that everybody turned up and played. */
+    celebrate: {
+      title: "Well played!",
+      youWon: "You brought every goti home.",
+      theyWon: "{name} brought every goti home.",
+      crown: "Winner",
+      alsoPlayed: "Also at the table",
+      warmth: "Points are for turning up, never for winning — everyone at this table earned them.",
+      shareCta: "Share this game",
+      shareDone: "Shared with your people",
+      rematchCta: "Play again — same seats",
+      backCta: "Back to games",
     },
 
     /* The small ceremonies that make a table feel like a place rather

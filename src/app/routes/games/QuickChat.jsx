@@ -1,16 +1,24 @@
 /* ════════════════════════════════════════════════
-   Quick chat — two taps, no typing. Shared by every table: ludo,
-   snakes, carrom.
+   Quick talk at the table — LUDO_UI_SPEC.md §7. Shared by every
+   table: ludo, snakes, carrom.
+
+   TWO BUTTONS, NOT ONE. The spec separates them and it is right to:
+   an emoji is a reaction and a phrase is a sentence, and burying the
+   faces behind a "say something" sheet costs a tap for the thing
+   people reach for most. So the action row carries an EMOJI button
+   and a CHAT button, each opening its own sheet, each one tap from
+   the board.
 
    At a real table nobody composes a sentence; they say "wah!" and get
    on with the game. So the ten things people actually say are one tap
-   each from a corner button, alongside the sticker row we already
-   have. A preset is an ordinary chat message — no schema of its own,
-   so it lands in the same history as everything else and anyone
-   reading the thread later sees a conversation rather than a set of
-   event codes.
+   each, in the warm desi register the spec asks for, and no part of
+   any of this requires typing.
 
-   What is said appears as a floating bubble BY THE SPEAKER'S CORNER
+   A preset is an ordinary chat message — no schema of its own — so it
+   lands in the same history as everything else and anyone reading the
+   thread later sees a conversation rather than a set of event codes.
+
+   What is said appears as a floating bubble BY THE SPEAKER'S AVATAR
    for a few seconds, so a remark belongs to a face rather than to a
    list. Bubbles fade on their own; under reduced-motion they simply
    appear and go without travelling.
@@ -23,19 +31,20 @@ import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import { SEAT_COLORS } from "./seatColors.js";
 
-/* The presets, in the order they are offered. Warm first, teasing
-   second, courteous last — the shape of an actual table's talk. */
+/* The presets, in the order LUDO_UI_SPEC §7 gives them. Warm first,
+   teasing in the middle, courteous last — the shape of an actual
+   table's talk. */
 export const QUICK_KEYS = [
   "wah",
   "shabash",
-  "kyaChaal",
-  "bachGaya",
+  "achhaKhela",
   "naaInsafi",
-  "chaloJaldi",
+  "kyaChaal",
   "meriBaari",
-  "acha",
-  "khelteHain",
+  "oho",
   "phirMilenge",
+  "jeetayRaho",
+  "chaloPhir",
 ];
 
 export const BUBBLE_MS = 4200;
@@ -44,6 +53,10 @@ export const BUBBLE_MS = 4200;
    board's own corner numbering (top-left, then clockwise). */
 export function ChatBubbles({ bubbles, cornerOf }) {
   const { ts } = useI18n();
+  /* PHYSICAL left/right, not logical. These name the corners of an SVG
+     board whose geometry does not flip with the document direction —
+     with inset-inline every bubble in Urdu landed on the opposite side
+     of the table from the person who said it. */
   const spot = (corner) => {
     switch (corner) {
       case 0: return { top: 4, left: 4, align: "flex-start" };
@@ -97,153 +110,188 @@ export function ChatBubbles({ bubbles, cornerOf }) {
   );
 }
 
-export default function QuickChat({ onSend, disabled }) {
+/* The sheet both buttons open. Same frame, different contents, so the
+   two never drift apart in padding, dismissal or safe-area handling. */
+function Sheet({ hint, onClose, children }) {
   const { t, ts } = useI18n();
-  const [open, setOpen] = useState(false);
-  const [stickers, setStickers] = useState(false);
-  const sending = useRef(false);
-
-  // Closing on Escape, because a sheet that only closes by tapping a
-  // small ✕ is a trap on a phone.
   useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [onClose]);
+
+  return (
+    <>
+      {/* Tapping outside dismisses it (§7). A sheet that only closes by
+          finding a small ✕ is a trap on a phone. */}
+      <div
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, zIndex: 69, background: "rgba(45,36,24,0.28)" }}
+      />
+      <div
+        role="dialog"
+        aria-label={hint}
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 70,
+          background: C.white,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          boxShadow: "0 -8px 30px rgba(45,36,24,0.28)",
+          padding: "16px 14px calc(16px + env(safe-area-inset-bottom, 0px))",
+          maxHeight: "72vh",
+          overflowY: "auto",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <p style={{ flex: 1, margin: 0, fontSize: ts(17), color: C.textMuted }}>{hint}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              minHeight: A11Y.minTapTargetPx,
+              minWidth: A11Y.minTapTargetPx,
+              borderRadius: 50,
+              border: `2px solid ${C.warmGray}`,
+              background: C.white,
+              color: C.textMain,
+              fontSize: ts(18),
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            {t("ludo.quick.close")}
+          </button>
+        </div>
+        {children}
+      </div>
+    </>
+  );
+}
+
+function TriggerBtn({ onClick, disabled, label, glyph }) {
+  const { ts } = useI18n();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      style={{
+        minHeight: A11Y.minTapTargetPx,
+        minWidth: A11Y.minTapTargetPx,
+        padding: "0 16px",
+        borderRadius: 50,
+        border: `2px solid ${C.warmGray}`,
+        background: C.white,
+        color: C.brown,
+        fontSize: ts(18),
+        fontWeight: 700,
+        fontFamily: "inherit",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: ts(20) }}>{glyph}</span>
+      {label}
+    </button>
+  );
+}
+
+/* ── The emoji button: a grid of faces, one tap to send ──
+   Our sticker set IS our emoji set — hand-drawn, bilingual labels,
+   already sized for a 64px cell. A second parallel set of faces would
+   be two things to translate and two to keep warm. */
+export function EmojiButton({ onSend, disabled }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const sending = useRef(false);
 
   const say = (text) => {
     if (sending.current || !text) return;
     sending.current = true;
     setOpen(false);
-    setStickers(false);
     Promise.resolve(onSend(text)).finally(() => {
       sending.current = false;
     });
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
+  return (
+    <>
+      <TriggerBtn
         onClick={() => setOpen(true)}
         disabled={disabled}
-        aria-label={t("ludo.quick.open")}
-        style={{
-          minHeight: A11Y.minTapTargetPx,
-          minWidth: A11Y.minTapTargetPx,
-          padding: "0 18px",
-          borderRadius: 50,
-          border: `2px solid ${C.warmGray}`,
-          background: C.white,
-          color: C.brown,
-          fontSize: ts(18),
-          fontWeight: 700,
-          fontFamily: "inherit",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          cursor: disabled ? "default" : "pointer",
-          opacity: disabled ? 0.5 : 1,
-        }}
-      >
-        <span aria-hidden="true">💬</span>
-        {t("ludo.quick.open")}
-      </button>
-    );
-  }
+        label={t("ludo.quick.emojiOpen")}
+        glyph="🙂"
+      />
+      {open && (
+        <Sheet hint={t("ludo.quick.emojiHint")} onClose={() => setOpen(false)}>
+          <StickerPicker onPick={(id) => say(stickerRef(id))} label={t("ludo.quick.emojiOpen")} />
+        </Sheet>
+      )}
+    </>
+  );
+}
+
+/* ── The chat button: ten things people say, one tap each ── */
+export default function QuickChat({ onSend, disabled }) {
+  const { t, ts } = useI18n();
+  const [open, setOpen] = useState(false);
+  const sending = useRef(false);
+
+  const say = (text) => {
+    if (sending.current || !text) return;
+    sending.current = true;
+    setOpen(false);
+    Promise.resolve(onSend(text)).finally(() => {
+      sending.current = false;
+    });
+  };
 
   return (
-    <div
-      role="dialog"
-      aria-label={t("ludo.quick.open")}
-      style={{
-        position: "fixed",
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
-        bottom: 0,
-        zIndex: 70,
-        background: C.white,
-        borderTopLeftRadius: 22,
-        borderTopRightRadius: 22,
-        boxShadow: "0 -8px 30px rgba(45,36,24,0.28)",
-        padding: "16px 14px calc(16px + env(safe-area-inset-bottom, 0px))",
-        maxHeight: "72vh",
-        overflowY: "auto",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <p style={{ flex: 1, margin: 0, fontSize: ts(17), color: C.textMuted }}>{t("ludo.quick.hint")}</p>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          style={{
-            minHeight: A11Y.minTapTargetPx,
-            minWidth: A11Y.minTapTargetPx,
-            borderRadius: 50,
-            border: `2px solid ${C.warmGray}`,
-            background: C.white,
-            color: C.textMain,
-            fontSize: ts(18),
-            fontWeight: 700,
-            fontFamily: "inherit",
-          }}
-        >
-          {t("ludo.quick.close")}
-        </button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
-        {QUICK_KEYS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => say(t(`ludo.quick.phrases.${k}`))}
-            style={{
-              minHeight: 56,
-              padding: "0 14px",
-              borderRadius: 16,
-              border: `2px solid ${C.warmGray}`,
-              background: C.cream,
-              color: C.textMain,
-              fontSize: ts(18),
-              fontWeight: 600,
-              fontFamily: "inherit",
-              textAlign: "start",
-              cursor: "pointer",
-            }}
-          >
-            {t(`ludo.quick.phrases.${k}`)}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={() => setStickers((v) => !v)}
-          aria-expanded={stickers}
-          style={{
-            minHeight: A11Y.minTapTargetPx,
-            padding: "0 16px",
-            borderRadius: 50,
-            border: `2px solid ${C.warmGray}`,
-            background: C.white,
-            color: C.brown,
-            fontSize: ts(18),
-            fontWeight: 700,
-            fontFamily: "inherit",
-          }}
-        >
-          {stickers ? "▾ " : "▸ "}
-          {t("ludo.chat.stickers")}
-        </button>
-        {stickers && (
-          <div style={{ marginTop: 8 }}>
-            <StickerPicker onPick={(id) => say(stickerRef(id))} label={t("ludo.chat.stickers")} />
+    <>
+      <TriggerBtn
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        label={t("ludo.quick.open")}
+        glyph="💬"
+      />
+      {open && (
+        <Sheet hint={t("ludo.quick.hint")} onClose={() => setOpen(false)}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
+            {QUICK_KEYS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => say(t(`ludo.quick.phrases.${k}`))}
+                dir="auto"
+                style={{
+                  minHeight: 56,
+                  padding: "0 14px",
+                  borderRadius: 16,
+                  border: `2px solid ${C.warmGray}`,
+                  background: C.cream,
+                  color: C.textMain,
+                  fontSize: ts(18),
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  textAlign: "start",
+                  cursor: "pointer",
+                }}
+              >
+                {t(`ludo.quick.phrases.${k}`)}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+        </Sheet>
+      )}
+    </>
   );
 }

@@ -29,9 +29,10 @@ import LudoBoard from "./LudoBoard.jsx";
 import Die, { DieFace } from "./Dice.jsx";
 import SeatPlates from "./SeatPlates.jsx";
 import ChatPanel from "./ChatPanel.jsx";
-import QuickChat, { ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
+import QuickChat, { EmojiButton, ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
+import LudoCelebration from "./LudoCelebration.jsx";
 import { screenCorner } from "./SeatPlates.jsx";
-import { leaveSession } from "../../../lib/games.js";
+import { leaveSession, boastToPeople } from "../../../lib/games.js";
 import { sendChat, fetchChat } from "./ludoRails.js";
 
 const POLL_MS = 2500;
@@ -120,6 +121,10 @@ export default function LudoSession() {
      letting someone pick it up and find out. */
   const [optionsByDie, setOptionsByDie] = useState({});
   const [chooser, setChooser] = useState(null);
+  /* A question about dice that no longer exist is not a question. */
+  useEffect(() => {
+    if (!Array.isArray(game?.state?.dice)) setChooser(null);
+  }, [game?.state?.dice]);
   const [rolling, setRolling] = useState(false);
   const [tumble, setTumble] = useState([1, 1]);
 
@@ -211,6 +216,7 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
+  const [shared, setShared] = useState(false);
   const [bubbles, setBubbles] = useState([]);
   const seenChat = useRef(new Set());
   const startedOnce = useRef(false);
@@ -359,26 +365,13 @@ export default function LudoSession() {
   const mySeatRow = seats.find((s) => s.profile_id === myId);
   const currentRow = seats.find((s) => s.seat === game.current_seat);
   const isMyTurn = game.status === "playing" && currentRow?.profile_id === myId;
-  /* WHERE THE DICE LIVE. Two people asked for opposite things here:
-     one wants each player's own die beside their own face (the table
-     feels inhabited), the other wants dice in the middle where thrown
-     dice land (the table feels real). Rather than one silently
-     overwriting the other, placement is a mode and BOTH layouts work.
-     Flip this constant to "centre" to restore the middle tray exactly
-     as it was — nothing else needs changing. */
-  const DICE_PLACEMENT = "corners";
-  const cornerDice = DICE_PLACEMENT === "corners";
-
-  /* What sits at one player's corner: their rolled dice while it is
-     their turn, an empty die for whoever is about to roll, and
-     nothing at all for the seats waiting their go — four idle dice on
-     screen would say "four things to tap" when only one is live. */
-  const diceForSeat = (seat) => {
-    if (seat !== game.current_seat) return [];
-    const rolled = Array.isArray(state.dice) ? state.dice : null;
-    if (!rolled) return [];
-    return rolled.map((d) => ({ v: d.v, spent: !!d.used || !!d.wasted }));
-  };
+  /* WHERE THE DICE LIVE — settled by LUDO_UI_SPEC §3, "next to their
+     own avatar, not in the board's middle". Two users had asked for
+     opposite things (a die per person; dice in the middle where thrown
+     dice land) and this was a mode for a while so neither answer was
+     destroyed while they decided. The spec decided. The middle tray is
+     gone rather than kept behind a flag, because a branch nobody runs
+     is not a preserved option, it is untested code. */
 
   const dice = Array.isArray(state.dice) ? state.dice : null;
   const hasDice = !!dice;
@@ -392,7 +385,30 @@ export default function LudoSession() {
   const deadDice = dice
     ? dice.filter((d, i) => !d.used && (d.wasted || (optionsByDie[i] || []).length === 0))
     : [];
+  /* What sits at one player's corner: their rolled dice while it is
+     their turn, an empty die for whoever is about to roll, and
+     nothing at all for the seats waiting their go — four idle dice on
+     screen would say "four things to tap" when only one is live.
+
+     A die that is unspent but has nowhere legal to go reads as
+     "wasted", not "ready": offering it as a choice would be inviting
+     a tap that can only be refused. */
+  const diceForSeat = (seat) => {
+    if (seat !== game.current_seat || !dice) return [];
+    return dice.map((d, i) => ({
+      v: d.v,
+      state: d.used
+        ? "used"
+        : d.wasted || (optionsByDie[i] || []).length === 0
+        ? "wasted"
+        : i === pickedDie
+        ? "selected"
+        : "ready",
+    }));
+  };
+
   const chain = Number(state.chain) || 0;
+  const turnSeconds = Number(game.house_rules?.turn_seconds) || 60;
   const secondsLeft = game.turn_deadline
     ? Math.max(0, Math.ceil((new Date(game.turn_deadline).getTime() - now) / 1000))
     : null;
@@ -440,7 +456,11 @@ export default function LudoSession() {
         </BodyText>
       )}
 
-      {/* Seat chips — colour + number + name, current turn marked in words */}
+      {/* Seat chips — who is here so far. Only in the lobby: once
+          play starts the seat plates carry all of this on the players
+          themselves, and a second row of the same facts is board the
+          phone does not have to give away (§1). */}
+      {game.status === "lobby" && (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         {seats.map((s) => (
           <Pill
@@ -472,6 +492,7 @@ export default function LudoSession() {
           </Pill>
         ))}
       </div>
+      )}
 
       {/* ── LOBBY ── */}
       {game.status === "lobby" && (
@@ -530,8 +551,10 @@ export default function LudoSession() {
       {/* ── PLAYING ── */}
       {game.status === "playing" && (
         <>
-          {/* Turn + countdown */}
-          <Card style={{ padding: 16 }}>
+          {/* Whose turn, and what just happened. No card and no
+              countdown bar: the clock is drawn on the player (§2) and
+              the border was costing the board ninety pixels. */}
+          <div style={{ margin: "0 0 10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
                 {isMyTurn
@@ -540,34 +563,7 @@ export default function LudoSession() {
                     : t("ludo.turn.yours")
                   : t("ludo.turn.theirs", { name: seatName(currentRow, t) })}
               </BodyText>
-              {secondsLeft != null && (
-                <BodyText
-                  style={{
-                    margin: 0,
-                    fontWeight: 700,
-                    fontSize: ts(22),
-                    color: secondsLeft <= 10 ? C.brown : C.green,
-                  }}
-                >
-                  ⏱ {secondsLeft}s
-                </BodyText>
-              )}
             </div>
-            {secondsLeft != null && (
-              <div
-                aria-hidden="true"
-                style={{ height: 8, borderRadius: 4, background: C.cream, marginTop: 8, overflow: "hidden" }}
-              >
-                <div
-                  style={{
-                    width: `${Math.min(100, (secondsLeft / 60) * 100)}%`,
-                    height: "100%",
-                    background: secondsLeft <= 10 ? C.brown : C.sage,
-                    borderRadius: 4,
-                  }}
-                />
-              </div>
-            )}
             {last && (
               <BodyText muted style={{ margin: "10px 0 0", fontSize: ts(18) }}>
                 {last.skipped
@@ -594,7 +590,7 @@ export default function LudoSession() {
                     })}
               </BodyText>
             )}
-          </Card>
+          </div>
 
           {/* ── The four players, at the four corners, outside the
                  board. Yours follows your yard down to the near side. ── */}
@@ -605,9 +601,13 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             myId={myId}
-            diceFor={cornerDice ? diceForSeat : undefined}
+            diceFor={diceForSeat}
             onRoll={doRoll}
-            canRoll={cornerDice && isMyTurn && !hasDice && !busy && !rolling}
+            canRoll={isMyTurn && !hasDice && !busy && !rolling}
+            onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
+            rolling={rolling}
+            secondsLeft={secondsLeft}
+            turnSeconds={turnSeconds}
           />
 
           <div style={{ position: "relative" }}>
@@ -656,79 +656,7 @@ export default function LudoSession() {
             options={isMyTurn && hasDice ? options : []}
             currentSeat={game.current_seat}
             onPieceTap={tapPiece}
-          >
-            {/* ── The dice, in the middle, where thrown dice land.
-                   Rendered only in "centre" placement; in "corners"
-                   each player's die sits beside their own face. ── */}
-            {!cornerDice && isMyTurn && !hasDice ? (
-              <button
-                type="button"
-                onClick={doRoll}
-                disabled={busy || rolling}
-                aria-label={t("ludo.turn.rollCta")}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minWidth: 64,
-                  minHeight: 64,
-                  borderRadius: "22%",
-                  border: `3px solid ${C.green}`,
-                  background: "#fffdf7",
-                  cursor: busy || rolling ? "default" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 4,
-                  padding: 0,
-                  boxShadow: "0 3px 0 rgba(0,0,0,0.10)",
-                }}
-              >
-                {Array.from({ length: diceCount }).map((_, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      animation: rolling ? "saath-tumble 0.42s linear infinite" : undefined,
-                      lineHeight: 0,
-                    }}
-                  >
-                    <DieFace value={rolling ? tumble[i] || 1 : 6 - i * 5} size={diceCount === 2 ? 26 : 40} />
-                  </span>
-                ))}
-              </button>
-            ) : !cornerDice && hasDice ? (
-              <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "center" }}>
-                {dice.map((d, i) => (
-                  <Die
-                    key={i}
-                    value={d.v}
-                    size={diceCount === 2 ? 28 : 42}
-                    state={
-                      d.used
-                        ? "used"
-                        : d.wasted || (isMyTurn && (optionsByDie[i] || []).length === 0)
-                        ? "wasted"
-                        : i === pickedDie
-                        ? "selected"
-                        : "ready"
-                    }
-                    label={
-                      d.used
-                        ? t("ludo.dice.used", { n: d.v })
-                        : d.wasted || (isMyTurn && (optionsByDie[i] || []).length === 0)
-                        ? t("ludo.dice.wasted", { n: d.v })
-                        : t("ludo.dice.pick", { n: d.v })
-                    }
-                    onClick={
-                      isMyTurn && spendable > 1 && liveDice.includes(i)
-                        ? () => setPickedDie(i)
-                        : undefined
-                    }
-                    disabled={busy}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </LudoBoard>
+          />
           <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>
             {t("ludo.legend.flow")}
           </p>
@@ -741,9 +669,13 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             myId={myId}
-            diceFor={cornerDice ? diceForSeat : undefined}
+            diceFor={diceForSeat}
             onRoll={doRoll}
-            canRoll={cornerDice && isMyTurn && !hasDice && !busy && !rolling}
+            canRoll={isMyTurn && !hasDice && !busy && !rolling}
+            onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
+            rolling={rolling}
+            secondsLeft={secondsLeft}
+            turnSeconds={turnSeconds}
           />
 
           {/* ── What to do next, in one sentence ── */}
@@ -781,7 +713,7 @@ export default function LudoSession() {
 
           {/* ── Choosing between the pair and the single, when a goti
                  standing in a jota could do either ── */}
-          {chooser && (
+          {chooser && dice && dice[pickedDie] && (
             <Card style={{ marginTop: 12, borderColor: C.green, borderWidth: 2 }}>
               <BodyText style={{ fontWeight: 700, margin: "0 0 8px" }}>
                 {t("ludo.jota.chooseTitle")}
@@ -872,39 +804,40 @@ export default function LudoSession() {
         </>
       )}
 
-      {/* ── FINISHED ── */}
+      {/* ── FINISHED — the "Well Played" screen (§8) ──
+             It covers the board rather than sitting on it. The board
+             has nothing left to say once the game is over, and leaving
+             it behind a dialog asks the eye to keep reading a finished
+             position. */}
       {game.status === "finished" && (
-        <>
-          <Card style={{ textAlign: "center", border: `2px solid ${C.sage}` }}>
-            <p aria-hidden="true" style={{ fontSize: 52, margin: "0 0 6px" }}>🎉</p>
-            <BodyText style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green }}>
-              {seats.find((s) => s.seat === game.winner_seat)?.profile_id === myId
-                ? t("ludo.finished.youWon")
-                : t("ludo.finished.won", {
-                    name: seatName(seats.find((s) => s.seat === game.winner_seat), t),
-                  })}
-            </BodyText>
-            <BodyText muted>{t("ludo.finished.note")}</BodyText>
-            {mySeatRow && (
-              <PrimaryBtn onClick={() => act(() => rematch(game.id))} disabled={busy} style={{ marginTop: 8 }}>
-                🔁 {t("ludo.finished.rematchCta")}
-              </PrimaryBtn>
-            )}
-          </Card>
-          <LudoBoard
-            mySeat={mySeatRow?.seat ?? null}
-            state={state}
-            seatsInPlay={game.target_seats}
-            options={[]}
-            currentSeat={-1}
-            onPieceTap={() => {}}
-          />
-        </>
+        <LudoCelebration
+          seats={seats}
+          winnerSeat={game.winner_seat}
+          myId={myId}
+          seatName={seatName}
+          busy={busy}
+          shared={shared}
+          onShare={
+            mySeatRow
+              ? () =>
+                  act(async () => {
+                    await boastToPeople("win", game.id, {
+                      game: t("ludo.title"),
+                      link: `/app/games/ludo/${game.id}`,
+                    });
+                    setShared(true);
+                  })
+              : undefined
+          }
+          onRematch={mySeatRow ? () => act(() => rematch(game.id)) : undefined}
+          onBack={() => navigate("/app/games")}
+        />
       )}
 
       {/* Chat travels with every phase */}
       {mySeatRow && (
         <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", margin: "12px 0 0" }}>
+          <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} />
           <QuickChat onSend={sayQuick} disabled={game.status === "finished"} />
           {game.status !== "finished" && (
             <GhostBtn onClick={() => setLeaveAsk(true)} style={{ minHeight: 52 }}>

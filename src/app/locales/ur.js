@@ -37,6 +37,7 @@ const ur = {
   },
 
   hub: {
+    stripLabel: "جہاں جا سکتے ہیں",
     todaysLog: "آج کا روزنامچہ",
     logSummary: "{total} میں سے {done} درج — {points} پوائنٹس",
     logEmpty: "ابھی کچھ درج نہیں — دن ابھی باقی ہے۔",

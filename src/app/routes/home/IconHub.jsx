@@ -32,7 +32,8 @@ import {
 } from "../../lib/points.js";
 import YourTurnChips from "../games/YourTurnChips.jsx";
 import TodayReminders from "./TodayReminders.jsx";
-import HomeFeed from "./HomeFeed.jsx";
+import Feed from "../community/Feed.jsx";
+import HomeStrip from "./HomeStrip.jsx";
 
 /* Notifications, Settings, and My profile live in the AppHeader —
    the hub keeps cards for the places, not the chrome. My Circle is
@@ -199,11 +200,19 @@ export default function IconHub() {
           {/* ── Today's reminders, one at a time ── */}
           <TodayReminders iconId={iconId} />
 
+          {/* ── §4: three doors that must not need a menu ──
+              Out & about, Friend groups and Grow sit here, under the
+              day's things and above the feed, as labelled entries. */}
+          <HomeStrip />
+
           {/* ── And then the people ──
-              Everywhere-else moved to the header menu, so what fills
-              the screen as the day's own business finishes is the
-              community rather than a grid of doors. */}
-          <HomeFeed />
+              THE REAL FEED, not a reader of it. TONIGHT.md §1: home
+              and community were two places where the user expected
+              one, so everything Community offered moves here —
+              composer, Everyone/Friends filter, Connect, origin
+              labels, automatic widening. A thinner second copy is what
+              made them two screens in the first place. */}
+          <Feed />
         </div>
       </main>
     </>

@@ -103,11 +103,6 @@ export default function AppHeader() {
       ? ICON_PLACES.map((p) => ({ to: p.to, label: `${p.emoji} ${t(p.key)}` }))
       : [];
 
-  const menuLinks = [
-    { to: "/app/profile", label: t("hub.profile") },
-    { to: "/app/settings", label: t("settings.title") },
-  ];
-
   return (
     <header
       className="sb-header"
@@ -171,66 +166,13 @@ export default function AppHeader() {
           )}
         </div>
 
+        {/* Just the bell. Navigation lives in the bottom bar and in
+            More — one menu, not two (TONIGHT.md §3). */}
         <nav style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
           <NotificationsBell />
-          {/* Desktop: the links inline. */}
-          {menuLinks.map((l) => (
-            <Link key={l.to} to={l.to} className="sbh-desktop" style={controlStyle}>
-              {l.label}
-            </Link>
-          ))}
-          <button type="button" onClick={signOut} className="sbh-desktop" style={controlStyle}>
-            {t("auth.welcome.signOut")}
-          </button>
-          {/* Phone: one menu button. */}
-          <button
-            type="button"
-            className={placeLinks.length ? "sbh-always" : "sbh-mobile"}
-            aria-expanded={menuOpen}
-            aria-label={t("settings.title")}
-            onClick={() => setMenuOpen((o) => !o)}
-            style={{ ...controlStyle, fontSize: ts(24), minWidth: A11Y.minTapTargetPx, paddingInline: 8 }}
-          >
-            {menuOpen ? "✕" : "☰"}
-          </button>
         </nav>
       </div>
 
-      {/* Phone menu panel: full-width, large targets, closes on tap. */}
-      {menuOpen && (
-        <nav
-          className={placeLinks.length ? "sbh-panel" : "sbh-mobile sbh-menu"}
-          style={{
-            flexDirection: "column",
-            maxWidth: 960,
-            margin: "6px auto 0",
-            borderTop: `1px solid ${C.warmGray}`,
-            paddingTop: 6,
-            width: "100%",
-          }}
-        >
-          {[...placeLinks, ...menuLinks].map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              onClick={() => setMenuOpen(false)}
-              style={{ ...controlStyle, justifyContent: "flex-start", minHeight: 52 }}
-            >
-              {l.label}
-            </Link>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              signOut();
-            }}
-            style={{ ...controlStyle, justifyContent: "flex-start", minHeight: 52 }}
-          >
-            {t("auth.welcome.signOut")}
-          </button>
-        </nav>
-      )}
     </header>
   );
 }

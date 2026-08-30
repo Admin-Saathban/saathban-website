@@ -26,6 +26,7 @@ const en = {
   },
 
   hub: {
+    stripLabel: "Places to go",
     todaysLog: "Today's log",
     logSummary: "{done} of {total} logged — {points} points",
     logEmpty: "Nothing logged yet — the day is young.",

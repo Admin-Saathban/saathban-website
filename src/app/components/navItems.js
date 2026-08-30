@@ -30,9 +30,13 @@ export function barItems(role, { buddyActive = true } = {}) {
   const more = { to: "/app/more", key: "hub.more", emoji: "☰" };
 
   if (role === "saath_icon") {
+    /* §1 merged Home and Community into one screen, so a Community
+       tab would now be a second door to the tab you are already on.
+       Messages takes the slot: it was reachable only from inside
+       Community, and the user never found it. */
     return [
       home,
-      { to: "/app/community", key: "hub.community", emoji: "🪷" },
+      { to: "/app/community/messages", key: "hub.messages", emoji: "💬" },
       games,
       { to: "/app/people", key: "hub.peopleShort", emoji: "🫶" },
       more,

@@ -24,6 +24,7 @@ import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor } from "./ludoRails.js";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
+import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
 import Die, { DieFace } from "./Dice.jsx";
@@ -690,6 +691,21 @@ export default function LudoSession() {
             </div>
           )}
 
+          {/* The table's theme (C1). `rules` is the frozen house rules
+              once play starts, so the board cannot change surface under
+              anyone mid-game, and a table created before themes existed
+              resolves to classic rather than crashing. The board's own
+              SVG background is transparent, so this ground shows through
+              it — that transparency is the whole seam. */}
+          <div
+            style={{
+              ...themeVars(themeOf(rules)),
+              background: "var(--sb-table-ground)",
+              borderRadius: 20,
+              padding: 8,
+              boxShadow: "0 2px 12px var(--sb-table-glow)",
+            }}
+          >
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
             state={state}
@@ -698,6 +714,7 @@ export default function LudoSession() {
             currentSeat={game.current_seat}
             onPieceTap={tapPiece}
           />
+          </div>
           <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>
             {t("ludo.legend.flow")}
           </p>

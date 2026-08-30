@@ -185,6 +185,27 @@ const SIZE = 15 * CELL;
    this is deliberately unhurried: a goti crossing eight squares takes
    about a second, which is slow enough to watch and short enough not
    to be waited on. */
+/* Does this person want less motion?
+
+   The three CSS animations on this board are already covered by a
+   media query. The WALK IS NOT: it is a setInterval moving gotis a
+   square at a time, and JavaScript does not care what the stylesheet
+   was asked. So a person who had turned motion down still watched
+   pieces hop across the board and a captured goti fly home — the
+   backlog's standing rule is that animation degrades to a STATIC
+   STATE, and this one degraded to nothing at all because it never
+   knew to.
+
+   Read live rather than cached: someone can change the setting while
+   a game is open, and the next move should honour it. */
+function wantsLessMotion() {
+  try {
+    return !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  } catch {
+    return false;
+  }
+}
+
 const STEP_MS = 120;
 /* How long a captured goti takes to get home. It travels in a straight
    line rather than back along the track: it is not walking the board,
@@ -266,6 +287,18 @@ function useWalk(pieces) {
     prevRef.current = pieces;
     if (!prev || prev.length !== pieces.length) {
       setShown(pieces);
+      return undefined;
+    }
+
+    /* Less motion: the board goes straight to the truth. That is the
+       static state the rule asks for — the move still HAPPENED and the
+       board still shows it, it simply is not acted out. It is not the
+       animation disappearing and leaving a gap: there is no gap, the
+       piece is where it should be, immediately. */
+    if (wantsLessMotion()) {
+      setShown(pieces);
+      setFlights(new Map());
+      setTrail([]);
       return undefined;
     }
 

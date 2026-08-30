@@ -141,14 +141,19 @@ if (await rec.count()) {
   const disabled = await shareBtn.isDisabled().catch(() => true);
   check("§7 a wordless voice post can still be shared", !disabled);
   if (!disabled) {
-    const before = new Date().toISOString();
+    /* IDS, NOT A TIMESTAMP. A client-clock ISO string in a PostgREST
+       .gt("created_at") filter silently returns nothing when the two
+       clocks disagree, which looks exactly like the post never being
+       created — this test reported a working feature as broken for
+       one run on that basis, and the outdoor lane had warned me about
+       the same trap an hour earlier. Comparing sets of ids cannot
+       drift. */
+    const { data: pre } = await sb.from("community_posts").select("id")
+      .eq("author_id", session.user.id);
+    const preIds = new Set((pre || []).map((r) => r.id));
     await shareBtn.click();
     await p.waitForTimeout(6000);
 
-    /* If the share was refused, the composer stays open holding the
-       words and a failure toast is on screen. Read it rather than
-       inferring from an absent row — "it did not save" and "it saved
-       somewhere I did not look" are different problems. */
     const screen = await p.evaluate(() => document.body.innerText);
     const failed = /did not|could not|try again|Retry/i.test(screen);
 
@@ -156,9 +161,8 @@ if (await rec.count()) {
       .from("community_posts")
       .select("id, body, audio_path, created_at")
       .eq("author_id", session.user.id)
-      .gt("created_at", before)
       .order("created_at", { ascending: false });
-    const newest = (rows || [])[0];
+    const newest = (rows || []).find((r) => !preIds.has(r.id));
     if (newest?.id) created.push(newest.id);
     check("§7 a wordless voice post is actually created", !!newest,
           failed ? "refused — screen says: " + screen.slice(0, 90).replace(/\n/g, " ") : "no new row and no refusal shown");

@@ -41,7 +41,7 @@ import TablePresence from "./TablePresence.jsx";
    Imported rather than copied: two lists of ten phrases would drift
    within a day, and the Urdu is theirs. If it is promoted to
    routes/games/ later, this import is the only line that changes. */
-import QuickChat from "./ludo/QuickChat.jsx";
+import QuickChat from "./QuickChat.jsx";
 /* Carrom has its own board on the rails; ludo has its own route.
    Everything else is the reference Race to 100 board below. */
 import CarromRailsController from "./carrom/CarromRailsController.jsx";

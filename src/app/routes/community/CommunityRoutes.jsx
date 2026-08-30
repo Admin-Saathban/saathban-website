@@ -23,7 +23,13 @@ export default function CommunityRoutes() {
       <Route path="messages/*" element={<MessagesWorld />} />
 
       <Route path="" element={<><AppHeader /><Feed /></>} />
-      <Route path="connect" element={<Navigate to="/app/people/requests" replace />} />
+      {/* §2.1 — "Connect with Saath-Icons" promised finding people and
+         landed on the Requests inbox, which is people who had already
+         found you. The label and the destination were two different
+         features. Finding people is unified search now, so that is
+         where an old link goes; the inbox keeps its own path and its
+         own badge, which is where §2.1 puts it. */}
+      <Route path="connect" element={<Navigate to="/app/search" replace />} />
       <Route path="*" element={<Navigate to="/app/community" replace />} />
     </Routes>
   );

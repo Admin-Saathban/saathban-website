@@ -661,6 +661,12 @@ export default function Feed() {
   const { profile } = useSession();
   const navigate = useNavigate();
   const myId = profile?.id;
+  /* The viewer's own place, for §4.2's middle two bands. Both may be
+     null — plenty of people have never filled them in — and a null
+     never matches, so those posts simply fall to the last band
+     instead of the ordering breaking. */
+  const myArea = profile?.area || null;
+  const myCity = profile?.city || null;
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
 
   const [access, setAccess] = useState(null); // null loading | true | false
@@ -695,8 +701,8 @@ export default function Feed() {
   const [posting, setPosting] = useState(false);
   const fileRef = useRef(null);
 
-  // Friends tab (connections) + the "Who's up for…?" composer.
-  const [tab, setTab] = useState("all"); // "all" | "friends"
+  /* Connections are no longer a FILTER (§4.2 deleted the pills) —
+     they are the first band of the feed's ordering rule. */
   const [connections, setConnections] = useState(null); // Set | null
   const [walkOpen, setWalkOpen] = useState(false);
   const [walkPlaces, setWalkPlaces] = useState([]);
@@ -782,8 +788,8 @@ export default function Feed() {
       setAuthors(a);
       setReactions(r);
       setJoins(j);
-      // Connections power the Friends tab; a failure just leaves the
-      // tab empty-with-a-door rather than erroring the feed.
+      // Connections are the first band of §4.2's order; a failure just
+      // means everybody sorts into the later bands, never an error.
       fetchConnections(myId)
         .then(setConnections)
         .catch(() => setConnections(new Set()));
@@ -1058,95 +1064,27 @@ export default function Feed() {
         {/* Doors only for those the surfaces will actually admit — a
             suspended Buddy keeps the page's gentle no-access note, not
             two links that refuse on arrival (PARITY.md). */}
-        {access === true && (
-          <>
-            <Link
-              /* ABSOLUTE. This was to="messages", which resolves against whatever
+        {/* THE TWO PILLS ARE GONE — §3 and §2.1.
 
-                 route the Feed is mounted under. That was right while the Feed
+           Messages moved to the header, where it is on every screen
+           rather than only this one, so a pill here was a second door
+           costing a row of vertical space on the screen §4 is trying
+           to give back to the feed.
 
-                 lived only at /app/community; now that it also renders on Home it
-
-                 resolved to /app/home/messages, which does not exist, and the link
-
-                 silently fell back to Home. A relative link inside a component that
-
-                 can be mounted in two places is a link that works in one of them. */
-
-              to="/app/community/messages"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: A11Y.minTapTargetPx,
-                padding: "0 18px",
-                borderRadius: 50,
-                border: `2px solid ${C.green}`,
-                color: C.green,
-                fontSize: ts(A11Y.minBodyPx),
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              ✉️ {t("community.feed.messagesCta")}
-            </Link>
-            <Link
-              to="/app/community/connect"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: A11Y.minTapTargetPx,
-                padding: "0 18px",
-                borderRadius: 50,
-                border: `2px solid ${C.green}`,
-                color: C.green,
-                fontSize: ts(A11Y.minBodyPx),
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              🤝 {t("community.connect.entryCta")}
-            </Link>
-          </>
-        )}
+           "Connect with Saath-Icons" is deleted with the People tab.
+           Its label promised finding people and it landed on the
+           Requests inbox — people who had already found you. Finding
+           people is unified search now (§5), which is in the header
+           beside Messages. */}
       </div>
-      <BodyText muted style={{ marginBottom: 14 }}>{t("community.feed.intro")}</BodyText>
+      {/* The "What people are sharing, newest first…" line is deleted
+         (§4). That sentence was the product describing itself to
+         itself: a person looking at posts from their neighbours can
+         see what it is. */}
 
-      {/* Everyone | Friends — same feed, the second filtered to the
-          viewer's circle connections. */}
-      <div role="tablist" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        {[
-          ["all", t("community.shares.allTab")],
-          ["friends", t("community.shares.friendsTab")],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              minHeight: A11Y.minTapTargetPx,
-              padding: "0 20px",
-              borderRadius: 50,
-              border: tab === id ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
-              background: tab === id ? C.white : "transparent",
-              color: C.textMain,
-              fontSize: ts(A11Y.minBodyPx),
-              fontWeight: 600,
-              fontFamily: "inherit",
-              cursor: "pointer",
-            }}
-          >
-            <span aria-hidden="true" style={{ color: C.green, visibility: tab === id ? "visible" : "hidden" }}>
-              ✓
-            </span>
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* NO FILTERS (§4.2). One feed, ordered by a rule set. Two pills
+         asked a person to choose between two feeds before they had
+         seen either, and the answer for almost everybody was "both". */}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -1361,18 +1299,38 @@ export default function Feed() {
           ))}
 
           {(() => {
-            const visible =
-              tab === "friends"
-                ? posts.filter((p) => connections?.has(p.author_id))
-                : posts;
+            /* §4.2 — ONE FEED, ORDERED BY A RULE SET, NOT A MODEL.
+
+               Friends first, then your neighbourhood, then your city,
+               then everyone else — and within each band, newest
+               first. That is the whole rule, and it fits in one
+               sentence on purpose: §4.2 requires it stay explainable
+               to any person who asks why they are seeing this.
+
+               IT MUST NEVER BECOME AN ENGAGEMENT RANKING. A model
+               that learns who you click is a popularity ranking of
+               human beings, which is principle 4. Nothing here reads
+               a click, a dwell or a reaction; the bands are facts
+               about where two people live and whether they are
+               connected, and nothing is ever buried — the last band
+               is still on the same page.
+
+               A stable sort keeps equal posts in the order the query
+               returned them, which is already newest first. */
+            const band = (p) => {
+              if (connections?.has(p.author_id)) return 0;
+              const a = authors[p.author_id];
+              if (a?.area && a.area === myArea) return 1;
+              if (a?.city && a.city === myCity) return 2;
+              return 3;
+            };
+            const visible = [...posts].sort((x, y) => band(x) - band(y));
             if (visible.length === 0) {
               return (
                 <BodyText muted>
-                  {tab === "friends"
-                    ? t("community.shares.friendsEmpty")
-                    : isIcon
-                      ? t("community.feed.emptyFeed")
-                      : t("community.feed.emptyFeedReader")}
+                  {isIcon
+                    ? t("community.feed.emptyFeed")
+                    : t("community.feed.emptyFeedReader")}
                 </BodyText>
               );
             }

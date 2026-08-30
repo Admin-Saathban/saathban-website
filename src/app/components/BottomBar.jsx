@@ -149,7 +149,17 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
             onClick={onOpenDrawer}
             aria-haspopup="dialog"
             aria-expanded={Boolean(drawerOpen)}
-            style={itemStyle(Boolean(drawerOpen))}
+            /* NOT itemStyle(drawerOpen) — THE PILL STAYS WHERE YOU ARE.
+
+               §3 gives the filled pill to the active item, singular.
+               Lighting More while its drawer is open put two filled
+               pills in the bar at once, Home and More, which says you
+               are in two places. The drawer is an 80%-wide card over a
+               dimmed screen — nobody needs a pill to know it is open,
+               and aria-expanded above says so for anyone who cannot
+               see it. The pill is for where you will be when the
+               drawer closes, which is where you already are. */
+            style={itemStyle(false)}
           >
             <Inside item={item} />
           </button>

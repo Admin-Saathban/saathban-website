@@ -98,7 +98,13 @@ export async function fetchMembers(groupId) {
 
 export async function fetchPosts(groupId) {
   const { data, error } = await supabase
-    .from("group_posts").select("id, author_id, body, created_at").eq("group_id", groupId)
+    .from("group_posts").select("id, author_id, body, created_at, pinned_at").eq("group_id", groupId)
+    // Pinned first, then newest. Ordering it here rather than sorting
+    // in the screen means every reader of this function gets the
+    // welcome post at the top, which is the whole point of section 8:
+    // a group whose pinned post says who we are and when we meet is
+    // the difference between one that survives and one that dies.
+    .order("pinned_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   const rows = data || [];
@@ -225,4 +231,136 @@ export async function fetchGroupEvents(groupId) {
 export async function fetchGroupPrivacy(groupId) {
   const { data } = await supabase.from("groups").select("privacy").eq("id", groupId).maybeSingle();
   return data?.privacy || "invite_only";
+}
+
+
+/* ═══════════════════════════════════════════════
+   §7 Managing a group, §8 the pinned post
+
+   The join-request half of §7 belongs to Lane 2 (migration 0086) and
+   is bound to here by name, not reimplemented: request_to_join_group,
+   respond_join_request, group_pending_request_count. Two lanes
+   writing the same rule is how the rule starts disagreeing with
+   itself — 0068 exists because that already happened once tonight,
+   with is_group_admin.
+   ═══════════════════════════════════════════════ */
+
+/* Am I one of the people who run this group? Creator, co-admin, or a
+   platform admin — 0068 is the single answer to that question. */
+export async function amIGroupAdmin(groupId) {
+  const { data, error } = await supabase.rpc("is_group_admin", { p_group: groupId });
+  if (error) return false;
+  return !!data;
+}
+
+/* ── §7.1 member requests (Lane 2's 0086) ── */
+export async function fetchJoinRequests(groupId) {
+  const { data, error } = await supabase
+    .from("group_join_requests")
+    .select("id, requester_id, message, status, created_at")
+    .eq("group_id", groupId)
+    .eq("status", "pending")
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  const rows = data || [];
+  if (rows.length === 0) return [];
+  /* The names and faces, in one lookup rather than one per row. */
+  const { data: people } = await supabase
+    .from("safe_profiles")
+    .select("id, full_name, avatar_url")
+    .in("id", rows.map((r) => r.requester_id));
+  const byId = Object.fromEntries((people || []).map((x) => [x.id, x]));
+  return rows.map((r) => ({ ...r, person: byId[r.requester_id] || null }));
+}
+
+export async function pendingRequestCount(groupId) {
+  const { data, error } = await supabase.rpc("group_pending_request_count", { p_group: groupId });
+  if (error) return 0;
+  return data || 0;
+}
+
+export async function respondJoinRequest(requestId, approve) {
+  const { error } = await supabase.rpc("respond_join_request", {
+    p_request: requestId,
+    p_approve: approve,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function requestToJoinGroup(groupId, message = null) {
+  const { data, error } = await supabase.rpc("request_to_join_group", {
+    p_group: groupId,
+    p_message: message,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/* My own request for this group, whatever became of it. §7's decline
+   is silent in the bell but NOT silent here: a person who asked
+   deserves to see what happened in the place they asked, rather than
+   watching the row quietly vanish and wondering if it ever sent. */
+export async function fetchMyJoinRequest(groupId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("group_join_requests")
+    .select("id, status, created_at")
+    .eq("group_id", groupId)
+    .eq("requester_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return (data || [])[0] || null;
+}
+
+/* ── §7.3 co-admins ── */
+export async function setCoAdmin(groupId, memberId, make) {
+  const { error } = await supabase.rpc("set_group_co_admin", {
+    p_group: groupId,
+    p_member: memberId,
+    p_make: make,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/* ── §7.4 group settings ── */
+export async function updateGroup(groupId, fields) {
+  const { error } = await supabase
+    .from("groups")
+    .update(fields)
+    .eq("id", groupId);
+  if (error) throw new Error(error.message);
+}
+
+/* ── §7.5 reports raised inside this group ── */
+export async function fetchGroupReports(groupId) {
+  const { data, error } = await supabase
+    .from("community_reports")
+    .select("id, target_kind, target_id, target_excerpt, reason, status, created_at")
+    .eq("target_id", groupId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/* ── §8 the pinned post ── */
+export async function pinPost(postId) {
+  const { error } = await supabase.rpc("pin_group_post", { p_post: postId });
+  if (error) throw new Error(error.message);
+}
+
+export async function unpinPost(postId) {
+  const { error } = await supabase.rpc("unpin_group_post", { p_post: postId });
+  if (error) throw new Error(error.message);
+}
+
+/* §1's seeded first post, pinned. Returns null if the group already
+   has a pin, so this can never overwrite what a group has written. */
+export async function seedWelcome(groupId, body) {
+  const { data, error } = await supabase.rpc("seed_group_welcome", {
+    p_group: groupId,
+    p_body: body,
+  });
+  if (error) throw new Error(error.message);
+  return data;
 }

@@ -10,6 +10,7 @@ import AppHeader from "../../components/AppHeader.jsx";
 import WhatsOn from "./WhatsOn.jsx";
 import OutdoorHome from "./OutdoorHome.jsx";
 import PlaceView from "./PlaceView.jsx";
+import Moments from "./Moments.jsx";
 
 export default function OutdoorRoutes() {
   return (
@@ -22,6 +23,10 @@ export default function OutdoorRoutes() {
             the bottom, just not a directory as the front door. */}
         <Route index element={<WhatsOn />} />
         <Route path="places" element={<OutdoorHome />} />
+        {/* section 8 — "I am at X" without creating a permanent place.
+            Registered BEFORE :placeId, or "moments" would be read as
+            a place id and render a missing place. */}
+        <Route path="moments" element={<Moments />} />
         <Route path=":placeId" element={<PlaceView />} />
         <Route path="*" element={<Navigate to="/app/outdoor" replace />} />
       </Routes>

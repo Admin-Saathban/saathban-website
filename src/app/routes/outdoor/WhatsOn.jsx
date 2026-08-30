@@ -47,11 +47,12 @@ import {
   dropMirroredOutings,
   joinPlacedActivity,
 } from "./outdoorData.js";
-import { fetchAppEvents, isUpcoming } from "../events/eventsStore.js";
+import { fetchAppEvents, isUpcoming, fetchMyRsvps, rsvpToEvent, cancelRsvp } from "../events/eventsStore.js";
 import { bandFor, dayBucket, sinceLabel, BAND_ORDER, TODAY, TOMORROW, LATER } from "./bands.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn } from "./ui.jsx";
 import StartSomething from "./StartSomething.jsx";
 import AddPlace from "./AddPlace.jsx";
+import WeatherLine from "./WeatherLine.jsx";
 
 const DAY_ORDER = [TODAY, TOMORROW, LATER];
 
@@ -68,6 +69,9 @@ export default function WhatsOn() {
   const [activities, setActivities] = useState([]);
   const [joins, setJoins] = useState({ counts: {}, mine: new Set() });
   const [events, setEvents] = useState([]);
+  /* Which gatherings I have already said I am coming to, so the
+     button can read "Coming" instead of asking me again. */
+  const [myRsvps, setMyRsvps] = useState(new Set());
   const [names, setNames] = useState({});
   const [asking, setAsking] = useState(false);
   const [addingPlace, setAddingPlace] = useState(false);
@@ -87,6 +91,8 @@ export default function WhatsOn() {
       fetchPlacedActivities().catch(() => []),
       fetchAppEvents().catch(() => []),
     ]);
+    // fetchMyRsvps returns whole event objects, not ids
+    setMyRsvps(new Set((await fetchMyRsvps().catch(() => [])).map((r) => r.id)));
     const live = ac.filter((p) => activityIsCurrent(p));
     setPlaces(pl);
     setCheckins(ci);
@@ -161,11 +167,12 @@ export default function WhatsOn() {
            you were standing in. /app/events/all is the gatherings list
            that actually renders. */
         to: `/app/events/all`,
+        rsvped: myRsvps.has(e.id),
         id: e.id,
       });
     }
     return rows;
-  }, [activities, outings, events, placeById, names, joins, t, profile]);
+  }, [activities, outings, events, placeById, names, joins, myRsvps, t, profile]);
 
   /* Live check-ins are their own thing and sit above everything, per
      §12.4 — not folded into the bands. */
@@ -201,6 +208,22 @@ export default function WhatsOn() {
   }, [happenings, me.city, me.area]);
 
   const canStart = profile?.role === "saath_icon";
+
+  /* "I'll come" on a Saathban gathering. The events lane owns the
+     RSVP itself; this is the same word on the same kind of card, so a
+     person learns one verb for "I am coming to this" rather than one
+     per source table. */
+  const rsvp = async (h) => {
+    if (busyId) return;
+    setBusyId(h.id);
+    try {
+      await (h.rsvped ? cancelRsvp(h.id) : rsvpToEvent(h.id));
+      await load();
+    } catch {
+      pushToast(t("whatson.joinFailed"), { tone: "error", key: "whatson" });
+    }
+    setBusyId(null);
+  };
 
   const join = async (h) => {
     if (busyId) return;
@@ -262,6 +285,19 @@ export default function WhatsOn() {
           {t("whatson.askIsIcons")}
         </BodyText>
       )}
+
+      {/* ── §2.3 the weather line, directly beneath the ask ──
+          "This sits here because this is the moment someone decides
+           WHEN to ask people out. In Lahore in June, 4pm is a bad
+           idea and the app knows the time."
+
+          Deliberately not a forecast widget: one sentence, the
+          temperature now and the one thing that changes the decision
+          (when it gets cooler). It is advisory, so if it cannot be
+          had it renders nothing rather than an error — nobody is
+          blocked from asking a friend out because a weather call
+          failed. */}
+      <WeatherLine city={profile?.city} />
 
       {asking && (
         <StartSomething
@@ -374,24 +410,49 @@ export default function WhatsOn() {
                     ✓ {t("whatson.coming")}
                   </span>
                 )}
+                {/* §2.4: "events, with 'I'll come' and 'Who's going'.
+                    NEVER 'Open'." Open what? The card already shows
+                    the event; the two things a person wants are to say
+                    they are coming and to see who else is. */}
                 {h.to && (
-                  <Link
-                    to={h.to}
-                    style={{
-                      minHeight: A11Y.minTapTargetPx,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: "0 16px",
-                      borderRadius: 50,
-                      border: `2px solid ${C.warmGray}`,
-                      color: C.textMain,
-                      fontSize: ts(A11Y.minBodyPx),
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                  >
-                    {t("whatson.open")}
-                  </Link>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => rsvp(h)}
+                      disabled={busyId === h.id}
+                      style={{
+                        minHeight: A11Y.minTapTargetPx,
+                        padding: "0 18px",
+                        borderRadius: 50,
+                        border: `2px solid ${C.green}`,
+                        background: h.rsvped ? C.green : C.white,
+                        color: h.rsvped ? C.white : C.green,
+                        fontFamily: "inherit",
+                        fontSize: ts(A11Y.minBodyPx),
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {h.rsvped ? `✓ ${t("whatson.coming")}` : t("whatson.illCome")}
+                    </button>
+                    <Link
+                      to={h.to}
+                      style={{
+                        minHeight: A11Y.minTapTargetPx,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "0 16px",
+                        borderRadius: 50,
+                        border: `2px solid ${C.warmGray}`,
+                        color: C.textMain,
+                        fontSize: ts(A11Y.minBodyPx),
+                        fontWeight: 600,
+                        textDecoration: "none",
+                      }}
+                    >
+                      {t("whatson.whosGoing")}
+                    </Link>
+                  </>
                 )}
               </div>
             </Card>
@@ -409,6 +470,25 @@ export default function WhatsOn() {
           §12: "Places have no list of their own — they exist inside
           happenings, plus one quiet 'Places near you' link." */}
       <div style={{ marginTop: 26, paddingTop: 14, borderTop: `1px solid ${C.warmGray}` }}>
+        {/* section 8 — saying where you are without creating a
+            permanent place. Sits beside "Places near you" because it
+            is the same question answered the other way round: the
+            places we keep, and the ones we are only at for an hour. */}
+        <Link
+          to="/app/outdoor/moments"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: A11Y.minTapTargetPx,
+            color: C.greenMuted,
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 600,
+            textDecoration: "underline",
+            marginInlineEnd: 16,
+          }}
+        >
+          {t("outdoor.moments.title")}
+        </Link>
         <Link
           to="/app/outdoor/places"
           style={{
@@ -423,29 +503,10 @@ export default function WhatsOn() {
         >
           {t("whatson.placesNearYou")}
         </Link>
-        {canStart && (
-          <>
-            <span aria-hidden="true" style={{ color: C.textMuted, padding: "0 8px" }}>·</span>
-            <button
-              type="button"
-              onClick={() => setAddingPlace((v) => !v)}
-              aria-expanded={addingPlace}
-              style={{
-                minHeight: A11Y.minTapTargetPx,
-                background: "none",
-                border: "none",
-                color: C.greenMuted,
-                fontFamily: "inherit",
-                fontSize: ts(A11Y.minBodyPx),
-                fontWeight: 600,
-                textDecoration: "underline",
-                cursor: "pointer",
-              }}
-            >
-              {t("whatson.addPlace")}
-            </button>
-          </>
-        )}
+        {/* section 2: "Add a place" used to sit here as a text link AND
+            as a box on the places screen — the same action twice, in
+            two visual styles. It now lives once, on the places screen,
+            as a plain row with a plus. */}
       </div>
       {addingPlace && (
         <div style={{ marginTop: 12 }}>

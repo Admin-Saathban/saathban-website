@@ -2,8 +2,21 @@
    "Ask who's up for something" — PRODUCT_DECISIONS §12, Starting
    something.
 
-   Six questions, in this order, and every one of them answerable
-   without typing if the person would rather not:
+   OUT_AND_ABOUT_SPEC §7: ONE QUESTION PER SCREEN, the same shape as
+   group creation. The owner's complaint was that this was "seven
+   questions on one scroll" — a wall that a person answers by
+   abandoning. Same questions, same order, one at a time, with a
+   progress line and a back at every step.
+
+   §7 also deletes "Ask them to confirm? / They can just come along /
+   Ask them / Not now" outright: "If a reader can't tell what it does
+   after three reads, a 68-year-old is lost." It is replaced by one
+   plain question with two plain answers — do you need to know who is
+   coming — because the underlying capability (an activity that asks
+   people to say yes) is genuinely useful and only its wording was
+   broken.
+
+   The questions, and every one answerable without typing:
 
      What          free text, plus quick chips (Chai · Walk · Ludo · …)
      Where         free text with suggestions from seeded places AND
@@ -29,6 +42,7 @@ import { useSession } from "../../lib/session.jsx";
 import { Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { startActivityHere } from "./outdoorData.js";
 
+const TOTAL = 6;
 const WHAT_CHIPS = ["chai", "walk", "ludo", "carrom", "talk", "sit"];
 /* Common answers that are not places in any database — §12 names
    these three explicitly, and they cover most of what a person
@@ -105,6 +119,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
   const [limit, setLimit] = useState(""); // "" = anyone
   const [audience, setAudience] = useState("people"); // people | area
   const [confirm, setConfirm] = useState(false);
+  const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -177,6 +192,13 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
         {t("whatson.start.title")}
       </h2>
 
+      {/* A thin progress line, the same one group creation uses — a
+          person mid-flow should be able to see it ends. */}
+      <div aria-hidden="true" style={{ height: 4, background: C.warmGray, borderRadius: 4, marginBottom: 18 }}>
+        <div style={{ height: 4, width: `${(step / TOTAL) * 100}%`, background: C.green, borderRadius: 4, transition: "width .2s" }} />
+      </div>
+
+      {step === 1 && (<>
       {/* WHAT — chips, or type anything */}
       <Row label={t("whatson.start.what")}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
@@ -195,8 +217,9 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
           dir={meta.dir}
           style={field(ts)}
         />
-      </Row>
+      </Row></>)}
 
+      {step === 2 && (<>
       {/* WHERE — suggestions, common answers, or anything at all */}
       <Row label={t("whatson.start.where")}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
@@ -237,8 +260,9 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
           dir={meta.dir}
           style={field(ts)}
         />
-      </Row>
+      </Row></>)}
 
+      {step === 3 && (<>
       {/* WHEN */}
       <Row label={t("whatson.start.when")}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -266,8 +290,9 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
             />
           </div>
         )}
-      </Row>
+      </Row></>)}
 
+      {step === 4 && (<>
       {/* HOW MANY */}
       <Row label={t("whatson.start.howMany")}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -280,8 +305,9 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
             </Chip>
           ))}
         </div>
-      </Row>
+      </Row></>)}
 
+      {step === 5 && (<>
       {/* WHO CAN SEE IT */}
       <Row label={t("whatson.start.whoSees")}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -292,22 +318,47 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
             {t("whatson.start.myArea")}
           </Chip>
         </div>
-      </Row>
+      </Row></>)}
 
-      {/* ASK THEM TO CONFIRM */}
-      <Row label={t("whatson.start.askConfirm")}>
-        <label style={{ display: "flex", alignItems: "center", gap: 12, minHeight: A11Y.minTapTargetPx }}>
-          <input
-            type="checkbox"
-            checked={confirm}
-            onChange={(e) => setConfirm(e.target.checked)}
-            style={{ width: 26, height: 26 }}
-          />
-          <BodyText style={{ margin: 0 }}>
-            {confirm ? t("whatson.start.confirmOn") : t("whatson.start.confirmOff")}
-          </BodyText>
-        </label>
-      </Row>
+      {/* §7: the old wording is deleted. "Ask them to confirm? /
+          They can just come along / Ask them / Not now" put four
+          phrases on screen and left a reader unable to say what any
+          button did. This is the same capability as ONE plain
+          question with TWO plain answers, each of which says what
+          happens rather than naming a mode. */}
+      {step === 6 && (
+        <Row label={t("whatson.start.needToKnow")}>
+          {[
+            [false, "whatson.start.needToKnowNo"],
+            [true, "whatson.start.needToKnowYes"],
+          ].map(([val, key]) => (
+            <button
+              key={String(val)}
+              type="button"
+              onClick={() => setConfirm(val)}
+              aria-pressed={confirm === val}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "start",
+                marginBottom: 10,
+                padding: "14px 16px",
+                borderRadius: 16,
+                minHeight: A11Y.minTapTargetPx,
+                border: confirm === val ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
+                background: confirm === val ? "#EEF3E8" : C.white,
+                color: C.textMain,
+                fontFamily: "inherit",
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {t(key)}
+            </button>
+          ))}
+        </Row>
+      )}
 
       {error && (
         <BodyText role="alert" style={{ color: C.brown, fontWeight: 700, margin: "0 0 12px" }}>
@@ -316,20 +367,36 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
       )}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <PrimaryBtn onClick={submit} disabled={busy} style={{ flex: "1 1 200px" }}>
-          {busy ? "…" : t("whatson.start.send")}
-        </PrimaryBtn>
-        <GhostBtn onClick={onClose} disabled={busy}>
-          {t("whatson.start.cancel")}
+        {step < TOTAL ? (
+          <PrimaryBtn
+            onClick={() => setStep(step + 1)}
+            disabled={step === 1 && !what.trim()}
+            style={{ flex: "1 1 200px" }}
+          >
+            {t("groups.new.next")}
+          </PrimaryBtn>
+        ) : (
+          <PrimaryBtn onClick={submit} disabled={busy} style={{ flex: "1 1 200px" }}>
+            {busy ? "…" : t("whatson.start.send")}
+          </PrimaryBtn>
+        )}
+        <GhostBtn onClick={() => (step > 1 ? setStep(step - 1) : onClose())} disabled={busy}>
+          {step > 1 ? t("groups.new.back") : t("whatson.start.cancel")}
         </GhostBtn>
       </div>
 
       {/* Who will hear about it — said plainly, because §12's protocol
           is deliberately narrow and a person should know it is not a
           broadcast to the whole neighbourhood. */}
-      <BodyText muted style={{ margin: "14px 0 0", fontSize: ts(A11Y.minBodyPx) }}>
-        {placeId ? t("whatson.start.reachWithPlace") : t("whatson.start.reach")}
-      </BodyText>
+      {/* §6/§12: say in plain words who this actually reaches. Shown
+          on the audience question and on the last screen, where it is
+          about to matter — not under every step, where it becomes
+          furniture nobody reads. */}
+      {(step === 5 || step === TOTAL) && (
+        <BodyText muted style={{ margin: "14px 0 0", fontSize: ts(A11Y.minBodyPx) }}>
+          {placeId ? t("whatson.start.reachWithPlace") : t("whatson.start.reach")}
+        </BodyText>
+      )}
     </Card>
   );
 }

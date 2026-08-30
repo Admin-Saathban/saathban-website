@@ -299,11 +299,71 @@ export async function unblockAuthor(userId, targetId) {
 export async function fetchAccessNotes() {
   const { data, error } = await supabase
     .from("outdoor_place_access")
-    .select("place_id, feature");
+    .select("place_id, feature")
+    // 0065: a chip cannot say "probably". An unverified note is a
+    // guess — mine, seeded for testing — and showing a guess in the
+    // same green as a checked fact is the harm the spec names: if it
+    // says "flat walk" and there are steps, somebody made a trip they
+    // could not finish. So the public screens see confirmed notes
+    // only, and an admin confirms them on the manage screen.
+    .eq("verified", true);
   if (error) throw error;
   const byPlace = {};
   for (const r of data || []) (byPlace[r.place_id] ||= []).push(r.feature);
   return byPlace;
+}
+
+/* ── Admin side (§4.1: admin-seeded is what launches) ──
+   Everything, verified or not, because the whole job of the admin
+   screen is to see which is which and settle it. */
+export async function fetchAllAccessNotes() {
+  const { data, error } = await supabase
+    .from("outdoor_place_access")
+    .select("place_id, feature, verified, verified_at");
+  if (error) throw error;
+  const byPlace = {};
+  for (const r of data || []) (byPlace[r.place_id] ||= []).push(r);
+  return byPlace;
+}
+
+/* Add or remove one note. Admin-only at the database (0064), so a
+   non-admin calling this is refused there rather than trusted here. */
+export async function setAccessNote(placeId, feature, on, { verified = true } = {}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!on) {
+    const { error } = await supabase
+      .from("outdoor_place_access")
+      .delete()
+      .eq("place_id", placeId)
+      .eq("feature", feature);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const { error } = await supabase.from("outdoor_place_access").upsert(
+    {
+      place_id: placeId,
+      feature,
+      noted_by: user?.id,
+      verified,
+      verified_by: verified ? user?.id : null,
+      verified_at: verified ? new Date().toISOString() : null,
+    },
+    { onConflict: "place_id,feature" }
+  );
+  if (error) throw new Error(error.message);
+}
+
+/* Confirm a seeded guess without retyping it — the common action on
+   the admin screen, since 0064 seeded a handful and every one of them
+   is waiting on somebody actually looking. */
+export async function confirmAccessNote(placeId, feature) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("outdoor_place_access")
+    .update({ verified: true, verified_by: user?.id, verified_at: new Date().toISOString() })
+    .eq("place_id", placeId)
+    .eq("feature", feature);
+  if (error) throw new Error(error.message);
 }
 
 /* "Something wrong here?" — §4 requires this whatever §4.1 decides

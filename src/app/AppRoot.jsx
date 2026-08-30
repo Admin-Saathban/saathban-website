@@ -29,6 +29,7 @@ import ModerationQueue from "./routes/admin/ModerationQueue.jsx";
 import Worklist from "./routes/admin/Worklist.jsx";
 import BroadcastsPage from "./routes/admin/BroadcastsPage.jsx";
 import QuestionsQueue from "./routes/admin/QuestionsQueue.jsx";
+import PlaceAccess from "./routes/admin/PlaceAccess.jsx";
 import HomeRoutes from "./routes/home/HomeRoutes.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
@@ -309,6 +310,10 @@ export default function AppRoot() {
             <Route path="questions" element={<QuestionsQueue />} />
             <Route path="broadcasts" element={<BroadcastsPage />} />
             <Route path="moderation" element={<ModerationQueue />} />
+            {/* OUT_AND_ABOUT_SPEC §4.1 — admin-seeded access notes.
+                The screen's real job is confirming guesses, since an
+                unverified note never reaches a place row (0065). */}
+            <Route path="places" element={<PlaceAccess />} />
           </Route>
           {/* Milestones (0017): Icons get points, badges and
               celebrations; admins get the message desk on the same

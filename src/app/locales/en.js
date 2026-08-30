@@ -1080,6 +1080,7 @@ const en = {
       comments: "Comments",
       commentPlaceholder: "Write a comment…",
       commentCta: "Send",
+      stickerLabel: "Send a sticker",
       noComments: "No comments yet.",
       reactAria: "React to this post",
       menuAria: "More actions",
@@ -1464,6 +1465,13 @@ const en = {
     },
   },
   groups: {
+    welcome: {
+      walking: "This is {name}. We walk together, at an easy pace.\n\nWe walk on ____ at ____, meeting at ____.\n\nAnyone is welcome to come at their own speed — nobody gets left behind.",
+      chai: "This is {name}. We meet for chai and good conversation.\n\nWe meet on ____ at ____, at ____.\n\nCome when you can. There is no need to tell anyone in advance.",
+      books: "This is {name}. We read, and we talk about what we read.\n\nWe meet on ____ at ____, at ____.\n\nWe are reading ____ at the moment. Join in whether or not you have finished it.",
+      family: "This is {name} — our family, in one place.\n\nSomewhere to share the small things: photos, news, who is visiting whom.",
+      gardening: "This is {name}. We grow things and swap what we learn.\n\nWe meet on ____ at ____, at ____.\n\nBring a cutting if you have one to spare.",
+    },
     interior: {
       memberCount: "{n} people",
       oneMember: "Just you so far — that is a fine place to start.",
@@ -1712,6 +1720,14 @@ const en = {
         failed: "That didn't send. Please try again.",
         whoSees: "Who can see this?",
       },
+    vis: {
+      circleName: "The people I have let in",
+      circleWhat: "Only your circle sees this. Not the neighbourhood.",
+      boardName: "Anyone nearby",
+      boardWhat: "Anyone using Saathban around here can see it, and may come along.",
+      notifyFriends: "Tell a few people anyway",
+      notifyFriendsWhat: "Private, but these people get told — so the ones who matter still hear about it.",
+    },
     access: {
       listLabel: "Getting there",
       f: {

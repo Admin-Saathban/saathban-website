@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { supabase } from "../../lib/supabase.js";
 import { useSession } from "../../lib/session.jsx";
 import { fetchMembershipsAsMember } from "../../lib/circle.js";
 import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
@@ -28,6 +29,7 @@ import {
 import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
 import AddPlace from "./AddPlace.jsx";
 import AccessChips from "./AccessChips.jsx";
+import Faces from "./Faces.jsx";
 
 const cityKey = (profileId) => `saathban.app.outdoorCity.${profileId || "anon"}`;
 
@@ -41,6 +43,10 @@ export default function OutdoorHome() {
      requests. Failing to load them must not cost anyone the list, so
      it degrades to no chips rather than to an error. */
   const [accessNotes, setAccessNotes] = useState({});
+  /* §3 — who is at each place, with the name and photo needed to show
+     a face. Built from the same live check-ins that produced the old
+     counts, so this costs one extra profile lookup, not one per row. */
+  const [herePeople, setHerePeople] = useState({});
   const [liveCounts, setLiveCounts] = useState({});
   const [happeningCounts, setHappeningCounts] = useState({});
   const [city, setCity] = useState("");
@@ -66,6 +72,36 @@ export default function OutdoorHome() {
         const counts = {};
         for (const ci of live) counts[ci.place_id] = (counts[ci.place_id] || 0) + 1;
         setLiveCounts(counts);
+
+        /* §3 — the faces. One lookup for everybody currently checked
+           in anywhere, then grouped by place, rather than a query per
+           row. Best effort: if the profiles cannot be read the rows
+           still render, they just fall back to "Quiet right now"
+           rather than showing a broken avatar. */
+        try {
+          const ids = [...new Set(live.map((ci) => ci.profile_id).filter(Boolean))];
+          if (ids.length) {
+            const { data: profs } = await supabase
+              .from("safe_profiles")
+              .select("id, full_name, avatar_url")
+              .in("id", ids);
+            const byId = Object.fromEntries((profs || []).map((x) => [x.id, x]));
+            const grouped = {};
+            for (const ci of live) {
+              const who = byId[ci.profile_id];
+              if (!who) continue;
+              (grouped[ci.place_id] ||= []).push({
+                id: who.id,
+                // First name only. §3 and the check-in copy both show a
+                // first name; a full name at a park is more than the
+                // person agreed to share by arriving.
+                name: (who.full_name || "").trim().split(/s+/)[0] || "",
+                avatarUrl: who.avatar_url,
+              });
+            }
+            if (!cancelled) setHerePeople(grouped);
+          }
+        } catch { /* faces are a bonus, never the reason a list fails */ }
 
         // A Fam member far away: their person's city gets named on its
         // chip, one obvious tap. Best-effort — the list stands alone.
@@ -158,9 +194,12 @@ export default function OutdoorHome() {
       >
         {t("outdoor.home.title")}
       </h1>
-      <BodyText muted style={{ marginBottom: 12 }}>{t("outdoor.home.intro")}</BodyText>
-      {/* Thumb test: say what a tap on a place does. */}
-      <BodyText style={{ marginBottom: 12, fontWeight: 600 }}>👉 {t("outdoor.home.tapHint")}</BodyText>
+      {/* §2: the four-line explainer and the "👉 Tap a place to see
+          who's there" line are BOTH gone. The explainer was the
+          product describing itself to itself before a single place
+          appeared; the hint existed only because the cards said
+          nothing but a name, and §3 now puts the faces on the card,
+          so the instruction has nothing left to explain. */}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -181,41 +220,39 @@ export default function OutdoorHome() {
               {t("outdoor.home.noPlacesOwnCity", { city: profile.city })}
             </BodyText>
           )}
+          {/* §2: "the city stated as quiet tappable text on the right —
+              NOT a toggle to answer." A person should not be asked to
+              choose their own city every time they open the screen;
+              the city they are in is a fact the app already has, so it
+              is stated, and tapping it offers the other one. */}
           {cities.length > 1 && (
-            <div
-              role="group"
-              aria-label={t("outdoor.home.cityChips")}
-              style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 6 }}
-            >
-              {cities.map((c) => {
-                const on = c === city;
-                const person = personCities[c];
-                const label = person
-                  ? `${c} · ${t("outdoor.home.personCity", { name: person })}`
-                  : c;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => pickCity(c)}
-                    style={{
-                      minHeight: A11Y.minTapTargetPx,
-                      padding: "0 20px",
-                      borderRadius: 50,
-                      border: `2px solid ${on ? C.green : C.warmGray}`,
-                      background: on ? C.green : C.white,
-                      color: on ? C.cream : C.textMain,
-                      fontSize: ts(A11Y.minBodyPx),
-                      fontWeight: 600,
-                      fontFamily: "inherit",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {on ? `✓ ${label}` : label}
-                  </button>
-                );
-              })}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const i = cities.indexOf(city);
+                  pickCity(cities[(i + 1) % cities.length]);
+                }}
+                aria-label={t("outdoor.home.cityTapLabel", {
+                  city: cities[(cities.indexOf(city) + 1) % cities.length],
+                })}
+                style={{
+                  minHeight: A11Y.minTapTargetPx,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  color: C.textMuted,
+                  fontFamily: "inherit",
+                  fontSize: ts(16),
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {city}
+                <span aria-hidden="true" style={{ textDecoration: "underline", marginInlineStart: 8 }}>
+                  {t("outdoor.home.cityChange")}
+                </span>
+              </button>
             </div>
           )}
 
@@ -261,11 +298,12 @@ export default function OutdoorHome() {
                         >
                           {p.name}
                         </span>
-                        {n > 0 && (
-                          <span style={{ display: "block", fontSize: ts(16), color: C.olive, fontWeight: 600 }}>
-                            {n === 1 ? t("outdoor.home.hereNowOne") : t("outdoor.home.hereNowMany", { n })}
-                          </span>
-                        )}
+                        {/* §3: faces first, then words — and "Quiet right
+                            now" rather than "0 people", which is a
+                            scoreboard reading nil. Faces renders both
+                            cases, so the empty park is never shown as a
+                            failure. */}
+                        <Faces people={herePeople[p.id] || []} />
                         {h > 0 && (
                           <span style={{ display: "block", fontSize: ts(16), color: C.brown, fontWeight: 600 }}>
                             {h === 1

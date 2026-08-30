@@ -32,7 +32,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { createGroup, inviteToGroup } from "./groupsStore.js";
+import { createGroup, inviteToGroup, seedWelcome } from "./groupsStore.js";
 import { STRINGS } from "./groupsCopy.js";
 import PeoplePicker from "../games/PeoplePicker.jsx";
 import { Screen, Card, H1, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
@@ -68,6 +68,20 @@ export default function CreateGroup() {
       for (const p of invitees) {
         try { await inviteToGroup(id, p.id); } catch { /* they simply were not asked */ }
       }
+      /* §1/§8 — seed the first post and pin it. "A group with a
+         pinned who-we-are-and-when-we-meet is the difference between
+         one that survives and one that dies in a week." The type
+         chosen on screen 1 is what makes this writable without asking
+         another question: a walking group gets a walking welcome.
+
+         Best effort on purpose. If it fails the group still exists and
+         the owner can write their own — a missing welcome post is a
+         smaller loss than a creation flow that errors at the end. */
+      try {
+        const body = type && type !== "other" ? t(`groups.welcome.${type}`, { name }) : null;
+        if (body) await seedWelcome(id, body);
+      } catch { /* the group is made; the welcome is a bonus */ }
+
       /* No toast. AUDIT_11: redundant beside a navigation that already
          lands you on the result. */
       navigate(`/app/groups/${id}`, { replace: true });

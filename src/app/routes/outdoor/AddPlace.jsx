@@ -93,24 +93,31 @@ export default function AddPlace({ defaultCity = "", onAdded }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
+        /* OUT_AND_ABOUT_SPEC section 2: "once, as a plain row with a
+           plus". The dashed pill was one of the three styles the
+           owner counted on this screen and matched nothing else in
+           the app; a row that looks like the place rows above it
+           reads as part of the same list. */
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
-          gap: 8,
-          minHeight: A11Y.minTapTargetPx,
-          padding: "0 20px",
-          borderRadius: 50,
-          border: `2px dashed ${C.green}`,
-          background: "transparent",
+          gap: 12,
+          width: "100%",
+          minHeight: A11Y.minTapTargetPx + 12,
+          padding: "12px 18px",
+          borderRadius: 16,
+          border: `1px solid ${C.warmGray}`,
+          background: C.white,
           color: C.green,
           fontSize: ts(A11Y.minBodyPx),
           fontWeight: 700,
           fontFamily: "inherit",
+          textAlign: "start",
           cursor: "pointer",
-          marginTop: 12,
+          marginTop: 10,
         }}
       >
-        <span aria-hidden="true">➕</span> {t("outdoor.add.cta")}
+        <span aria-hidden="true" style={{ fontSize: 22 }}>＋</span> {t("outdoor.add.cta")}
       </button>
     );
   }

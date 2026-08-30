@@ -19,6 +19,7 @@ import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stic
 import {
   fetchGroup, fetchMembers, fetchPosts, addPost, fetchMessages, sendMessage,
   fetchConnections, inviteToGroup, removeMember, leaveGroup, reportTarget,
+  amIGroupAdmin, pendingRequestCount, pinPost, unpinPost,
 } from "./groupsStore.js";
 
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -51,13 +52,33 @@ export default function GroupPage() {
   const [reportingGroup, setReportingGroup] = useState(false);
   const [reason, setReason] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
+  /* Who runs this group — creator, co-admin, or platform admin. Asked
+     of the database (0068) rather than inferred from created_by,
+     because a co-admin is not the creator and must still get in. */
+  const [canManage, setCanManage] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const iAmCreator = group && group.created_by === myId;
+
+  const togglePin = async (post) => {
+    try {
+      await (post.pinned_at ? unpinPost(post.id) : pinPost(post.id));
+      setPosts(await fetchPosts(id));
+    } catch (e) {
+      setError(String(e?.message || e));
+    }
+  };
 
   const loadCore = useCallback(async () => {
     try {
       const g = await fetchGroup(id);
       if (!g) { setGroup(null); return; }
+      /* Best effort both: the group still opens if either call fails,
+         it just offers no manage door and no badge. */
+      amIGroupAdmin(id).then((ok) => {
+        setCanManage(ok);
+        if (ok) pendingRequestCount(id).then(setPendingCount).catch(() => {});
+      }).catch(() => {});
       setGroup(g);
       setMembers(await fetchMembers(id));
     } catch { setError(s.loadError); }
@@ -190,6 +211,28 @@ export default function GroupPage() {
       <H1>{group.name}</H1>
       {group.description && <BodyText muted>{group.description}</BodyText>}
 
+      {/* §3: cover · name · MEMBER COUNT · the group's own feed. The
+          count is the cheapest signal that a group is alive, and its
+          absence is why an empty-looking group reads as abandoned. */}
+      <BodyText muted style={{ margin: "2px 0 0" }}>
+        {members.length === 1
+          ? t("groups.interior.oneMember")
+          : t("groups.interior.memberCount", { n: members.length })}
+      </BodyText>
+
+      {/* §7 is reached from the group itself, and only the people who
+          run it are offered the door. A member who guesses the URL is
+          told plainly what it is — the screen refuses rather than
+          rendering an empty version of itself. */}
+      {canManage && (
+        <div style={{ margin: "10px 0 0" }}>
+          <GhostBtn onClick={() => navigate(`/app/groups/${id}/manage`)}>
+            {t("groups.manage.cta")}
+            {pendingCount > 0 ? ` · ${pendingCount}` : ""}
+          </GhostBtn>
+        </div>
+      )}
+
       {notice && <BodyText role="status" style={{ color: C.green, fontWeight: 600 }}>✓ {notice}</BodyText>}
       {error && <BodyText role="alert" style={{ color: C.error, fontWeight: 600 }}>{error}</BodyText>}
 
@@ -204,7 +247,22 @@ export default function GroupPage() {
             <div style={{ marginTop: 10 }}><PrimaryBtn onClick={share} disabled={!draft.trim()}>{s.post}</PrimaryBtn></div>
           </Card>
           {posts.length === 0 ? <BodyText muted>{s.feedEmpty}</BodyText> : posts.map((p) => (
-            <Card key={p.id}>
+            <Card
+              key={p.id}
+              style={p.pinned_at ? { borderColor: C.green, borderWidth: 2, borderStyle: "solid" } : undefined}
+            >
+              {/* §8: one pinned post per group, and the seeded welcome
+                  is pinned by default. A group whose top post says who
+                  we are and when we meet is the difference between one
+                  that survives and one that dies in a week. */}
+              {p.pinned_at && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span aria-hidden="true">📌</span>
+                  <span style={{ fontSize: ts(15), fontWeight: 700, color: C.green }}>
+                    {t("groups.interior.pinned")}
+                  </span>
+                </div>
+              )}
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 700, fontSize: ts(18), color: C.green }}>{p.authorName}</span>
                 <span style={{ fontSize: ts(15), color: C.textMuted }}>{clock(p.created_at)}</span>
@@ -219,9 +277,20 @@ export default function GroupPage() {
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => { setReportingPost(p.id); setReportingGroup(false); setReason(""); }} style={{ minHeight: A11Y.minTapTargetPx, background: "none", border: "none", color: C.textMuted, fontSize: ts(16), fontFamily: "inherit", textDecoration: "underline", cursor: "pointer" }}>
-                  {s.reportPost}
-                </button>
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => { setReportingPost(p.id); setReportingGroup(false); setReason(""); }} style={{ minHeight: A11Y.minTapTargetPx, background: "none", border: "none", color: C.textMuted, fontSize: ts(16), fontFamily: "inherit", textDecoration: "underline", cursor: "pointer" }}>
+                    {s.reportPost}
+                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => togglePin(p)}
+                      style={{ minHeight: A11Y.minTapTargetPx, background: "none", border: "none", color: C.green, fontSize: ts(16), fontFamily: "inherit", fontWeight: 600, textDecoration: "underline", cursor: "pointer" }}
+                    >
+                      {p.pinned_at ? t("groups.interior.unpin") : t("groups.interior.pin")}
+                    </button>
+                  )}
+                </div>
               )}
             </Card>
           ))}

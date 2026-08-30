@@ -169,6 +169,13 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0070 — safe_profiles exposes area (saathban-website-38, 2026-08-30) — **APPLIED**
+
+First migration in this lane's allocated range (0070-0079). §7's feed
+widening needs the author's area and the RLS-safe view did not carry it.
+Additive column, appended last because CREATE OR REPLACE VIEW cannot
+reorder columns and dropping the view would take its grants with it.
+
 ## Contract dependencies
 
 - **Outdoor → 0027/0028 activity shape** (saathban-website-34): outdoor reads community_posts post_type in (walk, activity) relying on payload keys activity/place_id/place_name/starts_at/limit + ref_id dedupe against outdoor_outings, and reads post_joins / join_activity(); it writes only through communityData.shareActivity/joinActivity re-exports. Any change to shareActivity's signature or payload keys needs a ping to the outdoor lane.

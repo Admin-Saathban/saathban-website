@@ -19,6 +19,8 @@ import {
   canUseCommunity,
   canPostCommunity,
   fetchFeed,
+  widenFeed,
+  fetchGroupNeighbourIds,
   fetchAuthors,
   fetchReactions,
   fetchComments,
@@ -42,6 +44,20 @@ import {
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 
+/* §7 shows where a post came from as a small label — the area if the
+   author has one, else the city. It is information, not a filter: there
+   is nothing to tap and nothing to set. Saathban's own posts carry no
+   origin, because the org is not somewhere. */
+function OriginLabel({ author }) {
+  const { ts } = useI18n();
+  if (!author || author.is_org) return null;
+  const where = (author.area || author.city || "").trim();
+  if (!where) return null;
+  return (
+    <span style={{ fontSize: ts(14), color: C.textMuted }}>· {where}</span>
+  );
+}
+
 function AuthorLine({ author, when, dateLocale }) {
   const { t, ts } = useI18n();
   return (
@@ -49,6 +65,7 @@ function AuthorLine({ author, when, dateLocale }) {
       <span style={{ fontSize: ts(19), fontWeight: 700, color: C.green }}>
         {author?.full_name || "…"}
       </span>
+      <OriginLabel author={author} />
       {author?.is_org && (
         <span
           style={{
@@ -600,6 +617,9 @@ export default function Feed() {
   const [access, setAccess] = useState(null); // null loading | true | false
   const [canWrite, setCanWrite] = useState(false);
   const [posts, setPosts] = useState([]);
+  /* Which ring the feed had to reach for. Shown as a quiet line, never
+     as a setting: §7 is explicit that the person never changes one. */
+  const [radius, setRadius] = useState("area");
   const [authors, setAuthors] = useState({});
   const [reactions, setReactions] = useState([]);
   const [error, setError] = useState("");
@@ -683,7 +703,15 @@ export default function Feed() {
       if (!ok) return;
       setCanWrite(await canPostCommunity());
       const rows = await fetchFeed();
-      setPosts(rows);
+      /* §7: the feed shows the neighbourhood first and widens on its own
+         until there is something to read. Authors have to be resolved
+         BEFORE the radius can be decided, because the band is a fact
+         about the author rather than about the post. */
+      const authorsForBand = await fetchAuthors(rows.map((p) => p.author_id));
+      const neighbours = await fetchGroupNeighbourIds(myId).catch(() => new Set());
+      const widened = widenFeed(rows, authorsForBand, profile, neighbours);
+      setPosts(widened.posts);
+      setRadius(widened.radius);
       const joinable = rows.filter((p) => p.post_type === "walk" || p.post_type === "activity");
       const [a, r, j] = await Promise.all([
         fetchAuthors(rows.map((p) => p.author_id)),

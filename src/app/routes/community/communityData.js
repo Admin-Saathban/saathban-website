@@ -32,7 +32,7 @@ export async function fetchAuthors(ids) {
   if (unique.length === 0) return {};
   const { data, error } = await supabase
     .from("safe_profiles")
-    .select("id, full_name, role, is_org")
+    .select("id, full_name, role, is_org, city, area")
     .in("id", unique);
   if (error) throw error;
   return Object.fromEntries((data || []).map((p) => [p.id, p]));
@@ -49,6 +49,70 @@ export async function fetchFeed(limit = 50) {
     .limit(limit);
   if (error) throw error;
   return data || [];
+}
+
+/* §7 — NEIGHBOURHOOD FIRST, WIDENING ON ITS OWN.
+
+   The feed shows your area; if there is not enough happening there it
+   quietly takes in your city, and then the country, until it has
+   something. The person never sees an empty screen and never changes a
+   setting — as the app fills up, the radius shrinks again by itself.
+
+   Two things always come through whatever the radius says: posts from
+   people in your groups (§7 — 'regardless of where those people live'),
+   and Saathban's own posts, which early on will be much of the feed.
+
+   Widening is computed here rather than in SQL because it depends on
+   how much came back, which is not a thing a WHERE clause knows.
+   ENOUGH is deliberately small, and THREE is the number because the
+   question §7 asks is whether the feed has something in it — not whether
+   it has a full page. At four, a person with one neighbour's post and two
+   from across their city was shown the whole country, which is exactly the
+   over-widening the rule exists to avoid: they had a neighbourhood, and we
+   went national anyway. (Found by a unit test whose expectation disagreed
+   with the constant; the constant was the arbitrary half.) */
+export const ENOUGH = 3;
+
+export function widenFeed(posts, authors, me, alwaysIds = new Set()) {
+  const norm = (v) => (v || "").trim().toLowerCase();
+  const myArea = norm(me?.area);
+  const myCity = norm(me?.city);
+
+  const bandOf = (p) => {
+    const a = authors[p.author_id];
+    if (!a) return "far";
+    if (a.is_org) return "always";
+    if (alwaysIds.has(p.author_id)) return "always";
+    if (myArea && norm(a.area) === myArea) return "area";
+    if (myCity && norm(a.city) === myCity) return "city";
+    return "far";
+  };
+
+  const tagged = posts.map((p) => ({ ...p, band: bandOf(p) }));
+  const always = tagged.filter((p) => p.band === "always");
+  const area = tagged.filter((p) => p.band === "area");
+  const city = tagged.filter((p) => p.band === "city");
+  const far = tagged.filter((p) => p.band === "far");
+
+  let shown = [...always, ...area];
+  let radius = "area";
+  if (shown.length < ENOUGH) { shown = [...shown, ...city]; radius = "city"; }
+  if (shown.length < ENOUGH) { shown = [...shown, ...far]; radius = "country"; }
+
+  // newest first, whatever band each came from
+  shown.sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+  return { posts: shown, radius };
+}
+
+/* Everyone who shares a group with me — their posts ignore the radius. */
+export async function fetchGroupNeighbourIds(userId) {
+  const { data: mine } = await supabase
+    .from("group_members").select("group_id").eq("member_id", userId);
+  const ids = (mine || []).map((r) => r.group_id);
+  if (!ids.length) return new Set();
+  const { data: others } = await supabase
+    .from("group_members").select("member_id").in("group_id", ids);
+  return new Set((others || []).map((r) => r.member_id));
 }
 
 export function imageUrl(path) {

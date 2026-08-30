@@ -12,6 +12,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppHeader from "../../../components/AppHeader.jsx";
 import { COLORS as C } from "../../../../shared/tokens.js";
+import { GAME } from "../gameSurface.js";
 import LudoHome from "./LudoHome.jsx";
 import LudoSession from "./LudoSession.jsx";
 
@@ -38,12 +39,19 @@ function PlayScreen({ children }) {
   return (
     <main
       style={{
+        /* GAMES_IMMERSION_SPEC §2: a game takes the whole screen and
+           stops looking like Saathban. No cream, no app chrome — its
+           own dark table surface, warm rather than neon, reading as
+           lacquer under a light rather than as a page. */
+        boxSizing: "border-box",
         height: "100dvh",
         minHeight: "100vh",     /* the fallback, for anything without dvh */
         maxHeight: "100dvh",
+        width: "100%",
         overflow: "hidden",
-        background: C.bg,
-        color: C.textMain,
+        background: GAME.surfaceLift,
+        backgroundColor: GAME.surface,
+        color: GAME.ink,
         display: "flex",
         flexDirection: "column",
       }}

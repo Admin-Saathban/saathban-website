@@ -23,6 +23,7 @@ import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
+import { GAME } from "../gameSurface.js";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import { themeOf, themeVars } from "../themes.js";
@@ -124,11 +125,35 @@ export default function LudoSession() {
   const [rolling, setRolling] = useState(false);
   const [tumble, setTumble] = useState([1, 1]);
 
+  /* THE REMATCH THIS SCREEN HAS ALREADY SEEN.
+
+     Following rematch_id used to happen inside load(), which runs on
+     mount and again on every poll — so a table that already had a
+     rematch bounced you off it the instant you arrived. Two things
+     broke because of that, and they looked unrelated:
+
+       - A finished board could not be looked at. You tapped it, saw
+         it for a frame, and were thrown into the next game.
+       - A notification for THIS table opened a DIFFERENT one, which
+         reads as the app losing your game.
+
+     A rematch is worth following when it happens WHILE YOU ARE
+     WATCHING — everyone at the table moves to the new board together,
+     which is the point. It is not worth following when it happened
+     hours ago and you have come back to look at the old one.
+
+     So the id seen on the first load is remembered and never
+     followed. Only an id that APPEARS afterwards moves you. */
+  const rematchOnArrival = useRef(undefined);
+
   const load = async () => {
     const g = await fetchSession(sessionId);
     setGame(g);
-    if (g?.status === "finished" && g.rematch_id) {
-      navigate(`/app/games/ludo/${g.rematch_id}`, { replace: true });
+    const seen = g?.rematch_id ?? null;
+    if (rematchOnArrival.current === undefined) {
+      rematchOnArrival.current = seen;
+    } else if (g?.status === "finished" && seen && seen !== rematchOnArrival.current) {
+      navigate(`/app/games/ludo/${seen}`, { replace: true });
     }
     return g;
   };
@@ -136,6 +161,12 @@ export default function LudoSession() {
   useEffect(() => {
     let timer;
     let clock;
+    /* A different table is a different arrival. React keeps this
+       component mounted when only the :sessionId param changes, so
+       without this the second table would inherit the first's memory
+       of what its rematch was — and either follow a rematch it should
+       not, or refuse to follow one it should. */
+    rematchOnArrival.current = undefined;
     load().catch(() => setError("ludo.errors.load"));
     timer = setInterval(async () => {
       try {
@@ -686,17 +717,33 @@ export default function LudoSession() {
         style={
           playing
             ? {
+                /* BORDER-BOX, and it is the whole bug.
+
+                   This column was content-box with 12px of side
+                   padding, so width:100% measured 390 on a 390-wide
+                   phone and the padding pushed its contents to 402.
+                   The board was then measured against THAT and drawn
+                   374 wide starting at x=20 — a margin on the left,
+                   the green and red zones running off the right, and
+                   at the opponent's seat a plate pushed far enough
+                   off-screen that one of its two dice was cut in
+                   half. One box model, two "bugs" that were the same
+                   bug. */
+                boxSizing: "border-box",
                 display: "flex",
                 flexDirection: "column",
                 flex: "1 1 auto",
                 minHeight: 0,
                 overflow: "hidden",
-                padding: "6px 12px 8px",
+                /* §2: edge to edge, with EVEN margins. The old 12px
+                   was even too — it was the box model that made it
+                   lopsided. */
+                padding: `4px ${GAME.edge}px 6px`,
                 maxWidth: 640,
                 width: "100%",
                 margin: "0 auto",
               }
-            : { overflowY: "auto", padding: "16px 12px 64px", maxWidth: 640, width: "100%", margin: "0 auto" }
+            : { boxSizing: "border-box", overflowY: "auto", padding: "16px 12px 64px", maxWidth: 640, width: "100%", margin: "0 auto" }
         }
       >
       <div
@@ -709,31 +756,12 @@ export default function LudoSession() {
           flex: "0 0 auto",
         }}
       >
-        {/* THE WAY BACK. The app header is not on this screen — it is
-            what the board used to slide underneath — so the door out
-            lives here, inside the layout, where it can never overlap
-            what it sits above. */}
-        {playing && (
-          <button
-            type="button"
-            onClick={() => navigate("/app/games")}
-            aria-label={t("games.session.backCta")}
-            style={{
-              flex: "0 0 auto",
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              border: "none",
-              background: "transparent",
-              color: C.green,
-              fontSize: 26,
-              lineHeight: 1,
-              cursor: "pointer",
-            }}
-          >
-            ←
-          </button>
-        )}
+        {/* ONE WAY OUT (§2). The back chevron that used to sit here
+            is gone: it left a live game instantly and without asking,
+            which made the control that abandons your table the one
+            that looked most like browser furniture. The door below
+            asks first, and is the only thing on this screen that
+            navigates. */}
         {/* The name of the game earns its space in the lobby, where
             there is no board yet. Once play starts the board IS the
             screen (§1) and the title is 30px the board should have. */}
@@ -791,9 +819,9 @@ export default function LudoSession() {
               width: 44,
               height: 44,
               borderRadius: 22,
-              border: `1px solid ${C.line || "#E3D9C6"}`,
-              background: C.white,
-              color: C.textMain,
+              border: `1px solid ${GAME.controlEdge}`,
+              background: GAME.control,
+              color: GAME.ink,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -966,6 +994,7 @@ export default function LudoSession() {
           <div
             ref={fitRef}
             style={{
+              boxSizing: "border-box",
               flex: "1 1 auto",
               minHeight: 0,
               display: "flex",
@@ -976,9 +1005,13 @@ export default function LudoSession() {
           >
           <div
             style={{
+              boxSizing: "border-box",
               position: "relative",
               width: boardPx ? boardPx : "100%",
               maxWidth: "100%",
+              /* §2: the board is an object on a table, so it casts a
+                 shadow onto it. */
+              filter: playing ? "drop-shadow(0 10px 22px rgba(0,0,0,0.55))" : undefined,
             }}
           >
           {/* Remarks float by the speaker's corner — the corner they

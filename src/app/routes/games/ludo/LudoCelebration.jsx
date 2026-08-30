@@ -36,7 +36,7 @@ function initialOf(name) {
   return [...s][0].toUpperCase();
 }
 
-function Face({ seat, name, size, crowned, crownLabel }) {
+function Face({ seat, name, size, crowned, crownLabel, nameless }) {
   const { ts } = useI18n();
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0 }}>
@@ -80,6 +80,7 @@ function Face({ seat, name, size, crowned, crownLabel }) {
           {initialOf(name)}
         </span>
       </div>
+      {!nameless && (
       <span
         dir="auto"
         style={{
@@ -94,11 +95,12 @@ function Face({ seat, name, size, crowned, crownLabel }) {
       >
         {name}
       </span>
+      )}
     </div>
   );
 }
 
-function Action({ onClick, disabled, children, primary }) {
+function Action({ onClick, disabled, children, primary, big }) {
   const { ts } = useI18n();
   return (
     <button
@@ -107,12 +109,12 @@ function Action({ onClick, disabled, children, primary }) {
       disabled={disabled}
       style={{
         width: "100%",
-        minHeight: 60,
+        minHeight: big ? 76 : 60,
         borderRadius: 50,
         border: primary ? "none" : `2px solid ${C.warmGray}`,
         background: primary ? C.green : C.white,
         color: primary ? C.cream : C.textMain,
-        fontSize: ts(19),
+        fontSize: ts(big ? 22 : 19),
         fontWeight: 700,
         fontFamily: "inherit",
         cursor: disabled ? "default" : "pointer",
@@ -176,19 +178,34 @@ export default function LudoCelebration({
         textAlign: "center",
       }}
     >
+      {winner && (
+        <Face
+          seat={winner.seat}
+          name={seatName(winner, t)}
+          size={112}
+          crowned
+          crownLabel={t("ludo.celebrate.crown")}
+          nameless
+        />
+      )}
+
       <h1
         ref={headingRef}
         tabIndex={-1}
         style={{
           fontFamily: meta.fonts.heading,
-          fontSize: ts(38),
+          fontSize: ts(44),
           fontWeight: 700,
           color: C.green,
           margin: 0,
           outline: "none",
         }}
       >
-        {watching ? t("ludo.celebrate.overTitle") : t("ludo.celebrate.title")}
+        {watching
+          ? t("ludo.celebrate.overTitle")
+          : winner
+          ? seatName(winner, t)
+          : t("ludo.celebrate.title")}
       </h1>
 
       {/* The occasion, under the outcome. This is the line a person
@@ -208,22 +225,9 @@ export default function LudoCelebration({
       )}
 
       {winner && (
-        <>
-          <div style={{ marginTop: 10 }}>
-            <Face
-              seat={winner.seat}
-              name={seatName(winner, t)}
-              size={104}
-              crowned
-              crownLabel={t("ludo.celebrate.crown")}
-            />
-          </div>
-          <p style={{ margin: 0, fontSize: ts(21), fontWeight: 600, color: C.textMain, maxWidth: 460 }}>
-            {iWon
-              ? t("ludo.celebrate.youWon")
-              : t("ludo.celebrate.theyWon", { name: seatName(winner, t) })}
-          </p>
-        </>
+        <p style={{ margin: 0, fontSize: ts(23), fontWeight: 600, color: C.textMain, maxWidth: 460 }}>
+          {iWon ? t("ludo.celebrate.youWon") : t("ludo.celebrate.theyWon")}
+        </p>
       )}
 
       {others.length > 0 && (
@@ -239,15 +243,9 @@ export default function LudoCelebration({
         </div>
       )}
 
-      {/* The only thing said about points, and it is said about
-          everybody at once. No number, no rank, no comparison. */}
-      <p style={{ margin: "6px 0 0", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
-        {watching ? t("ludo.celebrate.overNote") : t("ludo.celebrate.warmth")}
-      </p>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 420, marginTop: 8 }}>
         {!watching && sessionId && (
-          <Action onClick={() => setSheet(true)} disabled={busy} primary>
+          <Action onClick={() => setSheet(true)} disabled={busy} primary big>
             📣 {t("ludo.boast.cta")}
           </Action>
         )}
@@ -260,6 +258,13 @@ export default function LudoCelebration({
           {t("ludo.celebrate.backCta")}
         </Action>
       </div>
+
+      {/* Kept, as A2 asks, and no longer leading. The only thing said
+          about points, said about everybody at once: no number, no
+          rank, no comparison. */}
+      <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
+        {watching ? t("ludo.celebrate.overNote") : t("ludo.celebrate.warmth")}
+      </p>
 
       {sheet && (
         <BoastSheet

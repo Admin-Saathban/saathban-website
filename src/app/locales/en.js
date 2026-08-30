@@ -1422,7 +1422,7 @@ const en = {
       holding: "Your sixes are counting. Keep going.",
       careful: "One more six and all three are void — a fourth would bring them back.",
       onTheEdge: "These sixes count for nothing as things stand. One more six redeems them all.",
-      voided: "Those sixes counted for nothing — the board is as it was.",
+      voided: "Teen chakkay! 😅 All of it void — the board is as it was.",
     },
     jota: {
       chooseTitle: "Two of your gotis are on that square.",
@@ -1446,8 +1446,8 @@ const en = {
     },
     last: {
       moved: "{name} rolled {dice} and moved.",
-      capture: "{name} rolled {dice} — and captured! Back to the yard.",
-      skipped: "{name} rolled {dice} — no move possible, turn passed.",
+      capture: "{name} rolled {dice} and CAUGHT one! 😯 That goti walks home.",
+      skipped: "{name} rolled {dice} — nowhere to go. Next!",
       provisional: "{name} rolled {dice} and moved — but the sixes haven't counted yet.",
     },
     finished: {
@@ -1539,8 +1539,10 @@ const en = {
          who won — and must not be told it was their table either. */
       overTitle: "This game has finished",
       overNote: "The table has packed up. There are others waiting.",
-      youWon: "You brought every goti home.",
-      theyWon: "{name} brought every goti home.",
+      /* The winner's NAME is the heading now, so these lines carry
+          the feeling rather than repeating it. */
+      youWon: "Jeet gaya! 🎉 Every goti home.",
+      theyWon: "Every goti home. Agli baar! 😄",
       crown: "Winner",
       alsoPlayed: "Also at the table",
       warmth: "Points are for turning up, never for winning — everyone at this table earned them.",

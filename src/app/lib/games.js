@@ -132,6 +132,28 @@ export async function respondInvite(inviteId, accept) {
 /* The caller's invitable connections — circle ∪ friends ∪ group
    co-members, deduped, eligibility- and block-filtered SERVER-side so
    the picker can never show someone and then fail. */
+/* How many tables this person has FINISHED — the number table themes
+   are earned from (backlog C1). Derived, never stored: a fact belongs
+   in a table only if it could not be recomputed from what already
+   happened, and this one can, for ever. (Registrar's ruling; stickers
+   differ because gift and stake make them path-dependent.)
+
+   Counts a table played against BOTS exactly like one played against
+   people. The person this app exists for is playing at eleven at night
+   with nobody free, and counting only human tables would hand every
+   reward to whoever has company.
+
+   head:true, so it costs a COUNT rather than a page of rows. */
+export async function fetchGamesFinished(profileId) {
+  const { count, error } = await supabase
+    .from("game_seats")
+    .select("session_id, game_sessions!inner(status)", { count: "exact", head: true })
+    .eq("profile_id", profileId)
+    .eq("game_sessions.status", "finished");
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function gamePeople() {
   const { data, error } = await supabase.rpc("game_people");
   if (error) throw error;

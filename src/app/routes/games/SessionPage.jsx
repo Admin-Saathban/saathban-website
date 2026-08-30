@@ -44,6 +44,8 @@ import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { useGameFeel, GameMotionStyles, Confetti } from "../../lib/gameFeel.jsx";
+import { SoundButton, SoundPanel } from "./SoundControls.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 
@@ -124,6 +126,19 @@ export default function SessionPage() {
   const gameName = game ? (lang === "ur" ? game.name_ur : game.name_en) : "";
   const mySeat = session?.seats.find((s) => s.profile_id === profile.id);
   const isHost = session?.created_by === profile.id;
+  const [soundOpen, setSoundOpen] = useState(false);
+
+  /* Sound and haptics for this table. Reads the move log rather than
+     these components' handlers, so a bot's move is as audible as
+     yours — see lib/gameFeel.jsx. */
+  useGameFeel({
+    gameKey: session?.game_key,
+    moves,
+    status: session?.status,
+    winnerSeat: session?.winner_seat,
+    mySeatNo: mySeat?.seat_no ?? null,
+    currentSeat: session?.current_seat ?? null,
+  });
 
   // Visible countdown, and the zero-crossing tick (once per turn).
   const turnSeconds = Number(session?.house_rules?.turn_seconds) || 60;
@@ -301,7 +316,27 @@ export default function SessionPage() {
 
   return (
     <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
-      <h1 style={{ fontSize: ts(28), margin: "0 0 12px", color: C.brown }}>{gameName}</h1>
+      <GameMotionStyles />
+      {/* Confetti falls only for the person who won. A table where the
+          loser's screen throws a party for someone else is a table
+          that rubs it in. Everyone hears the warm figure; only the
+          winner gets the paper. */}
+      <Confetti active={session.status === "finished" && session.winner_seat === mySeat?.seat_no} />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <h1 style={{ fontSize: ts(28), margin: 0, color: C.brown }}>{gameName}</h1>
+        <SoundButton onClick={() => setSoundOpen((v) => !v)} />
+      </div>
+
+      {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
 
       {/* The table filled while an invite waited: warm, with a door. */}
       {filledInfo && (
@@ -697,10 +732,13 @@ function Board({ session, mySeat, moves, secondsLeft, busy, onPlay, onReclaim, o
 
         {snakes && (
           <div style={{ margin: "4px 0 16px" }}>
+            {/* The board walks the token itself; it needs the move to
+                know where the dice ended and where the snake began. */}
             <SnakesBoard
               seats={session.seats}
               currentSeat={session.status === "active" ? session.current_seat : null}
               label={t("games.board.boardLabel")}
+              lastMove={moves.length ? moves[moves.length - 1] : null}
             />
             <BodyText muted style={{ fontSize: ts(15), margin: "8px 0 0" }}>
               🪜 {t("games.board.legendLadder")} · 🐍 {t("games.board.legendSnake")}

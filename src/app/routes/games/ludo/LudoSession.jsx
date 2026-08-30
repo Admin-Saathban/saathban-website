@@ -22,6 +22,8 @@ import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor } from "./ludoRails.js";
+import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
+import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
 import Die, { DieFace } from "./Dice.jsx";
@@ -243,6 +245,25 @@ export default function LudoSession() {
     setChooser({ piece: i, opts: mine });
   };
 
+  const [soundOpen, setSoundOpen] = useState(false);
+
+  /* Ludo keeps its last move in state rather than fetching the move
+     log, so the feel hook watches a key instead of an id. Pieces plus
+     the last move is a sound key: the pieces array cannot come back
+     identical two moves running, so no real move is ever swallowed
+     as "no change". */
+  const ludoState = game?.state || {};
+  useGameFeel({
+    gameKey: "ludo",
+    lastMove: ludoState.last,
+    eventKey: ludoState.last ? JSON.stringify([ludoState.last, ludoState.pieces]) : null,
+    // this screen calls the active state "playing"; the hook speaks rails
+    status: game?.status === "playing" ? "active" : game?.status,
+    winnerSeat: game?.winner_seat ?? null,
+    mySeatNo: game?.seats?.find((x) => x.profile_id === myId)?.seat ?? null,
+    currentSeat: game?.current_seat ?? null,
+  });
+
   if (!game) {
     return <BodyText muted role="status">···</BodyText>;
   }
@@ -273,29 +294,39 @@ export default function LudoSession() {
 
   return (
     <>
-      <style>{`
-        @keyframes saath-tumble {
-          0%   { transform: rotate(0deg)   scale(1);    }
-          25%  { transform: rotate(-18deg) scale(1.08); }
-          50%  { transform: rotate(14deg)  scale(0.94); }
-          75%  { transform: rotate(-9deg)  scale(1.05); }
-          100% { transform: rotate(0deg)   scale(1);    }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes saath-tumble { from, to { transform: none; } }
-        }
-      `}</style>
-      <h1
+      {/* saath-tumble and every other games animation now live in
+          lib/gameFeel.jsx, under ONE reduced-motion rule. The old
+          version disabled itself by redefining the same keyframes
+          inside a media query, which worked only because the later
+          definition wins — a source reorder away from silently
+          animating again for people who asked it not to. */}
+      <GameMotionStyles />
+      <Confetti active={game.status === "finished" && game.winner_seat === mySeatRow?.seat} />
+
+      <div
         style={{
-          fontFamily: meta.fonts.heading,
-          fontSize: ts(30),
-          fontWeight: 700,
-          color: C.green,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
           margin: "8px 0 10px",
         }}
       >
-        🎲 {t("ludo.title")}
-      </h1>
+        <h1
+          style={{
+            fontFamily: meta.fonts.heading,
+            fontSize: ts(30),
+            fontWeight: 700,
+            color: C.green,
+            margin: 0,
+          }}
+        >
+          🎲 {t("ludo.title")}
+        </h1>
+        <SoundButton onClick={() => setSoundOpen((v) => !v)} />
+      </div>
+
+      {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

@@ -14,6 +14,7 @@
    what the last roll did).
    ════════════════════════════════════════════════ */
 
+import { useEffect, useRef, useState } from "react";
 import { COLORS as C } from "../../../../shared/tokens.js";
 import { SIZE, CELL, LADDERS, SNAKES, cellCenter } from "./board.js";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
@@ -87,7 +88,88 @@ function Snake({ from, to }) {
   );
 }
 
-export default function SnakesBoard({ seats = [], currentSeat = null, label = "", mySeat = null }) {
+/* ── the walk ──────────────────────────────────
+   A token travels; it does not teleport. Same idea as the ludo
+   board's useWalk, with one difference the game demands: a move here
+   has TWO LEGS. You roll to a square, and only then does a ladder
+   carry you up or a snake take you down. Collapsing that into one
+   slide loses the reason you ended up where you did — and the whole
+   drama of snakes and ladders is in the second leg.
+
+   So: hop square by square to where the dice put you, pause long
+   enough for it to register, then travel the jump.
+
+   It snaps rather than walks when the move can't be a single roll —
+   a fresh load, a rematch, someone else's table arriving mid-game —
+   because a token strolling forty squares on page load is a lie
+   about what just happened. */
+const STEP_MS = 150;
+const JUMP_PAUSE_MS = 320;
+
+function useWalk(seats, lastMove) {
+  const target = {};
+  for (const s of seats) target[s.seat_no] = Number(s.score) || 0;
+  const key = seats.map((s) => `${s.seat_no}:${Number(s.score) || 0}`).join(",");
+
+  const [shown, setShown] = useState(target);
+  const prevRef = useRef(null);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = target;
+
+    // First paint of this board: show the truth, walk nothing.
+    if (!prev) {
+      setShown(target);
+      return undefined;
+    }
+
+    const seat = Number(lastMove?.seat_no);
+    const m = lastMove?.move || {};
+    const from = Number(m.from);
+    const landed = Number(m.landed);
+    const to = Number(m.to);
+
+    const changed = Object.keys(target).filter((k) => target[k] !== prev[k]);
+    const walkable =
+      changed.length === 1 &&
+      Number(changed[0]) === seat &&
+      isFinite(from) && isFinite(landed) && isFinite(to) &&
+      target[seat] === to &&
+      prev[seat] === from &&
+      landed > from &&
+      landed - from <= 12;
+
+    if (!walkable) {
+      setShown(target);
+      return undefined;
+    }
+
+    const timers = [];
+    const steps = landed - from;
+    setShown({ ...target, [seat]: from });
+
+    // leg one: the dice
+    for (let i = 1; i <= steps; i++) {
+      timers.push(
+        window.setTimeout(() => setShown({ ...target, [seat]: from + i }), i * STEP_MS)
+      );
+    }
+    // leg two: the ladder or the snake, after a beat on the landing square
+    if (to !== landed) {
+      timers.push(
+        window.setTimeout(() => setShown(target), steps * STEP_MS + JUMP_PAUSE_MS)
+      );
+    }
+    return () => timers.forEach((id) => window.clearTimeout(id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, lastMove?.id]);
+
+  return shown;
+}
+
+export default function SnakesBoard({ seats = [], currentSeat = null, label = "", mySeat = null, lastMove = null }) {
+  const walked = useWalk(seats, lastMove);
   const cells = [];
   const numerals = [];
   for (let n = 1; n <= SIZE * SIZE; n++) {
@@ -132,7 +214,7 @@ export default function SnakesBoard({ seats = [], currentSeat = null, label = ""
 
   // tokens: seats sharing a cell fan out slightly so none hides another
   const byCell = {};
-  for (const s of seats) (byCell[s.score || 0] ||= []).push(s);
+  for (const s of seats) (byCell[walked[s.seat_no] ?? s.score ?? 0] ||= []).push(s);
 
   return (
     <svg
@@ -169,7 +251,12 @@ export default function SnakesBoard({ seats = [], currentSeat = null, label = ""
             <g key={s.seat_no} transform={`translate(${x + spread} ${y})`}>
               {mine && <circle r={4.4} fill="none" stroke={C.brown} strokeWidth="0.5" strokeDasharray="1 1" />}
               {turn && <circle r={4.4} fill="none" stroke={C.green} strokeWidth="0.7" />}
-              <Pawn seat={s.seat_no - 1} cx={0} cy={0} r={3.4} />
+              {/* Keyed by the square so each hop restarts the little
+                  lift — a token that slides flat reads as a cursor,
+                  one that rises reads as a piece being picked up. */}
+              <g key={`hop-${cell}`} className="sb-hop">
+                <Pawn seat={s.seat_no - 1} cx={0} cy={0} r={3.4} />
+              </g>
             </g>
           );
         })

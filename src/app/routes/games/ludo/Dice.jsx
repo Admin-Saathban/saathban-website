@@ -122,6 +122,7 @@ export default function Die({
   return (
     <button
       type="button"
+      className="sb-pressable"
       onClick={onClick}
       aria-label={label}
       aria-pressed={state === "selected"}

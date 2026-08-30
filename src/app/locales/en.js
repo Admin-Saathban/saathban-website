@@ -1458,6 +1458,31 @@ const en = {
       leftToast: "You've left the table.",
       leftBotPlays: "You've left — a friendly bot will play your seat.",
     },
+
+    /* Sound, motion and touch. Kept inside `games` because that is
+       where the controls live — the board's own settings, reachable
+       without leaving the table. */
+    sound: {
+      openCta: "Sound",
+      title: "Sound & feel",
+      hint: "Set it however suits you. The game plays perfectly in silence.",
+      effects: "Game sounds",
+      effectsHint: "Dice, tokens, and a short cheer when someone wins.",
+      volume: "How loud",
+      quieter: "Quieter",
+      louder: "Louder",
+      ambient: "Background music",
+      ambientHint: "A soft drone under the game. Off unless you ask for it.",
+      haptics: "Gentle vibration",
+      hapticsHint: "A small tap when a token is sent home, and when someone wins.",
+      hapticsNone: "This phone doesn't offer vibration.",
+      test: "Hear it",
+      done: "Done",
+      onWord: "On",
+      offWord: "Off",
+      mutedNote: "Sound is off. Everything still shows on screen.",
+      silentNote: "If your phone is on silent, it may still play — use the switch above.",
+    },
     title: "Games",
     intro: "A table is always open — play with neighbours, or let the bots keep you company.",
     loadError: "That didn't load. Please try again in a moment.",

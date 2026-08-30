@@ -124,12 +124,6 @@ export default function NewGame() {
      clearing the gate resumes exactly that table rather than a
      default one. */
   const heldSetup = useRef(null);
-  /* The board everyone at this table will play on. Themes beyond the
-     free two are EARNED by playing, and earned-ness is derived from
-     finished tables rather than stored — so this is a count, not a
-     balance, and there is nothing here to spend or lose. */
-  const [theme, setTheme] = useState(DEFAULT_THEME);
-  const [gamesFinished, setGamesFinished] = useState(0);
   /* What this table is called. Optional forever: somebody opening a
      table because they want to play RIGHT NOW must not be stopped to
      title it, so this is never required and never validated at you. */

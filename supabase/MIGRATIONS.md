@@ -38,6 +38,11 @@ So each lane now owns a RANGE and never needs to ask:
 | messages / community / Fam | 0070–0079 |
 | games / sharing (Lane A) | 0080–0089 |
 | board, navigation, onboarding | 0090–0099 |
+| messages / community / Fam (second block) | 0100–0109 |
+
+A lane that EXHAUSTS its range claims the next free block here rather
+than borrowing a neighbour's number — 0070–0079 ran out on 2026-08-30
+and 0100–0109 was taken by the same lane, recorded before it was used.
 
 Register the row when you APPLY, not when you plan. Everything below 0060
 is history and keeps the number it shipped with.
@@ -178,6 +183,15 @@ Adds `circle_members.member_shares_log` (default FALSE — the member's own
 choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
+
+## 0100 — a tag the database refused (saathban-website-38, 2026-08-30) — **APPLIED**
+
+First in this lane's SECOND range (0100-0109); 0070-0079 exhausted.
+0077 checked allow_tagging by reading public.profiles inside the policy,
+which RLS hides from the tagger, so EVERY tag of anybody else was
+refused — and createPost swallowed the error, so it looked like it
+worked. Now a SECURITY DEFINER helper answers the question, the pattern
+the rest of the schema already uses.
 
 ## 0079 — being tagged is told (saathban-website-38, 2026-08-30) — **APPLIED**
 

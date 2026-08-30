@@ -2204,6 +2204,7 @@ const en = {
       closePh: "Add a line if you like — \"my nephew did it\"",
       closeCta: "Close it",
     },
+    tagFailed: "The post is up, but the names could not be added.",
     withNames: "With {names}",
     removeMe: "Take my name off",
     tagging: {

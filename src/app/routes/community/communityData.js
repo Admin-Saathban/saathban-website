@@ -207,13 +207,22 @@ export async function createPost(userId, body, file, opts = {}) {
   /* §5 — the tagged person is asked, never assumed. accepted stays
      false until they say so, and an event only appears under both
      names after they accept. */
+  /* A REFUSED TAG MUST NOT LOSE THE POST — but it must not be silent
+     either. This swallowed its error with `.then(()=>{}, ()=>{})`, and
+     that is how a policy bug hid: 0077's insert check read profiles
+     directly, RLS refused every tag of anybody but yourself, and the
+     post appeared anyway so nothing looked wrong (fixed in 0100).
+
+     Now the post is kept and the failure is RETURNED, so the caller can
+     say the names did not go on rather than pretending they did. */
+  let tagsFailed = false;
   if (tagged.length) {
-    await supabase
+    const { error: tagErr } = await supabase
       .from("post_tags")
-      .insert(tagged.map((pid) => ({ post_id: data.id, person_id: pid })))
-      .then(() => {}, () => {});   // a refused tag must not lose the post
+      .insert(tagged.map((pid) => ({ post_id: data.id, person_id: pid })));
+    tagsFailed = !!tagErr;
   }
-  return data;
+  return { ...data, tagsFailed };
 }
 
 export async function deleteOwnPost(postId) {

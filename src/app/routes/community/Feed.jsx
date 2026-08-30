@@ -962,6 +962,12 @@ export default function Feed() {
       });
       await load();
       setPendingPosts((cur) => cur.filter((p) => p.key !== key));
+      /* The post is kept whatever happens to the names on it, but a
+         refused tag is said out loud rather than swallowed — that
+         silence is what hid the 0077 policy bug. */
+      if (row?.tagsFailed) {
+        raiseToast(t("posts.tagFailed"), { tone: "error", key: "tag" });
+      }
       setTimeout(() => {
         if (row?.id) fresh.mark(row.id);
       }, 0);

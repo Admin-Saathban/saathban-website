@@ -88,13 +88,15 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
      no longer the starts plus eight. They are the starts plus ONE and
      plus NINE — one pair per arm, thirteen apart like everything else
      on this board. The start squares are no longer among them. */
-  check("safe squares are 1 and 9 past each start",
-    SAFE_ABS.join(",") === "1,9,14,22,27,35,40,48",
-    SAFE_ABS.join(","));
+  /* With the ring correctly phased, the eight marked cells ARE the
+     classic set: each seat start, and the square eight steps on. The
+     start squares are safe, which is the whole point of a start. */
+  check("safe squares are each start and eight past it",
+    SAFE_ABS.join(",") === "0,8,13,21,26,34,39,47", SAFE_ABS.join(","));
   check("every seat gets exactly two of them",
     [0, 1, 2, 3].every((s) => SAFE_ABS.filter((a) => Math.floor(a / 13) === s).length === 2));
   check("the 8 safe squares are all distinct", new Set(SAFE_ABS).size === 8);
-  check("no start square is safe", START_ABS.every((a) => !SAFE_ABS.includes(a)));
+  check("every start square IS safe", START_ABS.every((a) => SAFE_ABS.includes(a)));
 
   for (let seat = 0; seat < 4; seat++) {
     const [yc, yr] = YARD_ORIGIN[seat];
@@ -162,14 +164,14 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
    which no other assertion in this file would notice.
 
    The order below is the engine's, verified rather than assumed:
-   TOP -> LEFT -> BOTTOM -> RIGHT, which is counter-clockwise on the
-   board as drawn. If that ever needs to be the other way round, this
+   TOP -> RIGHT -> BOTTOM -> LEFT, which is CLOCKWISE, as the arrows
+   on the user marked board show. If that ever needs to be the other way round, this
    is the line to change, and reversing it is NOT a one-line edit to
    TRACK — see the note in the commit for why (a start square has to
    stay beside its own yard, so a true reversal mirrors the layout).
    ════════════════════════════════════════════════════════════════ */
 {
-  const RING = ["TOP", "LEFT", "BOTTOM", "RIGHT"];
+  const RING = ["TOP", "RIGHT", "BOTTOM", "LEFT"];   // clockwise
   const armOf = ([c, r]) => {
     if (r <= 5 && c >= 6 && c <= 8) return "TOP";
     if (c <= 5 && r >= 6 && r <= 8) return "LEFT";
@@ -262,8 +264,8 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
       engineSafe.join(","));
     check("the safe set is the same from every seat (rotationally symmetric)",
       engineSafe.every((a) => engineSafe.includes((a + 13) % 52)), engineSafe.join(","));
-    check("a start square is NOT safe (the marked board moved them one on)",
-      START_ABS.every((a) => !engineSafe.includes(a)), START_ABS.join(","));
+    check("every start square is safe in the engine too",
+      START_ABS.every((a) => engineSafe.includes(a)), START_ABS.join(","));
   }
 }
 

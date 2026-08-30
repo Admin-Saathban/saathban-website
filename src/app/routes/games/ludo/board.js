@@ -1,72 +1,98 @@
 /* ════════════════════════════════════════════════
    Ludo board geometry — the classic 15×15 layout, and the pure
    mapping from the server's progress model (0 yard, 1..51 track,
-   52..56 home column, 57 home) onto it. Mirrors the math in
-   0020_ludo.sql: absolute square = (seat*13 + progress - 1) % 52,
-   starts at absolute 0/13/26/39. The SAFE squares are 1/9/14/22/27/
-   35/40/48 — see SAFE_ABS below; they are not the start squares.
+   52..56 home column, 57 home) onto it. The engine's arithmetic is
+   unchanged: absolute square = (seat*13 + progress - 1) % 52.
 
-   THE CLASSIC BOARD, and why the cells are where they are:
+   ── THE RING RUNS CLOCKWISE, AND ITS PHASE IS SET BY THE STARTS ──
 
-   - 15×15 grid. Four 6×6 yards in the corners, each with a 2×2 court
-     of four token spots.
-   - A cross of four arms (3 cells wide, 6 long) between them. Each
-     arm gives the track its two OUTER lines (6 cells each) plus the
-     single cell at its tip: 4 × 13 = 52 track squares.
-   - Each arm's MIDDLE line (5 cells) is one seat's home column,
-     running from the tip inwards to the centre.
-   - The centre 3×3 is the finish. 52 + 4×5 + 9 = 81 cross cells,
-     and 81 + 4×36 yards = 225 = 15². Everything accounted for.
+   This was wrong twice, and the way it was wrong is worth keeping.
 
-   The ring below is written in MOVEMENT order, so TRACK[0] is seat
-   0's start square. That ordering is what makes the engine's lap
-   land correctly: a token's 51st track step is
-   (seat*13 + 50) % 52, which for every seat is exactly its own arm's
-   TIP cell — the square its home column runs from. Seat 0 finishes
-   its lap at (7,0) and turns down into (7,1)…(7,5); seat 1 at (0,7)
-   and turns right; seat 2 at (7,14) turning up; seat 3 at (14,7)
-   turning left. Get the ring's phase wrong and every token cuts the
-   corner into its home column diagonally, which is what the previous
-   layout did.
+   A goti leaves its yard onto its own arm's START square, and 51 steps
+   later it must arrive at that same arm's TIP — the one cell its home
+   column runs from — so it turns in head-on instead of cutting the
+   corner. Those two facts fix everything else: since 52 - 50 = 2, a
+   seat's start is exactly TWO steps past its own tip, and once you
+   know the direction there is only one ring that satisfies it.
+
+   The user's marked board settled the direction and the starts
+   together. The four cells they marked green — (8,1), (13,8), (6,13),
+   (1,6) — are two steps past the top, right, bottom and left tips
+   respectively when the ring is walked CLOCKWISE, and they are not
+   two steps past anything when it is walked the other way. So the
+   board turns clockwise: TOP → RIGHT → BOTTOM → LEFT.
+
+   The earlier layout ran counter-clockwise from (6,1), which put every
+   seat's exit one arm out of step. It still played — tokens moved a
+   legal number of squares, entered a home column and finished — which
+   is exactly why nothing caught it: a ring that is out of phase is
+   still a ring.
+
+   SEAT ORDER FOLLOWS THE RING, because the engine requires it: seat s
+   starts at absolute 13·s, so seats must be numbered the way a token
+   meets them.
+
+   AND THE YARDS FOLLOW THE STARTS, which is the step that caught me
+   out. A start square is the cell you set a goti down on when you lift
+   it out, so it must be beside its OWN yard. (8,1) sits against column
+   9, which is the top-RIGHT yard — not the top-left, where I first put
+   it. The geometry test refused it, correctly. So seats 0..3 have
+   yards top-right, bottom-right, bottom-left, top-left, and the
+   colours in seatColors.js run yellow, blue, red, green to land each
+   zone where the marked board puts it.
+
+   THE EIGHT SAFE SQUARES fall out of the corrected phase rather than
+   being a rule of their own: they are each seat's start and the square
+   eight steps on — the classic set. When the ring was mis-phased they
+   read as an odd off-by-one list; corrected, they are what every
+   physical board has always had, and the start squares are safe again.
+
+   Layout, unchanged:
+   - 15×15 grid. Four 6×6 yards in the corners, each with a 2×2 court.
+   - A cross of four arms (3 wide, 6 long). Each arm gives the track its
+     two OUTER lines plus the cell at its tip: 4 × 13 = 52.
+   - Each arm's MIDDLE line (5 cells) is one seat's home column.
+   - The centre 3×3 is the finish. 52 + 4×5 + 9 + 4×36 = 225 = 15².
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../../shared/tokens.js";
-
-/* The 52 track cells in movement order. TRACK[a] = [col, row]. */
+/* The 52 track cells in MOVEMENT order, clockwise. TRACK[0] is seat
+   0's start, two steps past the top arm's tip. */
 export const TRACK = (() => {
   const t = [];
-  for (let r = 1; r <= 5; r++) t.push([6, r]);        // 0-4   down the top arm's left line
-  for (let c = 5; c >= 0; c--) t.push([c, 6]);        // 5-10  left along the left arm's top line
-  t.push([0, 7]);                                     // 11    left tip
-  for (let c = 0; c <= 5; c++) t.push([c, 8]);        // 12-17 right along the left arm's lower line
-  for (let r = 9; r <= 14; r++) t.push([6, r]);       // 18-23 down the bottom arm's left line
+  for (let r = 1; r <= 5; r++) t.push([8, r]);        // 0-4   down the top arm's right line
+  for (let c = 9; c <= 14; c++) t.push([c, 6]);       // 5-10  right along the right arm's top line
+  t.push([14, 7]);                                    // 11    right tip
+  for (let c = 14; c >= 9; c--) t.push([c, 8]);       // 12-17 left along the right arm's lower line
+  for (let r = 9; r <= 14; r++) t.push([8, r]);       // 18-23 down the bottom arm's right line
   t.push([7, 14]);                                    // 24    bottom tip
-  for (let r = 14; r >= 9; r--) t.push([8, r]);       // 25-30 up the bottom arm's right line
-  for (let c = 9; c <= 14; c++) t.push([c, 8]);       // 31-36 right along the right arm's lower line
-  t.push([14, 7]);                                    // 37    right tip
-  for (let c = 14; c >= 9; c--) t.push([c, 6]);       // 38-43 left along the right arm's top line
-  for (let r = 5; r >= 1; r--) t.push([8, r]);        // 44-48 up the top arm's right line
-  t.push([8, 0]);                                     // 49
+  for (let r = 14; r >= 9; r--) t.push([6, r]);       // 25-30 up the bottom arm's left line
+  for (let c = 5; c >= 0; c--) t.push([c, 8]);        // 31-36 left along the left arm's lower line
+  t.push([0, 7]);                                     // 37    left tip
+  for (let c = 0; c <= 5; c++) t.push([c, 6]);        // 38-43 right along the left arm's top line
+  for (let r = 5; r >= 1; r--) t.push([6, r]);        // 44-48 up the top arm's left line
+  t.push([6, 0]);                                     // 49
   t.push([7, 0]);                                     // 50    top tip
-  t.push([6, 0]);                                     // 51
+  t.push([8, 0]);                                     // 51
   return t;
 })();
 
 /* Home column cells per seat, progress 52..56 → index 0..4, ordered
-   from the arm tip inwards to the centre. */
+   from the arm tip inwards to the centre. Seat order follows the ring:
+   top, right, bottom, left. */
 export const HOME_COLUMNS = [
   [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],      // seat 0 — top arm, entered from (7,0)
-  [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],      // seat 1 — left arm, from (0,7)
+  [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],  // seat 1 — right arm, from (14,7)
   [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]],  // seat 2 — bottom arm, from (7,14)
-  [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],  // seat 3 — right arm, from (14,7)
+  [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],      // seat 3 — left arm, from (0,7)
 ];
 
-/* Yards: 6×6 blocks, each seat's beside its own start square. */
+/* Yards: 6x6 blocks. Each seat sits at the corner its START square is
+   against — you lift a goti out and set it on the cell just outside. */
 export const YARD_ORIGIN = [
-  [0, 0],   // seat 0 top-left     → start (6,1)
-  [0, 9],   // seat 1 bottom-left  → start (1,8)
-  [9, 9],   // seat 2 bottom-right → start (8,13)
-  [9, 0],   // seat 3 top-right    → start (13,6)
+  [9, 0],   // seat 0 top-right    YELLOW → start (8,1),  home column top
+  [9, 9],   // seat 1 bottom-right BLUE   → start (13,8), home column right
+  [0, 9],   // seat 2 bottom-left  RED    → start (6,13), home column bottom
+  [0, 0],   // seat 3 top-left     GREEN  → start (1,6),  home column left
 ];
 
 /* The 2×2 court inside a yard: four token spots, in yard-local cells. */
@@ -77,59 +103,44 @@ export const YARD_SPOTS = [
 /* Finished tokens rest in the centre, each in ITS OWN seat's triangle
    and each in its own spot.
 
-   This used to be ONE point per seat, which meant all four of a seat's
-   finished tokens resolved to the same cell — and the board's
-   shared-square spread then fanned them out diagonally, so a finished
-   game showed a smear of tokens sliding across the middle instead of
-   four sitting in their colour's wedge. With two seats home that read
-   as eight tokens strewn through the centre, which is what the user's
-   screenshot caught.
+   This used to be ONE point per seat, so all four of a seat's finished
+   tokens resolved to the same cell and the board's shared-square
+   spread fanned them diagonally — a finished game showed a smear of
+   tokens sliding across the middle instead of four sitting in their
+   colour's wedge. Four distinct spots fixes it at the source: nothing
+   shares a cell, so nothing is spread.
 
-   Four distinct spots per seat fixes it at the source: nothing shares
-   a cell, so nothing is spread, and each token rests in the triangle
-   painted its own colour.
+   Each triangle runs from one outer edge of the centre to the middle,
+   so it is widest at that edge. The spots sit in a row just inside it,
+   and as far out as the wedge allows, because the dice tray sits over
+   the middle and a finished token should not hide under it.
 
-   The geometry: the centre is the 3×3 from (6,6) to (9,9) and each
-   triangle runs from one outer edge to the middle at (7.5, 7.5), so a
-   triangle is widest at its outer edge. The four spots therefore sit
-   in a row just inside that edge, where there is room for them — and
-   as far out as the wedge allows, because the dice tray sits over the
-   middle of the board and a finished token should not be hiding
-   underneath it. */
+   Wedges follow the ring: top, right, bottom, left. */
 export const HOME_SPOTS = [
   [[6.55, 6.32], [7.18, 6.32], [7.82, 6.32], [8.45, 6.32]],  // seat 0 — top wedge
-  [[6.32, 6.55], [6.32, 7.18], [6.32, 7.82], [6.32, 8.45]],  // seat 1 — left wedge
+  [[8.68, 6.55], [8.68, 7.18], [8.68, 7.82], [8.68, 8.45]],  // seat 1 — right wedge
   [[6.55, 8.68], [7.18, 8.68], [7.82, 8.68], [8.45, 8.68]],  // seat 2 — bottom wedge
-  [[8.68, 6.55], [8.68, 7.18], [8.68, 7.82], [8.68, 8.45]],  // seat 3 — right wedge
+  [[6.32, 6.55], [6.32, 7.18], [6.32, 7.82], [6.32, 8.45]],  // seat 3 — left wedge
 ];
 
-/* Where each seat's tokens enter the ring. Unchanged: the geometry
-   depends on it (a token's 51st step must land on its own arm's tip),
-   and the user's marks did not move these. */
+/* Where each seat's tokens enter the ring — the cells marked green on
+   the user's board. Two steps past that seat's own arm tip. */
 export const START_ABS = [0, 13, 26, 39];
 
-/* THE SAFE SQUARES — the stop positions, read from the user's marked
-   board, which is the authority and overrides the earlier convention.
+/* THE EIGHT SAFE SQUARES — the stop positions, and the same eight a
+   jota may rest on regardless of colour.
 
-   They were [0, 13, 26, 39, 8, 21, 34, 47]: the start squares plus the
-   square eight steps on. Every circled cell on the marked board is
-   exactly ONE STEP FORWARD of one of those, and the set that gives is
-   rotationally symmetric — 1, 14, 27, 40 and 9, 22, 35, 48, each pair
-   thirteen apart — which a misreading would not be.
+   Each seat's start, and the square eight steps on. Safe for everyone,
+   always. The start squares ARE among them: a goti stepping out of the
+   yard lands somewhere it cannot be taken.
 
-   So the safe squares are no longer the start squares. A token coming
-   out of the yard lands on a capturable cell and reaches safety one
-   step later. That is a real change to how the game plays, and it is
-   recorded in GAMES_CONTRACT.md rather than left to be inferred here.
+   The engine's list (ludo_is_safe) must match this EXACTLY — a board
+   that draws a star where the engine will not protect you is worse
+   than no star, because the person trusted it. board-geometry.mjs
+   reads the LIVE function square by square and asserts they agree. */
+export const SAFE_ABS = [0, 8, 13, 21, 26, 34, 39, 47];
 
-   The engine's list (ludo_is_safe, migration 0045) must match this
-   EXACTLY — a board that draws a star where the engine will not
-   protect you is worse than no star at all. tests/board-geometry.mjs
-   asserts the two agree cell for cell. */
-export const SAFE_ABS = [1, 9, 14, 22, 27, 35, 40, 48];
-
-/* Kept as the old name so nothing that imported it breaks silently;
-   it now means the same thing as SAFE_ABS. */
+/* Kept as the old name so nothing that imported it breaks silently. */
 export const STAR_ABS = SAFE_ABS;
 
 /* Re-exported so seat chips and the board can never disagree; the
@@ -160,19 +171,19 @@ export function cellFor(seat, p, pieceIdx) {
 
 /* ── Per-player point of view ──────────────────────────────────────
    Everyone should look at the board the way they'd sit at it: their
-   own yard nearest them, bottom-left. Seat 1 already sits there, so
-   the board turns a quarter for each seat around from it. A watcher
-   with no seat gets the neutral orientation.
+   own yard nearest them, bottom-left. Seat 3 already sits there, so
+   the board turns a quarter for each seat around from it.
 
    Returns degrees for a CSS/SVG rotation (positive = clockwise, as
    screen coordinates run y-down). Labels and numerals counter-rotate
-   by the same amount so nothing ever reads upside down. */
+   by the same amount so nothing ever reads upside down. A watcher with
+   no seat gets the neutral orientation. */
 export function povRotation(mySeat) {
   switch (mySeat) {
-    case 0: return -90; // top-left  → bottom-left
-    case 1: return 0;   // already bottom-left
-    case 2: return 90;  // bottom-right → bottom-left
-    case 3: return 180; // top-right → bottom-left
+    case 0: return 180; // top-right    → bottom-left
+    case 1: return 90;  // bottom-right → bottom-left
+    case 2: return 0;   // already bottom-left
+    case 3: return -90; // top-left     → bottom-left
     default: return 0;  // spectators: neutral
   }
 }

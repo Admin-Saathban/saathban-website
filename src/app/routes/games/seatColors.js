@@ -16,9 +16,14 @@
 
    ZONE LAYOUT, from the user's marked board (which is the authority):
    green top-left, yellow top-right, red bottom-left, blue
-   bottom-right. Yards run [top-left, bottom-left, bottom-right,
-   top-right] for seats 0..3 (see YARD_ORIGIN), so the seat order
-   below is green, red, blue, yellow.
+   bottom-right.
+
+   SEAT ORDER FOLLOWS THE RING, not the corners of the screen. The
+   board turns clockwise — top, right, bottom, left — and the engine
+   starts seat s at absolute 13*s, so seats must be numbered the way a
+   token meets them. Yards therefore run top-left, top-right,
+   bottom-right, bottom-left, and the colours below run green, yellow,
+   blue, red to land each zone where the marked board puts it.
 
    Colour still never carries meaning alone: every token also shows
    its seat number, which is what SEAT_INK is for — yellow needs dark
@@ -28,16 +33,16 @@
    ════════════════════════════════════════════════ */
 
 export const SEAT_COLORS = [
-  "#12A150", // seat 0 — top-left     GREEN
-  "#E0342A", // seat 1 — bottom-left   RED
-  "#1565C0", // seat 2 — bottom-right  BLUE
-  "#F6BE00", // seat 3 — top-right     YELLOW
+  "#F6BE00", // seat 0 — top-right     YELLOW
+  "#1565C0", // seat 1 — bottom-right  BLUE
+  "#E0342A", // seat 2 — bottom-left   RED
+  "#12A150", // seat 3 — top-left      GREEN
 ];
 
 /* Ink that stays legible on each seat colour. */
-export const SEAT_INK = ["#FFFFFF", "#FFFFFF", "#FFFFFF", "#3B2E12"];
+export const SEAT_INK = ["#3B2E12", "#FFFFFF", "#FFFFFF", "#FFFFFF"];
 
 /* A soft tint of each seat colour, for yard courts, start squares and
    resting spots — bright enough to name the zone, pale enough that a
    star or a token drawn on top of it still reads. */
-export const SEAT_TINTS = ["#D8F0E1", "#FBDDDA", "#DAE7F7", "#FDF0C8"];
+export const SEAT_TINTS = ["#FDF0C8", "#DAE7F7", "#FBDDDA", "#D8F0E1"];

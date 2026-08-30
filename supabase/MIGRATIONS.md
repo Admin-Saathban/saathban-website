@@ -184,6 +184,16 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0101 + 0102 — a notification knows who caused it (saathban-website-38, 2026-08-30) — **APPLIED**
+
+The outdoor lane built the per-notification mute in OUT_AND_ABOUT_SPEC
+6.1 and could not light it up: dm (104 rows) and social (9) were the
+only kinds never setting created_by, and they are the two person-driven
+kinds. Fixed inside the writers rather than by adding a defaulted
+parameter, which would have made every existing 4-arg call ambiguous.
+0102 is the DM trigger, which uses new.sender_id — better than
+auth.uid(), since it is the person the notification is about.
+
 ## 0100 — a tag the database refused (saathban-website-38, 2026-08-30) — **APPLIED**
 
 First in this lane's SECOND range (0100-0109); 0070-0079 exhausted.

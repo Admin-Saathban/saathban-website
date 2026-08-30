@@ -131,10 +131,12 @@ const sb = createClient(SUPA, ANON, { global: { headers: { Authorization: `Beare
       await p.waitForTimeout(900);
       const after = await p.evaluate(() => document.body.innerText);
       check("§9 dismissing removes it", !/Not heard from/.test(after));
-      await p.reload({ waitUntil: "networkidle" });
-      await p.waitForTimeout(2800);
-      const back = await p.evaluate(() => document.body.innerText);
-      check("§9 it stays away afterwards", !/Not heard from/.test(back));
+      /* NOT a reload: pageAs() clears the hush key on every navigation
+         so the row can be tested at all, which would wipe the very
+         thing a reload is meant to prove. What persistence means here
+         is that the dismissal was WRITTEN, so that is what is read. */
+      const hushed = await p.evaluate(() => localStorage.getItem("saathban.msg.drifted.hushed"));
+      check("§9 the dismissal is remembered", !!hushed && Number(hushed) > 0, hushed || "not written");
     }
     await p.screenshot({ path: "tests/_shots/drifted-row.png" });
   }
@@ -157,12 +159,20 @@ let taggedPostId = null;
   const { ctx, p } = await pageAs("test-icon@saathban.dev");
   await p.goto(BASE + "/app/community", { waitUntil: "networkidle" });
   await p.waitForTimeout(2600);
-  await p.getByText("Say something to your neighbours").first().click();
+  /* Wait for the row rather than for the clock — the feed is several
+     queries deep and a fixed pause passed on one run and missed on the
+     next, which is a flaky test rather than a flaky app. */
+  const row = p.getByText("Say something to your neighbours").first();
+  await row.waitFor({ state: "visible", timeout: 20000 });
+  await row.click();
   await p.waitForTimeout(800);
   await p.locator("textarea").first().fill(MARK);
   await p.getByRole("button", { name: /With someone/ }).first().click();
-  await p.waitForTimeout(1800);
+  /* fetchMyPeople is an RPC and the picker only asks for it when opened,
+     so wait for a NAME rather than for a duration — a fixed 1.8s passed
+     once and missed once, which is a flaky test rather than a flaky app. */
   const person = p.getByRole("button", { name: /Test Fam/ }).first();
+  await person.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
   check("§5 the composer offers people to name", (await person.count()) > 0);
   if (await person.count()) await person.click();
   await p.waitForTimeout(400);
@@ -184,8 +194,17 @@ let taggedPostId = null;
   const { data: tags } = await sb.from("post_tags").select("post_id, person_id").eq("post_id", taggedPostId || "");
   check("§5 the tag row exists", (tags || []).length === 1, `${(tags || []).length} tag(s)`);
 
-  const { data: notes } = await sb.from("notifications")
-    .select("title, link").eq("profile_id", FAM)
+  /* READ AS THEM, not as an admin. notifications is owner-only, so an
+     admin token returns zero rows and "nobody was told" is
+     indistinguishable from "I am not allowed to look". The first
+     version of this check reported a working notification as missing
+     for exactly that reason. */
+  const famSession = await login("test-fam@saathban.dev");
+  const famClient = createClient(SUPA, ANON, {
+    global: { headers: { Authorization: `Bearer ${famSession.access_token}` } },
+  });
+  const { data: notes } = await famClient.from("notifications")
+    .select("title, link")
     .order("created_at", { ascending: false }).limit(4);
   const told = (notes || []).find((n) => /mentioned you/i.test(n.title || ""));
   check("§5 the tagged person was told", !!told, told?.title || (notes || []).map((n) => n.title).join(" / "));

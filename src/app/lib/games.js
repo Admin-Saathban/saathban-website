@@ -362,7 +362,43 @@ export async function leaveSession(sessionId) {
    that is waiting for players or in play. Waiting counts — a table
    with empty seats is still a promise to somebody. */
 export function liveSessionOf(sessions) {
-  return (sessions ?? []).find((s) => s.status === "lobby" || s.status === "active") ?? null;
+  return liveSessionsOf(sessions)[0] ?? null;
+}
+
+/* ALL of them, because "one at a time" is the rule and not the state
+   of the data. Tables from before the rule, and any that slipped past
+   it, mean a person can genuinely have several — and a gate that
+   clears one at a time, showing an identical card each round, is what
+   made the user cancel "the same game" four times. Nothing was broken
+   on the way in; they were being shown a queue and told it was one
+   table. Whatever clears the way has to see the whole queue. */
+export function liveSessionsOf(sessions) {
+  return (sessions ?? []).filter((s) => s.status === "lobby" || s.status === "active");
+}
+
+/* A table nobody has touched for this long is not a game in progress,
+   it is a game somebody walked away from.
+
+   The turn clock is the evidence: every move sets turn_started_at, and
+   game_tick only runs while somebody has the board open. So a table
+   whose turn opened hours ago has had no player and no bot attend to
+   it since — it is not waiting for you in any sense a person would
+   recognise, and telling them "your move" about it is a lie the app
+   repeats every time they open the home screen.
+
+   Two hours rather than minutes: a real game between two people who
+   are cooking dinner is still a real game, and the point is to catch
+   abandonment, not slowness. */
+export const DORMANT_MS = 2 * 60 * 60 * 1000;
+
+export function isDormant(session, now = Date.now()) {
+  if (!session || session.status !== "active") return false;
+  const started = session.turn_started_at ? new Date(session.turn_started_at).getTime() : NaN;
+  if (!Number.isFinite(started)) return false;
+  /* A clock that reads the future is skew, not staleness — treat it as
+     fresh rather than declaring a table dead because a phone is fast. */
+  const age = now - started;
+  return age > DORMANT_MS;
 }
 
 export async function cancelSession(sessionId) {

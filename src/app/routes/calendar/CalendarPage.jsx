@@ -34,9 +34,15 @@ import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import { fetchMyRsvps, nextOccurrence, localIsoDate } from "../events/eventsStore.js";
 import { actionsFor, kindsForRole, KIND_ICON } from "./entryActions.js";
+import { occurrencesOf, timesOf, repeatLabel } from "./recurrence.js";
 import AddEntry from "./AddEntry.jsx";
 
 const DAY_MS = 86400000;
+/* ISO order, 1 = Monday, matching repeat_days in 0075. */
+const DAY_NAMES = [
+  "calendar.day.1", "calendar.day.2", "calendar.day.3", "calendar.day.4",
+  "calendar.day.5", "calendar.day.6", "calendar.day.7",
+];
 
 function dayLabel(d, lang) {
   return d.toLocaleDateString(lang === "ur" ? "ur-PK" : "en-GB", {
@@ -115,7 +121,9 @@ export default function CalendarPage() {
        the pure module, where personId was always supplied. */
     const { data: entryRows } = await supabase
       .from("calendar_entries")
-      .select("id, kind, title, entry_date, entry_time, repeats_yearly, person_id")
+      .select(
+        "id, kind, title, entry_date, entry_time, entry_times, repeats_yearly, repeat_rule, repeat_days, repeat_until, person_id"
+      )
       .order("entry_date", { ascending: true });
     const entries = entryRows || [];
     const people = [...new Set(entries.map((e) => e.person_id).filter(Boolean))];
@@ -124,26 +132,45 @@ export default function CalendarPage() {
       const { data } = await supabase.from("safe_profiles").select("id, full_name").in("id", people);
       names = Object.fromEntries((data || []).map((p) => [p.id, p.full_name]));
     }
+    /* TONIGHT §3.5 — an entry is a RULE now, not a date. It is expanded
+       across the window the list actually draws, so "every Tuesday" and
+       "drops at 8, 2 and 8" appear as the days and times they happen on
+       rather than as a single row that is right once and wrong after.
+
+       The window is bounded here rather than in the rule, because it is
+       a question about this screen: far enough ahead to plan by, short
+       enough that a daily entry does not become the whole calendar. */
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    const horizon = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 120);
+
     for (const e of entries) {
       if (!allowed.has(e.kind)) continue;
-      const date = e.repeats_yearly ? nextOccurrence(e) : new Date(`${e.entry_date}T${e.entry_time || "00:00:00"}`);
-      if (!date || Number.isNaN(date.getTime())) continue;
-      out.push({
-        id: `c:${e.id}`,
-        kind: e.kind,
-        title: e.title,
-        when: date,
-        allDay: !e.entry_time,
-        personId: e.person_id || null,
-        personName: names[e.person_id] || null,
-      });
+      const hits = occurrencesOf(e, from, horizon);
+      /* A yearly birthday may sit beyond the window — nextOccurrence
+         has always found it, and losing it would be a regression paid
+         for by a feature nobody asked to trade it against. */
+      if (hits.length === 0 && (e.repeats_yearly || e.repeat_rule === "yearly")) {
+        const next = nextOccurrence(e);
+        if (next && !Number.isNaN(next.getTime())) hits.push(next);
+      }
+      for (const at of hits) {
+        out.push({
+          id: `c:${e.id}:${at.getTime()}`,
+          kind: e.kind,
+          title: e.title,
+          when: at,
+          allDay: timesOf(e).length === 0,
+          repeat: repeatLabel(e, DAY_NAMES.map((k) => t(k))),
+          personId: e.person_id || null,
+          personName: names[e.person_id] || null,
+        });
+      }
     }
 
     /* Today onwards, in time order. A calendar that opens on last
        month's doctor's appointment is answering a question nobody
-       asked. */
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
+       asked. `from` is the same local midnight the expansion used. */
     return out.filter((r) => r.when >= from).sort((a, b) => a.when - b.when);
   }, [role, t]);
 
@@ -283,6 +310,16 @@ export default function CalendarPage() {
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
+                        {/* Said on the row, because an entry that comes
+                            back every week should look different from
+                            one that happens once — otherwise the same
+                            title appearing on five days reads as five
+                            mistakes. */}
+                        {r.repeat && (
+                          <span style={{ display: "block", fontSize: ts(15), color: C.green, fontWeight: 600 }}>
+                            ↻ {t(r.repeat.key, r.repeat.values)}
+                          </span>
+                        )}
                       </span>
                     </div>
 

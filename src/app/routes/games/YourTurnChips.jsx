@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { fetchGames, fetchMySessions } from "../../lib/games.js";
+import { fetchGames, fetchMySessions, isDormant } from "../../lib/games.js";
 
 export default function YourTurnChips() {
   const { t, ts, lang } = useI18n();
@@ -23,7 +23,23 @@ export default function YourTurnChips() {
           const byKey = Object.fromEntries(games.map((g) => [g.key, g]));
           setWaiting(
             sessions
-              .filter((s) => s.status === "active" && s.current_seat === s.my_seat)
+              /* TONIGHT §3.2 — "a chip only ever appears when it is
+                 genuinely that person's move in a LIVE table".
+
+                 The old test was status + whose seat it is, which is
+                 true of an abandoned table for ever: the Icon's home
+                 carried "Your move — Ludo" against a table whose turn
+                 had been open since the previous day, on every screen,
+                 permanently. It was not wrong about whose turn it was.
+                 It was wrong that there was a game going on. */
+              .filter(
+                (s) =>
+                  s.status === "active" &&
+                  s.current_seat != null &&
+                  s.my_seat != null &&
+                  s.current_seat === s.my_seat &&
+                  !isDormant(s)
+              )
               .map((s) => ({
                 id: s.id,
                 name:

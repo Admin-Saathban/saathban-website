@@ -24,19 +24,40 @@ import { Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import BoardThumb from "./BoardThumb.jsx";
 
 /* live: the session standing in the way (with .game_key, .status).
-   gameName: its human name. onCleared: called once the way is clear. */
-export default function OneTableGate({ live, gameName, onCleared, onDismiss }) {
+   gameName: its human name. all: every live table, when there is more
+   than one. onCleared: called once the way is clear.
+
+   TONIGHT §3.3 — "the user had to cancel the same game repeatedly
+   before it went." They were not cancelling the same game. Leaving
+   cleared ONE table, the caller immediately re-checked, found the next
+   one, and put up a card that looked identical — same title, same
+   words, and in the setup screen's case the same raw game key. Four
+   tables meant four rounds of a dialog that gave no sign anything had
+   happened. Nothing was failing; the screen was just refusing to say
+   how many there were.
+
+   So: one tap clears them all, and if there is more than one the card
+   says so before it is tapped. */
+export default function OneTableGate({ live, gameName, all, onCleared, onDismiss }) {
   const { t, ts } = useI18n();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const queue = all && all.length ? all : [live];
 
   const leave = async () => {
     if (busy) return;
     setBusy(true);
     setError("");
     try {
-      await leaveSession(live.id);
+      /* In series, not in parallel: leaving a lobby you host cancels it
+         and notifies everyone, and firing four of those at once is a
+         burst of writes for no gain. One failure stops the rest rather
+         than half-clearing the way and reporting success. */
+      for (const s of queue) {
+        await leaveSession(s.id);
+      }
       onCleared();
     } catch {
       setError(t("games.actionError"));
@@ -53,6 +74,14 @@ export default function OneTableGate({ live, gameName, onCleared, onDismiss }) {
         </p>
       </div>
       <BodyText muted>{t("games.oneTable.body")}</BodyText>
+      {/* Said before the tap, so one press clearing four tables is not
+          a surprise — and so the person knows why the card came back
+          the last four times. */}
+      {queue.length > 1 && (
+        <BodyText style={{ fontWeight: 700, color: C.brown }}>
+          {t("games.oneTable.several", { n: queue.length })}
+        </BodyText>
+      )}
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
           ⚠ {error}

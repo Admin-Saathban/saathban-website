@@ -75,7 +75,15 @@ export function moreGroups(role, { buddyActive = true } = {}) {
   const weekly = [
     canRoam && { to: "/app/outdoor", key: "hub.outdoor", emoji: "🌳" },
     canRoam && { to: "/app/groups", key: "hub.groups", emoji: "🧑‍🤝‍🧑" },
-    { to: "/app/history", key: "hub.journey", emoji: "🧭" },
+    /* TONIGHT §3.1 — My Journey was offered to EVERY role, and
+       /app/history is guarded to saath_icon. So a Fam member tapping it
+       was bounced to their own home, and a Buddy to theirs: a door onto
+       a redirect, which is precisely the "menu item that opens the
+       wrong room" the user reported. Walked as Fam on the deployed
+       preview: "My Journey" claimed /app/history and landed /app/fam.
+
+       Same reasoning as My Circle two groups down, and the same fix. */
+    icon && { to: "/app/history", key: "hub.journey", emoji: "🧭" },
     /* Kept even while its shelves are empty — §16. */
     { to: "/app/skills", key: "hub.grow", emoji: "🌱" },
     { to: "/app/calendar", key: "hub.calendar", emoji: "📅" },

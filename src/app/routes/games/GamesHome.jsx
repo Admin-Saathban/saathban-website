@@ -15,6 +15,7 @@ import {
   fetchMyAttempts,
   joinByCode,
   liveSessionOf,
+  liveSessionsOf,
   puzzleToday,
 } from "../../lib/games.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
@@ -215,6 +216,7 @@ export default function GamesHome() {
       {blockedBy && (
         <OneTableGate
           live={blockedBy}
+          all={liveSessionsOf(tables)}
           gameName={byKey[blockedBy.game_key] ? gameName(byKey[blockedBy.game_key], lang) : blockedBy.game_key}
           onCleared={async () => {
             setBlockedBy(null);

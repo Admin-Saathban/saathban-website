@@ -154,7 +154,13 @@ export default function WhatsOn() {
            only geography an event row carries. */
         place: { city: e.city || profile?.city, area: e.area || null },
         joinable: false,
-        to: `/app/events`,
+        /* TONIGHT §3.1 — this said `/app/events`, and /app/events is a
+           redirect to /app/outdoor (§12 merged the events screen into
+           What's on). So tapping a gathering here bounced you back to
+           the page you were already looking at: a door onto the room
+           you were standing in. /app/events/all is the gatherings list
+           that actually renders. */
+        to: `/app/events/all`,
         id: e.id,
       });
     }

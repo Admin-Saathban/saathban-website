@@ -173,6 +173,13 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0075 — a calendar that repeats (saathban-website-38, 2026-08-30) — **APPLIED**
+
+TONIGHT §3.5. repeat_rule / repeat_days / repeat_until, and entry_times
+as an array. repeats_yearly is NOT replaced — it carries every birthday
+and nextOccurrence() reads it — so repeat_rule is backfilled from it,
+and entry_time stays the first of entry_times so older readers work.
+
 ## 0074 — a voice in the thread (saathban-website-38, 2026-08-30) — **APPLIED**
 
 §6. dm-audio bucket, folder-per-thread, mirroring dm-images. NOT the

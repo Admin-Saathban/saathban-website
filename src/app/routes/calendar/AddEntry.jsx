@@ -30,7 +30,14 @@ export default function AddEntry({ onClose, onAdded }) {
   const [kind, setKind] = useState("appointment");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  /* TONIGHT §3.5 — "a single entry must be able to hold several times".
+     A list, not a field: drops at 8, 2 and 8 is ONE thing that happens
+     three times, and making somebody write it three times is how a
+     calendar stops being worth keeping. */
+  const [times, setTimes] = useState([""]);
+  const [repeat, setRepeat] = useState("");     // "" = just once
+  const [repeatDays, setRepeatDays] = useState([]);
+  const [repeatUntil, setRepeatUntil] = useState("");
   const [personId, setPersonId] = useState("");
   const [people, setPeople] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -68,14 +75,28 @@ export default function AddEntry({ onClose, onAdded }) {
       setError(t("calendar.needTitleAndDay"));
       return;
     }
+    /* A custom pattern with no days chosen would repeat on nothing —
+       ask rather than save something that will never appear. */
+    if (repeat === "custom" && repeatDays.length === 0) {
+      setError(t("calendar.needDays"));
+      return;
+    }
     setBusy(true);
     setError("");
+    const chosen = times.map((x) => x.trim()).filter(Boolean).sort();
     const { error: e } = await supabase.from("calendar_entries").insert({
       owner_id: profile.id,
       kind,
       title: title.trim(),
       entry_date: date,
-      entry_time: time || null,
+      /* entry_time stays the FIRST of the times: everything written
+         before tonight reads that column, and 0075 keeps the two in
+         step rather than taking the old one away. */
+      entry_time: chosen[0] || null,
+      entry_times: chosen.length ? chosen : null,
+      repeat_rule: kind === "birthday" ? "yearly" : repeat || null,
+      repeat_days: repeat === "custom" ? repeatDays.slice().sort((a, b) => a - b) : null,
+      repeat_until: repeat && repeatUntil ? repeatUntil : null,
       repeats_yearly: kind === "birthday",
       person_id: personId || null,
     });
@@ -145,10 +166,124 @@ export default function AddEntry({ onClose, onAdded }) {
         style={field}
       />
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ ...field, flex: "1 1 150px", width: "auto" }} />
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={{ ...field, flex: "1 1 120px", width: "auto" }} />
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={field} />
+
+      {/* Times: one row each, add another when there is another. */}
+      {times.map((tm, i) => (
+        <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+          <input
+            type="time"
+            value={tm}
+            onChange={(e) => setTimes((cur) => cur.map((x, j) => (j === i ? e.target.value : x)))}
+            aria-label={t("calendar.timeNth", { n: i + 1 })}
+            style={{ ...field, marginBottom: 0, flex: 1 }}
+          />
+          {times.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setTimes((cur) => cur.filter((_, j) => j !== i))}
+              aria-label={t("calendar.removeTime")}
+              style={{
+                minWidth: A11Y.minTapTargetPx, minHeight: A11Y.minTapTargetPx,
+                borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white,
+                color: C.textMain, fontSize: ts(20), cursor: "pointer",
+              }}
+            >
+              <span aria-hidden="true">−</span>
+            </button>
+          )}
+        </div>
+      ))}
+      {times.length < 8 && (
+        <button
+          type="button"
+          onClick={() => setTimes((cur) => [...cur, ""])}
+          style={{
+            minHeight: A11Y.minTapTargetPx, padding: "0 18px", borderRadius: 50,
+            border: `2px dashed ${C.warmGray}`, background: "transparent", color: C.textMain,
+            fontFamily: "inherit", fontSize: ts(A11Y.minBodyPx), fontWeight: 600,
+            cursor: "pointer", marginBottom: 14,
+          }}
+        >
+          + {t("calendar.addTime")}
+        </button>
+      )}
+
+      {/* How often. "Just once" is first and is what you get by doing
+          nothing — the common case must not need a decision. */}
+      <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, margin: "4px 0 8px" }}>
+        {t("calendar.repeatLabel")}
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {["", "daily", "weekdays", "weekly", "monthly", "custom"].map((r) => (
+          <button
+            key={r || "once"}
+            type="button"
+            onClick={() => setRepeat(r)}
+            aria-pressed={repeat === r}
+            style={{
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 16px",
+              borderRadius: 50,
+              border: repeat === r ? `2.5px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
+              background: repeat === r ? "#EEF3E8" : C.white,
+              color: repeat === r ? C.green : C.textMain,
+              fontFamily: "inherit",
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: repeat === r ? 700 : 600,
+              cursor: "pointer",
+            }}
+          >
+            {t(r ? `calendar.repeat.${r}` : "calendar.repeat.once")}
+          </button>
+        ))}
       </div>
+
+      {repeat === "custom" && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+            const on = repeatDays.includes(d);
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() =>
+                  setRepeatDays((cur) => (on ? cur.filter((x) => x !== d) : [...cur, d]))
+                }
+                aria-pressed={on}
+                style={{
+                  minWidth: A11Y.minTapTargetPx,
+                  minHeight: A11Y.minTapTargetPx,
+                  borderRadius: 50,
+                  border: on ? `2.5px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
+                  background: on ? "#EEF3E8" : C.white,
+                  color: on ? C.green : C.textMain,
+                  fontFamily: "inherit",
+                  fontSize: ts(16),
+                  fontWeight: on ? 800 : 600,
+                  cursor: "pointer",
+                }}
+              >
+                {t(`calendar.day.${d}`)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {repeat && (
+        <label style={{ display: "block", marginBottom: 12 }}>
+          <span style={{ display: "block", fontSize: ts(16), color: C.textMuted, marginBottom: 4 }}>
+            {t("calendar.untilLabel")}
+          </span>
+          <input
+            type="date"
+            value={repeatUntil}
+            onChange={(e) => setRepeatUntil(e.target.value)}
+            style={{ ...field, marginBottom: 0 }}
+          />
+        </label>
+      )}
 
       {(kind === "visiting" || kind === "birthday") && (
         <select value={personId} onChange={(e) => setPersonId(e.target.value)} style={field}>

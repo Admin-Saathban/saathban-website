@@ -42,6 +42,7 @@ import {
   createSession,
   fetchMySessions,
   liveSessionOf,
+  liveSessionsOf,
   inviteToGame,
   createSeatLink,
   startWithBots,
@@ -118,6 +119,8 @@ export default function NewGame() {
   /* One live table at a time. The refusal belongs HERE, on Start — the
      moment the second table would actually come into being. */
   const [blockedBy, setBlockedBy] = useState(null);
+  /* Every table in the way, not just the first — see OneTableGate. */
+  const [blockedAll, setBlockedAll] = useState([]);
   /* Which chair is choosing a person, and who is sitting where. */
   const [sheetSeat, setSheetSeat] = useState(null);
   const [seated, setSeated] = useState({});
@@ -181,10 +184,13 @@ export default function NewGame() {
       return;
     }
 
-    const inTheWay = liveSessionOf(await fetchMySessions(profile.id).catch(() => []));
+    const mine = await fetchMySessions(profile.id).catch(() => []);
+    const inTheWayAll = liveSessionsOf(mine);
+    const inTheWay = inTheWayAll[0] ?? null;
     if (inTheWay) {
       heldSetup.current = setup;
       setBlockedBy(inTheWay);
+      setBlockedAll(inTheWayAll);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -366,7 +372,11 @@ export default function NewGame() {
       {blockedBy && (
         <OneTableGate
           live={blockedBy}
-          gameName={blockedBy.game_key}
+          all={blockedAll}
+          /* The human name. This passed the raw key, so the card said
+             "ludo" — one more reason each round of the gate looked
+             like the one before it. */
+          gameName={game && game.key === blockedBy.game_key ? (lang === "ur" ? game.name_ur : game.name_en) : blockedBy.game_key}
           onCleared={() => {
             setBlockedBy(null);
             const held = heldSetup.current;

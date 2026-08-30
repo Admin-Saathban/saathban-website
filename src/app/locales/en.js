@@ -1335,6 +1335,26 @@ const en = {
     whoPlaceholder: "Who is it about?",
     save: "Add it",
     cancel: "Not now",
+    /* TONIGHT §3.5 — recurrence, in the words a person would use.
+       "Just once" is named rather than implied: the absence of a
+       repeat is a choice too, and it is the common one. */
+    repeatLabel: "How often?",
+    repeat: {
+      once: "Just once",
+      daily: "Every day",
+      weekdays: "Monday to Friday",
+      weekly: "Every week",
+      monthly: "Every month",
+      yearly: "Every year",
+      custom: "Chosen days",
+      onDays: "Every {days}",
+    },
+    day: { 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun" },
+    addTime: "Add another time",
+    removeTime: "Remove this time",
+    timeNth: "Time {n}",
+    untilLabel: "Until (leave empty to keep going)",
+    needDays: "Choose at least one day.",
     needTitleAndDay: "It needs a name and a day.",
     saveFailed: "That didn't save. Try once more?",
     emptyTitle: "Nothing in the calendar yet.",
@@ -2486,6 +2506,7 @@ const en = {
       filledAgainCta: "Start your own with the same people",
     },
     oneTable: {
+      several: "You have {n} tables open. Leaving clears all of them.",
       title: "You are already at a {game} table",
       body: "One game at a time keeps things simple — and the people at that table are waiting for you. Finish it, or leave it and start this one.",
       finishCta: "Finish that game",

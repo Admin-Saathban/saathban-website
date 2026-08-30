@@ -18,10 +18,13 @@
    it has moved as a pair (from then it travels only on even dice, at
    half speed). That is a rule you can see without being told.
 
-   THE DICE LIVE IN THE MIDDLE, where thrown dice land. They are HTML
-   over the SVG rather than inside it: a die is then a real button with
-   a real tap target, upright however the board is turned, and the
-   tumble is a plain CSS animation. Pass them in as children.
+   THE DICE ARE NOT HERE ANY MORE. They sat in the middle of the board
+   for a while, on the reasoning that thrown dice land in the middle.
+   LUDO_UI_SPEC settled it the other way — a die beside each player's
+   own face, so the table reads as people rather than as a board with a
+   tray on it — and the user confirmed. The children slot that held
+   them is gone rather than left dangling; LudoSession stopped passing
+   it in de520c0.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
@@ -98,6 +101,18 @@ export const BOARD_MOTION_CSS = `
     transform-origin: 0% 50%;
     animation: sb-spark 620ms ease-out both;
   }
+
+  /* The ring round a goti you can move, breathing.
+
+     NO SCALE, and not because it looks worse: these pieces are placed
+     by cx/cy, so a scale pivots on the SVG origin and throws them off
+     the board. Stroke width and opacity both animate safely and pivot
+     on nothing. */
+  @keyframes sb-pulse {
+    0%, 100% { stroke-opacity: 0.55; stroke-width: 3;   }
+    50%      { stroke-opacity: 1;    stroke-width: 4.6; }
+  }
+  .sb-pulse { animation: sb-pulse 1150ms ease-in-out infinite; }
   /* DISPLAY: NONE, NOT ANIMATION: NONE — and if this rule ever moves
      into gameFeel.jsx reduced-motion list, it must move as-is
      rather than being flattened into that list own animation:none rule.
@@ -116,6 +131,14 @@ export const BOARD_MOTION_CSS = `
      themselves out of it.) */
   @media (prefers-reduced-motion: reduce) {
     .sb-spark { display: none; }
+    /* animation:none here, NOT display:none — and the difference is the
+       same one the spark's comment makes, pointing the other way. A
+       burst has no resting state, so hiding it is right. This ring is
+       an INSTRUCTION: it is the only thing on the board saying "these
+       are the gotis you may move". The pulse is emphasis on top of it.
+       Switch the motion off and the ring must still be there, or
+       somebody who asked for less motion is left with no cue at all. */
+    .sb-pulse { animation: none; stroke-opacity: 1; stroke-width: 3.6; }
   }
 `;
 
@@ -253,7 +276,6 @@ function useWalk(pieces) {
 
 export default function LudoBoard({
   state,
-  seatsInPlay,
   /* The options for the die the player has picked up, straight from
      ludo_desi_legal: [{piece, split, to, kind}]. Empty when it is not
      your move or you have not chosen a die. */
@@ -261,7 +283,6 @@ export default function LudoBoard({
   currentSeat = -1,
   onPieceTap,
   mySeat = null,
-  children,
 }) {
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
@@ -703,6 +724,7 @@ export default function LudoBoard({
                 )}
                 {canTap && (
                   <circle
+                    className="sb-pulse"
                     cx={cx}
                     cy={cy}
                     r={21}
@@ -720,23 +742,6 @@ export default function LudoBoard({
         )}
       </svg>
 
-      {/* ── The dice tray: the middle 3×3 of the board, upright ── */}
-      {children && (
-        <div
-          style={{
-            position: "absolute",
-            left: "42%",
-            top: "42%",
-            width: "16%",
-            height: "16%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {children}
-        </div>
-      )}
     </div>
   );
 }

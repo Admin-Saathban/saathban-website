@@ -1437,6 +1437,7 @@ const en = {
       movePiece: "Move piece {n}",
       pickDie: "Tap a die, then tap the goti it should move.",
       pickPiece: "Tap the goti you'd like to move.",
+      autoPlayed: "Only one move was possible — played it for you.",
     },
     pos: {
       yard: "in the yard",
@@ -1588,6 +1589,25 @@ const en = {
     /* Setting the table. Almost every string here is an aria-label —
        the screen itself is pictures, and these are what a screen
        reader says in their place. */
+    /* D2 — the tables you have played. Every string here is chosen
+       so that nothing can be read as a score. "Played together", not
+       "results"; who was there, not who won. */
+    history: {
+      title: "Games you've played",
+      subtitle: "Who you played with, and when.",
+      sectionLabel: "Every table",
+      you: "You",
+      aBot: "a friendly bot",
+      someone: "someone",
+      and: "{list} and {last}",
+      more: "Show older games",
+      emptyTitle: "No games here yet.",
+      emptyBody: "When you play a table, it will be waiting here afterwards — who was there, and the day you played.",
+      emptyCta: "Find a game",
+      failed: "That didn't load. It's the connection, not your games.",
+      retry: "Try again",
+    },
+
     setup: {
       /* D1 — naming a table. "(optional)" is in the LABEL, not buried
          in help text, because the fastest way to make an optional
@@ -1632,6 +1652,7 @@ const en = {
       },
       diceCaptionOne: "One die, the way it has always been played.",
       diceCaption: "Two dice — the Desi table.",
+      autoOnlyMove: "Move for me when there's only one choice",
     },
     new: {
       hint: "Who are you playing?",

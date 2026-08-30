@@ -13,6 +13,7 @@ import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { LOCALES } from "../locales/index.js";
 import supabase from "../lib/supabase.js";
+import Logo from "./Logo.jsx";
 
 /* Page shell for the auth screens: warm background, logo, language
    toggle. Direction and the language's font stack come from the
@@ -68,11 +69,7 @@ export function AuthScreen({ children, width = 620, showHeader = true }) {
           }}
         >
           <a href="/" style={{ display: "block", flexShrink: 0 }}>
-            <img
-              src="/logo-extended.png"
-              alt="Saathban"
-              style={{ height: 44, width: "auto", display: "block" }}
-            />
+            <Logo height={34} />
           </a>
 
           {/* The label is the OTHER language's own name, rendered in that

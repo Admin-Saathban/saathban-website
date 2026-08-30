@@ -11,6 +11,7 @@
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Logo from "../../components/Logo.jsx";
 
 /* Page shell: warm background, logo home-link, optional back link.
    Direction and font come from the LanguageProvider wrapper. */
@@ -52,11 +53,7 @@ export function FamScreen({ children, backTo, backLabel, width = 680 }) {
       <div style={{ maxWidth: width, margin: "0 auto" }}>
         <header style={{ marginBottom: 24 }}>
           <a href="/app" style={{ display: "inline-block" }}>
-            <img
-              src="/logo-extended.png"
-              alt="Saathban"
-              style={{ height: 40, width: "auto", display: "block" }}
-            />
+            <Logo height={30} />
           </a>
         </header>
 

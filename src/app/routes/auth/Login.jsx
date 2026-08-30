@@ -1,13 +1,29 @@
 /* ════════════════════════════════════════════════
-   /app/auth/login — one card, one choice.
+   /app/auth/login — the whole screen, visible at once.
 
-   The default and frictionless path is the email sign-in link (Icons and
-   Fam never need a password). A quiet "I have a password" toggle reveals
-   the password field and turns the button into Sign in — for Buddies and
-   admins, and anyone who set one. The link request always lands on the
-   check-email screen with the same message whether or not the address has
-   an account — sign-in must never confirm which emails exist. Reset stays
-   reachable from the password state.
+   PRODUCT_DECISIONS §1. What was here before showed an email field, a
+   "Continue — we'll email you a sign-in link" button, and an "I have a
+   password" link that RESHAPED THE SCREEN: tapping it grew a password
+   field, changed the button's words, and moved "forgotten your
+   password?" into existence. Three different screens wearing one
+   name, and which one you were looking at depended on something you
+   may not remember tapping.
+
+   Now: email, password, Sign in, and three plain links under them.
+   Nothing hidden behind a toggle, nothing reshapes on tap, and the
+   page a person sees the second time is the page they saw the first.
+
+   THE MAGIC LINK IS NOT GONE — it is demoted. "Use an email link
+   instead" sends it and goes to the same check-email screen it always
+   did, and Icons and Fam who never set a password still sign in with
+   one tap after typing their address. It is a link rather than the
+   primary button because a password is what most people expect to see
+   on a sign-in page, and a screen that offers something else first
+   makes them wonder whether they are in the right place.
+
+   Sign-in never confirms which addresses have accounts: the link
+   request lands on check-email either way, and a wrong password and an
+   unknown address give the same sentence.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
@@ -33,30 +49,13 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState("magic"); // 'magic' | 'password'
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  /* Sign in with the password — the button. */
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (mode === "magic") {
-      if (!isValidEmail(email)) return setError(t("auth.common.errorEmail"));
-      setBusy(true);
-      // Whatever happens server-side, the answer is the same "check your
-      // email" screen — never a hint about whether the account exists.
-      try {
-        await sendMagicLink(email, {}, { createUser: false });
-      } catch {
-        /* deliberate: same outcome */
-      }
-      setBusy(false);
-      navigate("/app/auth/check-email", { state: { email: email.trim(), kind: "magic" } });
-      return;
-    }
-
-    // Password mode.
     if (!isValidEmail(email) || !password) return setError(t("auth.login.badCredentials"));
     setBusy(true);
     try {
@@ -72,6 +71,24 @@ export default function Login() {
       setBusy(false);
     }
   };
+
+  /* Sign in by email link — the plain link under the button. It acts
+     rather than revealing anything: the address is already typed above
+     it, so there is nothing more to ask for and nothing to reshape. */
+  const emailLink = async () => {
+    setError("");
+    if (!isValidEmail(email)) return setError(t("auth.common.errorEmail"));
+    setBusy(true);
+    try {
+      await sendMagicLink(email, {}, { createUser: false });
+    } catch {
+      /* deliberate: the answer is the same either way */
+    }
+    setBusy(false);
+    navigate("/app/auth/check-email", { state: { email: email.trim(), kind: "magic" } });
+  };
+
+  const linkRow = { textAlign: "center", marginTop: 14 };
 
   return (
     <AuthScreen>
@@ -101,48 +118,51 @@ export default function Login() {
             />
           </Field>
 
-          {mode === "password" && (
-            <Field id="login-password" label={t("auth.common.passwordLabel")}>
-              <input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                autoFocus
-              />
-            </Field>
-          )}
+          {/* Always here. It is not a reward for finding a toggle. */}
+          <Field id="login-password" label={t("auth.common.passwordLabel")}>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </Field>
 
-          <Button busy={busy}>
-            {mode === "magic" ? t("auth.login.continueCta") : t("auth.login.passwordCta")}
-          </Button>
+          <Button busy={busy}>{t("auth.login.passwordCta")}</Button>
         </form>
 
-        {/* The single quiet toggle. */}
-        <div style={{ textAlign: "center", marginTop: 14 }}>
-          {mode === "magic" ? (
-            <LinkButton onClick={() => { setMode("password"); setError(""); }}>
-              {t("auth.login.havePassword")}
-            </LinkButton>
-          ) : (
-            <>
-              <LinkButton onClick={() => { setMode("magic"); setPassword(""); setError(""); }}>
-                {t("auth.login.useLinkInstead")}
-              </LinkButton>
-              <div style={{ marginTop: 6 }}>
-                <LinkButton onClick={() => navigate("/app/auth/reset")}>
-                  {t("auth.login.forgot")}
-                </LinkButton>
-              </div>
-            </>
-          )}
+        {/* The three plain links, in the order §1 sets them out. Each
+            one goes somewhere; none of them changes this screen. */}
+        <div style={linkRow}>
+          <LinkButton onClick={emailLink} disabled={busy}>
+            {t("auth.login.useLinkInstead")}
+          </LinkButton>
+        </div>
+        <div style={linkRow}>
+          <LinkButton onClick={() => navigate("/app/auth/reset")}>
+            {t("auth.login.forgot")}
+          </LinkButton>
         </div>
       </section>
 
       <p style={{ textAlign: "center", fontSize: ts(A11Y.minBodyPx), marginTop: 12 }}>
         {t("auth.login.newHere")}{" "}
-        <Link to="/app/auth" style={{ color: C.brown, fontWeight: 600 }}>
+        {/* A 24px-tall link, which is what an inline <Link> in a
+            sentence gives you, is half of §0.2's floor. The padding
+            makes the target 48px without taking the words out of the
+            sentence they belong in. */}
+        <Link
+          to="/app/auth"
+          style={{
+            color: C.brown,
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: A11Y.minTapTargetPx,
+            paddingInline: 6,
+          }}
+        >
           {t("auth.login.getStarted")}
         </Link>
       </p>

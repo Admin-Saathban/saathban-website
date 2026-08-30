@@ -18,6 +18,7 @@ import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
 import supabase from "../lib/supabase.js";
 import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";
+import Logo from "./Logo.jsx";
 
 export default function AppHeader() {
   const { t, ts, meta } = useI18n();
@@ -153,11 +154,7 @@ export default function AppHeader() {
             onClick={() => setMenuOpen(false)}
             style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, flexShrink: 0 }}
           >
-            <img
-              src="/logo-extended.png"
-              alt="Saathban"
-              style={{ height: 30, width: "auto", display: "block" }}
-            />
+            <Logo height={26} />
           </Link>
           {showBack && (
             <Link

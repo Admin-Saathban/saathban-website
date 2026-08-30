@@ -661,15 +661,9 @@ export default function Feed() {
   const { profile } = useSession();
   const navigate = useNavigate();
   const myId = profile?.id;
-  /* The viewer's own place, for §4.2's middle two bands. Both may be
-     null — plenty of people have never filled them in — and a null
-     never matches, so those posts simply fall to the last band
-     instead of the ordering breaking. */
   /* The Feed renders at /app/community AND inside Home. Only the
      former is a page that needs naming — see the heading below. */
   const onHome = !useLocation().pathname.startsWith("/app/community");
-  const myArea = profile?.area || null;
-  const myCity = profile?.city || null;
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
 
   const [access, setAccess] = useState(null); // null loading | true | false
@@ -1331,14 +1325,30 @@ export default function Feed() {
 
                A stable sort keeps equal posts in the order the query
                returned them, which is already newest first. */
-            const band = (p) => {
-              if (connections?.has(p.author_id)) return 0;
-              const a = authors[p.author_id];
-              if (a?.area && a.area === myArea) return 1;
-              if (a?.city && a.city === myCity) return 2;
-              return 3;
-            };
-            const visible = [...posts].sort((x, y) => band(x) - band(y));
+            /* THE GEOGRAPHY IS widenFeed's, NOT RECOMPUTED HERE.
+
+               communityData.widenFeed already decides WHO is shown —
+               it starts at your area and widens to city, then further,
+               until there are at least a few posts — and it tags every
+               post it returns with the band it came from. What it does
+               not do is ORDER by that band: it finishes with a single
+               newest-first sort across all of them, because inclusion
+               was the question it was written to answer.
+
+               So this adds the ordering §4.2 asks for and nothing
+               else. Recomputing area and city here would have been a
+               second geography rule beside theirs — and mine compared
+               the strings raw where theirs trims and lowercases, so
+               "Model Town" and "model town" would have banded
+               differently on two screens reading one database.
+
+               Friends are the one band widenFeed has no notion of,
+               and they are §4.2's first. Array.prototype.sort is
+               stable, so inside every band the newest-first order
+               widenFeed produced survives untouched. */
+            const RANK = { always: 1, area: 1, city: 2, far: 3 };
+            const rankOf = (p) => (connections?.has(p.author_id) ? 0 : RANK[p.band] ?? 3);
+            const visible = [...posts].sort((x, y) => rankOf(x) - rankOf(y));
             if (visible.length === 0) {
               return (
                 <BodyText muted>

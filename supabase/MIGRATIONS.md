@@ -63,6 +63,8 @@ A row here claims the number even before the file lands.
 | 0052 | integration | `profiles.area` — PRODUCT_DECISIONS §2 collects city + area at signup, and §12 computes Out & about's distance bands (Walkable / Nearby / Across the city) from AREA rather than kilometres, because seniors think in "can I walk" not in km. `profiles` currently has `city` and no `area`, so the band cannot be computed at all today | claimed 2026-08-30 |
 | 0053 | integration | admin three levels (§18): `moderator` joins `admin` and `super` in `profiles.admin_level`, with `is_moderator()` and a helper for "at least admin". A moderator gets community safety ONLY — reports, hide, mute, suspend-with-reason — and must NOT reach Buddy applications, documents, health data or broadcasts. Today `is_admin()` is a single boolean over `role = 'admin'`, so every admin surface is all-or-nothing | claimed 2026-08-30 |
 | 0054 | integration | survey storage (§16), **super-admin-only**: answers stored separately from daily logs, never visible to Fam, Buddies, moderators or ordinary admins. The rule is enforced with RLS and proved by a negative test per §0.9, not by hiding the screen | claimed 2026-08-30 |
+| 0055 | integration | `0055_seat_links.sql` — **applied**: §17 send-a-link seat. Single-use, 48h, distinct from the reusable spoken join code because a WhatsApp link gets forwarded and a forwarded code would let three strangers into a family game. Single-use is enforced under a row lock in the statement that seats the claimer, so two simultaneous opens are serialised by the database. Claiming also leaves the two connected. **Two traps worth reading:** `gen_random_bytes` lives in pgcrypto and is NOT on a `search_path` of public+pg_temp — it raises "function does not exist", which PostgREST surfaces as a bare 404 that reads like a missing RPC; and PostgREST does not reliably match a JSON number to a `smallint` parameter, producing the same misleading 404. Use uuids for tokens and `integer` for numeric RPC args. Verified at the DB: host can hold, outsider cannot, re-share replaces rather than duplicating, first claimer seated, second refused, expired refused, anon refused, connection created where there was none | 2026-08-30 |
+| 0056 | integration | `0056_notification_defaults.sql` — **applied**: §19 defaults, enforced in the WRITER. `social_notify` now refuses to write a kind the recipient has turned off, because hiding it in the bell would still have delivered it and would still buzz a phone once push exists. No preferences table: the default is code (`notify_default_off`), the override is data (`profiles.settings->notify`), so a kind added later arrives with its default and needs no backfill. Unknown kinds default to ON deliberately — an unlisted kind is a notification about a person, the safe side to fail on. The kind-aware writer is a SEPARATE function, not a defaulted parameter, to avoid the 0049 overload trap. Verified by reading rows: default state delivers a person-kind and withholds an app-kind; with both defaults reversed the results swap, proving the gate can fail both ways | 2026-08-30 |
 | 0038 | games/entry-flow lane (saathban-website-38) | cancelled game sessions — widen `game_sessions_status_check` to allow `cancelled`, host-only + lobby-only cancel RPC, notify invited seats. **Deliberately NOT a delete**: `dm_messages.game_session_id` is ON DELETE CASCADE (0029d), so deleting a session started from a DM would destroy a message in someone's conversation. Must audit every status filter that assumes lobby/active/finished (my-tables lists, YourTurnChips, the waiting room, game_people, join_by_code, smoke selectors) so a cancelled table leaves the lists instead of lingering as a broken invite deep-link. Analysis originally recorded by integration in STATUS.md; ownership transferred 2026-08-29 |
 | 0039 | games/entry-flow lane (saathban-website-38) | points hardening — once-per-day-per-source, flat daily tracker amount, daily cap, no client-writable points path, badges derived from presence days. Server-side only; the client must not be able to mint points | 2026-08-29 |
 | 0037 | circle lane (saathban-website-f2) | circle defaults — sharing permissions default ON for NEW memberships only, set inside approve_circle_request + accept_circle_invite (NOT as column defaults, so no other insert path can silently grant), plus circle_members.quiet_days_notice (default false) and the post-acceptance notification deep-linking to that member’s review screen. **Explicitly no UPDATE over existing rows.** Reverses SPEC’s “default OFF except SOS” — user-directed; SPEC.md + QUESTIONS.md record the decision and the assisted-signup edge | 2026-08-29 |
@@ -113,6 +115,28 @@ GAMES_CONTRACT.md (games lane) carries the field mapping.
 Deliberately NOT in it: replying is never gated, and messaging someone you
 are already connected to is never gated — §6 is explicit that a blanket
 block traps the isolated senior and merely inconveniences a scammer.
+
+## 0056 — Fam proposes, Icon disposes (saathban-website-38, 2026-08-30)
+
+`0056_fam_proposes.sql` — PRODUCT_DECISIONS §10, enforced at the database
+because §0.9 and §20.6 both require a negative test proving an unapproved
+change never took effect.
+
+**What was already right, verified before writing anything:** `profiles`
+UPDATE is self-only, so a circle member already cannot touch an Icon's
+settings — including `who_can_message`. `circle_members` UPDATE is
+icon-only, so a member cannot widen their own permissions. And the two
+recurring permissions (`reminders`, `daily_log_prefs`) already work the
+way §10's first row describes, announcing every instance by trigger.
+
+**What was missing:** the *proposing* half. A Fam member had no way to ask
+at all, so §10 was half-implemented as a wall rather than a door.
+
+- `icon_change_proposals` — pending / approved / rejected / withdrawn.
+- `propose_icon_change()` — circle members only, whitelisted fields.
+- `decide_icon_proposal()` — the Icon only, and **the only path in the
+  database that can apply the change**. Nothing writes before approval.
+- Notifications both ways: the Icon on proposal, the proposer on decision.
 
 ## Contract dependencies
 

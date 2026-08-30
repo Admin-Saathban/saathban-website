@@ -165,6 +165,7 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
       </span>
       <span style={{ minWidth: 0, textAlign: align === "end" ? "end" : "start" }}>
         <span
+          dir="auto"
           style={{
             display: "block",
             fontSize: ts(16),

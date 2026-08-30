@@ -88,7 +88,7 @@ export function ChatBubbles({ bubbles, cornerOf }) {
                 lineHeight: 1.35,
               }}
             >
-              {sticker ? <Sticker id={sticker} size={54} /> : b.text}
+              {sticker ? <Sticker id={sticker} size={54} /> : <span dir="auto">{b.text}</span>}
             </div>
           </div>
         );

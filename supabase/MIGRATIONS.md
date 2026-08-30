@@ -116,7 +116,7 @@ Deliberately NOT in it: replying is never gated, and messaging someone you
 are already connected to is never gated — §6 is explicit that a blanket
 block traps the isolated senior and merely inconveniences a scammer.
 
-## 0056 — Fam proposes, Icon disposes (saathban-website-38, 2026-08-30)
+## 0056 — Fam proposes, Icon disposes (saathban-website-38, 2026-08-30) — **APPLIED**
 
 `0056_fam_proposes.sql` — PRODUCT_DECISIONS §10, enforced at the database
 because §0.9 and §20.6 both require a negative test proving an unapproved

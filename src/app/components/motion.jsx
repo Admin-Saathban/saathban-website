@@ -179,7 +179,24 @@ export function MotionStyles() {
 /* The class a full-screen route should wear, from the direction it was
    opened with. Defaults to the right, which is the common case. */
 export function arrivalClass(locationState) {
-  const from = locationState?.sbFrom;
   if (wantsLessMotion()) return "";
-  return from === "left" ? "sb-full-left" : "sb-full-right";
+  const from = locationState?.sbFrom;
+  if (from === "left") return "sb-full-left";
+  if (from === "right") return "sb-full-right";
+  /* NO STATE. The old fallback was a bare "sb-full-right", commented
+     "the common case" — which it is in English and wrong in Urdu,
+     where the header mirrors and the buttons sit on the left. It was
+     the same hard-coded physical side I had just deleted from four
+     call sites, surviving as this helper's own default and inherited
+     by every consumer.
+
+     Reachable without any of them doing anything wrong: a refresh, a
+     pasted URL, browser restore, or any navigate that does not go
+     through openFullScreen. Found by Lane 38 while adopting this
+     helper — the fix removes a physical side from the last place one
+     was left.
+
+     Defaults to the INLINE-END edge, mirrored, because that is where
+     all but one of the app's openers sit. */
+  return docDir() === "rtl" ? "sb-full-left" : "sb-full-right";
 }

@@ -116,23 +116,19 @@ export default function MessagesWorld() {
   const { state } = useLocation();
 
   /* MOTION_SPEC §1: this world arrives from the side that was touched.
-     The side is decided at DISPATCH — MessagesButton passes the logical
-     "end", openFullScreen resolves it against the reading direction — so
-     switching language mid-session still reverses the animation actually
-     watched, which is why this reads location state rather than the DOM.
+     Decided at DISPATCH — MessagesButton passes the logical "end" and
+     openFullScreen resolves it against the reading direction — so
+     switching language mid-session still reverses the animation that was
+     actually watched, which is why this reads location state and not the
+     DOM.
 
-     The fallback is the part arrivalClass gets wrong. It defaults to
-     sb-full-right, commented "the common case" — true in English only. In
-     Urdu the header mirrors and the messages icon sits on the LEFT, so a
-     stateless arrival (a refresh, a pasted URL, any navigate that skips
-     openFullScreen) would animate in from the wrong edge. That is the
-     same hard-coded physical side the navigation lane just removed from
-     four call sites, surviving one layer in as the helper's default.
-     Reported to them; until it moves, this screen supplies the missing
-     half rather than inheriting the bug. */
-  const arrival = state?.sbFrom
-    ? arrivalClass(state)
-    : arrivalClass({ sbFrom: meta.dir === "rtl" ? "left" : "right" });
+     This used to pass an explicit fallback for the stateless case,
+     because arrivalClass defaulted to a bare sb-full-right and would
+     have arrived from the wrong edge in Urdu on any refresh or pasted
+     URL. That is fixed in the helper now (it mirrors to the inline-end),
+     so the workaround is gone: a local patch that outlives the bug it
+     was written for is how one vocabulary becomes two again. */
+  const arrival = arrivalClass(state);
 
   /* §5.4 presence: touched while the world is open, and again on a
      slow interval. No socket, no heartbeat storm — see 0076. */

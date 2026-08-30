@@ -388,6 +388,54 @@ export default function LudoSession() {
     return () => window.clearTimeout(id);
   }, [autoNote]);
 
+  /* ── HOW BIG CAN THE BOARD BE? ────────────────────────────────
+     The play screen is one viewport and nothing scrolls, so the board
+     gets whatever is left after the rows above and below it have taken
+     what they need. That is a measurement, not a guess: a fixed
+     fraction of the height is right on exactly one phone and wrong on
+     every other, and CSS alone cannot fit a SQUARE into a box whose
+     width and height are both constrained without one axis winning.
+
+     So the slot is measured and the board is given the largest square
+     that fits inside it. On a tall phone that square is the full
+     width; on a 667px one it is the height, and the board is smaller —
+     which is the correct answer. A board that is smaller is still a
+     board. A board with its bottom edge below the fold is not. */
+  const fitRef = useRef(null);
+  const [boardPx, setBoardPx] = useState(0);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      const side = Math.max(140, Math.floor(Math.min(r.width, r.height)));
+      setBoardPx((prev) => (Math.abs(prev - side) > 1 ? side : prev));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    /* The URL bar collapsing changes dvh without resizing the element
+       on some browsers, so the viewport itself is watched too. */
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [game?.status]);
+
+  /* SHORT SCREENS GIVE UP THE ACTION ROW, NOT THE BOARD. Below this
+     the emoji/chat/leave pills move into the top bar as icons rather
+     than pushing the board off the bottom of the screen. */
+  const [shortScreen, setShortScreen] = useState(false);
+  useEffect(() => {
+    const check = () => setShortScreen(window.innerHeight < 720);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const [soundOpen, setSoundOpen] = useState(false);
 
   /* Ludo keeps its last move in state rather than fetching the move
@@ -416,7 +464,8 @@ export default function LudoSession() {
   const rules = game.status === "lobby" ? game.house_rules : state.rules || game.house_rules;
   const mySeatRow = seats.find((s) => s.profile_id === myId);
   const currentRow = seats.find((s) => s.seat === game.current_seat);
-  const isMyTurn = game.status === "playing" && currentRow?.profile_id === myId;
+  const playing = game.status === "playing";
+  const isMyTurn = playing && currentRow?.profile_id === myId;
   /* WHERE THE DICE LIVE — settled by LUDO_UI_SPEC §3, "next to their
      own avatar, not in the board's middle". Two users had asked for
      opposite things (a die per person; dice in the middle where thrown
@@ -487,15 +536,62 @@ export default function LudoSession() {
       <GameMotionStyles />
       <Confetti active={game.status === "finished" && game.winner_seat === mySeatRow?.seat} />
 
+      {/* THE COLUMN. During play it is the viewport: flex, no scroll,
+          the board taking whatever the rows leave it. In the lobby and
+          after the final whistle it scrolls like the page it is —
+          those screens are reading, not playing. */}
+      <div
+        style={
+          playing
+            ? {
+                display: "flex",
+                flexDirection: "column",
+                flex: "1 1 auto",
+                minHeight: 0,
+                overflow: "hidden",
+                padding: "6px 12px 8px",
+                maxWidth: 640,
+                width: "100%",
+                margin: "0 auto",
+              }
+            : { overflowY: "auto", padding: "16px 12px 64px", maxWidth: 640, width: "100%", margin: "0 auto" }
+        }
+      >
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          margin: game.status === "playing" ? "0 0 4px" : "8px 0 10px",
+          margin: playing ? "0 0 4px" : "8px 0 10px",
+          flex: "0 0 auto",
         }}
       >
+        {/* THE WAY BACK. The app header is not on this screen — it is
+            what the board used to slide underneath — so the door out
+            lives here, inside the layout, where it can never overlap
+            what it sits above. */}
+        {playing && (
+          <button
+            type="button"
+            onClick={() => navigate("/app/games")}
+            aria-label={t("games.session.backCta")}
+            style={{
+              flex: "0 0 auto",
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              border: "none",
+              background: "transparent",
+              color: C.green,
+              fontSize: 26,
+              lineHeight: 1,
+              cursor: "pointer",
+            }}
+          >
+            ←
+          </button>
+        )}
         {/* The name of the game earns its space in the lobby, where
             there is no board yet. Once play starts the board IS the
             screen (§1) and the title is 30px the board should have. */}
@@ -533,9 +629,63 @@ export default function LudoSession() {
             </p>
           )
         )}
+        {/* LEAVING LIVES UP HERE NOW, during play. It is a door, not
+            an action of the game, and down in the action row it was a
+            full-width pill costing the board about 70px of height on
+            every screen. Requirement: on a short screen the leave
+            control collapses into the bar rather than pushing the
+            board off the bottom — so it does, on every screen, since
+            the reasoning does not stop being true at 721px. Still a
+            44px target, still labelled for a screen reader, still
+            opens the same warm confirm. */}
+        {playing && mySeatRow && (
+          <button
+            type="button"
+            onClick={() => setLeaveAsk(true)}
+            aria-label={t("ludo.ceremony.leaveCta")}
+            title={t("ludo.ceremony.leaveCta")}
+            style={{
+              flex: "0 0 auto",
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              border: `1px solid ${C.line || "#E3D9C6"}`,
+              background: C.white,
+              color: C.textMain,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            {/* DRAWN, NOT TYPED. 🚪 renders as a blank tofu box on
+                anything without an emoji font for it — which included
+                the browser this was verified in, so the control that
+                leaves the game showed as a brown rectangle. A door
+                with an arrow out of it costs eleven lines and renders
+                identically everywhere. */}
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path d="M12 12h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="m18 8.5 3.5 3.5L18 15.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
         <SoundButton
           onClick={() => setSoundOpen((v) => !v)}
-          compact={game.status === "playing"}
+          compact={playing}
         />
       </div>
 
@@ -645,7 +795,7 @@ export default function LudoSession() {
           {/* Whose turn, and what just happened. No card and no
               countdown bar: the clock is drawn on the player (§2) and
               the border was costing the board ninety pixels. */}
-          <div style={{ margin: "0 0 10px" }}>
+          <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               {/* Whose turn is said by the ring, the bouncing arrow and
                   the plate's own "your turn" line (§2/§3). Repeating it
@@ -659,7 +809,21 @@ export default function LudoSession() {
               )}
             </div>
             {last && (
-              <BodyText muted style={{ margin: "10px 0 0", fontSize: ts(18) }}>
+              <BodyText
+                muted
+                style={{
+                  margin: playing ? "4px 0 0" : "10px 0 0",
+                  fontSize: ts(18),
+                  /* ONE LINE on the play screen. This is the running
+                     commentary — useful, never urgent — and when it
+                     wrapped to three lines it took them off the
+                     board. Ellipsis rather than a shorter sentence,
+                     because the sentence is also read aloud. */
+                  ...(playing
+                    ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+                    : null),
+                }}
+              >
                 {last.skipped
                   ? t("ludo.last.skipped", {
                       name: seatName(seats.find((s) => s.seat === last.seat), t),
@@ -688,6 +852,7 @@ export default function LudoSession() {
 
           {/* ── The four players, at the four corners, outside the
                  board. Yours follows your yard down to the near side. ── */}
+          <div style={{ flex: "0 0 auto" }}>
           <SeatPlates
             where="top"
             seats={seats}
@@ -703,8 +868,33 @@ export default function LudoSession() {
             secondsLeft={secondsLeft}
             turnSeconds={turnSeconds}
           />
+          </div>
 
-          <div style={{ position: "relative" }}>
+          {/* THE SLOT. It takes every pixel the rows above and below
+              do not, and the board inside it is the largest square
+              that fits. min-height: 0 is what makes that true — a
+              flex child's default min-height is its content, so
+              without it the board would refuse to shrink and would
+              push the roll button off the bottom instead, which is
+              the whole bug in miniature. */}
+          <div
+            ref={fitRef}
+            style={{
+              flex: "1 1 auto",
+              minHeight: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+          <div
+            style={{
+              position: "relative",
+              width: boardPx ? boardPx : "100%",
+              maxWidth: "100%",
+            }}
+          >
           {/* Remarks float by the speaker's corner — the corner they
               are actually sitting at after the POV rotation. */}
           <ChatBubbles
@@ -770,6 +960,7 @@ export default function LudoSession() {
           <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>
             {t("ludo.legend.flow")}
           </p>
+          </div>
           </div>
 
           <SeatPlates
@@ -871,7 +1062,15 @@ export default function LudoSession() {
             <PrimaryBtn
               onClick={doRoll}
               disabled={busy || rolling}
-              style={{ width: "100%", minHeight: 64, fontSize: ts(22), marginTop: 12 }}
+              style={{
+                width: "100%",
+                /* Comfortably past the 48px floor without taking a
+                   sixth of a small phone. */
+                minHeight: 56,
+                fontSize: ts(20),
+                marginTop: 8,
+                flex: "0 0 auto",
+              }}
             >
               🎲 {t("ludo.turn.rollCta")}
             </PrimaryBtn>
@@ -902,17 +1101,42 @@ export default function LudoSession() {
 
       {/* Chat travels with every phase */}
       {mySeatRow && (
-        <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", margin: "12px 0 0" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            /* ONE ROW during play. Wrapping is what turned three pills
+               into three stacked rows and took roughly 200px off the
+               board; off the play screen it may wrap as it always
+               did. Leave is not here any more — it is in the bar. */
+            flexWrap: playing ? "nowrap" : "wrap",
+            margin: playing ? "8px 0 0" : "12px 0 0",
+            flex: "0 0 auto",
+          }}
+        >
           <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} />
           <QuickChat onSend={sayQuick} disabled={game.status === "finished"} />
-          {game.status !== "finished" && (
+          {!playing && game.status !== "finished" && (
             <GhostBtn onClick={() => setLeaveAsk(true)} style={{ minHeight: 52 }}>
               {t("ludo.ceremony.leaveCta")}
             </GhostBtn>
           )}
         </div>
       )}
-      {mySeatRow && <ChatPanel sessionId={game.id} myId={myId} seats={seats} />}
+      {/* THE THREAD STANDS DOWN ON A SHORT SCREEN. Its trigger is a
+          full-width bar costing about 70px, and on a 667px phone that
+          is 70px taken from the only thing on the screen that matters.
+          Quick phrases and emoji stay — they are the two taps people
+          actually use mid-game — and the full thread is a tap away
+          again the moment the game ends or the screen is taller. */}
+      {mySeatRow && !(playing && shortScreen) && (
+        <div style={{ flex: "0 0 auto" }}>
+          <ChatPanel sessionId={game.id} myId={myId} seats={seats} />
+        </div>
+      )}
+
+      </div>
 
       {/* Leaving is a decision, so it is asked as one — warmly, and
           with the seat's fate stated rather than implied. */}

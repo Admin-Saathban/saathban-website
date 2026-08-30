@@ -15,6 +15,44 @@ import { COLORS as C } from "../../../../shared/tokens.js";
 import LudoHome from "./LudoHome.jsx";
 import LudoSession from "./LudoSession.jsx";
 
+/* THE PLAY SCREEN IS NOT A PAGE.
+
+   A session used to render inside the same scrolling <main> as every
+   other screen, under a sticky app header. So the board scrolled, and
+   the turn-status line — the one line telling you what to do — slid
+   up and was cut in half by the header sitting over it. The user
+   photographed exactly that.
+
+   Being inside a game should feel like being inside a game. This is
+   one viewport, exactly: 100dvh (dvh, not vh, so a phone's collapsing
+   URL bar cannot leave a strip of board under the fold), no page
+   scroll, and NO APP HEADER — the header is what the content was
+   sliding under, and hiding it also buys back its height for the
+   board on a 667px phone. The way back out lives inside the screen
+   instead, where it cannot overlap anything.
+
+   Everything inside sizes itself to whatever height it is given: the
+   board shrinks, the rows do not. A board that is smaller on a small
+   phone is still a board; a board with its bottom off-screen is not. */
+function PlayScreen({ children }) {
+  return (
+    <main
+      style={{
+        height: "100dvh",
+        minHeight: "100vh",     /* the fallback, for anything without dvh */
+        maxHeight: "100dvh",
+        overflow: "hidden",
+        background: C.bg,
+        color: C.textMain,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {children}
+    </main>
+  );
+}
+
 function Screen({ children }) {
   return (
     <main
@@ -33,14 +71,31 @@ function Screen({ children }) {
 export default function LudoRoutes() {
   return (
     <>
-      <AppHeader />
-      <Screen>
-        <Routes>
-          <Route index element={<LudoHome />} />
-          <Route path=":sessionId" element={<LudoSession />} />
-          <Route path="*" element={<Navigate to="/app/games/ludo" replace />} />
-        </Routes>
-      </Screen>
+      <Routes>
+        {/* A session is a game; everything else here is a page. The
+            header is rendered per-branch rather than above the switch,
+            because the play screen must not have one at all. */}
+        <Route
+          path=":sessionId"
+          element={
+            <PlayScreen>
+              <LudoSession />
+            </PlayScreen>
+          }
+        />
+        <Route
+          index
+          element={
+            <>
+              <AppHeader />
+              <Screen>
+                <LudoHome />
+              </Screen>
+            </>
+          }
+        />
+        <Route path="*" element={<Navigate to="/app/games/ludo" replace />} />
+      </Routes>
     </>
   );
 }

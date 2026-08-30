@@ -238,7 +238,7 @@ export default function AdminLayout() {
         {/* Coming later in the build order — visible so the shape of the
             admin area is legible, disabled so nothing dead-ends.
             (Milestone messages went live — it's in the nav above.) */}
-        {["Accounts & recovery", "Audit log"].map(
+        {[t("admin.soonAccounts"), t("admin.soonAudit")].map(
           (label) => (
             <div
               key={label}
@@ -255,9 +255,7 @@ export default function AdminLayout() {
               }}
             >
               {label}
-              <span style={{ marginLeft: "auto", fontSize: 13, color: C.sage }}>
-                soon
-              </span>
+              <span style={{ marginLeft: "auto", fontSize: 13, color: C.sage }}>{t("admin.soonBadge")}</span>
             </div>
           )
         )}
@@ -283,7 +281,11 @@ export default function AdminLayout() {
             <strong>{admin.name}</strong>
             <span style={{ color: C.textMuted }}>
               {" · "}
-              {admin.level === "super" ? "Super-admin" : "Support admin"}
+              {admin.level === "super"
+                ? t("admin.levelSuper")
+                : admin.level === "moderator"
+                  ? t("admin.levelModerator")
+                  : t("admin.levelSupport")}
             </span>
           </span>
         </header>

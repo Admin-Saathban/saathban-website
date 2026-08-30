@@ -138,11 +138,8 @@ export default function ModerationQueue() {
         }}
       >{t("admin.moderation")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
-        Reports from community posts, comments, and direct messages. The
-        response target is measured in <strong>hours, not days</strong>. DM
-        reports show the reporter's snapshot — threads themselves stay
-        private to their participants.
-      </p>
+        {t("admin.moderationIntro")}
+            </p>
 
       {error && (
         <p role="alert" style={{ color: C.brown, fontWeight: 700 }}>

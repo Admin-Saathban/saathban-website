@@ -86,9 +86,8 @@ export default function QuestionsQueue() {
         }}
       >{t("admin.questions")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px" }}>
-        Anyone signed in can ask. A reply is stored on the thread and delivered
-        to the asker as a notification.
-      </p>
+        {t("admin.questionsIntro")}
+            </p>
 
       {error && (
         <p

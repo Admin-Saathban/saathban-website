@@ -95,9 +95,8 @@ export default function BroadcastsPage() {
         }}
       >{t("admin.broadcasts")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px" }}>
-        An in-app notification to every active account, or one role. Every send
-        is audit-logged with its recipient count.
-      </p>
+        {t("admin.broadcastsIntro")}
+            </p>
 
       {sent && (
         <p

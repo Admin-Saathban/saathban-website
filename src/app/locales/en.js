@@ -1257,6 +1257,16 @@ const en = {
      locale block at all — a §0.1 gap wider than tonight and worth
      someone taking. This block is the start of one. */
   admin: {
+    buddyIntro: "Volunteers are matched with isolated seniors, so the bar is high. A Buddy has no access to any Icon data before they are active.",
+    questionsIntro: "Anyone signed in can ask. A reply is stored on the thread and delivered to the asker as a notification.",
+    broadcastsIntro: "An in-app notification to every active account, or one role. Every send is audit-logged with its recipient count.",
+    soonBadge: "soon",
+    soonAccounts: "Accounts & recovery",
+    soonAudit: "Audit log",
+    levelSuper: "Super-admin",
+    levelSupport: "Support admin",
+    levelModerator: "Moderator",
+    moderationIntro: "Reports from community posts, comments, and direct messages. The response target is measured in hours, not days. A report about a direct message shows the reporter's snapshot — the threads themselves stay private to the people in them.",
     navMilestones: "Milestones",
     audienceEveryone: "Everyone (all active accounts)",
     spaceCommunity: "Community feed",

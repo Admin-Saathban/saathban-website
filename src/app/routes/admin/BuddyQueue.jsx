@@ -45,10 +45,8 @@ export default function BuddyQueue() {
         }}
       >{t("admin.buddyReview")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
-        Volunteers are matched with isolated seniors, so the bar is high. A
-        Buddy has no access to any Icon data before they are{" "}
-        <strong>active</strong>.
-      </p>
+        {t("admin.buddyIntro")}
+            </p>
 
       {/* ─── Pipeline tabs ─── */}
       <div

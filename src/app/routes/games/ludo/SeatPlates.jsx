@@ -350,16 +350,31 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
       >
         <span
           dir="auto"
-          style={{
-            display: "block",
-            fontSize: ts(16),
-            fontWeight: 700,
-            /* Light on the table, dark on the cream card. */
-            color: isTurn ? C.textMain : GAME.ink,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
+          style={
+            /* Crowded: my own name steps aside for my own turn line.
+               Off-screen rather than removed — the name is still read
+               aloud, it just stops competing for 60px the dice and the
+               instruction need more. */
+            isMe && dice && dice.length > 1
+              ? {
+                  position: "absolute",
+                  width: 1,
+                  height: 1,
+                  overflow: "hidden",
+                  clip: "rect(0 0 0 0)",
+                  whiteSpace: "nowrap",
+                }
+              : {
+                  display: "block",
+                  fontSize: ts(16),
+                  fontWeight: 700,
+                  /* Light on the table, dark on the cream card. */
+                  color: isTurn ? C.textMain : GAME.ink,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }
+          }
         >
           {name}
           {isMe ? ` (${t("ludo.seat.you")})` : ""}

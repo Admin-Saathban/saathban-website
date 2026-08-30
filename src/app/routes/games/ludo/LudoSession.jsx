@@ -1163,7 +1163,7 @@ export default function LudoSession() {
                   play only the ACTIONABLE half survives: which dice you
                   are holding and must now spend. */}
               {isMyTurn && hasDice && (
-                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
+                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px", color: GAME.ink }}>
                   {t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })}
                 </BodyText>
               )}

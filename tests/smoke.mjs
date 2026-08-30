@@ -139,8 +139,15 @@ for (const [email, label, home, foreign] of ROLES) {
 {
   const session = await login("test-icon@saathban.dev");
   const { ctx, page } = await pageFor(browser, session);
-  const hubText = await goto(page, "/app/home");
-  check("icon: hub renders area cards", hubText.includes("Community") && hubText.includes("Events"));
+  await goto(page, "/app/home");
+  // Wait for the thing being asserted, not for a guessed duration.
+  await page.locator("text=Community").first().waitFor({ timeout: 15000 }).catch(() => {});
+  const hubText = (await page.evaluate(() => document.body.innerText)).trim();
+  check(
+    "icon: hub renders area cards",
+    hubText.includes("Community") && hubText.includes("Events"),
+    hubText.slice(0, 60).split(String.fromCharCode(10)).join(" | ")
+  );
   await goto(page, "/app/home/log");
   const moodHeader = page
     .locator('button[aria-expanded]')
@@ -263,18 +270,47 @@ for (const [email, label, home, foreign] of ROLES) {
   const famSess = await login("smoke-fam@saathban.dev");
   const buddySess = await login("test-buddy@saathban.dev");
 
+  const authed = (sess) => ({
+    apikey: ANON,
+    Authorization: `Bearer ${sess.access_token}`,
+    "Content-Type": "application/json",
+  });
+  const live = await (
+    await fetch(
+      `${SUPA}/rest/v1/game_sessions?select=id&created_by=eq.${iconSess.user.id}&status=in.(lobby,active)`,
+      { headers: authed(iconSess) }
+    )
+  ).json();
+  for (const t of Array.isArray(live) ? live : []) {
+    await fetch(`${SUPA}/rest/v1/rpc/leave_game_session`, {
+      method: "POST",
+      headers: authed(iconSess),
+      body: JSON.stringify({ p_session: t.id }),
+    });
+  }
+
   const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
   await goto(iconPage, "/app/games", 2000);
-  await iconPage.locator('button:has-text("Open a table")').last().click(); // Race to 100
-  await iconPage.waitForTimeout(1400);
+  await iconPage.locator('button:has-text("Start a game")').first().click();
+  await iconPage.waitForTimeout(900);
+  // The picker labels games by their real names; "Race to 100" was
+  // this one's old title and matched nothing.
+  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
+  await iconPage.waitForTimeout(1600);
+  // Fill the empty seat with a person rather than a bot.
+  await iconPage.locator('button[aria-label="Someone you know"]').first().click();
+  await iconPage.waitForTimeout(1500);
   check(
-    "games: create opens people picker",
-    (await iconPage.evaluate(() => document.body.innerText)).includes("Who's playing?")
+    "games: an empty seat opens the people sheet",
+    (await iconPage.evaluate(() => document.body.innerText)).includes("Who is playing?")
   );
   await iconPage.locator('button:has-text("Smoke Fam")').first().click();
-  await iconPage.waitForTimeout(500);
-  await iconPage.locator('button:has-text("set the table")').first().click();
-  await iconPage.waitForTimeout(3000);
+  // The seat has to actually register before Start will do anything;
+  // clicking too early leaves you on the same screen with no error.
+  await iconPage.waitForTimeout(1400);
+  await iconPage.locator('button:has-text("Start")').last().click();
+  await iconPage.waitForFunction(() => location.pathname.startsWith("/app/games/s/"), null, { timeout: 20000 }).catch(() => {});
+  await iconPage.waitForTimeout(1500);
   const sessionPath = pathOf(iconPage);
   check("games: table created with invite", /^\/app\/games\/s\//.test(sessionPath), sessionPath);
 
@@ -301,13 +337,47 @@ for (const [email, label, home, foreign] of ROLES) {
   await famCtx.close();
 
   // Open table + code join.
+  // The table just played is still live, and the games home refuses
+  // to open a second one — so leave it before opening the public one.
+  const stillLive = await (
+    await fetch(
+      SUPA + "/rest/v1/game_sessions?select=id&created_by=eq." + iconSess.user.id + "&status=in.(lobby,active)",
+      { headers: authed(iconSess) }
+    )
+  ).json();
+  for (const t of Array.isArray(stillLive) ? stillLive : []) {
+    await fetch(SUPA + "/rest/v1/rpc/leave_game_session", {
+      method: "POST",
+      headers: authed(iconSess),
+      body: JSON.stringify({ p_session: t.id }),
+    });
+  }
+
   await goto(iconPage, "/app/games", 1800);
-  await iconPage.locator('button:has-text("Open a table")').last().click();
+  await iconPage.locator('button:has-text("Start a game")').first().click();
+  await iconPage.waitForTimeout(900);
+  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
+  await iconPage.waitForTimeout(1800);
+  // "Anyone from the community" is what makes the table public and
+  // gives it the spoken 6-digit code.
+  await iconPage.locator('button[aria-label="Anyone from the community"]').first().click();
+  await iconPage.waitForTimeout(1400);
+  await iconPage.locator('button:has-text("Start")').last().click();
+  await iconPage.waitForFunction(() => location.pathname.startsWith("/app/games/s/"), null, { timeout: 20000 }).catch(() => {});
+  await iconPage.waitForTimeout(1800);
+  // The code lives behind the share toggle and is NOT in the page
+  // text by default. Scraping body text for six digits used to work
+  // and now picks up the board's own numerals instead — a check that
+  // passes on a number which is not the code, then fails the join it
+  // feeds. Open the panel and read the element that holds the code.
+  await iconPage.locator('button:has-text("Share code")').first().click();
   await iconPage.waitForTimeout(1200);
-  await iconPage.locator('button:has-text("set the table"), button:has-text("open the table")').first().click();
-  await iconPage.waitForTimeout(2800);
-  const lobby = await iconPage.evaluate(() => document.body.innerText);
-  const code = (lobby.match(/(\d[\s ]?){6}/) || [""])[0].replace(/\D/g, "");
+  const code = (
+    await iconPage.evaluate(() => {
+      const el = document.querySelector('p[dir="ltr"][aria-label]');
+      return el ? el.textContent.trim() : "";
+    })
+  ).replace(/[^0-9]/g, "");
   check("games: open table shows 6-digit code", code.length === 6, code);
 
   if (code.length === 6) {

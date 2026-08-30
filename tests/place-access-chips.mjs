@@ -2,11 +2,83 @@
    them. Not "the query returns rows": the rows are worthless if the
    place row does not render them, and a green build proves neither.
    Both languages, because §4's words ARE the feature and an English
-   chip on an Urdu screen is a broken chip. */
+   chip on an Urdu screen is a broken chip.
+
+   ── Why this file now confirms notes before it looks ──
+
+   0065 made an unverified note invisible to everyone, and the notes
+   seeded in 0064 are guesses. So the honest state of the app is that
+   NO chips render until an admin has actually checked something,
+   which is correct and which broke this test — it was asserting a
+   contract that no longer exists.
+
+   The fixture therefore confirms two notes through the real admin
+   path, looks, and then puts them BACK to unverified. That last step
+   matters: leaving them confirmed would mean this test had quietly
+   published my own guesses to every person using the app, which is
+   the exact harm §4 is about. A test that has to lie about the world
+   to pass should change the world back. */
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
-const BASE = (process.env.BASE_URL || "http://localhost:4173").replace(/\/$/, "");
+const BASE = await (async () => {
+  const raw = process.env.BASE_URL;
+  if (!raw) {
+    console.error(
+      "BASE_URL is required — there is no default on purpose.\n" +
+      "  local:    BASE_URL=http://localhost:<the port vite ACTUALLY printed> node <this file>\n" +
+      "  deployed: BASE_URL=https://<preview host> node <this file>"
+    );
+    process.exit(2);
+  }
+  let u;
+  try { u = new URL(raw); } catch {
+    console.error(`BASE_URL is not a usable URL: ${JSON.stringify(raw)}`);
+    process.exit(2);
+  }
+  const base = raw.replace(/\/$/, "");
+  const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
+
+  // new URL("http://localhost:") parses fine and has an empty port.
+  // That string is what you get from grepping vite's output, because
+  // it prints ANSI colour codes between the colon and the digits.
+  if (local && !u.port) {
+    console.error(`BASE_URL names no port: ${raw}\nvite preview does not serve on 80 — pass the port it printed.`);
+    process.exit(2);
+  }
+
+  let html;
+  try {
+    const r = await fetch(base + "/app/", { redirect: "follow" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    html = await r.text();
+  } catch (e) {
+    console.error(`Nothing is answering at ${base} (${e.message}).`);
+    process.exit(2);
+  }
+
+  /* Is it THIS build? Several lanes share this directory, so the
+     thing on the port you guessed is very often somebody else's
+     older preview, and it answers 200 to everything. */
+  if (local) {
+    const served = (html.match(/\/assets\/index-[A-Za-z0-9_-]+\.js/) || [])[0];
+    let built = null;
+    try {
+      built = (readFileSync("dist/index.html", "utf8").match(/\/assets\/index-[A-Za-z0-9_-]+\.js/) || [])[0];
+    } catch { /* no dist/ — nothing to compare against, so say nothing */ }
+    if (built && served && built !== served) {
+      console.error(
+        `${base} is serving a DIFFERENT build than dist/.\n` +
+        `  served: ${served}\n  dist:   ${built}\n` +
+        "Another lane's preview is probably on that port — vite walks 4173→4178 in\n" +
+        "silence when it is taken. Results from here would describe their build, not yours."
+      );
+      process.exit(2);
+    }
+    if (built && served) console.log(`(serving ${served}, matches dist/)`);
+  }
+  return base;
+})();
 const raw = readFileSync("./.env.local", "utf8");
 const g = (n) => { const l = raw.split(/\r?\n/).find((x) => x.startsWith(n)); return l.slice(l.indexOf("=") + 1).trim(); };
 const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");
@@ -21,6 +93,49 @@ if (!s.access_token) { console.log("login failed"); process.exit(2); }
 
 let fails = 0;
 const check = (n, ok, note = "") => { if (!ok) fails++; console.log((ok ? "PASS" : "FAIL").padEnd(5), n.padEnd(58), String(note).slice(0, 40)); };
+
+/* ── Confirm two notes, as an admin, through the same columns the
+      admin screen writes. Hill Park is the seeded place these
+      assertions read. ── */
+/* THREE places, not one, and the reason is a trap worth writing
+   down: Hill Park is in KARACHI, and the places list opens on the
+   person's own city — Lahore for the test account. Confirming only
+   Hill Park made the place-screen assertions pass and every
+   list-row assertion fail, which reads exactly like the list being
+   broken. It was the fixture looking at the wrong city.
+
+   So: Hill Park for the place screen, and two Lahore places for the
+   list — one carrying greens and one carrying only greys, since the
+   grey assertions need a grey chip actually on screen. */
+const PLACE = "945a2b9b-42c5-483e-8919-8433a748ad12"; // Hill Park, Karachi
+const SEEDED = [
+  [PLACE, ["shade", "benches", "toilet", "steps_at_gate"]],
+  ["2949ea63-57dd-460b-887e-cd08aa92cf8c", ["shade", "benches", "toilet", "flat_walk"]], // Bagh-e-Jinnah, Lahore
+  ["23f33a2d-4b2a-4526-b780-bbc14b07bfcd", ["steps_at_gate", "no_shade"]],               // Badshahi, Lahore
+];
+
+const admin = await (await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
+  method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
+  body: JSON.stringify({ email: "test-admin@saathban.dev", password: "SaathTest!2026" }),
+})).json();
+if (!admin.access_token) { console.log("admin login failed"); process.exit(2); }
+
+const setVerified = async (on) => {
+  for (const [place, features] of SEEDED) {
+    for (const f of features) {
+      await fetch(`${SUPA}/rest/v1/outdoor_place_access?place_id=eq.${place}&feature=eq.${f}`, {
+        method: "PATCH",
+        headers: { apikey: ANON, Authorization: `Bearer ${admin.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: on, verified_at: on ? new Date().toISOString() : null }),
+      });
+    }
+  }
+};
+await setVerified(true);
+
+/* Whatever happens below, the guesses go back to being guesses. */
+const restore = async () => { await setVerified(false); };
+process.on("exit", () => { /* best effort; the explicit call below is the real one */ });
 
 const b = await chromium.launch({ channel: "msedge", headless: true });
 
@@ -107,5 +222,16 @@ for (const lang of ["en", "ur"]) {
 }
 
 await b.close();
+await restore();
+
+/* Prove the restore actually happened, rather than trusting it. A
+   test that silently left my guesses published would be worse than a
+   test that failed. */
+const left = await (await fetch(
+  `${SUPA}/rest/v1/outdoor_place_access?select=feature&verified=is.true`,
+  { headers: { apikey: ANON, Authorization: `Bearer ${admin.access_token}` } })).json();
+check("CLEANUP: the seeded guesses are unverified again",
+  Array.isArray(left) && left.length === 0, `${left?.length ?? "?"} left confirmed`);
+
 console.log(`\n${fails} failed.`);
 process.exit(fails ? 1 : 0);

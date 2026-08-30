@@ -15,7 +15,64 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
-const BASE = (process.env.BASE_URL || "http://localhost:4173").replace(/\/$/, "");
+const BASE = await (async () => {
+  const raw = process.env.BASE_URL;
+  if (!raw) {
+    console.error(
+      "BASE_URL is required — there is no default on purpose.\n" +
+      "  local:    BASE_URL=http://localhost:<the port vite ACTUALLY printed> node <this file>\n" +
+      "  deployed: BASE_URL=https://<preview host> node <this file>"
+    );
+    process.exit(2);
+  }
+  let u;
+  try { u = new URL(raw); } catch {
+    console.error(`BASE_URL is not a usable URL: ${JSON.stringify(raw)}`);
+    process.exit(2);
+  }
+  const base = raw.replace(/\/$/, "");
+  const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
+
+  // new URL("http://localhost:") parses fine and has an empty port.
+  // That string is what you get from grepping vite's output, because
+  // it prints ANSI colour codes between the colon and the digits.
+  if (local && !u.port) {
+    console.error(`BASE_URL names no port: ${raw}\nvite preview does not serve on 80 — pass the port it printed.`);
+    process.exit(2);
+  }
+
+  let html;
+  try {
+    const r = await fetch(base + "/app/", { redirect: "follow" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    html = await r.text();
+  } catch (e) {
+    console.error(`Nothing is answering at ${base} (${e.message}).`);
+    process.exit(2);
+  }
+
+  /* Is it THIS build? Several lanes share this directory, so the
+     thing on the port you guessed is very often somebody else's
+     older preview, and it answers 200 to everything. */
+  if (local) {
+    const served = (html.match(/\/assets\/index-[A-Za-z0-9_-]+\.js/) || [])[0];
+    let built = null;
+    try {
+      built = (readFileSync("dist/index.html", "utf8").match(/\/assets\/index-[A-Za-z0-9_-]+\.js/) || [])[0];
+    } catch { /* no dist/ — nothing to compare against, so say nothing */ }
+    if (built && served && built !== served) {
+      console.error(
+        `${base} is serving a DIFFERENT build than dist/.\n` +
+        `  served: ${served}\n  dist:   ${built}\n` +
+        "Another lane's preview is probably on that port — vite walks 4173→4178 in\n" +
+        "silence when it is taken. Results from here would describe their build, not yours."
+      );
+      process.exit(2);
+    }
+    if (built && served) console.log(`(serving ${served}, matches dist/)`);
+  }
+  return base;
+})();
 const raw = readFileSync("./.env.local", "utf8");
 const g = (n) => { const l = raw.split(/\r?\n/).find((x) => x.startsWith(n)); return l.slice(l.indexOf("=") + 1).trim(); };
 const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");

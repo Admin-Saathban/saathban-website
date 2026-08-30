@@ -197,6 +197,40 @@ Until then Cancel is honest read as "leave this table"; the table
 stays open, which is harmless because a lobby table is only
 reachable by its code or an invite.
 
+## STANDING RULE (user-set, after the fourth work-loss incident this week)
+
+This supersedes the softer, conditional advice further down. Three
+clauses, no exceptions:
+
+1. **NEVER run `git restore --staged`, or any index manipulation, on
+   another lane's files.** Not even to protect them. Unstaging to keep
+   a peer's work OUT of your commit is what destroyed 357 lines,
+   twice, in one afternoon: it pins their path to a stale HEAD blob,
+   which then rides into your commit as a deletion nothing in your
+   diff mentions. If a peer's file is staged in the shared index,
+   leave it there and let them commit first.
+
+2. **Commit only with `git commit -- <your paths>`.** Not a bare
+   `git commit`, which takes whatever the shared index holds. Not a
+   private index or `commit-tree`, however carefully seeded — I used
+   that to avoid the shared index and it still produced a duplicated
+   state block and a red HEAD, because a synthesised tree is only ever
+   as fresh as the moment it was synthesised.
+
+3. **After EVERY commit, run `git show HEAD --stat` and read the file
+   list.** It must contain only your files. `git log` proves nothing:
+   it shows your own subject line on top even when someone else's
+   commit now sits above it, which is precisely how two of this week's
+   incidents went unnoticed by their authors.
+
+The one residual gap, stated so nobody assumes otherwise: clause 2
+commits the WORKING TREE at your paths, so if a peer has uncommitted
+edits inside a file you are also editing, their lines come with yours.
+Clause 3 does not catch that — it lists files, not lines. For a file
+genuinely shared mid-flight, stage your own hunks (`git apply --cached`
+with a patch of just those) and commit; that is index manipulation on
+YOUR OWN work, which clause 1 does not forbid.
+
 ## The stale-copy hazard (2026-08-30) — READ BEFORE WRITING A SHARED FILE
 
 In one afternoon this bit all three active lanes, in three different

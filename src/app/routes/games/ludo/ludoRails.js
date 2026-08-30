@@ -151,19 +151,19 @@ export async function fetchSession(sessionId) {
     names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
   }
 
-  /* THIS FALLBACK STAYS 60, and it is not an oversight.
+  /* NOW 30, because the SERVER now says 30.
 
-     game_tick decides when a turn has really lapsed, and ITS fallback
-     is 60. A table created before the new default carries no
-     turn_seconds at all, so dropping this to 30 would show that
-     table a clock counting from 30 while the server waited 60 — the
-     bar would empty, nothing would happen, and the player would be
-     told they had run out of time twice.
+     This used to be 60 deliberately: game_tick decides when a turn has
+     really lapsed and its fallback was 60, so a client counting 30
+     over a server waiting 60 would show a clock emptying while nothing
+     happened. That reasoning was right and it is why the client was
+     not changed on its own.
 
-     New tables carry turn_seconds explicitly (DEFAULT_RULES above), so
-     they never reach this line. It exists only for the old ones, and
-     for them 60 is the truth. */
-  const turnSeconds = Number(session.house_rules?.turn_seconds) || 60;
+     TONIGHT.md settles the number at 30, so the fallback moved on BOTH
+     sides — migration 0091 changes game_tick's — and the two agree
+     again. Tables that named their own turn_seconds are untouched
+     either way; this line only ever governed the ones that did not. */
+  const turnSeconds = Number(session.house_rules?.turn_seconds) || 30;
   const status = session.status === "active" ? "playing" : session.status;
 
   // The rails can't know Ludo's state shape; before the first action the

@@ -935,63 +935,6 @@ export default function LudoSession() {
           {/* Whose turn, and what just happened. No card and no
               countdown bar: the clock is drawn on the player (§2) and
               the border was costing the board ninety pixels. */}
-          <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              {/* Whose turn is said by the ring, the bouncing arrow and
-                  the plate's own "your turn" line (§2/§3). Repeating it
-                  here in full cost a line the board needed — so during
-                  play only the ACTIONABLE half survives: which dice you
-                  are holding and must now spend. */}
-              {isMyTurn && hasDice && (
-                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
-                  {t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })}
-                </BodyText>
-              )}
-            </div>
-            {last && (
-              <BodyText
-                muted
-                style={{
-                  margin: playing ? "4px 0 0" : "10px 0 0",
-                  fontSize: ts(18),
-                  /* ONE LINE on the play screen. This is the running
-                     commentary — useful, never urgent — and when it
-                     wrapped to three lines it took them off the
-                     board. Ellipsis rather than a shorter sentence,
-                     because the sentence is also read aloud. */
-                  ...(playing
-                    ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
-                    : null),
-                }}
-              >
-                {last.skipped
-                  ? t("ludo.last.skipped", {
-                      name: seatName(seats.find((s) => s.seat === last.seat), t),
-                      dice: rolledText(last),
-                    })
-                  : last.provisional
-                  ? /* A move made on a chained six: it is on the board
-                       in front of them, but it has not counted yet, and
-                       saying "moved" would be a small lie. */
-                    t("ludo.last.provisional", {
-                      name: seatName(seats.find((s) => s.seat === last.seat), t),
-                      dice: rolledText(last),
-                    })
-                  : last.capture
-                  ? t("ludo.last.capture", {
-                      name: seatName(seats.find((s) => s.seat === last.seat), t),
-                      dice: rolledText(last),
-                    })
-                  : t("ludo.last.moved", {
-                      name: seatName(seats.find((s) => s.seat === last.seat), t),
-                      dice: rolledText(last),
-                    })}
-              </BodyText>
-            )}
-          </div>
-
-          {/* ── The four players, at the four corners, outside the
-                 board. Yours follows your yard down to the near side. ── */}
           <div style={{ flex: "0 0 auto" }}>
           <SeatPlates
             where="top"
@@ -1160,6 +1103,63 @@ export default function LudoSession() {
             turnSeconds={turnSeconds}
           />
 
+          <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              {/* Whose turn is said by the ring, the bouncing arrow and
+                  the plate's own "your turn" line (§2/§3). Repeating it
+                  here in full cost a line the board needed — so during
+                  play only the ACTIONABLE half survives: which dice you
+                  are holding and must now spend. */}
+              {isMyTurn && hasDice && (
+                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
+                  {t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })}
+                </BodyText>
+              )}
+            </div>
+            {last && (
+              <BodyText
+                muted
+                style={{
+                  margin: playing ? "4px 0 0" : "10px 0 0",
+                  fontSize: ts(18),
+                  /* ONE LINE on the play screen. This is the running
+                     commentary — useful, never urgent — and when it
+                     wrapped to three lines it took them off the
+                     board. Ellipsis rather than a shorter sentence,
+                     because the sentence is also read aloud. */
+                  ...(playing
+                    ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+                    : null),
+                }}
+              >
+                {last.skipped
+                  ? t("ludo.last.skipped", {
+                      name: seatName(seats.find((s) => s.seat === last.seat), t),
+                      dice: rolledText(last),
+                    })
+                  : last.provisional
+                  ? /* A move made on a chained six: it is on the board
+                       in front of them, but it has not counted yet, and
+                       saying "moved" would be a small lie. */
+                    t("ludo.last.provisional", {
+                      name: seatName(seats.find((s) => s.seat === last.seat), t),
+                      dice: rolledText(last),
+                    })
+                  : last.capture
+                  ? t("ludo.last.capture", {
+                      name: seatName(seats.find((s) => s.seat === last.seat), t),
+                      dice: rolledText(last),
+                    })
+                  : t("ludo.last.moved", {
+                      name: seatName(seats.find((s) => s.seat === last.seat), t),
+                      dice: rolledText(last),
+                    })}
+              </BodyText>
+            )}
+          </div>
+
+          {/* ── The four players, at the four corners, outside the
+                 board. Yours follows your yard down to the near side. ── */}
           {/* ── What to do next, in one sentence ── */}
           {isMyTurn && hasDice && (
             <BodyText style={{ fontWeight: 700, margin: "10px 0 0", textAlign: "center" }}>

@@ -171,10 +171,13 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
         width: 44,
         height: 44,
         borderRadius: 12,
-        background: active ? "#fffdf7" : "#f3eee4",
-        border: `2px solid ${active ? colour : C.warmGray}`,
-        boxShadow: active ? `0 2px 8px ${colour}33` : "none",
-        opacity: active ? 1 : 0.55,
+        /* White, always. A die is a white object with dark pips; a
+           grey one reads as a disabled control rather than a die
+           somebody has already thrown. */
+        background: "#FFFFFF",
+        border: `2px solid ${active ? colour : "#CFC4AE"}`,
+        boxShadow: active ? `0 3px 10px ${colour}44` : "0 1px 3px rgba(74,58,34,0.18)",
+        opacity: active ? 1 : 0.82,
       }}
     >
       {value ? (
@@ -184,15 +187,39 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
             animation: rolling ? "saath-tumble 0.42s linear infinite" : undefined,
           }}
         >
-          <DieFace value={value} size={34} ink={spent ? C.textMuted : C.brown} />
+          <DieFace value={value} size={34} ink={spent ? "#8A7F6B" : "#2F2A24"} />
         </span>
       ) : (
-        <span aria-hidden="true" style={{ fontSize: ts(20) }}>🎲</span>
+        /* A blank face rather than 🎲 — the emoji renders as a
+           different object on every platform, and on the machine
+           this was verified on it drew a pale grey cube that read as
+           "nothing here". Five dots waiting for a number is
+           unmistakably a die about to be thrown. */
+        <span aria-hidden="true" style={{ lineHeight: 0, opacity: 0.35 }}>
+          <DieFace value={5} size={34} ink="#2F2A24" />
+        </span>
       )}
+      {/* The tick sits OUTSIDE the face, on the corner, so it never
+          sits on top of the pips it is describing. */}
       {spent && (
         <span
           aria-hidden="true"
-          style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 800, color: C.green }}
+          style={{
+            position: "absolute",
+            right: -5,
+            bottom: -5,
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            background: C.green,
+            color: C.cream,
+            fontSize: 12,
+            fontWeight: 800,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+          }}
         >
           ✓
         </span>
@@ -286,7 +313,16 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         }
       />
 
-      <span style={{ minWidth: 0, textAlign: align === "end" ? "end" : "start" }}>
+      <span
+        style={{
+          minWidth: 0,
+          textAlign: align === "end" ? "end" : "start",
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
+          lineHeight: 1.15,
+        }}
+      >
         <span
           dir="auto"
           style={{
@@ -462,13 +498,16 @@ export default function SeatPlates({
         alignItems: "center",
         gap: 8,
         maxWidth: 560,
+        /* Tight to the board. The reference screenshots put the
+           avatars within a few pixels of the board's edge, and that
+           closeness is what makes them read as sitting AT it. */
         margin: compact
           ? where === "top"
-            ? "0 auto 4px"
-            : "4px auto 0"
+            ? "0 auto 2px"
+            : "2px auto 0"
           : where === "top"
-          ? "0 auto 10px"
-          : "10px auto 0",
+          ? "0 auto 4px"
+          : "4px auto 0",
       }}
     >
       {plates.map((seat, i) => (

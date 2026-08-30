@@ -138,7 +138,15 @@ export default function SessionPage() {
           })
           .catch(() => {});
       }
-      if (s?.status === "lobby") {
+      /* THE THIRD THING I LEFT BEHIND THIS LOBBY GATE, and the one
+         that mattered most: an invitation to a §8 table was never
+         FETCHED, so the person who had been kept a seat arrived at
+         a table that said nothing to them. The host's side worked,
+         which made it look built.
+
+         There is nothing lobby-shaped about an invitation. A table
+         either has one out for you or it does not. */
+      if (s) {
         const [mine, all] = await Promise.all([
           fetchMyInvites(profile.id).catch(() => []),
           fetchSessionInvites(sessionId).catch(() => []),
@@ -491,7 +499,11 @@ export default function SessionPage() {
       )}
 
       {/* Invitee's own door: accept or quietly decline. */}
-      {session.status === "lobby" && myInvite && !mySeat && !filledInfo && (
+      {/* An invitation is answered wherever it finds you. A §8
+          table is already playing when the invitation goes out —
+          a bot is holding the seat — so gating this on a lobby
+          hid the one control the invited person came for. */}
+      {myInvite && !mySeat && !filledInfo && (
         <Card style={{ borderColor: C.green, borderWidth: 2 }}>
           <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 10px" }}>
             ✉️ {t("games.lobby.invitedTitle")}

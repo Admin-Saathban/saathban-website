@@ -12,7 +12,8 @@
    ════════════════════════════════════════════════ */
 
 import { readFileSync } from "node:fs";
-import { JUMPS, verifyBoard } from "../src/app/routes/games/snakes/board.js";
+import { JUMPS, verifyBoard, cellCenter, CELL } from "../src/app/routes/games/snakes/board.js";
+import { drawnEndpoints, crossingCount } from "../src/app/routes/games/snakes/art.js";
 
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
@@ -98,6 +99,58 @@ const live = {};
   check("snakes are mostly short", longOnes.length <= 2 && drops.filter((d) => d >= 5 && d <= 15).length >= 6, `drops ${drops.join(",")}`);
   const ladders = Object.entries(live).filter(([f, t]) => t > Number(f));
   check("8-10 of each", ladders.length >= 8 && ladders.length <= 10 && snakes.length >= 8 && snakes.length <= 10, `${ladders.length} ladders, ${snakes.length} snakes`);
+}
+
+
+/* ─── 5. The board that is DRAWN is the board that is PLAYED ───
+
+   The map can be right while the picture is wrong. A player traces a
+   snake with a finger to work out where they will land, so a head
+   drawn a third of a square off its landing cell is a board that
+   lies — and it lies in the most expensive way, by looking fine.
+
+   These assert the rendered coordinates, not the data: every drawn
+   path's head must sit on the exact centre of its own square, and the
+   set of drawn paths must be exactly the engine's jumps.              */
+{
+  const drawn = drawnEndpoints();
+
+  check("one drawn path per jump, no more and no fewer",
+    drawn.length === Object.keys(JUMPS).length,
+    `${drawn.length} drawn, ${Object.keys(JUMPS).length} in the map`);
+
+  const off = drawn.filter((e) => {
+    const h = cellCenter(e.from);
+    const t = cellCenter(e.to);
+    return e.head.x !== h.x || e.head.y !== h.y || e.tail.x !== t.x || e.tail.y !== t.y;
+  });
+  check("every head and tail sits exactly on its square's centre",
+    off.length === 0,
+    off.map((e) => `${e.from}->${e.to}`).join(" ") || "");
+
+  const wrong = drawn.filter((e) => JUMPS[e.from] !== e.to);
+  check("every drawn path connects the squares the engine connects",
+    wrong.length === 0,
+    wrong.map((e) => `drawn ${e.from}->${e.to}, engine ${e.from}->${JUMPS[e.from]}`).join("; "));
+
+  check("ladders climb and snakes drop, as drawn",
+    drawn.every((e) => (e.kind === "ladder" ? e.to > e.from : e.to < e.from)));
+
+  /* Endpoints must also be far enough inside their square to READ as
+     being in it — within a quarter cell of centre is the whole point
+     of "exactly", but state the tolerance rather than implying it. */
+  const stray = drawn.filter((e) => {
+    const h = cellCenter(e.from);
+    return Math.abs(e.head.x - h.x) > CELL / 4 || Math.abs(e.head.y - h.y) > CELL / 4;
+  });
+  check("no endpoint strays toward a neighbouring square", stray.length === 0);
+
+  /* Some crossing is unavoidable with nineteen paths on a 10x10 grid.
+     A ceiling stops it creeping up unnoticed when the map or the
+     routing changes — art.js bends the curves to minimise it, and the
+     game logic is never touched to help. */
+  const crossings = crossingCount();
+  check("drawn paths cross no more than six times", crossings <= 6, `${crossings} crossings`);
 }
 
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nall green");

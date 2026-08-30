@@ -48,8 +48,8 @@ const check = (name, ok, note = "") => {
    an earlier version of this file crashed at B4, skipped its own
    cleanup, and still read as green. Counting the checks turns a
    truncated run into a failed one. Update these when adding a case. */
-const EXPECTED_A = 32;
-const EXPECTED_FULL = 52; // 32 rules + 19 live + the cleanup assertion
+const EXPECTED_A = 39;    // measured from a full PART=A run, never estimated
+const EXPECTED_FULL = 59; // 39 rules + 19 live + the cleanup assertion
 
 function finish(mode) {
   const want = mode === "A" ? EXPECTED_A : EXPECTED_FULL;
@@ -255,6 +255,64 @@ const own = (state, colour) => state.pieces.filter((p) => p.owner === colour && 
 
 /* ── 11. Owner mapping is stable (seat 1 → white, seat 2 → black) ── */
 check("seat 0 plays white, seat 1 plays black", OWNER_OF[0] === "w" && OWNER_OF[1] === "b");
+
+/* ── 12. A FOUL shot can still be the winning shot ──
+   Pocket your last coin and an opponent's coin together, with the queen
+   already covered: the shot fouls AND wins. Both halves of the engine
+   agree — resolveShot returns `winner` from `myLeft === 0 &&
+   queenCovered`, and game_exec_carrom re-derives exactly the same
+   expression, neither of them consulting the foul.
+
+   This is asserted rather than corrected because it is a RULE, not a
+   divergence, and it is defensible: the opponent-coin foul's only
+   consequence is that the turn passes, and there is no turn left to
+   pass. Note the asymmetry it creates with the other foul — a striker
+   in the pocket returns one of your coins to the board, which puts
+   `myLeft` back to 1 and takes the win away. So one foul can cost you
+   the game on the winning shot and the other cannot. Written into
+   GAMES_CONTRACT.md so the next person meets it as a decision rather
+   than as a surprise. ── */
+{
+  const start = boardWith({ whitePocketed: 5, queen: "pocketed", queenCovered: true });
+  const lastWhite = own(start, "w")[0];
+  const aBlack = own(start, "b")[0];
+  const r = resolveShot(sink(start, [lastWhite.id, aBlack.id]), still, 0);
+  check("winning shot that also pockets an opponent coin → still a foul", r.outcome.foul === true, r.outcome.foulReason || "");
+  check("…and it STILL wins the game", r.winner === 0, String(r.winner));
+  check("…and the turn does not continue", r.continues === false);
+}
+
+/* ── 13. The queen stays covered by a coin that came straight back ──
+   Sink the queen, your only coin, and the striker on one shot. The
+   cover is decided first (own coin pocketed in the same shot), then the
+   striker penalty returns that very coin and un-scores it. The coin
+   that bought the cover is back on the board, unscored — and she stays
+   covered for good.
+
+   Reachable only with no earlier pocketed coin, which is why it hid:
+   with one to spare the penalty prefers the older coin and the covering
+   coin stays down. Asserted as the engine behaves; flagged in the
+   contract as the open question it is. ── */
+{
+  const start = boardWith({ whitePocketed: 0 });
+  const mine = own(start, "w")[0];
+  // the coins go down the FAR pocket: three bodies stacked on one pocket
+  // shove each other out of it before anything registers.
+  const staged = {
+    ...start,
+    pieces: start.pieces.map((p) =>
+      p.id === mine.id || p.id === "q" ? { ...p, x: 0.999, y: 0.001 } : p
+    ),
+  };
+  const r = resolveShot(staged, { ...still, x: 0.001, y: 0.001 }, 0);
+  check("queen + own coin + striker on one shot → she is covered", r.endState.queenCovered === true, r.outcome.queen);
+  check("…the striker foul returns the covering coin to the board", (() => {
+    const c = r.endState.pieces.find((p) => p.id === mine.id);
+    return c && c.pocketed === false;
+  })());
+  check("…that coin is NOT scored (the foul pays its own penalty)", r.outcome.scored.includes(mine.id) === false, r.outcome.scored.join(","));
+  check("…and the queen stays covered anyway", r.endState.queenCovered === true && r.endState.pieces.find((p) => p.id === "q").pocketed === true);
+}
 
 /* ─────────────────────────────────────────────────────────────
    Part B — the live engine: what the server does with a payload.

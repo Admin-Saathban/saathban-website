@@ -196,6 +196,36 @@ covered. Evaluated server-side on every shot, from the end state:
 error: the game continues, and that player may still cover her on a
 later shot under the no-coins clause above.
 
+**A foul does not stop a win.** `winner` is `myLeft = 0 AND
+queenCovered` and consults the foul flag nowhere — in resolveShot or
+in `game_exec_carrom`, which derive it identically. So pocketing your
+last coin *and* an opponent's coin on the same shot fouls **and** wins.
+That is deliberate as it stands: the opponent-coin foul's only
+consequence is that the turn passes, and a finished game has no turn
+left to pass.
+
+It does create an asymmetry worth knowing before you rely on it. The
+**other** foul can cost you the same win: a striker in the pocket
+returns one of your coins to the board, which puts `myLeft` back to 1
+and the win evaporates. So on the winning shot, sinking the striker
+loses it and sinking an opponent's coin does not. Asserted by case 12.
+
+**The queen can stay covered by a coin that came straight back.** The
+cover is decided before the striker penalty is paid. Sink the queen,
+your only pocketed coin, and the striker on one shot and all three
+happen: she is covered, the coin returns to the centre band, and the
+coin is **not** scored. The cover survives the coin that bought it, and
+it survives permanently, because `queenCovered` is a property of the
+board.
+
+Reachable only when the mover has no *earlier* pocketed coin — with one
+to spare the penalty prefers the older coin and the covering coin stays
+down, which is why it went unnoticed. Asserted by case 13. **This one
+is recorded as an open question rather than an intention**: nobody
+decided that a foul should buy a permanent cover for free, and if it is
+ever changed, the fix belongs in the ordering inside `resolveShot` —
+pay the penalty first, then decide the cover.
+
 **Timeouts.** Carrom is `timeout_style = 'pass_turn'`. A lapsed turn
 is a **missed** turn: the miss is counted against that seat, the turn
 advances, the board is untouched, and no shot is played on the absent

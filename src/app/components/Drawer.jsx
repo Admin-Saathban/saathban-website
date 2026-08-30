@@ -133,10 +133,19 @@ export default function Drawer({ id, open, onClose, from = "bottom", labelledBy,
           position: "fixed",
           zIndex: 71,
           insetInlineEnd: 10,
-          /* Gaps top and bottom (§4). The bottom one clears the bar so
-             the drawer does not look severed by it. */
+          /* Gaps top and bottom (§4). Only the TOP depends on which
+             button opened it — the bell sits below the header, the
+             More tab does not.
+
+             THE BOTTOM ALWAYS CLEARS THE BAR. §4 says the bottom bar
+             stays visible behind the dim, and the notifications
+             drawer was ending 28px from the viewport floor — which is
+             on top of a 92px bar, so it covered two thirds of it and
+             ran its own last row underneath the navigation. Whichever
+             corner a drawer grows from, it is a card in front of the
+             screen, and the bar is part of the screen. */
           top: from === "top" ? 64 : 28,
-          bottom: from === "top" ? 28 : BAR_HEIGHT + 14,
+          bottom: BAR_HEIGHT + 14,
           width: "80%",
           maxWidth: 380,
           display: "flex",

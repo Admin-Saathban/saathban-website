@@ -96,6 +96,24 @@ exec_game_move() registry folding the ludo_* RPCs in. Do NOT create
 those three tables again, and do NOT apply anything named 0020.
 GAMES_CONTRACT.md (games lane) carries the field mapping.
 
+## 0055 — first contact, server-enforced (saathban-website-38, 2026-08-30)
+
+`0055_first_contact.sql` — PRODUCT_DECISIONS §6.5 and §6.6, both of which
+§0.9 requires at the database rather than in the UI.
+
+- `profiles.who_can_message` — `met` (default) / `anyone` / `connected`.
+- `public.have_met(a, b)` — share a group, an event RSVP, or a park board.
+  Read-only over `group_members`, `event_rsvps`, `park_board_messages`.
+- `public.profile_is_complete(p)` — name, city and one more real detail.
+- `send_dm_request` gains three refusals it did not have: the recipient's
+  who-can-message setting, a complete profile for a FIRST contact with a
+  stranger, and **a declined request is permanent** (it currently returns
+  the declined row as though the request had gone through).
+
+Deliberately NOT in it: replying is never gated, and messaging someone you
+are already connected to is never gated — §6 is explicit that a blanket
+block traps the isolated senior and merely inconveniences a scammer.
+
 ## Contract dependencies
 
 - **Outdoor → 0027/0028 activity shape** (saathban-website-34): outdoor reads community_posts post_type in (walk, activity) relying on payload keys activity/place_id/place_name/starts_at/limit + ref_id dedupe against outdoor_outings, and reads post_joins / join_activity(); it writes only through communityData.shareActivity/joinActivity re-exports. Any change to shareActivity's signature or payload keys needs a ping to the outdoor lane.

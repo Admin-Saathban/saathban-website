@@ -41,6 +41,7 @@ import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
+import PublicResult from "./routes/games/PublicResult.jsx";
 import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
 import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
@@ -193,6 +194,18 @@ export default function AppRoot() {
               the way back. It is the same join_by_code RPC as the typed
               code, so the gates and rate limits are unchanged. */}
           <Route path="join/:code" element={<JoinByLink />} />
+          {/* The public result of a finished game — OUTSIDE RequireAuth,
+              like join/:code above, because the whole point is a link
+              someone can open with no account. The component never
+              calls useSession: a page that throws for a stranger is
+              worse than no page.
+
+              The security is not this route. It is the one
+              SECURITY DEFINER function behind it: finished games only,
+              names and the board, no profile ids, no photos, and not
+              enumerable — one id in, one game out, with the unguessable
+              session id as the key, exactly as the join link works. */}
+          <Route path="g/:id" element={<PublicResult />} />
           {/* Saath-Icon home area: hub at /app/home, daily log at
               /app/home/log. Icons only; RLS stays the real security
               boundary, this guard is navigation. */}

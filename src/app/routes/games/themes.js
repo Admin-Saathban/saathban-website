@@ -44,9 +44,15 @@ export const THEMES = {
     ink: C.textMain,
     inkMuted: C.textMuted,
     glow: "rgba(74,58,34,0.20)",
+    /* LUDO_MOTION_SPEC §1: track cells are WHITE with thin dark
+       gridlines — high contrast, easy for old eyes, not tinted and not
+       textured. Classic means the board as it has always been, and §1
+       moved what that is; the cream tint and the pale line below were
+       the old baseline. Wood, Marble and Night are the themes that get
+       to depart from it — Classic is the one that must not. */
     cell: C.white,
-    cellAlt: "#f3e9db",
-    line: C.warmGray,
+    cellAlt: "#FCFCFB",
+    line: "rgba(58,52,42,0.55)",
   },
   wood: {
     key: "wood",

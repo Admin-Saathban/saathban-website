@@ -126,6 +126,22 @@ const CELL = 40; // viewBox units per grid cell
 const SIZE = 15 * CELL;
 const STEP_MS = 110; // one square of travel
 
+/* A shield, centred on (x, y) and about 2r across: flat shoulders,
+   straight flanks, and a rounded point at the bottom. Wider than it
+   is tall below the shoulder line, so it still reads as a shield at
+   the size a phone actually draws it. */
+function shieldPath(x, y, r) {
+  const w = r * 1.06;
+  const top = y - r * 0.92;
+  const shoulder = y + r * 0.18;
+  const point = y + r * 1.06;
+  return (
+    `M ${x - w} ${top} L ${x + w} ${top} L ${x + w} ${shoulder}` +
+    ` Q ${x + w} ${y + r * 0.7} ${x} ${point}` +
+    ` Q ${x - w} ${y + r * 0.7} ${x - w} ${shoulder} Z`
+  );
+}
+
 /* A label that stays upright however the board is turned. */
 function Upright({ x, y, spin, children, ...props }) {
   return (
@@ -435,27 +451,39 @@ export default function LudoBoard({
                   cannot tell gold from cream still sees a star. */}
               {isSafe && showStars && (
                 <g filter="url(#sb-emboss)">
-                  <circle
-                    cx={c * CELL + CELL / 2}
-                    cy={r * CELL + CELL / 2}
-                    r={CELL * 0.34}
+                  {/* THE CHIP IS THE SHIELD. The spec asks for a star
+                      AND a shield so that safety is carried by two
+                      shapes rather than one — right, because colour
+                      alone never carries meaning here and a lone star
+                      is a single point of failure for anyone who
+                      cannot make it out.
+
+                      But two glyphs crammed into a 40-unit cell fight
+                      each other and beat the numerals underneath. So
+                      the chip is SHAPED as a shield and the star sits
+                      on it: one object, two readable shapes, and the
+                      gold emboss my user asked for is untouched. */}
+                  <path
+                    d={shieldPath(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.34)}
                     fill="url(#sb-gold)"
                     stroke="#9A6B08"
-                    strokeWidth={0.8}
+                    strokeWidth={0.9}
+                    strokeLinejoin="round"
                   />
                   <circle
                     cx={c * CELL + CELL / 2 - CELL * 0.09}
-                    cy={r * CELL + CELL / 2 - CELL * 0.11}
-                    r={CELL * 0.12}
+                    cy={r * CELL + CELL / 2 - CELL * 0.13}
+                    r={CELL * 0.1}
                     fill="#FFFFFF"
-                    opacity={0.42}
+                    opacity={0.4}
                   />
                   <Upright
                     x={c * CELL + CELL / 2}
-                    y={r * CELL + CELL / 2 + 6.5}
+                    y={r * CELL + CELL / 2 + 6.4}
                     spin={spin}
-                    fontSize={19}
-                    fill="#6B4906"
+                    fontSize={21}
+                    fontWeight="700"
+                    fill="#4A3204"
                     aria-hidden="true"
                   >
                     ★

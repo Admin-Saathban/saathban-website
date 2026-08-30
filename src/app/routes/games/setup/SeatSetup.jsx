@@ -217,7 +217,9 @@ function DiceToy({ count, chosen, onPick, t }) {
 /* One switch, drawn once. It was inline below for the auto-move
    rule; §8 needs a second, and two hand-drawn switches drift apart
    the moment one of them is tweaked. */
-function Switch({ on, onToggle, label, ts }) {
+/* Exported so each game can build its OWN rule rows with it (§8.1)
+   without a second hand-drawn switch drifting away from this one. */
+export function Switch({ on, onToggle, label, ts }) {
   return (
     <button
       type="button"
@@ -295,6 +297,13 @@ export default function SeatSetup({
      theme picker lives here. A slot rather than a prop per feature, so
      this screen does not grow a branch every time setup gains a
      choice. Defaulted to nothing, so existing callers are unchanged. */
+  /* A game's own rule switches, supplied by that game. Same
+     reasoning as extras below, and for a sharper reason: a third
+     boolean — showDice, showAutoMove, showUndo — is the shape that
+     produced the leak, because every new Ludo rule then appears in
+     every other game until somebody notices. A rule cannot leak
+     into a game that never passed it. */
+  rules = null,
   extras = null,
 }) {
   const { t, ts } = useI18n();
@@ -304,11 +313,6 @@ export default function SeatSetup({
      thing the rules had already decided. Off is for anyone who would
      rather move every goti with their own hand, and that is a real
      preference rather than a fallback. */
-  const [autoOnlyMove, setAutoOnlyMove] = useState(true);
-  /* §8, default ON. Taking a move back before the next player has
-     rolled is not cheating — it is the courtesy a real table gives
-     without anyone naming it. */
-  const [undoOn, setUndoOn] = useState(true);
   /* colours[seat] = index into SEAT_COLORS. You are seat 0 and start
      on green; the rest take what is left, in order, and can be
      changed. */
@@ -534,18 +538,12 @@ export default function SeatSetup({
              is the switch for people who would rather make it anyway,
              and it is a switch rather than a checkbox because the rest
              of this screen is things you touch. ── */}
-      <Switch
-        on={autoOnlyMove}
-        onToggle={() => setAutoOnlyMove((v) => !v)}
-        label={t("games.setup.autoOnlyMove")}
-        ts={ts}
-      />
-      <Switch
-        on={undoOn}
-        onToggle={() => setUndoOn((v) => !v)}
-        label={t("games.setup.undoOn")}
-        ts={ts}
-      />
+      {/* §8.1: a game's OWN rules, handed in by that game. These
+          were two hard-coded Ludo switches, so Carrom asked its
+          players whether to move for them when there was only one
+          choice, and whether they could take a move back. Carrom
+          has neither rule. */}
+      {rules}
 
       {extras}
 
@@ -559,8 +557,6 @@ export default function SeatSetup({
             diceCount,
             colours: colours.slice(0, seats),
             fill: fill.slice(0, seats),
-            autoOnlyMove,
-            undoOn,
           })
         }
         style={{

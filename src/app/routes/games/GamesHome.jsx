@@ -9,6 +9,7 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useFresh } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { openQuickTable } from "./quickTable.js";
 import {
   fetchGames,
   fetchMySessions,
@@ -33,6 +34,19 @@ export default function GamesHome() {
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
+  /* §8: a tap opens a TABLE, not a form. The old tile went to
+     /app/games/new/:key; that screen still exists for anything that
+     links to it, but nothing here does any more. */
+  const [opening, setOpening] = useState(null);
+  const openTable = async (key) => {
+    if (opening) return;
+    setOpening(key);
+    try {
+      navigate(await openQuickTable(key));
+    } catch {
+      setOpening(null);
+    }
+  };
 
   const [games, setGames] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -423,7 +437,7 @@ export default function GamesHome() {
               key={g.key}
               type="button"
               disabled={!g.enabled}
-              onClick={() => navigate(`/app/games/new/${g.key}`)}
+              onClick={() => openTable(g.key)}
               style={{
                 display: "flex",
                 alignItems: "center",

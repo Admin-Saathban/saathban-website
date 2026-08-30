@@ -51,6 +51,7 @@ import { createShare } from "../community/communityData.js";
 import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
+import { Switch as RuleSwitchBase } from "./setup/SeatSetup.jsx";
 import ThemePicker from "./ThemePicker.jsx";
 import { DEFAULT_THEME } from "./themes.js";
 import { GamesScreen, BodyText, GhostBtn } from "./ui.jsx";
@@ -171,9 +172,18 @@ export default function NewGame() {
   const botsAllowed = !!game && game.timeout_style !== "pass_turn";
   const canPostOpen = profile.role === "saath_icon" || profile.is_org;
 
+  /* The shared switch, with this screen's text size supplied once
+     rather than at every call site. */
+  const RuleSwitch = (p) => <RuleSwitchBase {...p} ts={ts} />;
+
+  /* Ludo's two house rules, owned by the screen that offers them
+     rather than by the shared setup component (§8.1). */
+  const [autoOnlyMove, setAutoOnlyMove] = useState(true);
+  const [undoOn, setUndoOn] = useState(true);
+
   const start = async (setup) => {
     if (busy || !game) return;
-    const { seats, diceCount, colours, fill, autoOnlyMove, undoOn } = setup;
+    const { seats, diceCount, colours, fill } = setup;
 
     /* A chair set to "person" with nobody chosen is an unanswered
        question, not a table. Open that chair's sheet rather than
@@ -395,6 +405,25 @@ export default function NewGame() {
         botsAllowed={botsAllowed}
         canPostOpen={canPostOpen}
         showDice={game.key === "ludo"}
+        /* §8.1: Ludo's rules, passed by Ludo. Carrom passes none
+           and therefore shows none — a game cannot be asked about
+           a rule it does not have. */
+        rules={
+          game.key === "ludo" ? (
+            <>
+              <RuleSwitch
+                on={autoOnlyMove}
+                onToggle={() => setAutoOnlyMove((v) => !v)}
+                label={t("games.setup.autoOnlyMove")}
+              />
+              <RuleSwitch
+                on={undoOn}
+                onToggle={() => setUndoOn((v) => !v)}
+                label={t("games.setup.undoOn")}
+              />
+            </>
+          ) : null
+        }
         extras={
           <ThemePicker value={theme} onPick={setTheme} gamesFinished={gamesFinished} />
         }

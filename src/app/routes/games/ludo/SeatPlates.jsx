@@ -424,7 +424,18 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
                  says "Tap a die, then tap the goti it should move" in
                  full width, light on the table. The dice stay,
                  because they are the thing being read. */
-              compact || (isMe && dice && dice.length > 1)
+              /* ON MY OWN PLATE, NEVER INLINE. The side-by-side
+                 against the reference showed it still clipping to
+                 "you… turn" over the die with only ONE die in hand —
+                 my earlier guard only caught the two-dice case, which
+                 was the case I happened to be looking at.
+
+                 There is no width for it and there does not need to
+                 be: the instruction sits directly under the board at
+                 full width saying what to do, the ring sweeps, the
+                 avatar brightens and the die carries the arrow. This
+                 stays in the accessibility tree. */
+              compact || isMe
                 ? {
               position: "absolute",
               width: 1,

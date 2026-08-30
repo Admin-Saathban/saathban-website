@@ -24,7 +24,14 @@ import {
   inviteToGroup,
   blockPerson,
 } from "./myPeopleStore.js";
-import { fetchGames, createSession, inviteToGame, personWarmth, riddleTouch } from "../../lib/games.js";
+import {
+  fetchGames,
+  createSession,
+  inviteToGame,
+  personWarmth,
+  riddleTouch,
+  fetchGamesTogether,
+} from "../../lib/games.js";
 
 /* ─── Warmth (together lane, 0029/0029b): per-person riddle chip +
    last-7-days badge celebrations, connection-gated server-side.
@@ -132,6 +139,8 @@ export default function PersonPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   // action panels
+  // D3 — games finished together. 0 until known, and 0 renders nothing.
+  const [togetherCount, setTogetherCount] = useState(0);
   const [gamePick, setGamePick] = useState(null); // null | games[]
   const [groupPick, setGroupPick] = useState(null); // null | groups[]
 
@@ -139,16 +148,21 @@ export default function PersonPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [p, m, list, mm, pr, rd] = await Promise.all([
+        const [p, m, list, mm, pr, rd, together] = await Promise.all([
           fetchPerson(profileId),
           fetchMembershipsWith(profileId).catch(() => []),
           fetchMyPeople().catch(() => []),
           fetchPersonMoments(profileId).catch(() => []),
           fetchPersonPresence(profileId).catch(() => ({ checkinPlace: null, inGame: null })),
           probeWarmth(profileId),
+          /* A failure here must cost the profile nothing: the count is
+             a nicety, and a page that will not load because a number
+             would not is a bad trade. */
+          fetchGamesTogether(myId, profileId).catch(() => 0),
         ]);
         if (cancelled) return;
         setPerson(p);
+        setTogetherCount(together || 0);
         setMemberships(m);
         setConnection(list.find((x) => x.id === profileId) || null);
         setMoments(mm);
@@ -164,7 +178,7 @@ export default function PersonPage() {
     return () => {
       cancelled = true;
     };
-  }, [profileId]);
+  }, [profileId, myId]);
 
   const inviteGame = async () => {
     if (gamePick) return setGamePick(null);
@@ -408,6 +422,20 @@ export default function PersonPage() {
               </Link>
             )}
           </div>
+        )}
+
+{/* D3 — the games you have played together. A count, warmly, and
+            never a record: no wins, no split, no run. It appears only
+            once there is something to remember, because "0 games
+            together" on the profile of someone you have not played
+            with yet is a scoreboard reading nil. */}
+        {togetherCount > 0 && (
+          <BodyText style={{ margin: "14px 0 0", fontWeight: 600, color: C.green }}>
+            🎲{" "}
+            {togetherCount === 1
+              ? t("people.profile.gamesTogetherOne", { name: first })
+              : t("people.profile.gamesTogether", { n: togetherCount, name: first })}
+          </BodyText>
         )}
 
         {/* Pickers */}

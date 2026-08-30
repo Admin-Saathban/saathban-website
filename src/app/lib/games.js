@@ -108,6 +108,42 @@ export async function fetchTableHistory(profileId, { limit = 20, before = null }
   return sessions.map((s) => ({ ...s, players: bySession.get(s.id) ?? [] }));
 }
 
+/* D3 — how many games two people have finished together.
+
+   A COUNT AND NOTHING ELSE. Never who won, never a split, never a
+   run. "You've played 14 games together" is a fact about a
+   friendship; "you've won 4 of 14" is a fact about a contest, and
+   only one of those belongs on the profile of someone's daughter.
+
+   Computed the explicit way — my finished tables, then their seats
+   within exactly those tables — rather than counting their seats and
+   trusting RLS to have narrowed the set to ours. RLS SHOULD narrow
+   it, but a number whose correctness depends on a policy staying
+   exactly as broad as it is today is a number that will quietly
+   become wrong. This one is right whatever the policy does.
+
+   Returns 0 rather than throwing when there is nothing: a profile
+   must render for someone you have never played with. */
+export async function fetchGamesTogether(myId, theirId) {
+  if (!myId || !theirId || myId === theirId) return 0;
+  const { data: mine, error } = await supabase
+    .from("game_seats")
+    .select("session_id, game_sessions!inner(status)")
+    .eq("profile_id", myId)
+    .eq("game_sessions.status", "finished");
+  if (error) throw error;
+  const ids = (mine ?? []).map((r) => r.session_id);
+  if (!ids.length) return 0;
+
+  const { count, error: e2 } = await supabase
+    .from("game_seats")
+    .select("session_id", { count: "exact", head: true })
+    .eq("profile_id", theirId)
+    .in("session_id", ids);
+  if (e2) throw e2;
+  return count ?? 0;
+}
+
 export async function fetchSession(sessionId) {
   const [{ data: session, error: e1 }, { data: seats, error: e2 }] = await Promise.all([
     supabase.from("game_sessions").select(SESSION_COLS).eq("id", sessionId).maybeSingle(),

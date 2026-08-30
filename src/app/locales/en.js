@@ -1274,6 +1274,13 @@ const en = {
       loadError: "That didn't load. Please try again in a moment.",
       actionError: "That didn't go through. Please try again.",
       gameCta: "Invite to a game",
+      /* D3 — a count, never a record. There is deliberately no
+         string here for wins, losses or a split, so a later change
+         cannot quietly add one by filling in a key that was waiting.
+         Singular matters: "1 games together" is how a person learns
+         the app was not written for them. */
+      gamesTogether: "You and {name} have played {n} games together.",
+      gamesTogetherOne: "You and {name} have played one game together.",
       gamePickHint: "Which game shall you and {name} play? They'll get the invitation.",
       cheerCta: "Send a cheer",
       nudgeCta: "Nudge for today's riddle",

@@ -15,10 +15,49 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { STRINGS } from "./strings.js";
-import { fetchMyProfile, updateMyProfile, parseLanguages } from "./data.js";
+import { fetchMyProfile, updateMyProfile } from "./data.js";
+import { LANGUAGES, INTERESTS, ABOUT_PROMPTS } from "./profileFields.js";
+import { useI18n as useT } from "../../lib/i18n.jsx";
+
+/* Tappable, multi-select, and never colour alone: a chosen chip
+   carries a tick AND a heavier border AND a filled background. */
+function ChipGroup({ options, chosen, labelFor, onToggle, ts }) {
+  const set = new Set(chosen || []);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+      {options.map((id) => {
+        const on = set.has(id);
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onToggle(id)}
+            aria-pressed={on}
+            style={{
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 16px",
+              borderRadius: 50,
+              border: `${on ? 3 : 2}px solid ${on ? C.green : C.warmGray}`,
+              background: on ? "#fffdf5" : C.white,
+              color: C.textMain,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: on ? 700 : 500,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            {on ? "✓ " : ""}
+            {labelFor(id)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { lang, ts, meta } = useI18n();
+  const { t } = useT();
   const s = STRINGS[lang] || STRINGS.en;
   const { profile, refreshProfile } = useSession();
 
@@ -38,7 +77,13 @@ export default function ProfilePage() {
         setForm({
           full_name: p.full_name || "",
           city: p.city || "",
-          languages: (p.languages || []).join(", "),
+          /* Sets, not strings. A free-text box turns "Punjabi" into
+             "punjabi", "Panjabi" and "پنجابی", and nothing can match
+             on it afterwards — which is the whole point of the field. */
+          languages: p.languages || [],
+          interests: p.interests || [],
+          about: p.about || "",
+          about_prompt: p.about_prompt || ABOUT_PROMPTS[0],
         });
       } catch {
         if (alive) setError(s.loadError);
@@ -48,6 +93,13 @@ export default function ProfilePage() {
       alive = false;
     };
   }, [profile?.id, s.loadError]);
+
+  const toggleIn = (field, id) =>
+    setForm((f) => {
+      const cur = new Set(f[field] || []);
+      cur.has(id) ? cur.delete(id) : cur.add(id);
+      return { ...f, [field]: [...cur] };
+    });
 
   const onChange = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -66,7 +118,10 @@ export default function ProfilePage() {
       await updateMyProfile(profile.id, {
         full_name: form.full_name,
         city: form.city,
-        languages: parseLanguages(form.languages),
+        languages: form.languages,
+        interests: form.interests,
+        about: form.about.trim() || null,
+        about_prompt: form.about.trim() ? form.about_prompt : null,
       });
       await refreshProfile(); // so the rest of the app sees the new name
       setStatus("saved");
@@ -119,11 +174,55 @@ export default function ProfilePage() {
               <p style={hintStyle}>{s.cityHint}</p>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <label htmlFor="pf-langs" style={labelStyle}>{s.languagesLabel}</label>
-              <input id="pf-langs" style={inputStyle} value={form.languages} onChange={onChange("languages")} />
-              <p style={hintStyle}>{s.languagesHint}</p>
-            </div>
+            {/* §8: the highest-value field in the app — it decides
+                whether a Buddy can genuinely talk with them. Tapped,
+                never typed. */}
+            <fieldset style={{ border: "none", padding: 0, margin: "0 0 24px" }}>
+              <legend style={labelStyle}>{t("profile.languagesLabel")}</legend>
+              <p style={hintStyle}>{t("profile.languagesHint")}</p>
+              <ChipGroup
+                options={LANGUAGES}
+                chosen={form.languages}
+                labelFor={(id) => t(`profile.languages.${id}`)}
+                onToggle={(id) => toggleIn("languages", id)}
+                ts={ts}
+              />
+            </fieldset>
+
+            <fieldset style={{ border: "none", padding: 0, margin: "0 0 24px" }}>
+              <legend style={labelStyle}>{t("profile.interestsLabel")}</legend>
+              <p style={hintStyle}>{t("profile.interestsHint")}</p>
+              <ChipGroup
+                options={INTERESTS}
+                chosen={form.interests}
+                labelFor={(id) => t(`profile.interests.${id}`)}
+                onToggle={(id) => toggleIn("interests", id)}
+                ts={ts}
+              />
+            </fieldset>
+
+            {/* §8: the PROMPT is the field. "Where did you grow up?"
+                gets a real sentence; "tell people about yourself" gets
+                nothing. */}
+            <fieldset style={{ border: "none", padding: 0, margin: "0 0 24px" }}>
+              <legend style={labelStyle}>{t("profile.aboutLabel")}</legend>
+              <p style={hintStyle}>{t("profile.aboutHint")}</p>
+              <ChipGroup
+                options={ABOUT_PROMPTS}
+                chosen={[form.about_prompt]}
+                labelFor={(id) => t(`profile.prompts.${id}`)}
+                onToggle={(id) => setForm((f) => ({ ...f, about_prompt: id }))}
+                ts={ts}
+              />
+              <textarea
+                id="pf-about"
+                aria-label={t(`profile.prompts.${form.about_prompt}`)}
+                style={{ ...inputStyle, marginTop: 10, minHeight: 96, resize: "vertical" }}
+                value={form.about}
+                onChange={onChange("about")}
+                maxLength={280}
+              />
+            </fieldset>
 
             {error && (
               <p role="alert" style={{ fontSize: ts(A11Y.minBodyPx), color: C.error, fontWeight: 600, margin: "0 0 16px" }}>

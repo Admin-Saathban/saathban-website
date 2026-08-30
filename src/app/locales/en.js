@@ -562,6 +562,25 @@ const en = {
       riddle: "🧩 Cracked the Daily Riddle",
       celebrate: "Something to smile about together.",
     },
+    /* §10 — the family group. The line naming who is in it is not a
+       warning, it is the ordinary description of a room that has her
+       in it, and it is required: §10's whole point is that there is
+       no hidden channel. */
+    group: {
+      title: "Your family group",
+      whoIsIn: "{n} of you, {name} among them — nothing here is behind her back.",
+      sharedSomething: "shared something",
+      quiet: "No one has said anything yet. You could be first.",
+      openCta: "Open the group",
+    },
+    presence: {
+      at: "{name} is at {place} right now",
+      inGame: "{name} is in a game right now",
+    },
+    sticker: {
+      send: "Send {sticker}",
+      othersLabel: "What others sent",
+    },
     reminders: {
       title: "Reminders for {name}",
       intro:
@@ -1656,6 +1675,41 @@ const en = {
   },
 
   // ─── The first three screens (routes/onboarding/) ───
+  profile: {
+    languagesLabel: "Languages you speak",
+    languagesHint: "Tap every one. It's how we find someone who can really talk with you.",
+    languages: {
+      urdu: "Urdu", punjabi: "Punjabi", english: "English", sindhi: "Sindhi",
+      pashto: "Pashto", saraiki: "Saraiki", balochi: "Balochi", other: "Another",
+    },
+    interestsLabel: "What you enjoy",
+    interestsHint: "Tap anything you like. It gives people a reason to say hello.",
+    interests: {
+      chai: "Chai", walking: "Walking", ludo: "Ludo", gardening: "Gardening",
+      poetry: "Poetry", cricket: "Cricket", cooking: "Cooking", prayer: "Prayer",
+      music: "Music", grandchildren: "Grandchildren", news: "The news", sewing: "Sewing",
+    },
+    aboutLabel: "A line about you",
+    aboutHint: "Pick a question you'd enjoy answering.",
+    prompts: {
+      grewUp: "Where did you grow up?",
+      work: "What did you do for work?",
+      weekend: "What does a good day look like?",
+      proud: "What are you proud of?",
+    },
+    /* The soft dot (§8): an invitation, never an error, and never a
+       percentage. Each line says what the benefit IS. */
+    nudge: {
+      photo: "Add a photo — it's the thing that makes people say hello.",
+      languages: "Add your languages so people know you speak Punjabi.",
+      interests: "Add what you enjoy — it gives people something to start with.",
+      about: "Answer one question about yourself.",
+      dismiss: "Not now",
+      go: "Add it",
+    },
+    howOthersSee: "How others see you",
+  },
+
   onboarding: {
     next: "Carry on",
     mood: {
@@ -2277,6 +2331,33 @@ const en = {
 
   // ─── My journey (routes/history/) — the Icon's own record ───
   history: {
+    /* §14 — a journey, not a dashboard. Nothing here is a score:
+       "22 days here", never "22/31". There is deliberately NO string
+       for a points total, because §14 forbids one shouting and the
+       surest way to keep that promise is to have nothing to render. */
+    header: {
+      days: "{n} days with Saathban",
+      since: "since {date}",
+      badges: "{n} badges",
+    },
+    ahead: {
+      title: "Just ahead",
+      badgeNear: "{n} more and {name} finds you",
+    },
+    chapters: {
+      title: "Your months",
+      days: "{n} days here",
+      dayOne: "One day here",
+      badges: "{n} badges",
+    },
+    share: {
+      whole: "Share your journey",
+      chapter: "Share this month",
+      pending: {
+        whole: "This would send your journey — the days, the months, the badges. Nothing private.",
+        chapter: "This would send {month} — that month's days and badges. Nothing private.",
+      },
+    },
     title: "My journey",
     intro:
       "Your own record — every day you've shown up, in your own way. This page is yours alone.",

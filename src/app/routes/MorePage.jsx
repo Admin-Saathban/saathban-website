@@ -81,16 +81,23 @@ export default function MorePage() {
 
           {groups.map((g) => (
             <section key={g.id} style={{ marginBottom: 26 }}>
-              <h2
-                style={{
-                  fontSize: ts(A11Y.minBodyPx),
-                  fontWeight: 700,
-                  color: C.textMuted,
-                  margin: "0 0 10px",
-                }}
-              >
-                {t(g.labelKey)}
-              </h2>
+              {/* NAVIGATION_SPEC §6 deleted the group headers —
+                 "Every so often" and "Now and then" were synonyms, so
+                 a person could not predict which one held what. The
+                 single group navItems now returns carries labelKey:
+                 null, and a heading is drawn only if one comes back. */}
+              {g.labelKey && (
+                <h2
+                  style={{
+                    fontSize: ts(A11Y.minBodyPx),
+                    fontWeight: 700,
+                    color: C.textMuted,
+                    margin: "0 0 10px",
+                  }}
+                >
+                  {t(g.labelKey)}
+                </h2>
+              )}
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {g.items.map((item) => (
                   <Link

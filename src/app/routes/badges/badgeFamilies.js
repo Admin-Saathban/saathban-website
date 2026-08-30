@@ -68,3 +68,38 @@ export function voiceVariant(seed, count) {
 }
 
 export const VOICE_VARIANTS = 3;
+
+/* Which family a badge belongs to, from the only column that says so.
+
+   `badges` (0017) has no `family` column — it has `trigger_kind`, and
+   the family is a fact about what the trigger MEANS: a run of days is
+   presence, a first is a moment, a finished course is a credential.
+   Deriving it here rather than at each call site is what stops two
+   screens drawing the same badge as two different shapes.
+
+   Unknown kinds fall to `moment`, which is the honest default: a badge
+   we cannot classify is at least something that happened once. */
+const KIND_FAMILY = {
+  presence_7: "presence",
+  presence_30: "presence",
+  presence_100: "presence",
+  first_log: "moment",
+  first_note: "moment",
+  first_rest_day: "moment",
+  first_post: "moment",
+  first_outing: "moment",
+  return_after_absence: "moment",
+};
+
+export function familyOfKind(triggerKind) {
+  return FAMILIES[KIND_FAMILY[triggerKind]] || FAMILIES.moment;
+}
+
+/* The locale key for a family's name IN WORDS. §0.1 forbids meaning
+   carried by colour alone, and the shapes help only somebody who
+   already knows the code — so every badge says which kind it is. */
+export const FAMILY_LABEL_KEY = {
+  presence: "badges.familyPresence",
+  moment: "badges.familyMoment",
+  credential: "badges.familyCredential",
+};

@@ -61,6 +61,13 @@ import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
+/* NAVIGATION_SPEC §5 and §6 — four destinations the new bar and
+   More rows point at. Every one of them was a live link to nothing
+   until this commit. */
+import SearchPage from "./routes/search/SearchPage.jsx";
+import BadgesPage from "./routes/badges/BadgesPage.jsx";
+import SavedPage from "./routes/saved/SavedPage.jsx";
+import HelpPage from "./routes/help/HelpPage.jsx";
 
 // App-shell offline caching + installability (production only; no-op
 // in dev). Module level so it runs once, and only for /app visitors.
@@ -507,6 +514,51 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <MorePage />
+              </RequireAuth>
+            }
+          />
+          {/* ── §5 and §6: the four rows that opened nothing ──
+
+              The bar and the More drawer were rebuilt to point here
+              before anything was mounted on any of them, so every one
+              of these paths fell through to the catch-all below and
+              silently landed on Home. A menu row that opens nothing is
+              the defect this redesign exists to fix, and four of them
+              had just been added.
+
+              No roles prop on any of them: a badge belongs to whoever
+              earned it, and help belongs to anyone who needs it.
+              Milestones is guarded to Icons, which is exactly why
+              Badges is its own screen rather than a redirect there. */}
+          <Route
+            path="search"
+            element={
+              <RequireAuth>
+                <SearchPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="badges"
+            element={
+              <RequireAuth>
+                <BadgesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="saved"
+            element={
+              <RequireAuth>
+                <SavedPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="help"
+            element={
+              <RequireAuth>
+                <HelpPage />
               </RequireAuth>
             }
           />

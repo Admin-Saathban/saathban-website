@@ -14,6 +14,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { NavLink, Outlet } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
@@ -22,6 +23,7 @@ import supabase from "../../lib/supabase.js";
 import * as api from "./api.js";
 
 export default function AdminLayout() {
+  const { t } = useI18n();
   const { profile } = useSession();
   const admin = {
     id: profile.id,
@@ -140,9 +142,7 @@ export default function AdminLayout() {
               fontWeight: 700,
               lineHeight: 1.1,
             }}
-          >
-            Saathban
-          </div>
+          >{t("admin.brand")}</div>
           <div
             style={{
               fontSize: 14,
@@ -204,9 +204,7 @@ export default function AdminLayout() {
             color: C.sage,
             padding: "16px 14px 4px",
           }}
-        >
-          View the spaces
-        </div>
+        >{t("admin.viewSpaces")}</div>
         {[
           { to: "/app/community", label: "Community feed" },
           { to: "/app/outdoor", label: "Outdoor places" },
@@ -312,9 +310,7 @@ export default function AdminLayout() {
                   cursor: "pointer",
                   fontFamily: FONTS.sans,
                 }}
-              >
-                Try again
-              </button>
+              >{t("admin.tryAgain")}</button>
             </p>
           )}
           <Outlet

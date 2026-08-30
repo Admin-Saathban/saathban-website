@@ -14,6 +14,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
@@ -59,6 +60,7 @@ async function fetchNames(ids) {
 }
 
 export default function ModerationQueue() {
+  const { t } = useI18n();
   const [reports, setReports] = useState(null); // null = loading
   const [names, setNames] = useState({});
   const [resolutionDraft, setResolutionDraft] = useState({}); // id -> text
@@ -134,9 +136,7 @@ export default function ModerationQueue() {
           color: C.green,
           margin: "0 0 6px",
         }}
-      >
-        Moderation
-      </h1>
+      >{t("admin.moderation")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
         Reports from community posts, comments, and direct messages. The
         response target is measured in <strong>hours, not days</strong>. DM
@@ -162,7 +162,7 @@ export default function ModerationQueue() {
           {reports === null ? (
             <p style={{ margin: 0, color: C.textMuted }} role="status">Loading…</p>
           ) : open.length === 0 ? (
-            <p style={{ margin: 0, color: C.textMuted }}>The queue is clear.</p>
+            <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {open.map((r) => {
@@ -239,7 +239,7 @@ export default function ModerationQueue() {
                     >
                       <input
                         type="text"
-                        placeholder="Resolution note (audit-logged)"
+                        placeholder={t("admin.resolutionNote")}
                         value={resolutionDraft[r.id] || ""}
                         onChange={(e) =>
                           setResolutionDraft((d) => ({ ...d, [r.id]: e.target.value }))
@@ -258,20 +258,14 @@ export default function ModerationQueue() {
                         }}
                       />
                       {canHide && (
-                        <AdminBtn kind="ghost" onClick={() => hideContent(r)}>
-                          Hide content
-                        </AdminBtn>
+                        <AdminBtn kind="ghost" onClick={() => hideContent(r)}>{t("admin.hideContent")}</AdminBtn>
                       )}
                       <AdminBtn
                         kind="primary"
                         disabled={!(resolutionDraft[r.id] || "").trim()}
                         onClick={() => decide(r, "resolved")}
-                      >
-                        Resolve
-                      </AdminBtn>
-                      <AdminBtn kind="ghost" onClick={() => decide(r, "dismissed")}>
-                        Dismiss
-                      </AdminBtn>
+                      >{t("admin.resolve")}</AdminBtn>
+                      <AdminBtn kind="ghost" onClick={() => decide(r, "dismissed")}>{t("admin.dismiss")}</AdminBtn>
                     </div>
                   </div>
                 );
@@ -282,7 +276,7 @@ export default function ModerationQueue() {
 
         <Card title="Recently decided">
           {decided.length === 0 ? (
-            <p style={{ margin: 0, color: C.textMuted }}>Nothing yet.</p>
+            <p style={{ margin: 0, color: C.textMuted }}>{t("admin.nothingYet")}</p>
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
               {decided.map((r) => (

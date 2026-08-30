@@ -12,6 +12,7 @@
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { PIPELINE, STATUS_LABELS } from "./data.js";
@@ -20,6 +21,7 @@ import { StatusChip, FlagBadge, fmtDate } from "./ui.jsx";
 const TABS = [...PIPELINE, "suspended", "rejected"];
 
 export default function BuddyQueue() {
+  const { t } = useI18n();
   const { applications, loading } = useOutletContext();
   const navigate = useNavigate();
   const [tab, setTab] = useState("pending");
@@ -41,9 +43,7 @@ export default function BuddyQueue() {
           color: C.green,
           margin: "0 0 6px",
         }}
-      >
-        Saath-Buddy review
-      </h1>
+      >{t("admin.buddyReview")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
         Volunteers are matched with isolated seniors, so the bar is high. A
         Buddy has no access to any Icon data before they are{" "}

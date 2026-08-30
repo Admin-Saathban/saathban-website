@@ -13,6 +13,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { useOutletContext } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
@@ -32,6 +33,7 @@ const inputStyle = {
 };
 
 export default function QuestionsQueue() {
+  const { t } = useI18n();
   const { reload } = useOutletContext(); // refreshes the sidebar count
   const [questions, setQuestions] = useState(null); // null = loading
   const [error, setError] = useState(null);
@@ -82,9 +84,7 @@ export default function QuestionsQueue() {
           color: C.green,
           margin: "0 0 6px",
         }}
-      >
-        Questions
-      </h1>
+      >{t("admin.questions")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px" }}>
         Anyone signed in can ask. A reply is stored on the thread and delivered
         to the asker as a notification.
@@ -118,7 +118,7 @@ export default function QuestionsQueue() {
           {questions === null ? (
             <p style={{ margin: 0, color: C.textMuted }}>Loading…</p>
           ) : open.length === 0 ? (
-            <p style={{ margin: 0, color: C.textMuted }}>The queue is clear.</p>
+            <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {open.map((q) => (
@@ -164,9 +164,7 @@ export default function QuestionsQueue() {
                         kind="primary"
                         disabled={busyId === q.id || !(drafts[q.id] || "").trim()}
                         onClick={() => reply(q)}
-                      >
-                        Send reply
-                      </AdminBtn>
+                      >{t("admin.sendReply")}</AdminBtn>
                     </div>
                   </div>
                 </div>
@@ -177,7 +175,7 @@ export default function QuestionsQueue() {
 
         <Card title="Answered">
           {answered.length === 0 ? (
-            <p style={{ margin: 0, color: C.textMuted }}>Nothing yet.</p>
+            <p style={{ margin: 0, color: C.textMuted }}>{t("admin.nothingYet")}</p>
           ) : (
             <div style={{ display: "grid", gap: 14 }}>
               {answered.map((q) => (

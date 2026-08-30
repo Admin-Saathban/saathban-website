@@ -12,6 +12,7 @@
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { sendBroadcast } from "./api.js";
@@ -39,6 +40,7 @@ const AUDIENCES = [
 ];
 
 export default function BroadcastsPage() {
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [reason, setReason] = useState("");
@@ -85,9 +87,7 @@ export default function BroadcastsPage() {
           color: C.green,
           margin: "0 0 6px",
         }}
-      >
-        Broadcasts
-      </h1>
+      >{t("admin.broadcasts")}</h1>
       <p style={{ color: C.textMuted, margin: "0 0 24px" }}>
         An in-app notification to every active account, or one role. Every send
         is audit-logged with its recipient count.
@@ -127,9 +127,7 @@ export default function BroadcastsPage() {
 
       <Card title="Compose">
         <div style={{ display: "grid", gap: 14 }}>
-          <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>
-            Audience
-            <select
+          <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>{t("admin.audience")}<select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               style={{ ...inputStyle, minHeight: A11Y.minTapTargetPx, fontWeight: 400 }}
@@ -148,7 +146,7 @@ export default function BroadcastsPage() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What the notification says"
+              placeholder={t("admin.notifSays")}
               style={{ ...inputStyle, fontWeight: 400 }}
             />
           </label>
@@ -159,7 +157,7 @@ export default function BroadcastsPage() {
               rows={4}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="The longer text shown when the notification is opened"
+              placeholder={t("admin.notifLonger")}
               style={{ ...inputStyle, fontWeight: 400, resize: "vertical" }}
             />
           </label>
@@ -170,15 +168,13 @@ export default function BroadcastsPage() {
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Why this broadcast is going out"
+              placeholder={t("admin.whyBroadcast")}
               style={{ ...inputStyle, fontWeight: 400 }}
             />
           </label>
 
           <div>
-            <AdminBtn kind="primary" disabled={!canSend} onClick={send}>
-              Send broadcast
-            </AdminBtn>
+            <AdminBtn kind="primary" disabled={!canSend} onClick={send}>{t("admin.sendBroadcast")}</AdminBtn>
           </div>
         </div>
       </Card>

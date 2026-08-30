@@ -18,6 +18,7 @@
 
 const en = {
   common: {
+    back: "Back",
     appName: "Saathban",
     backToHome: "Back to home",
     remove: "Remove",
@@ -86,6 +87,54 @@ const en = {
   },
 
   settings: {
+    accountTitle: "Your account",
+    accountHint: "How you sign in, who can see you, and what reaches you.",
+    account: {
+      emailLabel: "You sign in with",
+      emailChange: "Change to a different email",
+      emailHint: "We'll send a note to both addresses. Nothing changes until you open the one we send to the new address.",
+      emailCta: "Send the confirmation",
+      emailSent: "Sent. Open the email we've sent to {email} and nothing will change until you do.",
+      emailInvalid: "That doesn't look like an email address.",
+      emailFailed: "That didn't send. Please try again.",
+      pwChangeTitle: "Change your password",
+      pwChangeHint: "At least 8 characters. You'll still be able to sign in with an email link as well.",
+      pwChangeCta: "Change password",
+      pwChanged: "Your password is changed.",
+      pwSetTitle: "Set a password",
+      pwSetHint: "You sign in with an email link at the moment. A password gives you a second way in — the link keeps working.",
+      pwSetCta: "Set password",
+      pwSet: "Your password is set. You can still use an email link.",
+      pwShort: "Please use at least 8 characters.",
+      pwFailed: "That didn't save. Please try again.",
+      saved: "Saved.",
+      saveFailed: "That didn't save. Please try again.",
+      deleteHint: "Leaving Saathban removes your account and everything in it.",
+      deleteCta: "Delete my account",
+      deleteTitle: "Deleting your account",
+      deleteBody: "We do this by hand so nothing is lost by accident. Write to hello@saathban.org from this address and we'll remove your account and everything in it within a few days. You can change your mind any time before then.",
+    },
+    privacy: {
+      profileTitle: "Who can see my profile",
+      profile: { members: "Anyone on Saathban", connections: "Only my people" },
+      profileHint: {
+        members: "Someone looking for company can find you and say hello.",
+        connections: "Only people you've connected with see your photo, languages and what you enjoy.",
+      },
+      checkinTitle: "Who can see where I've checked in",
+      checkin: { circle: "My circle", connections: "My people", nobody: "Nobody" },
+      checkinHint: {
+        circle: "The people you've let into your circle see that you're out and about.",
+        connections: "Anyone you've connected with sees it.",
+        nobody: "Nobody sees your check-ins. You can still check in for yourself.",
+      },
+    },
+    notify: {
+      title: "Notifications",
+      hint: "Choose what reaches you and what waits until you open the app.",
+      cta: "Open notification settings",
+    },
+
     title: "Settings",
 
     dailyLog: {
@@ -695,6 +744,13 @@ const en = {
       badImageType: "Please use a JPG, PNG, or WebP photo.",
     },
     profile: {
+    somethingToAdd: "Something to add",
+    photoAdd: "Add a photo",
+    photoChange: "Change photo",
+    photoBusy: "Adding…",
+    photoHint: "A face is the thing that makes people say hello. Only members can see it.",
+    photoTooBig: "That picture is a bit large — could you try a smaller one?",
+    photoFailed: "That didn't upload. Please try again.",
       intro:
         "Matching starts from two things: where you are, and — above everything else — the languages you're comfortable talking in.",
       langLabel: "Languages you speak comfortably",
@@ -1203,6 +1259,34 @@ const en = {
      locale block at all — a §0.1 gap wider than tonight and worth
      someone taking. This block is the start of one. */
   admin: {
+    /* §0.1/§0.2 — the admin screens were hardcoded English with no
+       locale block. These are the strings they actually render. */
+    brand: "Saathban",
+    viewSpaces: "View the spaces",
+    tryAgain: "Try again",
+    laterBuild: "Arrives in a later build step",
+    buddyReview: "Saath-Buddy review",
+    questions: "Questions",
+    queueClear: "The queue is clear.",
+    sendReply: "Send reply",
+    nothingYet: "Nothing yet.",
+    waitingReply: "Waiting for a reply",
+    answered: "Answered",
+    broadcasts: "Broadcasts",
+    audience: "Audience",
+    sendBroadcast: "Send broadcast",
+    compose: "Compose",
+    notifSays: "What the notification says",
+    notifLonger: "The longer text shown when the notification is opened",
+    whyBroadcast: "Why this broadcast is going out",
+    moderation: "Moderation",
+    hideContent: "Hide content",
+    resolve: "Resolve",
+    dismiss: "Dismiss",
+    openReports: "Open reports",
+    resolutionNote: "Resolution note (audit-logged)",
+    recentlyDecided: "Recently decided",
+
     work: {
       title: "What needs you",
       intro: "Oldest first. Tap anything to open it.",

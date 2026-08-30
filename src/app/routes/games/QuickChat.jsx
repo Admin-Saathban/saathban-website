@@ -95,7 +95,7 @@ export function ChatBubbles({ bubbles, cornerOf }) {
                 borderRadius: 16,
                 padding: sticker ? "6px 8px" : "8px 12px",
                 boxShadow: "0 4px 14px rgba(45,36,24,0.22)",
-                fontSize: ts(17),
+                fontSize: ts(A11Y.minBodyPx),
                 fontWeight: 600,
                 color: C.textMain,
                 lineHeight: 1.35,
@@ -147,7 +147,7 @@ function Sheet({ hint, onClose, children }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <p style={{ flex: 1, margin: 0, fontSize: ts(17), color: C.textMuted }}>{hint}</p>
+          <p style={{ flex: 1, margin: 0, fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>{hint}</p>
           <button
             type="button"
             onClick={onClose}

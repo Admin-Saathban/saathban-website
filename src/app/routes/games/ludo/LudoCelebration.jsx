@@ -82,10 +82,10 @@ function Face({ seat, name, size, crowned, crownLabel }) {
       <span
         dir="auto"
         style={{
-          fontSize: ts(crowned ? 20 : 16),
+          fontSize: ts(crowned ? 22 : A11Y.minBodyPx),
           fontWeight: crowned ? 700 : 600,
           color: C.textMain,
-          maxWidth: crowned ? 220 : 96,
+          maxWidth: crowned ? 240 : 116,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -208,7 +208,7 @@ export default function LudoCelebration({
 
       {others.length > 0 && (
         <div style={{ marginTop: 4 }}>
-          <p style={{ margin: "0 0 10px", fontSize: ts(16), color: C.textMuted, fontWeight: 600 }}>
+          <p style={{ margin: "0 0 10px", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, fontWeight: 600 }}>
             {t("ludo.celebrate.alsoPlayed")}
           </p>
           <div style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap" }}>
@@ -221,7 +221,7 @@ export default function LudoCelebration({
 
       {/* The only thing said about points, and it is said about
           everybody at once. No number, no rank, no comparison. */}
-      <p style={{ margin: "6px 0 0", fontSize: ts(17), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
+      <p style={{ margin: "6px 0 0", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
         {watching ? t("ludo.celebrate.overNote") : t("ludo.celebrate.warmth")}
       </p>
 

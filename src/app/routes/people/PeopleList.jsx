@@ -79,6 +79,20 @@ export default function PeopleList() {
             </span>
           )}
         </Link>
+        {/* §7 — inviting people from outside starts here, on the
+            list of the people you already have. */}
+        <Link
+          to="invite"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            minHeight: A11Y.minTapTargetPx, padding: "0 18px", borderRadius: 50,
+            border: `2px solid ${C.warmGray}`,
+            background: C.white, color: C.textMain,
+            fontSize: ts(A11Y.minBodyPx), fontWeight: 600, textDecoration: "none",
+          }}
+        >
+          🌸 {t("people.list.inviteCta")}
+        </Link>
       </div>
       <BodyText muted style={{ marginBottom: 14 }}>{t("people.list.intro")}</BodyText>
 
@@ -105,6 +119,21 @@ export default function PeopleList() {
           <BodyText muted style={{ margin: 0 }}>
             {q ? t("people.list.noMatches") : t("people.list.empty")}
           </BodyText>
+          {/* The emptier this list, the more the invitation matters —
+              so it is offered here rather than only in the header. */}
+          {!q && (
+            <Link
+              to="invite"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14,
+                minHeight: A11Y.minTapTargetPx, padding: "0 22px", borderRadius: 50,
+                background: C.green, color: C.cream,
+                fontSize: ts(A11Y.minBodyPx), fontWeight: 700, textDecoration: "none",
+              }}
+            >
+              🌸 {t("people.list.inviteCta")}
+            </Link>
+          )}
         </Card>
       ) : (
         shown.map((p) => {

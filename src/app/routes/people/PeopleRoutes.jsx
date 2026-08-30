@@ -13,6 +13,7 @@ import PersonPage from "./PersonPage.jsx";
 import ThreadPage from "./ThreadPage.jsx";
 import PeopleList from "./PeopleList.jsx";
 import RequestsPage from "./RequestsPage.jsx";
+import InvitePage from "./InvitePage.jsx";
 
 function Screen({ children }) {
   return (
@@ -37,6 +38,9 @@ export default function PeopleRoutes() {
         <Routes>
           <Route index element={<PeopleList />} />
           <Route path="requests" element={<RequestsPage />} />
+          {/* Before :profileId in the file for readability; react-router
+              ranks the static segment higher either way. */}
+          <Route path="invite" element={<InvitePage />} />
           <Route path=":profileId" element={<PersonPage />} />
           <Route path=":profileId/chat" element={<ThreadPage />} />
           <Route path="*" element={<Navigate to="/app/people" replace />} />

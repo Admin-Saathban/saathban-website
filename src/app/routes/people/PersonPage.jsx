@@ -10,12 +10,13 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../circle/ui.jsx";
 import { fetchPerson, fetchMembershipsWith, openDmWith } from "./peopleStore.js";
+import InviteWelcome from "./InviteWelcome.jsx";
 import {
   fetchMyPeople,
   fetchPersonMoments,
@@ -125,6 +126,12 @@ function PermissionList({ membership }) {
 export default function PersonPage() {
   const { profileId } = useParams();
   const navigate = useNavigate();
+  /* §7 — arriving on somebody's invitation. The code only decides
+     whether the welcome banner appears; it grants nothing, and the
+     server re-checks everything on the tap. */
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get("invite");
+  const [reloadKey, setReloadKey] = useState(0);
   const { t, ts, lang, meta } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
@@ -178,7 +185,7 @@ export default function PersonPage() {
     return () => {
       cancelled = true;
     };
-  }, [profileId, myId]);
+  }, [profileId, myId, reloadKey]);
 
   const inviteGame = async () => {
     if (gamePick) return setGamePick(null);
@@ -268,6 +275,14 @@ export default function PersonPage() {
 
   return (
     <>
+      {inviteCode && (
+        <InviteWelcome
+          code={inviteCode}
+          personId={profileId}
+          personName={person.full_name}
+          onConnected={() => setReloadKey((n) => n + 1)}
+        />
+      )}
       <Card>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <span

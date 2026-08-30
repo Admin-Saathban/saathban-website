@@ -170,6 +170,14 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0071 — a link that points at a person (saathban-website-38, 2026-08-30) — **APPLIED**
+
+§7 personal invite links. personal_invites + create/open/accept, all
+definer; no insert or update policy, so the binding rule and the
+"never auto-connected" rule cannot be sidestepped by writing the table.
+Blocks, gates and the daily ceiling are NOT reimplemented — the group
+path calls send_friend_request, the personal path re-uses its helpers.
+
 ## 0070 — safe_profiles exposes area (saathban-website-38, 2026-08-30) — **APPLIED**
 
 First migration in this lane's allocated range (0070-0079). §7's feed

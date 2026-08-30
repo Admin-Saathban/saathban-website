@@ -44,6 +44,9 @@ export const THEMES = {
     ink: C.textMain,
     inkMuted: C.textMuted,
     glow: "rgba(74,58,34,0.20)",
+    cell: C.white,
+    cellAlt: "#f3e9db",
+    line: C.warmGray,
   },
   wood: {
     key: "wood",
@@ -56,6 +59,9 @@ export const THEMES = {
     ink: "#3b2a1c",
     inkMuted: "#7a5c3e",
     glow: "rgba(90,60,25,0.28)",
+    cell: "#f6ead2",
+    cellAlt: "#e7d3b3",
+    line: "#c9ad83",
   },
   marble: {
     key: "marble",
@@ -66,6 +72,9 @@ export const THEMES = {
     ink: "#2f2c28",
     inkMuted: "#6d6862",
     glow: "rgba(60,58,54,0.22)",
+    cell: "#ffffff",
+    cellAlt: "#eceae5",
+    line: "#cfcbc3",
   },
   night: {
     key: "night",
@@ -76,6 +85,9 @@ export const THEMES = {
     ink: "#f0ece4",
     inkMuted: "#a9b0bd",
     glow: "rgba(0,0,0,0.45)",
+    cell: "#273041",
+    cellAlt: "#1e2430",
+    line: "#3d4757",
   },
 };
 
@@ -111,6 +123,12 @@ export function themeVars(theme) {
     "--sb-table-ink": theme.ink,
     "--sb-table-ink-muted": theme.inkMuted,
     "--sb-table-glow": theme.glow,
+    /* Interior tokens, for a board that repaints its own cells. The
+       board lane reads these with a C.* fallback — var(--sb-table-cell,
+       #fff) — so an unthemed table is byte-identical to before. */
+    "--sb-table-cell": theme.cell,
+    "--sb-table-cell-alt": theme.cellAlt,
+    "--sb-table-line": theme.line,
   };
 }
 

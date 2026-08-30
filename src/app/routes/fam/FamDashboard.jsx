@@ -24,6 +24,7 @@ import {
 } from "../../lib/circle.js";
 import { FamScreen, Card, SectionLabel, Pill, BodyText } from "./ui.jsx";
 import { MOOD_BY_VALUE } from "./famCopy.js";
+import PersonCard from "./PersonCard.jsx";
 import AreaCards from "../../components/AreaCards.jsx";
 import YourTurnChips from "../games/YourTurnChips.jsx";
 import { fetchSharedMoments, momentDayLabel } from "./famMoments.js";
@@ -143,57 +144,11 @@ function IconCard({ view }) {
         {t("fam.card.todayLabel")}
       </p>
 
-      {/* Daily logs — the granted-or-privacy fork */}
-      {p.seeDailyLogs ? (
-        view.today.dailyCount > 0 ? (
-          <div style={{ background: C.cream, borderRadius: 14, padding: "14px 18px", marginBottom: 14 }}>
-            {view.today.mood && (
-              <BodyText style={{ marginBottom: 8 }}>
-                <span aria-hidden="true" style={{ marginInlineEnd: 8 }}>
-                  {view.today.mood.face}
-                </span>
-                {t(view.today.mood.labelKey)}
-              </BodyText>
-            )}
-            <BodyText style={{ marginBottom: 8 }}>
-              {view.today.dailyCount === 1
-                ? t("fam.card.logsSummaryOne")
-                : t("fam.card.logsSummaryMany", { n: view.today.dailyCount })}
-            </BodyText>
-            {view.today.lastLogAt && (
-              <BodyText muted style={{ margin: 0, fontSize: ts(16) }}>
-                {t("fam.card.lastLog", { time: view.today.lastLogAt })}
-              </BodyText>
-            )}
-          </div>
-        ) : (
-          <BodyText muted style={{ marginBottom: 14 }}>
-            {t("fam.card.quietSoFar")}
-          </BodyText>
-        )
-      ) : (
-        <BodyText muted style={{ marginBottom: 14 }}>
-          {t("fam.card.privateDaily", { name: first })}
-        </BodyText>
-      )}
-
-      {/* Health — medication class, its own permission */}
-      {p.seeHealth ? (
-        <BodyText muted={view.today.medsTaken == null} style={{ marginBottom: 14 }}>
-          {view.today.medsTaken != null
-            ? t("fam.card.medsSummary", { taken: view.today.medsTaken })
-            : t("fam.card.quietHealth")}
-        </BodyText>
-      ) : (
-        <BodyText muted style={{ marginBottom: 14 }}>
-          {t("fam.card.privateHealth", { name: first })}
-        </BodyText>
-      )}
-
-      {/* Location standing — stated in words either way; never a map */}
-      <BodyText muted style={{ fontSize: ts(16), marginBottom: 14 }}>
-        {p.location === "sos_only" ? t("fam.card.locationSos") : t("fam.card.locationNever")}
-      </BodyText>
+      {/* How they are doing, drawn rather than described. Every row
+          is already permission-filtered by RLS before it arrives; the
+          card adds nothing when a module is missing, and says what is
+          closed ONCE, at its foot. */}
+      <PersonCard view={view} permissions={p} />
 
       {/* Shared moments — celebration of what they chose to share */}
       <SharedMoments view={view} />
@@ -310,6 +265,7 @@ export default function FamDashboard() {
               location: m.location_access,
             },
             today: summarize(summaries[i]),
+            todayRows: summaries[i],
           }))
         );
         setPending(requests);

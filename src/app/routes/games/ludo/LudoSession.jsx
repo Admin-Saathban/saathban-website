@@ -408,6 +408,16 @@ export default function LudoSession() {
   };
 
   const chain = Number(state.chain) || 0;
+  /* This 60 is NOT a stale twin of the 30 that new tables carry, and
+     it must not be "fixed" to match. New ludo tables write
+     turn_seconds: 30 into house_rules explicitly (ludoRails, and the
+     setup screen since 388ac5b), so this fallback is only ever
+     reached by an OLDER table that has no key at all — and for those,
+     game_tick's own server-side fallback is 60. Lowering it to 30
+     here would draw a ring emptying at 30 while the server went on
+     waiting until 60: a clock that lies, and a player blamed for a
+     turn they were told they had lost. The two numbers differ on
+     purpose. */
   const turnSeconds = Number(game.house_rules?.turn_seconds) || 60;
   const secondsLeft = game.turn_deadline
     ? Math.max(0, Math.ceil((new Date(game.turn_deadline).getTime() - now) / 1000))

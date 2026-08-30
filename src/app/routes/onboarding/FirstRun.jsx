@@ -36,7 +36,8 @@
 import { useState } from "react";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { MOODS, isoDate } from "../home/homeMock.js";
+import { LOCALES } from "../../locales/index.js";
+import { MOODS, isoDate, greetingKeyForHour } from "../home/homeMock.js";
 import { useDailyLogs } from "../home/logStore.js";
 import { useIconPrefs, toggleModule } from "../../lib/iconPrefs.js";
 import supabase from "../../lib/supabase.js";
@@ -131,11 +132,11 @@ function BigButton({ onClick, children, primary = true, disabled }) {
 }
 
 export default function FirstRun({ profile, onDone }) {
-  const { t, ts } = useI18n();
+  const { t, ts, lang, setLang } = useI18n();
   const { writeEntry } = useDailyLogs(profile.id);
   const prefs = useIconPrefs(profile.id);
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [picked, setPicked] = useState(null);
   const [invite, setInvite] = useState("");
   const [busy, setBusy] = useState(false);
@@ -165,6 +166,111 @@ export default function FirstRun({ profile, onDone }) {
     setBusy(false);
     onDone?.();
   };
+
+  /* ── §9: THE LANGUAGE SCREEN, AND WHY IT IS FIRST ──
+
+     The switch lives in Settings only — the owner ruled out a flag or
+     an ا/A in the header. That leaves one real risk, which §9 names:
+     somebody opens the app in a language they cannot read and cannot
+     find the setting that would fix it. Everything else on this
+     screen assumes you can read the screen.
+
+     So it is chosen BY LOOKING, NOT BY READING A LANGUAGE NAME. Each
+     card is a live sample of the real interface in that script — the
+     actual greeting and the actual log line, in that language's own
+     font. A person who reads neither Latin nor Nastaliq still sees
+     two shapes and knows which one is theirs. "English" and "اردو"
+     are on the cards too, but they are the caption, not the choice.
+
+     It says where to change it later, because §9 requires that, and
+     because a person who taps the wrong one must not be trapped.
+
+     Asked once. The onboarding stamp gates this whole flow, so it
+     never appears again. */
+  if (step === 0) {
+    const sample = (code) => ({
+      dir: code === "ur" ? "rtl" : "ltr",
+      font: LOCALES[code].meta.fonts.body,
+      /* The REAL greeting for the real hour, so the preview is the
+         screen they are about to see rather than a specimen. */
+      greeting: LOCALES[code].strings.home[greetingKeyForHour(new Date().getHours()).split(".")[1]],
+      line: LOCALES[code].strings.hub.logLine
+        .replace("{done}", code === "ur" ? "١" : "1")
+        .replace("{total}", code === "ur" ? "٢" : "2"),
+      label: LOCALES[code].meta.label,
+    });
+    return (
+      <Screen title={t("onboarding.language.title")} note={t("onboarding.language.later")}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {["en", "ur"].map((code) => {
+            const sp = sample(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => {
+                  setLang(code);
+                  setStep(1);
+                }}
+                lang={code}
+                dir={sp.dir}
+                aria-label={LOCALES[code].meta.label}
+                style={{
+                  width: "100%",
+                  textAlign: sp.dir === "rtl" ? "right" : "left",
+                  padding: "18px 20px",
+                  borderRadius: 18,
+                  /* An outline, because it IS the control — §4.1. The
+                     current language keeps a thicker one so the
+                     default is visible without being preselected. */
+                  border:
+                    lang === code ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
+                  background: C.white,
+                  color: C.textMain,
+                  cursor: "pointer",
+                  fontFamily: sp.font,
+                }}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 26,
+                    fontWeight: 700,
+                    color: C.green,
+                    lineHeight: LOCALES[code].meta.lineHeight + 0.4,
+                  }}
+                >
+                  {sp.greeting}
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 17,
+                    color: C.textMuted,
+                    marginTop: 2,
+                    lineHeight: LOCALES[code].meta.lineHeight,
+                  }}
+                >
+                  {sp.line}
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: 10,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: C.textMain,
+                  }}
+                >
+                  {sp.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Screen>
+    );
+  }
 
   if (step === 1) {
     return (

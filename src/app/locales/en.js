@@ -2362,6 +2362,13 @@ const en = {
   },
 
   onboarding: {
+    /* NAVIGATION_SPEC §9. The title is short and the note carries the
+       promise, because a person who cannot read this screen is the
+       exact person it exists for — the CARDS do the talking. */
+    language: {
+      title: "Which looks right?",
+      later: "You can change this any time in Settings.",
+    },
     next: "Carry on",
     mood: {
       title: "How are you today?",

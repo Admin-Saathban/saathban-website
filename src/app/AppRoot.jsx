@@ -42,6 +42,7 @@ import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
 import PublicResult from "./routes/games/PublicResult.jsx";
+import ClaimSeat from "./routes/games/ClaimSeat.jsx";
 import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
 import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
@@ -54,6 +55,8 @@ import BuddyHome from "./routes/buddy/BuddyHome.jsx";
 import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
 import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
+import MorePage from "./routes/MorePage.jsx";
+import AppShellBar from "./components/AppShellBar.jsx";
 
 // App-shell offline caching + installability (production only; no-op
 // in dev). Module level so it runs once, and only for /app visitors.
@@ -153,12 +156,21 @@ function PendingJoinRedirect() {
   const done = useRef(false);
   useEffect(() => {
     if (done.current || !profile) return;
-    if (pathname.startsWith("/app/join")) return;
+    if (pathname.startsWith("/app/join") || pathname.startsWith("/app/seat")) return;
     const code = readPendingJoin();
     if (!code) return;
     done.current = true;
     clearPendingJoin();
-    navigate(`/app/join/${code}`, { replace: true });
+    /* Two kinds of pending arrival share one stash: a spoken join code
+       and a §17 seat token, told apart by the prefix. They resume to
+       different screens because they are different things — the code
+       seats whoever types it, the token holds one chair for one
+       person. */
+    if (String(code).startsWith("seat:")) {
+      navigate(`/app/seat/${String(code).slice(5)}`, { replace: true });
+    } else {
+      navigate(`/app/join/${code}`, { replace: true });
+    }
   }, [profile, pathname, navigate]);
   return null;
 }
@@ -207,6 +219,11 @@ export default function AppRoot() {
               the way back. It is the same join_by_code RPC as the typed
               code, so the gates and rate limits are unchanged. */}
           <Route path="join/:code" element={<JoinByLink />} />
+          {/* §17 — a seat held by a link. Outside RequireAuth for the
+              same reason join/:code is: the person it was sent to may
+              not have an account yet, and a sign-in wall on the link
+              defeats the option entirely. */}
+          <Route path="seat/:token" element={<ClaimSeat />} />
           {/* The public result of a finished game — OUTSIDE RequireAuth,
               like join/:code above, because the whole point is a link
               someone can open with no account. The component never
@@ -443,9 +460,26 @@ export default function AppRoot() {
               </RequireAuth>
             }
           />
+          {/* MORE — the weekly and rare tiers of §3's navigation.
+              Every signed-in role that has a bar has this screen; the
+              groups inside it are filtered per role. */}
+          <Route
+            path="more"
+            element={
+              <RequireAuth>
+                <MorePage />
+              </RequireAuth>
+            }
+          />
           {/* Per-role dashboards land here in build step 6. */}
           <Route path="*" element={<AppHome />} />
         </Routes>
+
+        {/* THE BOTTOM BAR, mounted once for the whole app (§3). It
+            decides for itself where it must not appear — see
+            AppShellBar. Outside <Routes> so it survives navigation
+            rather than remounting on every screen change. */}
+        <AppShellBar />
         </FeedbackProvider>
       </AuthProvider>
     </LanguageProvider>

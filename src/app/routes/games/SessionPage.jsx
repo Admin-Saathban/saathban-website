@@ -57,6 +57,7 @@ import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, TableHeading } from "./ui.jsx";
+import SeatLinks from "./SeatLinks.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../lib/gameFeel.jsx";
 import { SoundButton, SoundPanel } from "./SoundControls.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
@@ -410,6 +411,11 @@ export default function SessionPage() {
         <TableHeading title={session.title} gameName={gameName} ts={ts} />
         <SoundButton onClick={() => setSoundOpen((v) => !v)} />
       </div>
+
+      {/* §17 — chairs held by a link, and one action each: send it. */}
+      {session.status === "lobby" && mySeat && (
+        <SeatLinks sessionId={session.id} gameName={gameName} />
+      )}
 
       {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
 

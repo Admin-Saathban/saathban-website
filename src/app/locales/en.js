@@ -63,6 +63,8 @@ const en = {
     grow: "Grow with Saathban",
     calendar: "Calendar",
     navLabel: "Main areas",
+    /* Bar-only short forms. The screens keep their full names. */
+    peopleShort: "People",
     tierWeekly: "Every so often",
     tierRare: "Now and then",
     events: "Events",
@@ -1748,6 +1750,13 @@ const en = {
       nameLabel: "Name this table (optional)",
       namePlaceholder: "Sunday chai match",
       nameHint: "Anyone who joins this table can see the name.",
+      /* §17 — the fourth seat option. "Send a link" is for the
+         person who is not on Saathban yet. */
+      fillLinkNote: "They'll sign up and land straight in this seat.",
+      /* §17's own strings. Every refusal gets its own sentence,
+         because "somebody got there first" and "this link is too old"
+         are different things to a person holding a phone. */
+      seatLinkGroup: "",
       /* The faces sheet behind the person choice. */
       sheet: {
         title: "Who is playing?",
@@ -1776,6 +1785,7 @@ const en = {
         yellow: "Yellow",
       },
       fill: {
+        link: "Send a link",
         person: "Someone you know",
         bot: "The computer",
         open: "Anyone from the community",
@@ -1804,6 +1814,24 @@ const en = {
       leave: "Leave",
       leftToast: "You've left the table.",
       leftBotPlays: "You've left — a friendly bot will play your seat.",
+    },
+
+    /* §17 — a seat held by a link. */
+    seatLink: {
+      heading: "Waiting on a link",
+      seatHeld: "Seat {n} is being kept",
+      firstToOpen: "The first person to open the link takes it.",
+      send: "Send it",
+      sent: "Sent.",
+      copied: "Link copied — paste it into WhatsApp.",
+      copyPrompt: "Copy this link:",
+      failed: "That didn't send. Try once more?",
+      shareText: "Come and play {game} with me on Saathban",
+      taking: "Taking your seat…",
+      taken: "Someone else took this seat first.",
+      expired: "This link has expired. Ask them to send a new one.",
+      invalid: "This link doesn't work any more.",
+      findAnother: "See what else is on",
     },
 
     /* Sound, motion and touch. Kept inside `games` because that is

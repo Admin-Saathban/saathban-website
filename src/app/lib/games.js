@@ -202,6 +202,42 @@ export async function createSession(gameKey, seats, houseRules = {}, title = nul
   return data; // session id
 }
 
+/* §17 — "send a link" seat option (0055).
+
+   Distinct from the table's join CODE on purpose: the code is
+   reusable and spoken aloud to a room, this is single-use and dies in
+   48 hours, because a link sent on WhatsApp gets forwarded and a
+   forwarded code would let three strangers into a family game. */
+export async function createSeatLink(sessionId, seatNo) {
+  const { data, error } = await supabase.rpc("create_seat_link", {
+    p_session: sessionId,
+    p_seat: seatNo,
+  });
+  if (error) throw error;
+  return data; // the token
+}
+
+/* Returns the session id, so the caller lands the person AT THE TABLE
+   rather than on a confirmation screen (§11). */
+export async function claimSeatLink(token) {
+  const { data, error } = await supabase.rpc("claim_seat_link", { p_token: token });
+  if (error) throw error;
+  return data;
+}
+
+/* The links still holding chairs at this table. Only participants can
+   read them (0055's policy), which is also what lets any of them
+   re-share — a guest inviting the fourth player is the point. */
+export async function fetchSeatLinks(sessionId) {
+  const { data, error } = await supabase
+    .from("game_seat_links")
+    .select("seat_no, token, expires_at")
+    .eq("session_id", sessionId)
+    .is("used_at", null);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function inviteToGame(sessionId, inviteeId) {
   const { error } = await supabase.rpc("invite_to_game", {
     p_session: sessionId,

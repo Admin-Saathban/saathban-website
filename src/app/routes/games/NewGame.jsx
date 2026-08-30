@@ -43,6 +43,7 @@ import {
   fetchMySessions,
   liveSessionOf,
   inviteToGame,
+  createSeatLink,
   startWithBots,
 } from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
@@ -217,6 +218,20 @@ export default function NewGame() {
       }
 
       const others = fill.map((f, seat) => ({ f, seat })).filter((o) => o.seat > 0);
+
+      /* §17 — a chair held by a link. The link is made HERE, at
+         creation, so the seat is held by a row from the moment the
+         table exists rather than by the setup screen remembering an
+         intention. Seats are 1-based on the server. */
+      for (const o of others.filter((x) => x.f === "link")) {
+        try {
+          await createSeatLink(id, o.seat + 1);
+        } catch {
+          /* One link that would not be made must not strand the
+             table: the chair simply stays empty and can be shared
+             again from the table itself. */
+        }
+      }
       const invited = others.filter((o) => o.f === "person");
       const open = others.filter((o) => o.f === "open");
       const bots = others.filter((o) => o.f === "bot");

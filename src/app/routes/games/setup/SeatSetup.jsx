@@ -138,6 +138,12 @@ function FillChoice({ value, onChange, t, ts, botsAllowed = true, canPostOpen = 
     ["person", "👤", t("games.setup.fill.person")],
     ...(botsAllowed ? [["bot", "🤖", t("games.setup.fill.bot")]] : []),
     ...(canPostOpen ? [["open", "🪷", t("games.setup.fill.open")]] : []),
+    /* §17 — send a link. Offered to everyone, because it is the option
+       for the person who is NOT on Saathban yet: a daughter on
+       WhatsApp who will sign up and land in the seat. It needs no
+       community rights, unlike an open table, because it reaches
+       exactly one person and dies when they take the chair. */
+    ["link", "🔗", t("games.setup.fill.link")],
   ];
   return (
     <div role="radiogroup" style={{ display: "flex", gap: 6 }}>

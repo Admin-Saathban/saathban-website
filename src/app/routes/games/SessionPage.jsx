@@ -212,11 +212,29 @@ export default function SessionPage() {
 
   // Visible countdown, and the zero-crossing tick (once per turn).
   const turnSeconds = Number(session?.house_rules?.turn_seconds) || 60;
+  /* THE CLOCK IS HELD BEFORE THE FIRST ROLL (0094), so no clock is
+     drawn. At a table nobody has played, holding nobody but bots,
+     the server does not take the opening turn — the person is
+     still setting up. This screen went on counting anyway, so a
+     snakes table showed "53 seconds left in this turn" against a
+     server that had already decided to wait: a ring emptying while
+     nothing happens, which is the exact failure the ludo board was
+     fixed for in the same commit as the migration. I fixed one of
+     the two boards and left the other counting.
+
+     Both conditions are the server's, restated rather than
+     guessed, and the auto-tick below stops with it — a client
+     calling game_tick every second for a turn the server will not
+     play is noise on somebody's phone data. */
+  const clockHeld =
+    soft && (session?.seats || []).every((x) => x.is_bot || x.profile_id === profile.id);
+
   const secondsLeft = useMemo(() => {
+    if (clockHeld) return null;
     if (session?.status !== "active" || !session.turn_started_at) return null;
     const deadline = new Date(session.turn_started_at).getTime() + turnSeconds * 1000;
     return Math.max(0, Math.ceil((deadline - now) / 1000));
-  }, [session, turnSeconds, now]);
+  }, [session, turnSeconds, now, clockHeld]);
 
   useEffect(() => {
     if (session?.status !== "active" || secondsLeft !== 0) return;

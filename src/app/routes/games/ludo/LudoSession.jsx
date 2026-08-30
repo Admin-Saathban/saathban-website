@@ -29,6 +29,10 @@ import LudoBoard from "./LudoBoard.jsx";
 import Die, { DieFace } from "./Dice.jsx";
 import SeatPlates from "./SeatPlates.jsx";
 import ChatPanel from "./ChatPanel.jsx";
+import QuickChat, { ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
+import { screenCorner } from "./SeatPlates.jsx";
+import { leaveSession } from "../../../lib/games.js";
+import { sendChat, fetchChat } from "./ludoRails.js";
 
 const POLL_MS = 2500;
 
@@ -201,6 +205,87 @@ export default function LudoSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diceKey, myTurnNow, game?.current_seat]);
 
+  /* ── The small ceremonies ──
+     Arriving, starting, and leaving are moments, not state changes.
+     Each is brief, each is skippable by doing nothing, and each is
+     announced to a screen reader as a status rather than an alert. */
+  const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
+  const [leaveAsk, setLeaveAsk] = useState(false);
+  const [bubbles, setBubbles] = useState([]);
+  const seenChat = useRef(new Set());
+  const startedOnce = useRef(false);
+
+  /* "Setting the table…" while the seats are still filling, and
+     "Khelte hain!" the moment play begins — once, not on every poll. */
+  useEffect(() => {
+    if (game?.status === "lobby") {
+      setCeremony((c) => (c === null ? "setting" : c));
+      return undefined;
+    }
+    if (game?.status === "playing" && !startedOnce.current) {
+      startedOnce.current = true;
+      setCeremony("start");
+      const h = setTimeout(() => setCeremony(null), 1800);
+      return () => clearTimeout(h);
+    }
+    if (game?.status !== "lobby") setCeremony((c) => (c === "setting" ? null : c));
+    return undefined;
+  }, [game?.status]);
+
+  /* New chat lines float by their sender's corner for a few seconds.
+     Only messages that arrive AFTER this screen opened — replaying the
+     history as bubbles would be a wall of noise on join. */
+  useEffect(() => {
+    if (!game?.id) return undefined;
+    let alive = true;
+    let primed = false;
+    const tick = async () => {
+      try {
+        const rows = await fetchChat(game.id);
+        if (!alive) return;
+        const fresh = [];
+        for (const m of rows) {
+          if (seenChat.current.has(m.id)) continue;
+          seenChat.current.add(m.id);
+          if (primed) fresh.push(m);
+        }
+        primed = true;
+        if (fresh.length) {
+          const add = fresh.slice(-3).map((m) => ({
+            id: m.id,
+            text: m.body,
+            seat: (game.seats || []).find((x) => x.profile_id === m.sender_id)?.seat ?? 0,
+          }));
+          setBubbles((b) => [...b, ...add]);
+          setTimeout(() => {
+            setBubbles((b) => b.filter((x) => !add.some((a) => a.id === x.id)));
+          }, BUBBLE_MS);
+        }
+      } catch {
+        /* the bubbles are a grace note; the chat panel is the record */
+      }
+    };
+    tick();
+    const h = setInterval(tick, 4000);
+    return () => {
+      alive = false;
+      clearInterval(h);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, game?.seats?.length]);
+
+  const sayQuick = async (text) => {
+    // Mine appears at once; the poll will simply find it already seen.
+    const mine = { id: `local-${Date.now()}`, text, seat: mySeatRow?.seat ?? 0 };
+    setBubbles((b) => [...b, mine]);
+    setTimeout(() => setBubbles((b) => b.filter((x) => x.id !== mine.id)), BUBBLE_MS);
+    try {
+      await sendChat(game.id, text);
+    } catch {
+      /* said out loud locally either way — the panel shows the truth */
+    }
+  };
+
   const act = async (fn) => {
     setBusy(true);
     setError("");
@@ -274,6 +359,27 @@ export default function LudoSession() {
   const mySeatRow = seats.find((s) => s.profile_id === myId);
   const currentRow = seats.find((s) => s.seat === game.current_seat);
   const isMyTurn = game.status === "playing" && currentRow?.profile_id === myId;
+  /* WHERE THE DICE LIVE. Two people asked for opposite things here:
+     one wants each player's own die beside their own face (the table
+     feels inhabited), the other wants dice in the middle where thrown
+     dice land (the table feels real). Rather than one silently
+     overwriting the other, placement is a mode and BOTH layouts work.
+     Flip this constant to "centre" to restore the middle tray exactly
+     as it was — nothing else needs changing. */
+  const DICE_PLACEMENT = "corners";
+  const cornerDice = DICE_PLACEMENT === "corners";
+
+  /* What sits at one player's corner: their rolled dice while it is
+     their turn, an empty die for whoever is about to roll, and
+     nothing at all for the seats waiting their go — four idle dice on
+     screen would say "four things to tap" when only one is live. */
+  const diceForSeat = (seat) => {
+    if (seat !== game.current_seat) return [];
+    const rolled = Array.isArray(state.dice) ? state.dice : null;
+    if (!rolled) return [];
+    return rolled.map((d) => ({ v: d.v, spent: !!d.used || !!d.wasted }));
+  };
+
   const dice = Array.isArray(state.dice) ? state.dice : null;
   const hasDice = !!dice;
   const diceCount = Number(state.dice_count) || Number(rules.dice_count) || 1;
@@ -370,6 +476,21 @@ export default function LudoSession() {
       {/* ── LOBBY ── */}
       {game.status === "lobby" && (
         <>
+          {/* ── Setting the table ──
+                 Waiting for seats to fill is not dead time, it is the
+                 moment before a game. Said once, warmly, above the
+                 code — not a spinner, because nothing is loading. */}
+          {ceremony === "setting" && (
+            <div role="status" className="sb-ceremony" style={{ textAlign: "center", margin: "4px 0 12px" }}>
+              <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green }}>
+                {t("ludo.ceremony.setting")}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: ts(17), color: C.textMuted }}>
+                {t("ludo.ceremony.settingNote")}
+              </p>
+            </div>
+          )}
+
           <Card style={{ textAlign: "center" }}>
             <BodyText muted>{t("ludo.lobby.codeHint")}</BodyText>
             <p
@@ -484,7 +605,49 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             myId={myId}
+            diceFor={cornerDice ? diceForSeat : undefined}
+            onRoll={doRoll}
+            canRoll={cornerDice && isMyTurn && !hasDice && !busy && !rolling}
           />
+
+          <div style={{ position: "relative" }}>
+          {/* Remarks float by the speaker's corner — the corner they
+              are actually sitting at after the POV rotation. */}
+          <ChatBubbles
+            bubbles={bubbles}
+            cornerOf={(seat) => screenCorner(seat, povRotation(mySeatRow?.seat ?? null))}
+          />
+
+          {/* "Setting the table…" and "Khelte hain!" — brief, warm,
+              and never in the way of a tap. */}
+          {ceremony === "start" && (
+            <div
+              role="status"
+              className="sb-ceremony"
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                background: "#fffdf5cc",
+                borderRadius: 20,
+                pointerEvents: "none",
+                textAlign: "center",
+                padding: 16,
+              }}
+            >
+              <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(30), fontWeight: 700, color: C.green }}>
+                {t("ludo.ceremony.start")}
+              </p>
+              <p style={{ margin: 0, fontSize: ts(17), color: C.textMuted }}>
+                {t("ludo.ceremony.startNote")}
+              </p>
+            </div>
+          )}
 
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
@@ -494,8 +657,10 @@ export default function LudoSession() {
             currentSeat={game.current_seat}
             onPieceTap={tapPiece}
           >
-            {/* ── The dice, in the middle, where thrown dice land ── */}
-            {isMyTurn && !hasDice ? (
+            {/* ── The dice, in the middle, where thrown dice land.
+                   Rendered only in "centre" placement; in "corners"
+                   each player's die sits beside their own face. ── */}
+            {!cornerDice && isMyTurn && !hasDice ? (
               <button
                 type="button"
                 onClick={doRoll}
@@ -530,7 +695,7 @@ export default function LudoSession() {
                   </span>
                 ))}
               </button>
-            ) : hasDice ? (
+            ) : !cornerDice && hasDice ? (
               <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "center" }}>
                 {dice.map((d, i) => (
                   <Die
@@ -564,6 +729,10 @@ export default function LudoSession() {
               </div>
             ) : null}
           </LudoBoard>
+          <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>
+            {t("ludo.legend.flow")}
+          </p>
+          </div>
 
           <SeatPlates
             where="bottom"
@@ -572,6 +741,9 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             myId={myId}
+            diceFor={cornerDice ? diceForSeat : undefined}
+            onRoll={doRoll}
+            canRoll={cornerDice && isMyTurn && !hasDice && !busy && !rolling}
           />
 
           {/* ── What to do next, in one sentence ── */}
@@ -731,7 +903,91 @@ export default function LudoSession() {
       )}
 
       {/* Chat travels with every phase */}
+      {mySeatRow && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", margin: "12px 0 0" }}>
+          <QuickChat onSend={sayQuick} disabled={game.status === "finished"} />
+          {game.status !== "finished" && (
+            <GhostBtn onClick={() => setLeaveAsk(true)} style={{ minHeight: 52 }}>
+              {t("ludo.ceremony.leaveCta")}
+            </GhostBtn>
+          )}
+        </div>
+      )}
       {mySeatRow && <ChatPanel sessionId={game.id} myId={myId} seats={seats} />}
+
+      {/* Leaving is a decision, so it is asked as one — warmly, and
+          with the seat's fate stated rather than implied. */}
+      {leaveAsk && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("ludo.ceremony.leaveTitle")}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 80,
+            background: "rgba(45,36,24,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div style={{ background: C.white, borderRadius: 22, padding: "26px 22px", maxWidth: 460, width: "100%" }}>
+            <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green, margin: "0 0 10px" }}>
+              {t("ludo.ceremony.leaveTitle")}
+            </h2>
+            <p style={{ fontSize: ts(19), lineHeight: 1.55, color: C.textMain, margin: "0 0 20px" }}>
+              {t("ludo.ceremony.leaveBody")}
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  setLeaveAsk(false);
+                  // Navigate first: a guest loses read access to the
+                  // session the instant they leave, so staying here
+                  // would only show them a door closing on them.
+                  try { await leaveSession(game.id); } catch { /* already gone is fine */ }
+                  navigate("/app/games");
+                }}
+                style={{
+                  flex: "1 1 160px",
+                  minHeight: 56,
+                  borderRadius: 50,
+                  border: "none",
+                  background: C.green,
+                  color: C.cream,
+                  fontSize: ts(19),
+                  fontWeight: 700,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                {t("ludo.ceremony.leaveConfirm")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeaveAsk(false)}
+                style={{
+                  flex: "1 1 160px",
+                  minHeight: 56,
+                  borderRadius: 50,
+                  border: `2px solid ${C.warmGray}`,
+                  background: C.white,
+                  color: C.textMain,
+                  fontSize: ts(19),
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                {t("ludo.ceremony.leaveStay")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

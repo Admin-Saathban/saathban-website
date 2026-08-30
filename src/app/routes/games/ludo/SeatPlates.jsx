@@ -6,14 +6,26 @@
    view (your yard nearest you, bottom-left), your own plate follows it
    down to the bottom-left too. You always sit in the same place.
 
-   Whose turn it is is said three ways: a heavy ring, the word "turn"
-   under the name, and the plate's own raised weight. Never the glow
-   alone.
+   Whose turn it is is said four ways now: a heavy ring, the word
+   "turn" under the name, the plate's own raised weight, and a quiet
+   "thinking…" while the table waits on them. Never the glow alone.
+
+   A plate can also carry that player's OWN DIE, beside their face —
+   your die next to your name, theirs next to theirs, so the table
+   reads as four people rather than one shared tray. The active
+   player's die is bright and carries an arrow cue; everyone else's is
+   dimmed and inert. Tapping your own die rolls it; tapping anyone
+   else's does nothing, which is the point. In two-dice mode both of
+   that player's dice sit together at their corner.
+
+   Placement is a MODE, not a decision baked in here: passing no dice
+   renders the plates exactly as before, for the centre-tray layout.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
+import { DieFace } from "./Dice.jsx";
 
 /* The board's corners, clockwise from top-left. Seat 0's yard is at
    top-left, seat 1's at bottom-left, seat 2's bottom-right, seat 3's
@@ -32,7 +44,88 @@ function initialOf(name) {
   return [...s][0].toUpperCase();
 }
 
-function Plate({ seat, row, isTurn, isMe, align }) {
+/* One die at a corner. Bright and arrow-cued when it is that
+   player's turn, dim and inert otherwise. Only your own die is a
+   button — tapping someone else's does nothing at all, so the board
+   never invites a tap it will refuse. */
+function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label }) {
+  const { t, ts } = useI18n();
+  const live = active && mine && canRoll;
+  const body = (
+    <span
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        background: active ? "#fffdf7" : "#f3eee4",
+        border: `2px solid ${active ? colour : C.warmGray}`,
+        boxShadow: active ? `0 2px 8px ${colour}33` : "none",
+        opacity: active ? 1 : 0.55,
+      }}
+    >
+      {value ? (
+        <DieFace value={value} size={34} ink={spent ? C.textMuted : C.brown} />
+      ) : (
+        <span aria-hidden="true" style={{ fontSize: ts(20) }}>🎲</span>
+      )}
+      {spent && (
+        <span aria-hidden="true" style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(13), fontWeight: 800, color: C.green }}>
+          ✓
+        </span>
+      )}
+    </span>
+  );
+
+  if (!live) {
+    return (
+      <span aria-hidden={!value} title={value ? String(value) : undefined} style={{ display: "inline-flex" }}>
+        {body}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onRoll}
+      aria-label={label}
+      className="sb-die-cue"
+      style={{
+        position: "relative",
+        background: "none",
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        minHeight: A11Y.minTapTargetPx,
+        minWidth: A11Y.minTapTargetPx,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {body}
+      {/* the arrow cue: "this one, now" */}
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: -14,
+          fontSize: ts(15),
+          color: colour,
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        ▾
+      </span>
+    </button>
+  );
+}
+
+function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll }) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   const colour = SEAT_COLORS[seat];
@@ -92,7 +185,54 @@ function Plate({ seat, row, isTurn, isMe, align }) {
               : t("ludo.seat.turn")
             : t("ludo.seat.seatN", { n: seat + 1 })}
         </span>
+        {/* Someone is deciding. Three dots that settle, not a spinner:
+            a spinner says "the app is busy", this says "they are
+            thinking", which is a different and truer thing. */}
+        {isTurn && !isMe && (
+          <span
+            className="sb-think"
+            style={{ display: "block", fontSize: ts(13), color: C.textMuted, letterSpacing: "0.06em" }}
+          >
+            {t("ludo.ceremony.thinking")}
+          </span>
+        )}
       </span>
+
+      {/* This player's own die (or dice), beside their face. */}
+      {dice && dice.length > 0 && (
+        <span style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+          {dice.map((d, i) => (
+            <SeatDie
+              key={i}
+              value={d.v}
+              spent={d.spent}
+              active={isTurn}
+              mine={isMe}
+              canRoll={canRoll}
+              colour={colour}
+              onRoll={onRoll}
+              label={
+                canRoll
+                  ? t("ludo.turn.yours")
+                  : t("ludo.dice.pick", { n: d.v })
+              }
+            />
+          ))}
+        </span>
+      )}
+      {/* Nothing rolled yet: the empty die is the roll button, and only
+          for the person whose turn it is. */}
+      {dice && dice.length === 0 && (
+        <SeatDie
+          value={null}
+          active={isTurn}
+          mine={isMe}
+          canRoll={canRoll}
+          colour={colour}
+          onRoll={onRoll}
+          label={t("ludo.turn.yours")}
+        />
+      )}
     </div>
   );
 }
@@ -100,7 +240,19 @@ function Plate({ seat, row, isTurn, isMe, align }) {
 /* `where` is "top" or "bottom": the row of two plates above or below
    the board. On a phone the board is the full width, so the corners
    live in a row of their own rather than floating over it. */
-export default function SeatPlates({ where, seats, seatsInPlay, spin, currentSeat, myId }) {
+export default function SeatPlates({
+  where,
+  seats,
+  seatsInPlay,
+  spin,
+  currentSeat,
+  myId,
+  /* Dice at the corners — omit entirely for the centre-tray layout.
+     diceFor(seat) → [{ v, spent }] | [] | null */
+  diceFor,
+  onRoll,
+  canRoll,
+}) {
   const wanted = where === "top" ? [0, 1] : [3, 2]; // TL,TR above · BL,BR below
   const plates = wanted.map((corner) => {
     for (let seat = 0; seat < seatsInPlay; seat++) {
@@ -130,6 +282,9 @@ export default function SeatPlates({ where, seats, seatsInPlay, spin, currentSea
               isTurn={seat === currentSeat}
               isMe={seats.find((s) => s.seat === seat)?.profile_id === myId}
               align={i === 0 ? "start" : "end"}
+              dice={diceFor ? diceFor(seat) : null}
+              onRoll={onRoll}
+              canRoll={!!canRoll && seat === currentSeat}
             />
           )}
         </div>

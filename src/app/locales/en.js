@@ -1429,6 +1429,53 @@ const en = {
       sendCta: "Send",
       stickers: "Send a sticker",
     },
+
+    /* Two taps, no typing: the things people actually say at a carrom
+       or ludo table, in the register they'd say them in. Sent as
+       ordinary chat messages, so they need no schema of their own. */
+    quick: {
+      open: "Say something",
+      close: "Close",
+      hint: "Tap to send — it goes straight to the table.",
+      phrases: {
+        wah: "Wah! 🎉",
+        shabash: "Shabash! 👏",
+        naaInsafi: "Naa insafi! 😤",
+        kyaChaal: "Kya chaal thi!",
+        phirMilenge: "Phir milenge 🙏",
+        chaloJaldi: "Chalo, jaldi karo 😄",
+        meriBaari: "Meri baari!",
+        acha: "Acha acha, samajh gaya",
+        bachGaya: "Bach gaya! 😅",
+        khelteHain: "Khelte hain!",
+      },
+    },
+
+    /* The small ceremonies that make a table feel like a place rather
+       than a screen: arriving, starting, a capture, and leaving. */
+    ceremony: {
+      setting: "Setting the table…",
+      settingNote: "Chairs out, board open. One moment.",
+      start: "Khelte hain!",
+      startNote: "The table is set — good luck, everyone.",
+      captureOwn: "You sent one home!",
+      captureTheirs: "One of yours goes home.",
+      leaveCta: "Leave the table",
+      leaveTitle: "Leave the table?",
+      leaveBody:
+        "If the game has begun, a friendly bot takes your chair so the others can carry on. If it hasn't started yet, your seat simply opens up again.",
+      leaveConfirm: "Yes, leave",
+      leaveStay: "Stay at the table",
+      thinking: "thinking…",
+    },
+
+    /* The arrows printed on the board, described for anyone who can't
+       see them. */
+    legend: {
+      flow: "The arrows show the way the pieces travel.",
+      entry: "Seat {n} enters the track here.",
+      home: "Seat {n} turns for home here.",
+    },
     errors: {
       load: "That didn't load. Please try again in a moment.",
       generic: "That didn't go through — please try again.",

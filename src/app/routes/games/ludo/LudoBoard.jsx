@@ -39,6 +39,49 @@ import {
   cellFor,
   povRotation,
 } from "./board.js";
+import { allArrows } from "./boardArrows.js";
+
+/* ── The arrows that teach the board ──────────────────────────────
+   A first-timer's first question is "which way do I go?", and on a
+   real board the cloth answers it. So does this one.
+
+   Three glyphs, one meaning each: a plain chevron for the flow of the
+   track, a CURVED arrow where a seat's gotis step out of their yard
+   (a doorway, drawn in that seat's colour), and a coloured arrow at
+   each arm's tip turning into that seat's home column. Every angle is
+   read off the track in boardArrows.js, so the arrows cannot drift out
+   of step with the geometry.
+
+   They are drawn UNDER the pieces and at low contrast: an instruction
+   for the first game, wallpaper by the tenth, never a thing competing
+   with a goti for your eye. */
+function Arrow({ kind, cell, angle, seat, seatsInPlay }) {
+  const [c, r] = cell;
+  const x = c * CELL + CELL / 2;
+  const y = r * CELL + CELL / 2;
+  const colored = kind !== "flow";
+  const stroke = colored ? SEAT_COLORS[seat] : "#8A7B66";
+  // An arrow into a seat nobody is sitting at would be an instruction
+  // to nowhere, so it fades with its yard.
+  const dim = colored && seat >= seatsInPlay;
+  return (
+    <g
+      transform={`translate(${x} ${y}) rotate(${angle})`}
+      opacity={dim ? 0.12 : colored ? 0.95 : 0.55}
+      aria-hidden="true"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={colored ? 4 : 3.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {kind === "entry" && <path d="M -11 11 Q -11 0 -2 0" />}
+      {kind === "flow" && <path d="M -11 0 L 1 0" />}
+      {kind === "home" && <path d="M -9 0 L 1 0" />}
+      <path d="M -5 -6 L 3 0 L -5 6" />
+    </g>
+  );
+}
 
 const CELL = 40; // viewBox units per grid cell
 const SIZE = 15 * CELL;
@@ -72,7 +115,7 @@ function Upright({ x, y, spin, children, ...props }) {
    whose goti it was sees what happened rather than merely finding it
    missing later. */
 function useCaptured(pieces) {
-  const [hit, setHit] = useState(() => new Set());
+  const [hit, setHit] = useState(() => new Map());
   const prevRef = useRef(null);
   const key = JSON.stringify(pieces);
 
@@ -81,15 +124,18 @@ function useCaptured(pieces) {
     prevRef.current = pieces;
     if (!prev) return undefined;
 
-    const sent = new Set();
+    const sent = new Map();
     pieces.forEach((row, s) =>
       row.forEach((p, i) => {
-        if (p === 0 && Number(prev[s]?.[i] ?? 0) > 0) sent.add(`${s}:${i}`);
+        const was = Number(prev[s]?.[i] ?? 0);
+        // Where it was standing when it was taken: the flash belongs
+        // on that square, which only the previous board knows.
+        if (p === 0 && was > 0) sent.set(`${s}:${i}`, cellFor(s, was, i));
       })
     );
     if (!sent.size) return undefined;
     setHit(sent);
-    const id = window.setTimeout(() => setHit(new Set()), 600);
+    const id = window.setTimeout(() => setHit(new Map()), 700);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
@@ -287,6 +333,14 @@ export default function LudoBoard({
           );
         })}
 
+        {/* ── Which way you go ──
+               Printed on the track like a real board's cloth, derived
+               from the track itself so it can never point the wrong
+               way after a geometry change. */}
+        {allArrows({ every: 2 }).map((a, i) => (
+          <Arrow key={`arw-${i}`} {...a} seatsInPlay={seatsInPlay} />
+        ))}
+
         {/* ── Home columns: each arm's middle line, in the seat's colour ── */}
         {HOME_COLUMNS.map((cells, seat) =>
           cells.map(([c, r], i) => (
@@ -334,6 +388,26 @@ export default function LudoBoard({
           />
         </g>
 
+        {/* ── A capture flashes the square ──
+               The goti that was taken shakes as it lands back home,
+               but the thing that HAPPENED happened here, and a player
+               watching the other end of the board would otherwise
+               never see it. */}
+        {[...captured.values()].map(([cc, rr], i) => (
+          <rect
+            key={`flash-${i}`}
+            className="sb-cell-flash"
+            x={cc * CELL - CELL / 2 + 1}
+            y={rr * CELL - CELL / 2 + 1}
+            width={CELL - 2}
+            height={CELL - 2}
+            rx={6}
+            fill={C.brown}
+            pointerEvents="none"
+            aria-hidden="true"
+          />
+        ))}
+
         {/* ── Where the die you are holding could take you ── */}
         {options.map((o, i) => {
           const [cc, rr] = cellFor(currentSeat, o.to, 0);
@@ -360,16 +434,40 @@ export default function LudoBoard({
             const [cc, rr] = cellFor(seat, p, i);
             const group = groups.get(`${cc},${rr}`) || [{ seat, i, p }];
             const k = group.findIndex((g) => g.seat === seat && g.i === i);
-            const n = group.length;
             // Two of MY gotis here is a jota; anyone else here is a
             // guest resting on the square.
             const mine = group.filter((g) => g.seat === seat).length;
             const isJota = mine >= 2 && p >= 1 && p <= 56;
             const firstOfSeat = group.findIndex((g) => g.seat === seat) === k;
-            // Lean everything on the square apart so nothing hides.
-            const spread = n > 1 ? 13 : 0;
-            const cx = cc * CELL + (k - (n - 1) / 2) * spread;
-            const cy = rr * CELL - (k - (n - 1) / 2) * spread;
+
+            /* ── A JOTA IS A TOWER ──
+               Two of your gotis on one square is a different kind of
+               thing from two gotis near each other, and it has to read
+               that way from arm's length. So the pair is STACKED —
+               one goti standing on the other, a taller silhouette than
+               anything else on the board — rather than leaned side by
+               side, where at phone width it looks like two singles
+               that happen to be close.
+
+               Guests from other seats still lean apart horizontally;
+               they are separate pieces and must stay separately
+               tappable. Only your own pair climbs. */
+            const seatsHere = [...new Set(group.map((g) => g.seat))];
+            const slot = seatsHere.indexOf(seat);
+            const mineIdx = group.filter((g, gi) => g.seat === seat && gi <= k).length - 1;
+            const spread = seatsHere.length > 1 ? 15 : 0;
+            const climb = isJota ? 13 : 0;
+            const stackX = cc * CELL + (slot - (seatsHere.length - 1) / 2) * spread;
+            const cx = stackX;
+            /* The upper goti is drawn FIRST and the lower one over it,
+               so the near piece occludes the far one and the pair
+               reads as depth rather than as two flat discs. Map order
+               is piece index, and mineIdx follows it, so this falls out
+               of the ordering for free. */
+            const cy = rr * CELL - (mine - 1 - mineIdx) * climb + (isJota ? climb / 2 : 0);
+            // The tower is centred on its square: a goti's centre sits
+            // half a climb above and below, so the pair grows upward
+            // AND downward rather than drifting off the cell.
             const canTap = seat === currentSeat && movable.has(i);
             const moved = !!pairsMoved[`${seat}:${p}`];
 
@@ -386,16 +484,32 @@ export default function LudoBoard({
                     while the pair may still split, solid once it has
                     moved together and is bound to even dice. */}
                 {isJota && firstOfSeat && (
-                  <circle
-                    cx={cc * CELL}
-                    cy={rr * CELL}
-                    r={24}
-                    fill="none"
-                    stroke={SEAT_COLORS[seat]}
-                    strokeWidth={2.5}
-                    strokeDasharray={moved ? undefined : "5 4"}
-                    opacity={0.85}
-                  />
+                  <g data-jota={`${seat}:${moved ? "moved" : "virgin"}`}>
+                    {/* The ring is drawn round the whole tower, not
+                        round one goti, and it is TALL — the shape
+                        itself says "these two are one piece now". */}
+                    <ellipse
+                      cx={stackX}
+                      cy={rr * CELL}
+                      rx={20}
+                      ry={26}
+                      fill="none"
+                      stroke={SEAT_COLORS[seat]}
+                      strokeWidth={3}
+                      strokeDasharray={moved ? undefined : "5 4"}
+                      opacity={0.9}
+                    />
+                    {/* A shadow on the square it actually occupies,
+                        so a tall piece still reads as standing HERE. */}
+                    <ellipse
+                      cx={stackX}
+                      cy={rr * CELL + 22}
+                      rx={15}
+                      ry={4.5}
+                      fill="#2F2A24"
+                      opacity={0.18}
+                    />
+                  </g>
                 )}
                 {canTap && (
                   <circle

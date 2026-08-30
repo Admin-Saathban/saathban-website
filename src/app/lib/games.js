@@ -588,3 +588,32 @@ export async function fetchTablePeople(sessionIds, profileId) {
   }
   return bySession;
 }
+
+/* ── The §8 soft window, for every game (0092/0093) ──────────────
+   Both RPCs are game-agnostic on the server, and both started life
+   in ludoRails because ludo was the first board to need them. They
+   belong here: a snakes table opened by tapping the game is 'active'
+   from its first instant too, so everything gated on a lobby — the
+   invite picker most of all — simply never renders for one. */
+
+/* Set, but not yet played: the window in which a table's seats,
+   name, dice and invitations can still be changed. */
+export async function tableIsSoft(sessionId) {
+  const { data, error } = await supabase.rpc("game_table_is_soft", { p_session: sessionId });
+  if (error) return false;
+  return data === true;
+}
+
+/* Ask one person to one seat a bot is holding. The bot goes on
+   playing it until they arrive, so asking somebody never stalls the
+   game for the people already at it. Seat is 0-based, like every
+   other seat number the components see. */
+export async function inviteToSeat(sessionId, profileId, seat) {
+  const { data, error } = await supabase.rpc("game_invite_to_seat", {
+    p_session: sessionId,
+    p_invitee: profileId,
+    p_seat: seat + 1,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}

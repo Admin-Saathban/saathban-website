@@ -21,6 +21,8 @@ import {
   gameTick,
   reclaimSeat,
   inviteToGame,
+  tableIsSoft,
+  inviteToSeat,
   respondInvite,
   fetchMyInvites,
   fetchSessionInvites,
@@ -76,6 +78,18 @@ export default function SessionPage() {
   const [chat, setChat] = useState([]);
   const [myInvite, setMyInvite] = useState(null); // my pending invite here
   const [pendingInvites, setPendingInvites] = useState([]); // host's view
+  /* §8 — IS THIS TABLE STILL SOFT? A table opened by tapping a
+     game is 'active' from its first instant, so everything this
+     page gated on status === 'lobby' simply never renders for one.
+     For ludo that did not matter, because the board grew its own
+     seat sheet; for snakes and carrom it meant there was no way
+     left to ask a person to a table AT ALL — the setup form that
+     used to do it is gone from the home, and this picker was
+     behind a lobby that no longer happens.
+
+     A regression I introduced with the quick table, found because
+     the smoke suite still drove the old form. */
+  const [soft, setSoft] = useState(false);
   const [filledInfo, setFilledInfo] = useState(null); // respond → 'filled'
   const [inviteNames, setInviteNames] = useState({}); // invitee id → name
   const [loadError, setLoadError] = useState(false);
@@ -115,6 +129,7 @@ export default function SessionPage() {
           fetchSessionInvites(sessionId).catch(() => []),
         ]);
         setMyInvite(mine.find((i) => i.session_id === sessionId) ?? null);
+        tableIsSoft(sessionId).then(setSoft).catch(() => {});
         setPendingInvites(all);
         if (all.length) {
           setInviteNames(await fetchNames(all.map((i) => i.invitee_id)).catch(() => ({})));
@@ -156,6 +171,10 @@ export default function SessionPage() {
   const gameName = game ? (lang === "ur" ? game.name_ur : game.name_en) : "";
   const mySeat = session?.seats.find((s) => s.profile_id === profile.id);
   const isHost = session?.created_by === profile.id;
+  /* Seats a bot is holding, 0-based the way inviteToSeat wants. */
+  const botSeats = (session.seats || [])
+    .filter((x) => x.is_bot)
+    .map((x) => x.seat_no - 1);
   const [soundOpen, setSoundOpen] = useState(false);
 
   /* Sound and haptics for this table. Reads the move log rather than
@@ -449,6 +468,36 @@ export default function SessionPage() {
         </Card>
       )}
 
+      {/* ASKING SOMEONE TO A TABLE THAT IS ALREADY PLAYING (§8).
+
+          The lobby below is where invites used to live, and a §8
+          table never has one: it opens active, with bots in every
+          seat but yours. So the invite comes here instead, for as
+          long as the table is still soft — nobody has played it —
+          and it names a SEAT a bot is holding (0093). The bot goes
+          on playing that seat until the person arrives, so asking
+          somebody does not stall the game for everyone who is
+          already at it. */}
+      {isHost && soft && session.status !== "lobby" && botSeats.length > 0 && (
+        <Card>
+          <SectionLabel>{t("games.lobby.inviteTitle")}</SectionLabel>
+          <PeoplePicker
+            searchable
+            states={pickerStates}
+            maxPick={botSeats.length}
+            pickedCount={0}
+            onToggle={(p) =>
+              act(async () => {
+                /* The first seat a bot is holding. Which one hardly
+                   matters here — unlike ludo, these boards do not
+                   give a seat a colour somebody would choose. */
+                await inviteToSeat(session.id, p.id, botSeats[0]);
+                setSoft(await tableIsSoft(session.id).catch(() => false));
+              }, t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] }))
+            }
+          />
+        </Card>
+      )}
       {session.status === "lobby" && (
         <WaitingRoom
           session={session}

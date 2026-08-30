@@ -1,8 +1,11 @@
 /* ════════════════════════════════════════════════
    Saathban app smoke suite.
 
-   Run:  npm run smoke                (against http://localhost:5173)
-         BASE_URL=<url> npm run smoke (against a deployed preview)
+   Run:  BASE_URL=<url> npm run smoke
+
+   BASE_URL is REQUIRED and has no default — see the note beside
+   it below. Several lanes share this working tree, so a default
+   port silently tests whoever's build got to it first.
 
    Requires:
    - playwright-core (devDependency) + Microsoft Edge installed
@@ -30,7 +33,60 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
 // ─── Config ───
-const BASE = (process.env.BASE_URL || "http://localhost:5173").replace(/\/$/, "");
+/* WHERE TO RUN. NAMED, NEVER ASSUMED.
+
+   This defaulted to http://localhost:5173, which fails in the one
+   way a test must not: silently and green. Four lanes share this
+   one working tree, so 5173 is usually already taken; `vite
+   preview` walks to the next free port without saying so anywhere
+   anyone reads; and whatever is already on 5173 answers 200 to
+   every request. A lane then runs the suite against ANOTHER
+   lane's build and reads the failures as their own broken
+   feature. That happened tonight and cost a full run.
+
+   PARSED, not merely non-empty. `new URL` is the check, because
+   the obvious guard has the same class of bug: a BASE built by
+   grepping a port out of vite's output comes back as
+   "http://localhost:" when the grep misses (vite prints ANSI
+   colour codes between the colon and the digits), and that string
+   is truthy. It walks past an emptiness check and dies later at
+   ERR_CONNECTION_REFUSED, a long way from the cause.
+
+   Local is still one word: BASE_URL=http://localhost:5173. The
+   cost of typing it is the point — it is the difference between
+   choosing a target and inheriting one. */
+const BASE = (() => {
+  const given = (process.env.BASE_URL || "").trim().replace(/\/$/, "");
+  let parsed = null;
+  try {
+    parsed = given ? new URL(given) : null;
+  } catch {
+    parsed = null;
+  }
+  /* A TRAILING COLON IS THE TELL, and `new URL` will not raise it:
+     "http://localhost:" parses perfectly and means port 80, so a
+     guard that only parses lets through the exact string a lost
+     port grep produces. Nobody writes a bare colon on purpose. */
+  const afterScheme = given.includes("//") ? given.slice(given.indexOf("//") + 2) : given;
+  const lostPort = afterScheme.endsWith(":");
+  if (!parsed || !parsed.host || lostPort || !/^https?:$/.test(parsed.protocol)) {
+    console.error(
+      [
+        given
+          ? `BASE_URL is not a usable url: ${JSON.stringify(given)}`
+          : "BASE_URL is not set, and this suite will not guess.",
+        "",
+        "  BASE_URL=https://<the deployed preview> npm run smoke",
+        "  BASE_URL=http://localhost:5173          npm run smoke",
+        "",
+        "Naming it is deliberate: several lanes share this tree, and a",
+        "default port answers 200 from whoever got there first.",
+      ].join("\n")
+    );
+    process.exit(2);
+  }
+  return given;
+})();
 const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
 
 function envLocal(name) {
@@ -301,34 +357,49 @@ for (const [email, label, home, foreign] of ROLES) {
 
   const { ctx: iconCtx, page: iconPage } = await pageFor(browser, iconSess);
   await goto(iconPage, "/app/games", 2000);
-  await iconPage.locator('button:has-text("Start a game")').first().click();
-  await iconPage.waitForTimeout(900);
-  // The picker labels games by their real names; "Race to 100" was
-  // this one's old title and matched nothing.
+  /* THERE IS NO SETUP FORM ANY MORE (GAMES_IMMERSION_SPEC §8).
+
+     This drove "Start a game" → a game → "Someone you know" →
+     "Start", which was the old four-screen path. Tapping a game now
+     opens a playable table directly, with bots in every seat but
+     yours, and the person is asked to a SEAT at the table instead.
+
+     Keeping the old script would have been worse than useless: it
+     failed at the first locator, so everything it went on to check
+     — the invite, the accept, the first turn — stopped being
+     checked at all while still looking like one red line. */
   await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
-  await iconPage.waitForTimeout(1600);
-  // Fill the empty seat with a person rather than a bot.
-  await iconPage.locator('button[aria-label="Someone you know"]').first().click();
-  await iconPage.waitForTimeout(1500);
+  await iconPage.waitForFunction(() => /\/app\/games\/(s|ludo)\//.test(location.pathname), null, { timeout: 25000 }).catch(() => {});
+  await iconPage.waitForTimeout(2500);
+  check("games: tapping a game opens a table, no form", /^\/app\/games\//.test(pathOf(iconPage)), pathOf(iconPage));
   check(
-    "games: an empty seat opens the people sheet",
-    (await iconPage.evaluate(() => document.body.innerText)).includes("Who is playing?")
+    "games: and it is playable on arrival",
+    !/Name this table is required|Set the table/.test(await iconPage.evaluate(() => document.body.innerText))
   );
-  await iconPage.locator('button:has-text("Smoke Fam")').first().click();
-  // The seat has to actually register before Start will do anything;
-  // clicking too early leaves you on the same screen with no error.
-  await iconPage.waitForTimeout(1400);
-  await iconPage.locator('button:has-text("Start")').last().click();
-  await iconPage.waitForFunction(() => location.pathname.startsWith("/app/games/s/"), null, { timeout: 20000 }).catch(() => {});
-  await iconPage.waitForTimeout(1500);
+
+  /* Ask a person to one of the seats a bot is holding. */
+  const askBtn = iconPage.locator('button:has-text("Smoke Fam")');
+  await iconPage.waitForTimeout(1200);
+  check("games: a bot's seat can be offered to a person", (await askBtn.count()) > 0);
+  if ((await askBtn.count()) > 0) {
+    await askBtn.first().click();
+    await iconPage.waitForTimeout(2000);
+  }
   const sessionPath = pathOf(iconPage);
   check("games: table created with invite", /^\/app\/games\/s\//.test(sessionPath), sessionPath);
 
   const { ctx: famCtx, page: famPage } = await pageFor(browser, famSess);
   const inviteTxt = await goto(famPage, sessionPath, 2500);
-  check("games: invitee sees Take my seat", inviteTxt.includes("Take my seat"));
-  await famPage.locator('button:has-text("Take my seat")').first().click();
-  await famPage.waitForTimeout(3000);
+  /* 0093: the seat they were kept is being played by a bot, so the
+     invitation is answered from wherever it is offered rather than
+     from a lobby that no longer exists. Either wording is a pass —
+     what matters is that they end up seated. */
+  const takeSeat = famPage.locator('button:has-text("Take my seat"), button:has-text("Take a seat")');
+  check("games: invitee is offered the seat", (await takeSeat.count()) > 0, inviteTxt.slice(0, 80));
+  if ((await takeSeat.count()) > 0) {
+    await takeSeat.first().click();
+    await famPage.waitForTimeout(3000);
+  }
 
   // Two humans fill the table — someone must now hold the dice.
   let rolled = false;
@@ -364,17 +435,12 @@ for (const [email, label, home, foreign] of ROLES) {
   }
 
   await goto(iconPage, "/app/games", 1800);
-  await iconPage.locator('button:has-text("Start a game")').first().click();
-  await iconPage.waitForTimeout(900);
+  /* Same §8 path. Every table carries a join code from the moment
+     it exists, so "open to the community" is no longer a thing
+     chosen at setup — the code is simply there to be shared. */
   await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
-  await iconPage.waitForTimeout(1800);
-  // "Anyone from the community" is what makes the table public and
-  // gives it the spoken 6-digit code.
-  await iconPage.locator('button[aria-label="Anyone from the community"]').first().click();
-  await iconPage.waitForTimeout(1400);
-  await iconPage.locator('button:has-text("Start")').last().click();
-  await iconPage.waitForFunction(() => location.pathname.startsWith("/app/games/s/"), null, { timeout: 20000 }).catch(() => {});
-  await iconPage.waitForTimeout(1800);
+  await iconPage.waitForFunction(() => /\/app\/games\/(s|ludo)\//.test(location.pathname), null, { timeout: 25000 }).catch(() => {});
+  await iconPage.waitForTimeout(2200);
   // The code lives behind the share toggle and is NOT in the page
   // text by default. Scraping body text for six digits used to work
   // and now picks up the board's own numerals instead — a check that

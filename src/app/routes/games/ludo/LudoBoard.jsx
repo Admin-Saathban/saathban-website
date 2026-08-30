@@ -33,7 +33,7 @@ import {
   YARD_ORIGIN,
   YARD_SPOTS,
   START_ABS,
-  STAR_ABS,
+  SAFE_ABS,
   SEAT_COLORS,
   SEAT_TINTS,
   cellFor,
@@ -65,6 +65,38 @@ function Upright({ x, y, spin, children, ...props }) {
    WHY it landed where it did — which square it counted onto, and what
    it passed. A piece sent home by a capture snaps instead: watching it
    trudge backwards would say something the rules do not.            */
+/* A goti that was just sent home. Nothing in the move payload says
+   WHICH one was captured — only that a capture happened — so we read
+   it off the board: a piece that was somewhere and is now back at 0
+   did not walk there. It shakes once, where it landed, so the person
+   whose goti it was sees what happened rather than merely finding it
+   missing later. */
+function useCaptured(pieces) {
+  const [hit, setHit] = useState(() => new Set());
+  const prevRef = useRef(null);
+  const key = JSON.stringify(pieces);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = pieces;
+    if (!prev) return undefined;
+
+    const sent = new Set();
+    pieces.forEach((row, s) =>
+      row.forEach((p, i) => {
+        if (p === 0 && Number(prev[s]?.[i] ?? 0) > 0) sent.add(`${s}:${i}`);
+      })
+    );
+    if (!sent.size) return undefined;
+    setHit(sent);
+    const id = window.setTimeout(() => setHit(new Set()), 600);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return hit;
+}
+
 function useWalk(pieces) {
   const [shown, setShown] = useState(pieces);
   const prevRef = useRef(pieces);
@@ -137,6 +169,10 @@ export default function LudoBoard({
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
   const pieces = useWalk(live);
+  /* Fed the TRUTH, not the walked positions: a captured goti snaps
+     home rather than strolling back, so the shake has to key off the
+     real board or it would fire a beat late. */
+  const captured = useCaptured(live);
   const pairsMoved = state?.pairs_moved || {};
   const spin = povRotation(mySeat);
 
@@ -215,7 +251,7 @@ export default function LudoBoard({
         {/* ── The 52-square track ── */}
         {TRACK.map(([c, r], abs) => {
           const startSeat = START_ABS.indexOf(abs);
-          const isStar = STAR_ABS.includes(abs);
+          const isSafe = SAFE_ABS.includes(abs);
           return (
             <g key={`t-${abs}`}>
               <rect
@@ -226,29 +262,22 @@ export default function LudoBoard({
                 rx={6}
                 fill={startSeat >= 0 ? SEAT_TINTS[startSeat] : C.white}
                 stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
-                strokeWidth={startSeat >= 0 ? 2.5 : 1}
+                strokeWidth={startSeat >= 0 ? 3 : 1}
                 opacity={startSeat >= 0 && startSeat >= seatsInPlay ? 0.3 : 1}
               />
-              {isStar && showStars && (
+              {/* A STAR MEANS SAFE — one glyph, one meaning, on all
+                  eight stop squares alike. It is deliberately not a
+                  seat colour: safety belongs to whoever is standing
+                  there, not to the seat whose arm it sits on. The
+                  start squares carry their zone's tint and no star,
+                  because on this board they are not safe. */}
+              {isSafe && showStars && (
                 <Upright
                   x={c * CELL + CELL / 2}
-                  y={r * CELL + CELL / 2 + 8}
+                  y={r * CELL + CELL / 2 + 9}
                   spin={spin}
-                  fontSize={23}
-                  fill={C.olive}
-                  aria-hidden="true"
-                >
-                  ★
-                </Upright>
-              )}
-              {startSeat >= 0 && (
-                <Upright
-                  x={c * CELL + CELL / 2}
-                  y={r * CELL + CELL / 2 + 7}
-                  spin={spin}
-                  fontSize={19}
-                  fontWeight="700"
-                  fill={SEAT_COLORS[startSeat]}
+                  fontSize={26}
+                  fill="#2F2A24"
                   aria-hidden="true"
                 >
                   ★
@@ -269,14 +298,14 @@ export default function LudoBoard({
               height={CELL - 2}
               rx={6}
               fill={SEAT_COLORS[seat]}
-              opacity={seat < seatsInPlay ? 0.75 : 0.15}
+              opacity={seat < seatsInPlay ? 1 : 0.15}
             />
           ))
         )}
 
         {/* ── The centre: four triangles, one per arm, meeting at home.
                Muted, because the dice sit on top of it. ── */}
-        <g opacity={0.55}>
+        <g opacity={0.9}>
           {[
             [`${6 * CELL},${6 * CELL} ${9 * CELL},${6 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 0],
             [`${6 * CELL},${6 * CELL} ${6 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 1],
@@ -346,6 +375,9 @@ export default function LudoBoard({
             return (
               <g
                 key={`p-${seat}-${i}`}
+                className={`${canTap ? "sb-press-svg" : ""}${
+                  captured.has(`${seat}:${i}`) ? " sb-nudge" : ""
+                }`}
                 onClick={canTap ? () => onPieceTap(i) : undefined}
                 style={{ cursor: canTap ? "pointer" : "default" }}
               >
@@ -375,7 +407,7 @@ export default function LudoBoard({
                     strokeDasharray="6 5"
                   />
                 )}
-                <Pawn seat={seat} cx={cx} cy={cy} r={15} spin={spin} />
+                <Pawn seat={seat} cx={cx} cy={cy} r={p >= 57 ? 10 : 15} spin={spin} />
                 {canTap && <circle cx={cx} cy={cy} r={26} fill="transparent" />}
               </g>
             );
@@ -388,10 +420,10 @@ export default function LudoBoard({
         <div
           style={{
             position: "absolute",
-            left: "33%",
-            top: "36%",
-            width: "34%",
-            height: "28%",
+            left: "42%",
+            top: "42%",
+            width: "16%",
+            height: "16%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

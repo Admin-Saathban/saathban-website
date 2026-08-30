@@ -11,13 +11,14 @@
    brings that seat's yard to the bottom-left.
    ════════════════════════════════════════════════ */
 
+import { readFileSync } from "node:fs";
 import {
   TRACK,
   HOME_COLUMNS,
   YARD_ORIGIN,
   YARD_SPOTS,
   START_ABS,
-  STAR_ABS,
+  SAFE_ABS,
   absOf,
   cellFor,
   povRotation,
@@ -83,8 +84,17 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
 /* ─── Starts, laps, home columns ─── */
 {
   check("starts are 13 apart", START_ABS.join(",") === "0,13,26,39");
-  check("stars are 8 past each start", STAR_ABS.join(",") === "8,21,34,47");
-  check("the 8 safe squares are all distinct", new Set([...START_ABS, ...STAR_ABS]).size === 8);
+  /* The marked board moved the safe squares one step on, so they are
+     no longer the starts plus eight. They are the starts plus ONE and
+     plus NINE — one pair per arm, thirteen apart like everything else
+     on this board. The start squares are no longer among them. */
+  check("safe squares are 1 and 9 past each start",
+    SAFE_ABS.join(",") === "1,9,14,22,27,35,40,48",
+    SAFE_ABS.join(","));
+  check("every seat gets exactly two of them",
+    [0, 1, 2, 3].every((s) => SAFE_ABS.filter((a) => Math.floor(a / 13) === s).length === 2));
+  check("the 8 safe squares are all distinct", new Set(SAFE_ABS).size === 8);
+  check("no start square is safe", START_ABS.every((a) => !SAFE_ABS.includes(a)));
 
   for (let seat = 0; seat < 4; seat++) {
     const [yc, yr] = YARD_ORIGIN[seat];
@@ -139,6 +149,122 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
     );
   }
   check("a watcher with no seat gets the neutral view", povRotation(null) === 0);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   ONE LAP, ARM BY ARM — the direction of travel.
+
+   A token leaving any seat's start must go round the four arms in one
+   consistent rotational order, beginning with its own. Get this wrong
+   and every token still moves a legal number of squares, still enters
+   a home column, still finishes — it simply goes the wrong way round,
+   which no other assertion in this file would notice.
+
+   The order below is the engine's, verified rather than assumed:
+   TOP -> LEFT -> BOTTOM -> RIGHT, which is counter-clockwise on the
+   board as drawn. If that ever needs to be the other way round, this
+   is the line to change, and reversing it is NOT a one-line edit to
+   TRACK — see the note in the commit for why (a start square has to
+   stay beside its own yard, so a true reversal mirrors the layout).
+   ════════════════════════════════════════════════════════════════ */
+{
+  const RING = ["TOP", "LEFT", "BOTTOM", "RIGHT"];
+  const armOf = ([c, r]) => {
+    if (r <= 5 && c >= 6 && c <= 8) return "TOP";
+    if (c <= 5 && r >= 6 && r <= 8) return "LEFT";
+    if (r >= 9 && c >= 6 && c <= 8) return "BOTTOM";
+    if (c >= 9 && r >= 6 && r <= 8) return "RIGHT";
+    return `off-cross(${c},${r})`;
+  };
+
+  check("every track cell belongs to one of the four arms",
+    TRACK.every((cell) => RING.includes(armOf(cell))),
+    TRACK.filter((cell) => !RING.includes(armOf(cell))).map(String).join(" ") || "");
+
+  for (let seat = 0; seat < 4; seat++) {
+    /* Walk the whole lap the way the engine does: progress 1..52 maps
+       to absolute (seat*13 + p - 1) % 52. */
+    const walk = [];
+    for (let p = 1; p <= 52; p++) walk.push(armOf(TRACK[(seat * 13 + p - 1) % 52]));
+
+    const visited = walk.filter((a, i) => i === 0 || a !== walk[i - 1]);
+    const startArm = armOf(TRACK[START_ABS[seat]]);
+    const expected = [0, 1, 2, 3, 4].map((k) => RING[(RING.indexOf(startArm) + k) % 4]);
+
+    check(`seat ${seat}: starts in its own arm (${startArm})`,
+      visited[0] === startArm && armOf(TRACK[START_ABS[seat]]) === startArm);
+    check(`seat ${seat}: one lap visits the arms ${expected.slice(0, 4).join(" -> ")}`,
+      visited.length === 5 && visited.every((a, i) => a === expected[i]),
+      visited.join(" -> "));
+    check(`seat ${seat}: 52 steps returns to where it started`,
+      TRACK[(seat * 13 + 52 - 1 + 1) % 52].join(",") === TRACK[START_ABS[seat]].join(","));
+  }
+
+  /* The four seats must go round the SAME way as each other. */
+  const dirs = [0, 1, 2, 3].map((seat) => {
+    const a0 = armOf(TRACK[(seat * 13) % 52]);
+    const a1 = armOf(TRACK[(seat * 13 + 13) % 52]);
+    return (RING.indexOf(a1) - RING.indexOf(a0) + 4) % 4;
+  });
+  check("all four seats travel the same way round", new Set(dirs).size === 1, `steps: ${dirs.join(",")}`);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   THE BOARD AND THE ENGINE MUST AGREE ON WHAT IS SAFE.
+
+   The board draws a star; the engine decides whether a token standing
+   there can be taken. Those are two lists in two languages, and a star
+   drawn where the engine will not protect you is worse than no star at
+   all — the person trusted it.
+
+   Read from the LIVE function rather than the migration file, for the
+   reason tests/snakes-board.mjs gives: a create-or-replace that
+   silently failed to apply would otherwise leave this passing against
+   a database that disagrees.
+   ════════════════════════════════════════════════════════════════ */
+{
+  const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
+  const env = (n) => {
+    const l = raw.split(/\r?\n/).find((x) => x.startsWith(n));
+    return l ? l.slice(l.indexOf("=") + 1).replace(/\s/g, "") : null;
+  };
+  const SUPA = env("VITE_SUPABASE_URL");
+  const ANON = env("VITE_SUPABASE_ANON_KEY");
+  const auth = await (
+    await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { apikey: ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "smoke-icon@saathban.dev", password: "SaathTest!2026" }),
+    })
+  ).json();
+
+  if (!auth.access_token) {
+    check("live engine reachable for the safe-square check", false, "login failed");
+  } else {
+    const H = { apikey: ANON, Authorization: `Bearer ${auth.access_token}`, "Content-Type": "application/json" };
+    const engineSafe = [];
+    for (let abs = 0; abs < 52; abs++) {
+      const r = await fetch(`${SUPA}/rest/v1/rpc/ludo_is_safe`, {
+        method: "POST",
+        headers: H,
+        body: JSON.stringify({ p_abs: abs, p_rules: { safe_squares: "standard" } }),
+      });
+      if (await r.json()) engineSafe.push(abs);
+    }
+    const drawn = [...SAFE_ABS].sort((a, b) => a - b).join(",");
+    const engine = engineSafe.join(",");
+    check("the stars the board draws ARE the engine's safe squares",
+      drawn === engine, drawn === engine ? `${engineSafe.length} squares` : `\n  drawn:  ${drawn}\n  engine: ${engine}`);
+    check("there are eight of them, two per arm",
+      engineSafe.length === 8 &&
+        [0, 1, 2, 3].every((k) => engineSafe.filter((a) => Math.floor(a / 13) === k).length === 2),
+      engineSafe.join(","));
+    check("the safe set is the same from every seat (rotationally symmetric)",
+      engineSafe.every((a) => engineSafe.includes((a + 13) % 52)), engineSafe.join(","));
+    check("a start square is NOT safe (the marked board moved them one on)",
+      START_ABS.every((a) => !engineSafe.includes(a)), START_ABS.join(","));
+  }
 }
 
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nall green");

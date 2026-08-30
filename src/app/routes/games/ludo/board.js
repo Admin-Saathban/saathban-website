@@ -3,7 +3,8 @@
    mapping from the server's progress model (0 yard, 1..51 track,
    52..56 home column, 57 home) onto it. Mirrors the math in
    0020_ludo.sql: absolute square = (seat*13 + progress - 1) % 52,
-   starts at absolute 0/13/26/39, stars at 8/21/34/47.
+   starts at absolute 0/13/26/39. The SAFE squares are 1/9/14/22/27/
+   35/40/48 — see SAFE_ABS below; they are not the start squares.
 
    THE CLASSIC BOARD, and why the cells are where they are:
 
@@ -73,16 +74,63 @@ export const YARD_SPOTS = [
   [1.5, 1.5], [4.5, 1.5], [1.5, 4.5], [4.5, 4.5],
 ];
 
-/* Finished tokens rest in the centre, on their own arm's side. */
+/* Finished tokens rest in the centre, each in ITS OWN seat's triangle
+   and each in its own spot.
+
+   This used to be ONE point per seat, which meant all four of a seat's
+   finished tokens resolved to the same cell — and the board's
+   shared-square spread then fanned them out diagonally, so a finished
+   game showed a smear of tokens sliding across the middle instead of
+   four sitting in their colour's wedge. With two seats home that read
+   as eight tokens strewn through the centre, which is what the user's
+   screenshot caught.
+
+   Four distinct spots per seat fixes it at the source: nothing shares
+   a cell, so nothing is spread, and each token rests in the triangle
+   painted its own colour.
+
+   The geometry: the centre is the 3×3 from (6,6) to (9,9) and each
+   triangle runs from one outer edge to the middle at (7.5, 7.5), so a
+   triangle is widest at its outer edge. The four spots therefore sit
+   in a row just inside that edge, where there is room for them — and
+   as far out as the wedge allows, because the dice tray sits over the
+   middle of the board and a finished token should not be hiding
+   underneath it. */
 export const HOME_SPOTS = [
-  [7.5, 6.85],  // seat 0, from the top
-  [6.85, 7.5],  // seat 1, from the left
-  [7.5, 8.15],  // seat 2, from the bottom
-  [8.15, 7.5],  // seat 3, from the right
+  [[6.55, 6.32], [7.18, 6.32], [7.82, 6.32], [8.45, 6.32]],  // seat 0 — top wedge
+  [[6.32, 6.55], [6.32, 7.18], [6.32, 7.82], [6.32, 8.45]],  // seat 1 — left wedge
+  [[6.55, 8.68], [7.18, 8.68], [7.82, 8.68], [8.45, 8.68]],  // seat 2 — bottom wedge
+  [[8.68, 6.55], [8.68, 7.18], [8.68, 7.82], [8.68, 8.45]],  // seat 3 — right wedge
 ];
 
+/* Where each seat's tokens enter the ring. Unchanged: the geometry
+   depends on it (a token's 51st step must land on its own arm's tip),
+   and the user's marks did not move these. */
 export const START_ABS = [0, 13, 26, 39];
-export const STAR_ABS = [8, 21, 34, 47];
+
+/* THE SAFE SQUARES — the stop positions, read from the user's marked
+   board, which is the authority and overrides the earlier convention.
+
+   They were [0, 13, 26, 39, 8, 21, 34, 47]: the start squares plus the
+   square eight steps on. Every circled cell on the marked board is
+   exactly ONE STEP FORWARD of one of those, and the set that gives is
+   rotationally symmetric — 1, 14, 27, 40 and 9, 22, 35, 48, each pair
+   thirteen apart — which a misreading would not be.
+
+   So the safe squares are no longer the start squares. A token coming
+   out of the yard lands on a capturable cell and reaches safety one
+   step later. That is a real change to how the game plays, and it is
+   recorded in GAMES_CONTRACT.md rather than left to be inferred here.
+
+   The engine's list (ludo_is_safe, migration 0045) must match this
+   EXACTLY — a board that draws a star where the engine will not
+   protect you is worse than no star at all. tests/board-geometry.mjs
+   asserts the two agree cell for cell. */
+export const SAFE_ABS = [1, 9, 14, 22, 27, 35, 40, 48];
+
+/* Kept as the old name so nothing that imported it breaks silently;
+   it now means the same thing as SAFE_ABS. */
+export const STAR_ABS = SAFE_ABS;
 
 /* Re-exported so seat chips and the board can never disagree; the
    palette itself lives one level up, shared with the other boards. */
@@ -107,7 +155,7 @@ export function cellFor(seat, p, pieceIdx) {
     const [c, r] = HOME_COLUMNS[seat][p - 52];
     return [c + 0.5, r + 0.5];
   }
-  return HOME_SPOTS[seat]; // 57
+  return HOME_SPOTS[seat][pieceIdx]; // 57 — its own spot in its own wedge
 }
 
 /* ── Per-player point of view ──────────────────────────────────────

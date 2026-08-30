@@ -495,7 +495,7 @@ export default function LudoSession() {
                       lineHeight: 0,
                     }}
                   >
-                    <DieFace value={rolling ? tumble[i] || 1 : 6 - i * 5} size={diceCount === 2 ? 34 : 46} />
+                    <DieFace value={rolling ? tumble[i] || 1 : 6 - i * 5} size={diceCount === 2 ? 26 : 40} />
                   </span>
                 ))}
               </button>
@@ -505,7 +505,7 @@ export default function LudoSession() {
                   <Die
                     key={i}
                     value={d.v}
-                    size={diceCount === 2 ? 34 : 48}
+                    size={diceCount === 2 ? 28 : 42}
                     state={
                       d.used
                         ? "used"

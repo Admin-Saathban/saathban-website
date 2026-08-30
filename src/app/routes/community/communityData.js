@@ -409,6 +409,45 @@ export async function fetchDmOverview(userId) {
   };
 }
 
+/* One row per accepted thread, ordered by the LAST MESSAGE rather than
+   by when the request was made (§6: newest first). A thread nobody has
+   written in since it opened sorts by the request itself, so a brand new
+   acceptance still appears at the top rather than vanishing to the
+   bottom of the list.
+
+   Deleted messages still count for ordering: a thread whose last message
+   was withdrawn has still had activity, and dropping it down the list
+   would quietly tell the other person something about what you deleted. */
+export async function fetchThreadSummaries(userId) {
+  const { threads } = await fetchDmOverview(userId);
+  if (!threads.length) return [];
+  const ids = threads.map((t) => t.id);
+  const { data, error } = await supabase
+    .from("dm_messages")
+    .select("request_id, sender_id, body, image_path, game_session_id, deleted_at, created_at, read_at")
+    .in("request_id", ids)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const last = new Map();
+  const unread = new Map();
+  for (const m of data || []) {
+    if (!last.has(m.request_id)) last.set(m.request_id, m);
+    // unread = written by the OTHER person and not yet read
+    if (m.sender_id !== userId && !m.read_at) {
+      unread.set(m.request_id, (unread.get(m.request_id) || 0) + 1);
+    }
+  }
+  return threads
+    .map((t) => ({
+      requestId: t.id,
+      otherId: t.requester_id === userId ? t.recipient_id : t.requester_id,
+      last: last.get(t.id) || null,
+      unread: unread.get(t.id) || 0,
+      at: last.get(t.id)?.created_at || t.created_at,
+    }))
+    .sort((a2, b2) => new Date(b2.at) - new Date(a2.at));
+}
+
 export async function respondToRequest(requestId, status) {
   const { error } = await supabase
     .from("dm_requests")

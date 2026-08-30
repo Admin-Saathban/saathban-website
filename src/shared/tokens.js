@@ -41,9 +41,31 @@ export const FONTS = {
 export const GOOGLE_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap";
 
-// ─── Accessibility floors (SPEC.md: hard requirement, not a later pass) ───
-// Minimums, not defaults — going above these is fine, below is not.
+/* ─── Accessibility floors ───
+
+   AMENDED 30 AUGUST 2026 — 00_REDESIGN_INDEX §2.1, which changes
+   principle 9. Was 18px body and 48px targets everywhere; now 16px
+   body and 44px targets outside games.
+
+   THIS IS NOT A RELAXATION OF THE PRINCIPLE, IT IS A RELOCATION OF
+   IT. The 18px floor was the single largest reason the app fitted
+   about a third of what Facebook fits on one screen, and density was
+   the owner's loudest complaint. A 75-year-old who needs 20px still
+   gets 20px — from the text size control in Settings, which is four
+   steps from 1.0 to 1.5 — rather than it being imposed on everyone
+   who does not. Someone who was comfortable at the old default now
+   picks "Large" (16 × 1.15 ≈ 18.4px) once, and it is remembered.
+
+   THE CONSEQUENCE IS A TESTING OBLIGATION, and it is the reason this
+   comment is here rather than a one-line edit: every screen must be
+   looked at at every size. A size setting nobody tested is how
+   Nastaliq ends up overlapping, because Urdu needs a taller line box
+   than Latin at the same nominal size and 1.5× multiplies the
+   difference rather than the text.
+
+   Inside a game screen neither floor applies —
+   GAMES_IMMERSION_SPEC §3. */
 export const A11Y = {
-  minBodyPx: 18,
-  minTapTargetPx: 48,
+  minBodyPx: 16,
+  minTapTargetPx: 44,
 };

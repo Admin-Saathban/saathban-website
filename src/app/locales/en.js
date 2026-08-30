@@ -211,6 +211,23 @@ const en = {
     icon: {
       title: "Let's get you set up",
       intro: "Just a few details — everything else can wait.",
+      /* The label IS the reason, and the reason is true. Nothing here
+         hints at a check: §2 is explicit that the age check happens
+         quietly and nobody is told they are being verified. */
+      dobLabel: "When's your birthday?",
+      dobHint: "So we can celebrate with you.",
+      errorDobMissing: "We'd love to know your birthday.",
+      errorDobUnreal: "That date doesn't look right — could you check it?",
+      errorCity: "Which city are you in?",
+      areaLabel: "Area",
+      areaHint: "Which part of the city? It's how we find parks and gatherings near you.",
+      /* Under 50. Not a rejection, not an apology — a different set of
+         doors, both open, on the same screen. */
+      welcomeTitle: "You're very welcome here",
+      welcomeBody:
+        "Saath-Icons are 50 and above. There's a place for you either way — alongside someone in your family, or as a volunteer.",
+      doorFam: "Join as a Saath-Fam",
+      doorBuddy: "Join as a Saath-Buddy",
       emailHint:
         "We'll email you a link. Opening it signs you in — no password to remember.",
       cta: "Email me my sign-in link",

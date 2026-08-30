@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   0061 — a move you can take back
+   0090 — a move you can take back
 
    LUDO_MOTION_SPEC §8: "A single-step undo available to the player who
    just moved, until the next player rolls. House-rules toggle, default
@@ -38,7 +38,7 @@ alter table public.game_moves
 
 comment on column public.game_moves.state_before is
   'The session state immediately before this move, captured by '
-  'exec_game_move. Undo (0061) restores it. Null for rows written '
+  'exec_game_move. Undo (0090) restores it. Null for rows written '
   'before this migration, which therefore cannot be undone — correct, '
   'since a game in progress at deploy time has no recorded past.';
 

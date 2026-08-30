@@ -13,7 +13,7 @@
    Nothing is described as a "notification type". Each row says what
    actually happens: "Someone sends you a message", not "Messages".
 
-   The defaults live in ONE place — 0056's notify_default_off — and
+   The defaults live in ONE place — 0058's notify_default_off — and
    this screen only ever writes the differences. Somebody who has
    never changed anything stores nothing at all, so a kind added later
    arrives with its default rather than with whatever was frozen into
@@ -27,7 +27,7 @@ import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import supabase from "../../lib/supabase.js";
 
-/* Kept in step with 0056's notify_default_off. The server is the
+/* Kept in step with 0058's notify_default_off. The server is the
    authority — it refuses to write a kind you have turned off — and
    this list decides what the screen OFFERS and how it is grouped. */
 export const PERSON_KINDS = [

@@ -202,7 +202,7 @@ export async function createSession(gameKey, seats, houseRules = {}, title = nul
   return data; // session id
 }
 
-/* §17 — "send a link" seat option (0055).
+/* §17 — "send a link" seat option (0057).
 
    Distinct from the table's join CODE on purpose: the code is
    reusable and spoken aloud to a room, this is single-use and dies in
@@ -226,7 +226,7 @@ export async function claimSeatLink(token) {
 }
 
 /* The links still holding chairs at this table. Only participants can
-   read them (0055's policy), which is also what lets any of them
+   read them (0057's policy), which is also what lets any of them
    re-share — a guest inviting the fourth player is the point. */
 export async function fetchSeatLinks(sessionId) {
   const { data, error } = await supabase

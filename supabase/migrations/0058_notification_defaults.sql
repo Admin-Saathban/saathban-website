@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   0056 — what may interrupt a person (PRODUCT_DECISIONS §19)
+   0058 — what may interrupt a person (PRODUCT_DECISIONS §19)
 
    "An interruption must be about a person, not about the app."
 

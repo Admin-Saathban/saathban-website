@@ -9,7 +9,7 @@
    Anyone at the table can re-send — the same rule the join code
    already follows, because a guest inviting the fourth player is the
    point. Re-sending makes a NEW link and kills the old one, which is
-   0055's job, not this component's: a person who taps twice must not
+   0057's job, not this component's: a person who taps twice must not
    leave two keys in circulation.
    ════════════════════════════════════════════════ */
 
@@ -38,7 +38,7 @@ export default function SeatLinks({ sessionId, gameName }) {
     setBusy(seatNo);
     try {
       /* A fresh token every time it is sent. The old one dies in the
-         same statement (0055), so the person cannot accidentally have
+         same statement (0057), so the person cannot accidentally have
          two live keys to one chair. */
       const token = await createSeatLink(sessionId, seatNo);
       const url = seatUrl(token);

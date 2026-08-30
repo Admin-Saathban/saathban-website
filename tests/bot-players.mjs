@@ -115,7 +115,38 @@ for (const g of turnGames) {
     check(`${g.key}: claims bot_plays, so bots may be seated`, bots.ok, (bots.body?.message || "").slice(0, 70));
     if (bots.ok) {
       await new Promise((r) => setTimeout(r, 1600)); // let the turn lapse
+
+      /* FIRST, THE RULE THAT NOW GUARDS THE OPENING TURN (0094).
+
+         A table opened by tapping a game is active from the first
+         instant, so its clock used to run while the person was
+         still setting it up — and thirty seconds later the server
+         played their opening turn for them, which also ended the
+         window in which §8's taps exist. The clock is there to
+         protect the OTHER players' evening; at a table holding
+         nobody but bots there is nobody to protect, so it holds
+         until the first roll.
+
+         This suite is exactly that shape — one person, the rest
+         bots, nothing played — so ticking here must do nothing.
+         It asserted the opposite before 0094, and that failure is
+         how the rule got a test. */
       await rpc("game_tick", { p_session: id });
+      const held = await rest(`game_moves?select=id&session_id=eq.${id}`);
+      check(
+        `${g.key}: the clock holds the opening turn at a bots-only table`,
+        (held || []).length === 0,
+        `${(held || []).length} moves — the opening turn should still be theirs`
+      );
+
+      /* NOW OPEN THE GAME, and the clock is a clock again. One
+         roll is enough: ludo builds its state on the first roll,
+         and everything else records the turn itself. */
+      if (g.key === "ludo") await rpc("ludo_roll", { p_session: id });
+      else await rpc("play_turn", { p_session: id, p_payload: null });
+      await new Promise((r) => setTimeout(r, 1600));
+      await rpc("game_tick", { p_session: id });
+
       const moves = await rest(`game_moves?select=id,by_bot&session_id=eq.${id}`);
       const botMoves = (moves || []).filter((m) => m.by_bot).length;
       // This is the assertion the declaration cannot make for itself.

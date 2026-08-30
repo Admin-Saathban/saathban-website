@@ -149,7 +149,10 @@ export default function GroupPage() {
   const doLeave = async () => {
     try {
       await leaveGroup(id);
-      pushToast(t("feedback.groupLeft"), { tone: "info" });
+      /* AUDIT_11: you are navigated away, so the line must name WHICH
+         group you left — "You have left the group" beside a list of
+         groups tells you nothing. */
+      pushToast(t("feedback.groupLeft", { group: group?.name || "" }), { tone: "info" });
       navigate("/app/groups", { replace: true });
     } catch {
       setError(s.actionError);

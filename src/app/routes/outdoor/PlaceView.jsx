@@ -32,6 +32,8 @@ import {
   blockAuthor,
   unblockAuthor,
   fetchPlacedActivities,
+  fetchAccessNotes,
+  reportPlaceAccess,
   activityIsCurrent,
   fetchActivityJoins,
   dropMirroredOutings,
@@ -39,6 +41,7 @@ import {
   joinPlacedActivity,
 } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import AccessChips, { AccessWrongLink } from "./AccessChips.jsx";
 import { useToast, useAction, useFresh } from "../../lib/feedback.jsx";
 
 function VisibilityChoice({ value, onChange }) {
@@ -107,6 +110,11 @@ export default function PlaceView() {
   const [actNote, setActNote] = useState("");
   const [actLimit, setActLimit] = useState("");
   const [error, setError] = useState("");
+  /* §4 access notes, and the "something wrong here?" panel. */
+  const [access, setAccess] = useState([]);
+  const [wrongOpen, setWrongOpen] = useState(false);
+  const [wrongText, setWrongText] = useState("");
+  const [wrongBusy, setWrongBusy] = useState(false);
   // The lane-local Toast is retired: every outcome here goes through
   // the shared feedback layer (FEEDBACK.md).
   const { toast } = useToast();
@@ -114,14 +122,16 @@ export default function PlaceView() {
 
   const load = useCallback(async () => {
     try {
-      const [places, live, my, outs, msgs, acts] = await Promise.all([
+      const [places, live, my, outs, msgs, acts, notes] = await Promise.all([
         fetchPlaces(),
         fetchLiveCheckins(),
         myId ? myLiveCheckin(myId) : null,
         fetchOutings(placeId),
         fetchBoard(placeId),
         fetchPlacedActivities(),
+        fetchAccessNotes().catch(() => ({})),
       ]);
+      setAccess(notes[placeId] || []);
       const p = places.find((x) => x.id === placeId) || null;
       setPlace(p);
       const hereNow = live.filter((ci) => ci.place_id === placeId);
@@ -337,9 +347,60 @@ export default function PlaceView() {
           >
             <span aria-hidden="true">{TYPE_ICONS[place.place_type] || "🌳"}</span> {place.name}
           </h1>
-          <BodyText muted style={{ marginBottom: 16 }}>
+          <BodyText muted style={{ marginBottom: 4 }}>
             {place.area} · {place.city}
           </BodyText>
+
+          {/* §4 — how to get in, before anything about who is here.
+              The chips appear only when there is something to say; the
+              "something wrong here?" link appears ALWAYS, because the
+              place with no notes is exactly where a person knows
+              something the app does not. */}
+          <AccessChips features={access} size={16} />
+          <div style={{ marginBottom: 12 }}>
+            <AccessWrongLink onClick={() => setWrongOpen((v) => !v)} />
+          </div>
+          {wrongOpen && (
+            <Card style={{ marginBottom: 16 }}>
+              <SectionLabel>{t("outdoor.access.wrongTitle")}</SectionLabel>
+              <BodyText muted>{t("outdoor.access.wrongSub")}</BodyText>
+              <textarea
+                value={wrongText}
+                onChange={(e) => setWrongText(e.target.value)}
+                placeholder={t("outdoor.access.wrongPh")}
+                rows={3}
+                dir={meta.dir}
+                style={{
+                  width: "100%",
+                  fontFamily: "inherit",
+                  fontSize: ts(A11Y.minBodyPx),
+                  padding: 12,
+                  borderRadius: 12,
+                  border: `2px solid ${C.warmGray}`,
+                  marginTop: 8,
+                }}
+              />
+              <PrimaryBtn
+                disabled={wrongBusy || !wrongText.trim()}
+                onClick={async () => {
+                  setWrongBusy(true);
+                  try {
+                    await reportPlaceAccess(myId, place, wrongText);
+                    setWrongOpen(false);
+                    setWrongText("");
+                    toast(t("outdoor.access.wrongThanks"), { tone: "success" });
+                  } catch {
+                    toast(t("outdoor.access.wrongFailed"), { tone: "error" });
+                  } finally {
+                    setWrongBusy(false);
+                  }
+                }}
+                style={{ marginTop: 10 }}
+              >
+                {t("outdoor.access.wrongSend")}
+              </PrimaryBtn>
+            </Card>
+          )}
 
           {error && (
             <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>

@@ -84,6 +84,92 @@ const en = {
     games: "Games",
     groups: "Friend groups",
     people: "My People",
+    badges: "Badges",
+    saved: "Saved posts",
+    help: "Help and support",
+    /* The bell and this both carry counts (NAVIGATION_SPEC §3). The
+       number goes in the accessible name because the badge itself is
+       aria-hidden — a count nobody can hear is decoration. */
+    messagesUnread: "Messages — {n} unread",
+  },
+
+  /* ── Search — NAVIGATION_SPEC §5 ──
+     One box, four kinds of result, the action on the row. */
+  search: {
+    open: "Search",
+    title: "Search",
+    placeholder: "Search people, groups, places and posts",
+    clear: "Clear what I typed",
+    searching: "Looking…",
+    /* Before typing. §5: never a blank page. */
+    recent: "Recently searched",
+    forget: "Forget these",
+    suggested: "Groups near you",
+    people: "People",
+    groups: "Groups",
+    outdoor: "Out and about",
+    posts: "Posts",
+    nothing: "Nothing matched that.",
+    nothingHint: "Try a shorter word, or just a first name.",
+    /* The action lives on the row: finding a thing and acting on it
+       is one screen, not two. */
+    join: "Join",
+    ask: "Ask to join",
+    asked: "Asked",
+    joined: "You are in",
+    openIt: "Open",
+    members: "{n} members",
+    privateGroup: "Private group",
+  },
+
+  /* ── Badges — PRODUCT_DECISIONS §9 ── */
+  badges: {
+    title: "Badges",
+    /* No count of anyone else, ever. §9: participation, never
+       performance, and nothing here is a ranking. */
+    intro: "Everything here is something you did.",
+    yours: "Yours",
+    ahead: "Still ahead",
+    earnedOn: "Earned {date}",
+    none: "None yet. The first one comes the first time you log a day.",
+    /* Family names in WORDS. The shapes and colours say it too, and
+       §0.1 forbids meaning carried by colour alone. */
+    familyPresence: "Showing up",
+    familyMoment: "A first",
+    familyCredential: "Completed",
+  },
+
+  /* ── Saved posts ── */
+  saved: {
+    title: "Saved posts",
+    /* An honest door, not a fake shelf. §0.6's second kind: a place
+       that is deliberately not built yet says so in its own words. */
+    notYet: "Saving posts isn't built yet.",
+    notYetBody: "When it is, anything you keep from a post will sit here — private to you, and nobody is told what you saved.",
+    home: "Back to Home",
+  },
+
+  /* ── Help and support ──
+     The questions table and its admin queue have existed since
+     migration 0010 with nothing in the app able to write to them. */
+  help: {
+    title: "Help and support",
+    intro: "Ask us anything about Saathban. A person reads every message.",
+    subject: "What is it about?",
+    subjectPlaceholder: "A few words",
+    body: "Tell us a little more",
+    bodyPlaceholder: "What happened, or what you would like to do",
+    send: "Send it",
+    sending: "Sending…",
+    yours: "What you have asked",
+    none: "You have not asked us anything yet.",
+    /* Never "pending" or "in queue". A person is waiting on a person. */
+    open: "We have this — someone will reply",
+    answered: "Answered",
+    askedOn: "Asked {date}",
+    reply: "Saathban replied",
+    error: "That did not send. Please try once more.",
+    tooShort: "A subject of at least three letters, and a line about it.",
   },
 
   settings: {
@@ -1519,6 +1605,24 @@ const en = {
   },
 
   outdoor: {
+    access: {
+      listLabel: "Getting there",
+      f: {
+        shade: "Shade",
+        benches: "Benches",
+        toilet: "Toilet",
+        flat_walk: "Flat walk",
+        steps_at_gate: "Steps at gate",
+        no_shade: "No shade",
+      },
+      wrong: "Something wrong here?",
+      wrongTitle: "What's not right?",
+      wrongSub: "Tell us and we'll check it. If a note here is wrong, someone could make a trip they can't finish.",
+      wrongPh: "For example: there are steps at the back gate too",
+      wrongSend: "Send",
+      wrongThanks: "Thank you — we'll check it.",
+      wrongFailed: "That didn't send. Please try again.",
+    },
     home: {
       title: "Outdoor",
       intro:

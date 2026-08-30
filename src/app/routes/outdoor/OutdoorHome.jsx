@@ -18,6 +18,7 @@ import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
 import {
   canUseCommunity,
   fetchPlaces,
+  fetchAccessNotes,
   fetchLiveCheckins,
   fetchUpcomingOutingsAll,
   fetchPlacedActivities,
@@ -26,6 +27,7 @@ import {
 } from "./outdoorData.js";
 import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
 import AddPlace from "./AddPlace.jsx";
+import AccessChips from "./AccessChips.jsx";
 
 const cityKey = (profileId) => `saathban.app.outdoorCity.${profileId || "anon"}`;
 
@@ -34,6 +36,11 @@ export default function OutdoorHome() {
   const { profile } = useSession();
   const [access, setAccess] = useState(null);
   const [places, setPlaces] = useState([]);
+  /* §4 access notes, place_id → [feature]. One query for the whole
+     list; a request per row is how twenty places become twenty
+     requests. Failing to load them must not cost anyone the list, so
+     it degrades to no chips rather than to an error. */
+  const [accessNotes, setAccessNotes] = useState({});
   const [liveCounts, setLiveCounts] = useState({});
   const [happeningCounts, setHappeningCounts] = useState({});
   const [city, setCity] = useState("");
@@ -48,7 +55,12 @@ export default function OutdoorHome() {
         if (cancelled) return;
         setAccess(ok);
         if (!ok) return;
-        const [rows, live] = await Promise.all([fetchPlaces(), fetchLiveCheckins()]);
+        const [rows, live, notes] = await Promise.all([
+          fetchPlaces(),
+          fetchLiveCheckins(),
+          fetchAccessNotes().catch(() => ({})),
+        ]);
+        setAccessNotes(notes);
         if (cancelled) return;
         setPlaces(rows);
         const counts = {};
@@ -261,6 +273,11 @@ export default function OutdoorHome() {
                               : t("outdoor.home.happeningMany", { n: h })}
                           </span>
                         )}
+                        {/* §4: what a person needs to know BEFORE
+                            setting out, on the row itself. One tap in
+                            is one tap too late — the decision to go is
+                            made here. */}
+                        <AccessChips features={accessNotes[p.id]} />
                       </span>
                     </Link>
                   );

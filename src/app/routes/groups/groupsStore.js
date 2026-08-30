@@ -59,8 +59,16 @@ export async function fetchMyGroupInvites() {
   }));
 }
 
-export async function createGroup(name, description) {
-  const { data, error } = await supabase.rpc("create_group", { p_name: name, p_description: description || null });
+/* privacy is passed explicitly: 0063 made it the third argument and
+   dropped the two-argument signature, because a defaulted parameter
+   would have left two overloads that both match a two-argument call
+   and PostgREST refuses that as not unique (the 0049 trap). */
+export async function createGroup(name, description, privacy) {
+  const { data, error } = await supabase.rpc("create_group", {
+    p_name: name,
+    p_description: description || null,
+    p_privacy: privacy === "anyone" ? "anyone" : "invite_only",
+  });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -165,4 +173,56 @@ export async function reportTarget({ kind, targetId, authorId, excerpt, reason }
     reason: reason || null,
   });
   if (error) throw new Error(error.message);
+}
+
+/* ── GROUPS_SPEC §4 — a group event IS an Out & about happening ──
+
+   There is not a second events system. The row goes in
+   outdoor_outings like any other happening; what makes it the
+   group's is group_id, and that single column is what makes it
+   inherit the group's privacy.
+
+   The inheritance is NOT done here. 0063 put it in the row's read
+   policy, because this function is one of several ways a happening
+   can be written and a rule enforced in one writer is not a rule.
+   What this does is set group_id — and if it were ever omitted, the
+   event would silently become city-wide, which is the exact leak
+   tests/group-event-privacy.mjs exists to catch. */
+export async function createGroupEvent(groupId, { placeId, startsAt, note }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("outdoor_outings")
+    .insert({
+      place_id: placeId,
+      creator_id: user?.id,
+      starts_at: startsAt,
+      note: (note || "").trim() || null,
+      visibility: "board",
+      group_id: groupId,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id;
+}
+
+/* The happenings this group has planned. Reads the same table the
+   city-wide list reads; RLS decides what comes back. */
+export async function fetchGroupEvents(groupId) {
+  const { data, error } = await supabase
+    .from("outdoor_outings")
+    .select("id, place_id, starts_at, note")
+    .eq("group_id", groupId)
+    .is("canceled_at", null)
+    .gt("starts_at", new Date().toISOString())
+    .order("starts_at");
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/* Is this group private? Used only to tell the poster who will see
+   what they are about to plan — never as the gate itself. */
+export async function fetchGroupPrivacy(groupId) {
+  const { data } = await supabase.from("groups").select("privacy").eq("id", groupId).maybeSingle();
+  return data?.privacy || "invite_only";
 }

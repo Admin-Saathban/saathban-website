@@ -183,52 +183,7 @@ export function GhostBtn({ children, style, ...props }) {
     </button>
   );
 }
-
-export function Toast({ text, actionLabel, onAction }) {
-  const { ts } = useI18n();
-  if (!text) return null;
-  return (
-    <div
-      role="status"
-      style={{
-        position: "fixed",
-        insetInlineStart: "50%",
-        transform: "translateX(-50%)",
-        bottom: 24,
-        zIndex: 50,
-        maxWidth: "min(92vw, 560px)",
-        background: C.brown,
-        color: C.cream,
-        fontSize: ts(A11Y.minBodyPx),
-        lineHeight: 1.5,
-        padding: "14px 22px",
-        borderRadius: 16,
-        boxShadow: "0 6px 24px rgba(45, 36, 24, 0.35)",
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-      }}
-    >
-      <span style={{ flex: 1 }}>{text}</span>
-      {actionLabel && (
-        <button
-          type="button"
-          onClick={onAction}
-          style={{
-            minHeight: A11Y.minTapTargetPx,
-            background: "none",
-            border: "none",
-            color: C.cream,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 700,
-            fontFamily: "inherit",
-            textDecoration: "underline",
-            cursor: "pointer",
-          }}
-        >
-          {actionLabel}
-        </button>
-      )}
-    </div>
-  );
-}
+/* OUT_AND_ABOUT_SPEC section 10, FEEDBACK.md: the lane-local Toast that
+   used to live here is gone. Every outcome in this area now goes
+   through the shared feedback store, and a second toast
+   implementation is how two toasts end up on screen at once. */

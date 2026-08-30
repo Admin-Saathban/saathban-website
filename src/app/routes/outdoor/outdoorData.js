@@ -289,3 +289,37 @@ export async function unblockAuthor(userId, targetId) {
     .eq("kind", "block");
   if (error) throw error;
 }
+
+/* ── Access notes (OUT_AND_ABOUT_SPEC §4) ──
+
+   Fetched for the whole visible list in one query and grouped here,
+   rather than per place row: the list renders every place in a city
+   at once, and a request per row is how a list of twenty places
+   becomes twenty requests. */
+export async function fetchAccessNotes() {
+  const { data, error } = await supabase
+    .from("outdoor_place_access")
+    .select("place_id, feature");
+  if (error) throw error;
+  const byPlace = {};
+  for (const r of data || []) (byPlace[r.place_id] ||= []).push(r.feature);
+  return byPlace;
+}
+
+/* "Something wrong here?" — §4 requires this whatever §4.1 decides
+   about who writes the notes in the first place.
+
+   It goes into community_reports, the queue admins already work,
+   rather than a private table nobody opens. target_author_id is left
+   null on purpose: a place has no author to answer for it, and the
+   point is to correct a note, not to judge a person. */
+export async function reportPlaceAccess(userId, place, note) {
+  const { error } = await supabase.from("community_reports").insert({
+    reporter_id: userId,
+    target_kind: "place_access",
+    target_id: place.id,
+    target_excerpt: `${place.name}${place.area ? `, ${place.area}` : ""}`,
+    reason: (note || "").trim().slice(0, 500) || null,
+  });
+  if (error) throw error;
+}

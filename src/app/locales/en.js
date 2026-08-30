@@ -1498,6 +1498,11 @@ const en = {
        what is celebrated is that everybody turned up and played. */
     celebrate: {
       title: "Well played!",
+      /* For somebody who was not at the table. game_seats is
+         participants-only at the database, so a watcher cannot be told
+         who won — and must not be told it was their table either. */
+      overTitle: "This game has finished",
+      overNote: "The table has packed up. There are others waiting.",
       youWon: "You brought every goti home.",
       theyWon: "{name} brought every goti home.",
       crown: "Winner",

@@ -147,6 +147,10 @@ export default function LudoCelebration({
   const winner = seats.find((s) => s.seat === winnerSeat);
   const others = seats.filter((s) => s.seat !== winnerSeat);
   const iWon = winner?.profile_id === myId;
+  /* Nobody to name. Not a sad version of the celebration — a different
+     and honest screen, which does not claim anything about a table
+     this person was not sitting at. */
+  const watching = seats.length === 0;
 
   return (
     <div
@@ -180,7 +184,7 @@ export default function LudoCelebration({
           outline: "none",
         }}
       >
-        {t("ludo.celebrate.title")}
+        {watching ? t("ludo.celebrate.overTitle") : t("ludo.celebrate.title")}
       </h1>
 
       {winner && (
@@ -218,7 +222,7 @@ export default function LudoCelebration({
       {/* The only thing said about points, and it is said about
           everybody at once. No number, no rank, no comparison. */}
       <p style={{ margin: "6px 0 0", fontSize: ts(17), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
-        {t("ludo.celebrate.warmth")}
+        {watching ? t("ludo.celebrate.overNote") : t("ludo.celebrate.warmth")}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 420, marginTop: 8 }}>

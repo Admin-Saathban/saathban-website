@@ -55,19 +55,16 @@ import { allArrows } from "./boardArrows.js";
    They are drawn UNDER the pieces and at low contrast: an instruction
    for the first game, wallpaper by the tenth, never a thing competing
    with a goti for your eye. */
-function Arrow({ kind, cell, angle, seat, seatsInPlay }) {
+function Arrow({ kind, cell, angle, seat }) {
   const [c, r] = cell;
   const x = c * CELL + CELL / 2;
   const y = r * CELL + CELL / 2;
   const colored = kind !== "flow";
   const stroke = colored ? SEAT_COLORS[seat] : "#8A7B66";
-  // An arrow into a seat nobody is sitting at would be an instruction
-  // to nowhere, so it fades with its yard.
-  const dim = colored && seat >= seatsInPlay;
   return (
     <g
       transform={`translate(${x} ${y}) rotate(${angle})`}
-      opacity={dim ? 0.12 : colored ? 0.95 : 0.55}
+      opacity={colored ? 0.95 : 0.55}
       aria-hidden="true"
       fill="none"
       stroke={stroke}
@@ -499,7 +496,7 @@ export default function LudoBoard({
                from the track itself so it can never point the wrong
                way after a geometry change. */}
         {allArrows({ every: 2 }).map((a, i) => (
-          <Arrow key={`arw-${i}`} {...a} seatsInPlay={seatsInPlay} />
+          <Arrow key={`arw-${i}`} {...a} />
         ))}
 
         {/* ── Home columns: each arm's middle line, in the seat's colour ── */}

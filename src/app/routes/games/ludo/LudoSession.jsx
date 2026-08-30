@@ -327,7 +327,27 @@ export default function LudoSession() {
       act(() => move(game.id, { piece: i, die: pickedDie, split: mine[0].split }));
       return;
     }
-    setChooser({ piece: i, opts: mine });
+    /* THE PAIR'S FIRST MOVE IS THE ONLY TIME INTENT IS AMBIGUOUS.
+
+       Two of your gotis on one square that have never moved together
+       could be a jota you are building or two pieces that happen to
+       share a square, and nothing on the board can tell us which. So
+       we ask — once. The engine is what makes "once" true rather than
+       a flag we keep: ludo_desi_legal offers both a "pair" and a
+       "single" for a virgin stack, and after the pair has moved
+       together it offers pair moves only. There is no second ask to
+       suppress, and no state to get wrong.
+
+       Which of the two moves alone used to be arbitrary, because the
+       gotis were interchangeable. They are not any more — each one
+       carries its own number now — so the person choosing "just one"
+       is offered the choice of which. */
+    const seat = game.current_seat;
+    const square = Number(state.pieces?.[seat]?.[i] ?? 0);
+    const mates = (state.pieces?.[seat] || [])
+      .map((p, idx) => (Number(p) === square ? idx : -1))
+      .filter((idx) => idx >= 0 && options.some((o) => o.piece === idx && o.kind === "single"));
+    setChooser({ piece: i, opts: mine, mates });
   };
 
   /* ── WHEN THERE IS ONLY ONE MOVE, PLAY IT ──────────────────────
@@ -855,6 +875,7 @@ export default function LudoSession() {
           <div style={{ flex: "0 0 auto" }}>
           <SeatPlates
             where="top"
+            compact={playing && shortScreen}
             seats={seats}
             seatsInPlay={game.target_seats}
             spin={povRotation(mySeatRow?.seat ?? null)}
@@ -965,6 +986,7 @@ export default function LudoSession() {
 
           <SeatPlates
             where="bottom"
+            compact={playing && shortScreen}
             seats={seats}
             seatsInPlay={game.target_seats}
             spin={povRotation(mySeatRow?.seat ?? null)}
@@ -1020,25 +1042,92 @@ export default function LudoSession() {
           {/* ── Choosing between the pair and the single, when a goti
                  standing in a jota could do either ── */}
           {chooser && dice && dice[pickedDie] && (
-            <Card style={{ marginTop: 12, borderColor: C.green, borderWidth: 2 }}>
-              <BodyText style={{ fontWeight: 700, margin: "0 0 8px" }}>
+            <Card style={{ marginTop: 10, borderColor: C.green, borderWidth: 2, flex: "0 0 auto" }}>
+              <BodyText style={{ fontWeight: 700, margin: "0 0 4px", fontSize: ts(20) }}>
                 {t("ludo.jota.chooseTitle")}
               </BodyText>
-              {chooser.opts.map((o) => (
-                <GhostBtn
-                  key={`${o.kind}-${o.to}`}
+              <BodyText muted style={{ margin: "0 0 10px", fontSize: ts(A11Y.minBodyPx) }}>
+                {t("ludo.jota.onceOnly")}
+              </BodyText>
+
+              {/* BOTH TOGETHER. Half the dice, as a pair always
+                  travels, and the number says so rather than the
+                  player discovering it after the fact. */}
+              {chooser.opts.some((o) => o.kind === "pair") && (
+                <PrimaryBtn
                   disabled={busy}
                   onClick={() =>
-                    act(() => move(game.id, { piece: chooser.piece, die: pickedDie, split: o.split }))
+                    act(() =>
+                      move(game.id, {
+                        piece: chooser.piece,
+                        die: pickedDie,
+                        split: chooser.opts.find((o) => o.kind === "pair").split,
+                      })
+                    )
                   }
-                  style={{ width: "100%", justifyContent: "flex-start", borderColor: C.green, marginBottom: 8 }}
+                  style={{ width: "100%", minHeight: 64, fontSize: ts(20), marginBottom: 10 }}
                 >
-                  {o.kind === "pair"
-                    ? t("ludo.jota.together", { n: Math.floor(dice[pickedDie].v / 2) })
-                    : t("ludo.jota.alone", { n: dice[pickedDie].v })}
-                </GhostBtn>
-              ))}
-              <GhostBtn onClick={() => setChooser(null)} style={{ width: "100%" }}>
+                  {t("ludo.jota.together", { n: Math.floor(dice[pickedDie].v / 2) })}
+                </PrimaryBtn>
+              )}
+
+              {/* JUST ONE — and now, which one. Two gotis that used to
+                  be interchangeable each carry a number, so "move one"
+                  without saying which would be the app choosing for
+                  you and hoping you did not notice. With only one
+                  candidate it stays a single button. */}
+              {chooser.opts.some((o) => o.kind === "single") &&
+                (chooser.mates && chooser.mates.length > 1 ? (
+                  <>
+                    <BodyText style={{ fontWeight: 700, margin: "0 0 8px", fontSize: ts(A11Y.minBodyPx) }}>
+                      {t("ludo.jota.aloneWhich", { n: dice[pickedDie].v })}
+                    </BodyText>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                      {chooser.mates.map((idx) => (
+                        <GhostBtn
+                          key={idx}
+                          disabled={busy}
+                          onClick={() =>
+                            act(() =>
+                              move(game.id, {
+                                piece: idx,
+                                die: pickedDie,
+                                split: options.find((o) => o.piece === idx && o.kind === "single").split,
+                              })
+                            )
+                          }
+                          style={{
+                            flex: "1 1 0",
+                            minHeight: 64,
+                            fontSize: ts(20),
+                            borderColor: C.green,
+                            color: C.textMain,
+                          }}
+                        >
+                          {t("ludo.jota.goti", { n: idx + 1 })}
+                        </GhostBtn>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <GhostBtn
+                    disabled={busy}
+                    onClick={() =>
+                      act(() =>
+                        move(game.id, {
+                          piece: chooser.piece,
+                          die: pickedDie,
+                          split: chooser.opts.find((o) => o.kind === "single").split,
+                        })
+                      )
+                    }
+                    style={{ width: "100%", minHeight: 64, fontSize: ts(20), borderColor: C.green, marginBottom: 10 }}
+                  >
+                    {t("ludo.jota.alone", { n: dice[pickedDie].v })}
+                  </GhostBtn>
+                ))}
+
+              <GhostBtn onClick={() => setChooser(null)} style={{ width: "100%", minHeight: 52 }}>
                 {t("outdoor.place.formCancel")}
               </GhostBtn>
             </Card>

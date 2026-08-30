@@ -1459,6 +1459,9 @@ const en = {
       chooseTitle: "Two of your gotis are on that square.",
       together: "Move both together — {n} steps",
       alone: "Move just one — {n} steps",
+      aloneWhich: "Or move just one — {n} steps. Which one?",
+      goti: "Goti {n}",
+      onceOnly: "You'll only be asked this once for this pair.",
     },
     turn: {
       yours: "Your turn — roll the dice!",

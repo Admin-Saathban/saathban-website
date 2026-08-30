@@ -25,6 +25,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 import {
   MODULES,
   MOODS,
@@ -718,7 +719,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                 onClick={() => setOpenId(open ? null : mod.key)}
                 style={{ width: "100%", minHeight: 60, display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: done ? "#f4f7f1" : C.white, border: "none", fontFamily: "inherit", textAlign: "start", cursor: editable ? "pointer" : "default" }}
               >
-                <span aria-hidden="true" style={{ fontSize: ts(26) }}>{mod.icon}</span>
+                <Icon name={mod.icon} size={24} style={{ color: C.green }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>{entryName(mod)}</span>
                   <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: done ? C.green : C.textMuted, overflowWrap: "anywhere" }}>

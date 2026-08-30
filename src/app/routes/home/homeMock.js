@@ -28,13 +28,18 @@ export const MOCK_ICON = {
 // ─── Log modules ───
 // Display names come from the existing settings.dailyLog.modules.* keys
 // (one source for Settings and the log card alike).
+/* `icon` is a name in components/Icon.jsx, not an emoji — the owner's
+   30 August pass. Six emoji in a vertical list was the worst case for
+   the mismatch: each one drawn by a different hand at a different
+   optical size, stacked so the differences line up next to each
+   other. */
 export const MODULES = [
-  { id: "mood", icon: "🌤️" },
-  { id: "sleep", icon: "🌙" },
-  { id: "medication", icon: "💊" },
-  { id: "exercise", icon: "🚶" },
-  { id: "diet", icon: "🍲" },
-  { id: "water", icon: "💧" },
+  { id: "mood", icon: "mood" },
+  { id: "sleep", icon: "sleep" },
+  { id: "medication", icon: "medication" },
+  { id: "exercise", icon: "exercise" },
+  { id: "diet", icon: "diet" },
+  { id: "water", icon: "water" },
 ];
 
 // Five options, always in this order. The note placeholder adapts to the

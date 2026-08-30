@@ -32,7 +32,7 @@ import ChatPanel from "./ChatPanel.jsx";
 import QuickChat, { EmojiButton, ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
 import LudoCelebration from "./LudoCelebration.jsx";
 import { screenCorner } from "./SeatPlates.jsx";
-import { leaveSession, boastToPeople } from "../../../lib/games.js";
+import { leaveSession } from "../../../lib/games.js";
 import { sendChat, fetchChat } from "./ludoRails.js";
 
 const POLL_MS = 2500;
@@ -216,7 +216,6 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
-  const [shared, setShared] = useState(false);
   const [bubbles, setBubbles] = useState([]);
   const seenChat = useRef(new Set());
   const startedOnce = useRef(false);
@@ -819,20 +818,10 @@ export default function LudoSession() {
           winnerSeat={game.winner_seat}
           myId={myId}
           seatName={seatName}
+          sessionId={game.id}
+          pieces={state.pieces}
+          seatsInPlay={game.target_seats}
           busy={busy}
-          shared={shared}
-          onShare={
-            mySeatRow
-              ? () =>
-                  act(async () => {
-                    await boastToPeople("win", game.id, {
-                      game: t("ludo.title"),
-                      link: `/app/games/ludo/${game.id}`,
-                    });
-                    setShared(true);
-                  })
-              : undefined
-          }
           onRematch={mySeatRow ? () => act(() => rematch(game.id)) : undefined}
           onBack={() => navigate("/app/games")}
         />

@@ -1496,6 +1496,42 @@ const en = {
 
     /* §8 — the end of a game. No coins, no rank, no leaderboard (§9):
        what is celebrated is that everybody turned up and played. */
+    boast: {
+      cta: "Share this game",
+      sheetTitle: "Send this game",
+      preparing: "Making your card…",
+      cardAlt: "A picture of the finished game, with the winner crowned.",
+      cardFailed: "The picture didn't come out — you can still send the link.",
+      cardTitle: "Well played!",
+      cardLine: "Jeet gaya! 🎉",
+      mark: "Saathban",
+      shareText: "{name} won our Ludo game on Saathban",
+      shareTextNoName: "Our Ludo game on Saathban",
+      withPicture: "with the picture",
+      linkOnly: "link only",
+      phone: "Share…",
+      save: "Save the picture",
+      saved: "Saved to your phone",
+      copy: "Copy the link",
+      copied: "Link copied",
+      community: "Post to Community",
+      postedCommunity: "Posted to Community ✓",
+      people: "Tell my people",
+      peopleNote: "everyone you're connected to",
+      toldPeople: "Your people know ✓",
+      group: "Send to a group",
+      noGroups: "You're not in a group yet.",
+      sentGroup: "Sent to the group ✓",
+      failed: "That didn't send — please try again.",
+      /* The public page, readable by somebody with no account. */
+      publicIntro: "{name} won this game on Saathban.",
+      publicPlayers: "Who played",
+      publicCta: "Play Ludo on Saathban",
+      publicBlurb:
+        "Saathban is a warm place for older people to play, talk and keep company. Free to join.",
+      publicMissing: "This game isn't here any more.",
+    },
+
     celebrate: {
       title: "Well played!",
       /* For somebody who was not at the table. game_seats is
@@ -1555,6 +1591,20 @@ const en = {
       sheet: {
         title: "Who is playing?",
         close: "Close",
+      },
+      /* Table themes (C1). The board everyone at the table plays on.
+         Locked ones say what to DO — how many more tables — never a
+         price, because these are earned by playing and never bought. */
+      themes: {
+        label: "The board",
+        classic: "Classic",
+        wood: "Wood",
+        marble: "Marble",
+        night: "Night",
+        chosen: "chosen",
+        locked: "{n} more tables",
+        lockedOne: "1 more table",
+        lockedAria: "{name} — opens after {n} more tables",
       },
       addSeat: "Add a player",
       removeSeat: "Remove this player",

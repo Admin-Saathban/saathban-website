@@ -24,10 +24,11 @@
    the whole point of the screen.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
+import BoastSheet from "../BoastSheet.jsx";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -128,11 +129,12 @@ export default function LudoCelebration({
   winnerSeat,
   myId,
   seatName,
-  onShare,
+  sessionId,
+  pieces,
+  seatsInPlay,
   onRematch,
   onBack,
   busy,
-  shared,
 }) {
   const { t, ts, meta } = useI18n();
   const headingRef = useRef(null);
@@ -151,6 +153,7 @@ export default function LudoCelebration({
      and honest screen, which does not claim anything about a table
      this person was not sitting at. */
   const watching = seats.length === 0;
+  const [sheet, setSheet] = useState(false);
 
   return (
     <div
@@ -226,13 +229,13 @@ export default function LudoCelebration({
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 420, marginTop: 8 }}>
-        {onShare && (
-          <Action onClick={onShare} disabled={busy || shared}>
-            {shared ? `✓ ${t("ludo.celebrate.shareDone")}` : `📣 ${t("ludo.celebrate.shareCta")}`}
+        {!watching && sessionId && (
+          <Action onClick={() => setSheet(true)} disabled={busy} primary>
+            📣 {t("ludo.boast.cta")}
           </Action>
         )}
         {onRematch && (
-          <Action onClick={onRematch} disabled={busy} primary>
+          <Action onClick={onRematch} disabled={busy}>
             🔁 {t("ludo.celebrate.rematchCta")}
           </Action>
         )}
@@ -240,6 +243,22 @@ export default function LudoCelebration({
           {t("ludo.celebrate.backCta")}
         </Action>
       </div>
+
+      {sheet && (
+        <BoastSheet
+          open
+          onClose={() => setSheet(false)}
+          sessionId={sessionId}
+          players={seats.map((s) => ({
+            seat: s.seat,
+            name: seatName(s, t),
+            photoUrl: s.avatar_url || null,
+            isWinner: s.seat === winnerSeat,
+          }))}
+          pieces={pieces}
+          seatsInPlay={seatsInPlay}
+        />
+      )}
     </div>
   );
 }

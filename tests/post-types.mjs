@@ -2,6 +2,7 @@
    each, then removes them. POSTS_SPEC §1-§6. */
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
+import { snapshotProbes, sweepProbes } from "./probes.mjs";
 
 /* NO DEFAULT PORT. This file used to default to an assumed localhost
    port, and that cost a full run of tests/messages-arrival.mjs: every
@@ -20,6 +21,10 @@ if (!BASE) {
   console.error("Set BASE_URL — a deployed URL, or the port vite preview actually printed.");
   process.exit(2);
 }
+
+/* Ids that already existed, so the sweep at the end deletes only what
+   THIS run made. Both conditions — see tests/probes.mjs. */
+const probesBefore = await snapshotProbes();
 /* AND IT MUST BE A REAL URL. The empty check alone was not enough: a
    port-reading one-liner grepped vite`s output for localhost:[0-9]+,
    the output carries ANSI colour codes between the colon and the
@@ -89,17 +94,60 @@ await p.screenshot({ path: `${SHOTS}/composer-${LANG}.png` });
 /* Make one post of each type. */
 const made = [];
 async function post(text, { tag = null, colour = null } = {}) {
-  if (!(await p.getByText(L.newPost).first().isVisible().catch(() => false))) {
+  /* WAIT FOR THE TEXTAREA, NOT FOR THE WORDS "New post".
+
+     This is what made the suite fail about one run in two, with a bare
+     30s TimeoutError on Share and nothing else to go on. A successful
+     share closes the composer (Composer.jsx:152, which is correct), and
+     the heading stays in the DOM while the overlay animates out — so the
+     old guard read a CLOSING composer as an open one, skipped reopening,
+     filled a textarea that was on its way to being unmounted, and then
+     waited thirty seconds for a Share button that had gone with it. The
+     diagnostic dump showed textareas: 0 at the moment of the timeout,
+     which is the whole story in one number.
+
+     Same shape as everything else tonight: text that is still painted
+     read as a component that is still there. Ask for the thing you are
+     about to use — the textarea — and wait for it to actually exist. */
+  const editor = p.locator("textarea").first();
+  if (!(await editor.isVisible().catch(() => false))) {
     await feed();
     await p.getByText(L.row).first().click();
-    await p.waitForTimeout(800);
   }
-  await p.locator("textarea").first().fill(text);
+  await editor.waitFor({ state: "visible", timeout: 15000 });
+  await editor.fill(text);
   if (colour != null) { await p.locator(`button[aria-label="${LANG === "ur" ? "رنگ" : "Colour"} ${colour}"]`).first().click().catch(() => {}); }
   if (tag) { await p.getByRole("button", { name: L.tags[tag], exact: true }).first().click().catch(() => {}); }
   await p.waitForTimeout(300);
-  await p.getByRole("button", { name: L.share, exact: true }).first().click();
-  await p.waitForTimeout(3000);
+  /* Wait for Share to be ENABLED, then say what was on screen if it never
+     is. This click used to time out roughly one run in two with nothing
+     but a 30s TimeoutError to go on — no screenshot, no page text, so
+     every investigation started from zero. A test that fails without
+     saying what it saw costs more than the bug it is reporting. */
+  const share = p.getByRole("button", { name: L.share, exact: true }).first();
+  try {
+    await share.waitFor({ state: "visible", timeout: 15000 });
+    await p.waitForFunction(
+      (label) => [...document.querySelectorAll("button")]
+        .some((b) => b.textContent.trim() === label && !b.disabled),
+      L.share, { timeout: 15000 });
+    await share.click({ timeout: 15000 });
+  } catch (e) {
+    await p.screenshot({ path: `${SHOTS}/share-timeout-${LANG}.png`, fullPage: true }).catch(() => {});
+    const seen = await p.evaluate(() => ({
+      buttons: [...document.querySelectorAll("button")].map((b) => b.textContent.trim()).filter(Boolean),
+      textareas: document.querySelectorAll("textarea").length,
+      value: document.querySelector("textarea")?.value?.slice(0, 40) || null,
+      text: document.body.innerText.slice(0, 200),
+    })).catch(() => null);
+    console.log("  SHARE TIMED OUT. on screen:", JSON.stringify(seen));
+    console.log("  page errors so far:", JSON.stringify([...new Set(errs)]));
+    throw e;
+  }
+  /* Gone, not "probably gone by now". The next post() opens a fresh
+     composer and must not race this one's unmount. */
+  await p.locator("textarea").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  await p.waitForTimeout(1200);
   made.push(text);
 }
 
@@ -127,6 +175,7 @@ check(`${LANG} no Block in the post menu`, !/^Block$|بلاک کریں/m.test(me
 await p.screenshot({ path: `${SHOTS}/postmenu-${LANG}.png` });
 
 check(`${LANG} no page errors`, errs.length === 0, [...new Set(errs)].slice(0, 2).join(" | "));
+await sweepProbes(probesBefore);
 console.log(fails ? `\n${fails} FAILED` : `\nPOSTS OK (${LANG})`);
 await b.close();
 process.exit(fails ? 1 : 0);

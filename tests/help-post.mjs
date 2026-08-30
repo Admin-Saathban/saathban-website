@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
+import { createClient } from "@supabase/supabase-js";
+import { snapshotProbes, sweepProbes } from "./probes.mjs";
 /* NO DEFAULT PORT. This file used to default to an assumed localhost
    port, and that cost a full run of tests/messages-arrival.mjs: every
    lane works in this one directory, the port was already taken, vite
@@ -30,6 +32,10 @@ if (!_u || !_u.hostname || (_u.protocol === "http:" && _u.hostname === "localhos
   console.error(`BASE_URL is not a usable URL: ${JSON.stringify(BASE)}`);
   process.exit(2);
 }
+
+/* Ids that already existed, so the sweep at the end deletes only what
+   THIS run made. Both conditions — see tests/probes.mjs. */
+const probesBefore = await snapshotProbes();
 const raw = readFileSync("./.env.local", "utf8");
 const g = (n) => { const l = raw.split(/\r?\n/).find(x=>x.startsWith(n)); return l.slice(l.indexOf("=")+1).trim(); };
 const SUPA=g("VITE_SUPABASE_URL"), ANON=g("VITE_SUPABASE_ANON_KEY");
@@ -49,6 +55,34 @@ async function as(email) {
   await p.goto(BASE+"/app/community",{waitUntil:"networkidle"}); await p.waitForTimeout(2600);
   return { ctx, p };
 }
+
+/* THE FIXTURE THIS SUITE USED TO BORROW.
+
+   It created nothing and asserted straight against the feed, so it was
+   passing on a "ZZ help" row that tests/post-types.mjs had left behind
+   on a shared account. Three suites had no cleanup, the debris built up
+   to twenty-two posts, and this one quietly depended on it — the moment
+   the account was swept clean, three checks failed. It had never tested
+   a help post it made; it tested whatever happened to still be there.
+
+   A test that passes because of another test's litter is not passing.
+   It makes its own ask now, and sweepProbes removes it at the end. */
+const icon = await login("test-icon@saathban.dev");
+const iconSb = createClient(SUPA, ANON, { global: { headers: { Authorization: `Bearer ${icon.access_token}` } } });
+async function makeHelpPost() {
+  const { data, error } = await iconSb.from("community_posts").insert({
+    author_id: icon.user.id,
+    body: "ZZ help — I cannot manage the ladder any more",
+    post_type: "text",
+    visibility: "public",
+    style_tag: "help",
+    help_wanted: 1,
+  }).select("id").single();
+  if (error) { console.error("could not create the help fixture:", error.message); process.exit(1); }
+  return data.id;
+}
+const helpId = await makeHelpPost();
+check("the help fixture exists", !!helpId, helpId);
 
 // The author sees "This is sorted" on their own ask (§6 — you do not offer to yourself)
 {
@@ -77,6 +111,7 @@ async function as(email) {
   } else { check("offer button clickable", false, "not found"); }
   await ctx.close();
 }
+await sweepProbes(probesBefore);
 console.log(fails?`\n${fails} FAILED`:"\nHELP POST OK");
 await b.close();
 process.exit(fails?1:0);

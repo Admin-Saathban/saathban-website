@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 import { createClient } from "@supabase/supabase-js";
+import { snapshotProbes, sweepProbes } from "./probes.mjs";
 
 /* NO DEFAULT PORT. This file used to default to an assumed localhost
    port, and that cost a full run of tests/messages-arrival.mjs: every
@@ -31,6 +32,10 @@ if (!BASE) {
   console.error("Set BASE_URL — a deployed URL, or the port vite preview actually printed.");
   process.exit(2);
 }
+
+/* Ids that already existed, so the sweep at the end deletes only what
+   THIS run made. Both conditions — see tests/probes.mjs. */
+const probesBefore = await snapshotProbes();
 /* AND IT MUST BE A REAL URL. The empty check alone was not enough: a
    port-reading one-liner grepped vite`s output for localhost:[0-9]+,
    the output carries ANSI colour codes between the colon and the
@@ -183,6 +188,7 @@ check("the report carries the recording's path", !!rep?.target_media_path, rep ?
   await ctx.close();
 }
 
+await sweepProbes(probesBefore);
 console.log(fails ? `\n${fails} FAILED` : "\nVOICE POSTS OK — and a moderator can hear one");
 await browser.close();
 process.exit(fails ? 1 : 0);

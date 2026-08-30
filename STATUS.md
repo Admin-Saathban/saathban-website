@@ -197,6 +197,48 @@ Until then Cancel is honest read as "leave this table"; the table
 stays open, which is harmless because a lobby table is only
 reachable by its code or an invite.
 
+## The stale-copy hazard (2026-08-30) — READ BEFORE WRITING A SHARED FILE
+
+In one afternoon this bit all three active lanes, in three different
+disguises, and every instance looked like something else at first:
+
+1. I overwrote another lane's `fetchGamesFinished` out of
+   `lib/games.js` by writing the whole file from a copy I had read a
+   few minutes earlier. The build caught it — "not exported" — but only
+   because something imported the missing name.
+2. `083bc43` ("Restore the A1 strings that C1 committed away") touched
+   ELEVEN files from a stale copy: it restored the strings it meant to,
+   and also deleted `ThemePicker.jsx` and `themes.js`, reverted a
+   `SeatSetup` hunk, and cut `fetchGamesFinished` out again — all of
+   which had been correctly committed minutes before. It left
+   `useState(DEFAULT_THEME)` with no import behind it: a **blank page**
+   with `ReferenceError: DEFAULT_THEME is not defined`, which no build
+   can catch, because there was no import left to fail on.
+3. The same commit swept a third lane's uncommitted D1 work into
+   itself, so a feature now lives inside a commit whose message
+   describes something else entirely. Nothing broke; but anyone
+   bisecting table naming later will land on "Restore the A1 strings".
+
+**The two rules that would have prevented all three:**
+
+- **Re-read a file immediately before you write it.** A patch computed
+  against a copy read even a minute ago can silently revert a peer.
+  Read and write in the same step. The window shrinks from minutes to
+  seconds; it is not airtight, but nearly all of the damage lives in
+  those minutes.
+- **Never commit a path you did not personally change in this session.**
+  `git commit -- <paths>` commits the WORKING TREE at those paths, not
+  your changes to them. Run `git diff --stat` on what you are about to
+  commit and read the file list: anything you do not recognise is a
+  peer's work about to become yours. When a file holds both your work
+  and someone else's, stage your own hunks — build a patch of just
+  those and `git apply --cached` it, since `git add -p` cannot run
+  here — and leave theirs in the tree.
+
+And the corollary that keeps origin safe: **a green build is not a
+green page.** Two of the three incidents produced code that compiled.
+Load the actual route with a `pageerror` listener before pushing.
+
 ## Working agreements (learned the hard way, 2026-08-29)
 
 Several sessions share one working tree and one database here. Every

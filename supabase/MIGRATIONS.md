@@ -96,7 +96,7 @@ exec_game_move() registry folding the ludo_* RPCs in. Do NOT create
 those three tables again, and do NOT apply anything named 0020.
 GAMES_CONTRACT.md (games lane) carries the field mapping.
 
-## 0055 — first contact, server-enforced (saathban-website-38, 2026-08-30)
+## 0055 — first contact, server-enforced (saathban-website-38, 2026-08-30) — **APPLIED**
 
 `0055_first_contact.sql` — PRODUCT_DECISIONS §6.5 and §6.6, both of which
 §0.9 requires at the database rather than in the UI.

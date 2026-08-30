@@ -1162,11 +1162,12 @@ export default function LudoSession() {
                   here in full cost a line the board needed — so during
                   play only the ACTIONABLE half survives: which dice you
                   are holding and must now spend. */}
-              {isMyTurn && hasDice && (
-                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px", color: GAME.ink }}>
-                  {t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })}
-                </BodyText>
-              )}
+              {/* "You rolled 4" is deleted, not moved. The die is on
+                  the screen showing a 4 — saying it again in words
+                  cost the board a whole line to repeat something the
+                  player is already looking at. The instruction below
+                  survives because it says what to DO, which the die
+                  does not. */}
             </div>
             {last && (
               <BodyText
@@ -1483,7 +1484,7 @@ export default function LudoSession() {
           Quick phrases and emoji stay — they are the two taps people
           actually use mid-game — and the full thread is a tap away
           again the moment the game ends or the screen is taller. */}
-      {mySeatRow && !(playing && shortScreen) && (
+      {mySeatRow && !playing && (
         <div style={{ flex: "0 0 auto" }}>
           <ChatPanel sessionId={game.id} myId={myId} seats={seats} />
         </div>

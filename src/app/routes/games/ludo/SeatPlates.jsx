@@ -316,9 +316,13 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         overflow: "hidden",
         padding: compact ? "2px 6px" : "6px 8px",
         borderRadius: 16,
-        background: isTurn ? "#fffdf5" : "transparent",
+        /* A soft lozenge of the seat's own colour on the table,
+           rather than a page-coloured card. Dark enough that light
+           text sits on it, bright enough to be the thing your eye
+           goes to first. */
+        background: isTurn ? `${colour}2e` : "transparent",
         border: isTurn ? `2px solid ${colour}` : "2px solid transparent",
-        boxShadow: isTurn ? `0 2px 10px ${colour}2e` : "none",
+        boxShadow: isTurn ? `0 2px 14px ${colour}33` : "none",
       }}
     >
       <Avatar
@@ -368,8 +372,10 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
                   display: "block",
                   fontSize: ts(16),
                   fontWeight: 700,
-                  /* Light on the table, dark on the cream card. */
-                  color: isTurn ? C.textMain : GAME.ink,
+                  /* Everything is on the table now, so everything is
+                     light. The cream card that used to justify dark
+                     ink here is gone. */
+                  color: GAME.ink,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",

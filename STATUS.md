@@ -292,7 +292,30 @@ building. Same shape as the database channel (see "Database load
 discipline"), and the same lesson we learned there about measuring
 while another lane holds the resource.
 
-The family 1..1f is one idea: **the instrument answers the question it
+**1g. Grep for the tool's SUCCESS marker, never for "error".** A
+negative check — "no errors found" — asserts nothing: an empty result
+is indistinguishable from a command that never ran, a binary that is
+not installed, or a typo in your own pattern. A positive check asserts
+something, and when IT breaks it fails closed.
+
+Demonstrated on a log from a genuinely failed build (1f's `EPERM`):
+
+    grep -c 'error during build'  →  1   correct: it failed
+    grep -c 'eror during build'   →  0   ONE TYPO — reads as clean
+    grep -c '✓ built'             →  0   correct: it did not build
+    grep -c '✓ buit'              →  0   ONE TYPO — still says failed
+
+A broken negative check fails OPEN and reports green. A broken positive
+check fails CLOSED and reports red. Only one of those wakes anyone up.
+
+This is the same asymmetry as agreement 8 ("prove the check can fail
+before you trust it passing") applied to how we read command output,
+and it is worth stating separately because almost every "verified, no
+errors" reported between sessions today was the weaker kind. Say what
+you grepped FOR, and prefer the string the tool prints when it is
+happy.
+
+The family 1..1g is one idea: **the instrument answers the question it
 was pointed at, which is not always the question asked.** A build
 resolves modules, `node --check` parses, a pipe reports its tail, an
 HTTP 200 says a server replied. None of them is lying; each is being

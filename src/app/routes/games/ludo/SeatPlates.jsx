@@ -133,8 +133,12 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label }) {
           aria-hidden="true"
           style={{
             position: "absolute",
-            bottom: -4,
-            fontSize: ts(12),
+            bottom: -6,
+            /* The last-seconds numeral is an ACCESSIBILITY CUE, not a
+               decoration: it exists so the ring turning colour is never
+               the only warning that a turn is running out. A 12px
+               warning helps nobody who needed warning (§10). */
+            fontSize: ts(A11Y.minBodyPx),
             fontWeight: 800,
             color: C.brown,
             background: C.white,
@@ -188,7 +192,7 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
       {spent && (
         <span
           aria-hidden="true"
-          style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(13), fontWeight: 800, color: C.green }}
+          style={{ position: "absolute", right: 1, bottom: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 800, color: C.green }}
         >
           ✓
         </span>
@@ -297,27 +301,30 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
           {name}
           {isMe ? ` (${t("ludo.seat.you")})` : ""}
         </span>
-        <span
-          style={{
-            display: "block",
-            fontSize: ts(14),
-            color: isTurn ? colour : C.textMuted,
-            fontWeight: isTurn ? 700 : 400,
-          }}
-        >
-          {isTurn
-            ? isMe
-              ? t("ludo.seat.yourTurn")
-              : t("ludo.seat.turn")
-            : t("ludo.seat.seatN", { n: seat + 1 })}
-        </span>
+        {/* Only when it says something. "Seat 2" under a seat that is
+            simply sitting there is a label nobody reads, and the room
+            it costs is room the board needs (§1). Whose turn it is
+            stays said by the ring, the border and the arrow (§10 —
+            never colour alone), and here in words at the floor size. */}
+        {isTurn && (
+          <span
+            style={{
+              display: "block",
+              fontSize: ts(A11Y.minBodyPx),
+              color: colour,
+              fontWeight: 700,
+            }}
+          >
+            {isMe ? t("ludo.seat.yourTurn") : t("ludo.seat.turn")}
+          </span>
+        )}
         {/* Someone is deciding. Three dots that settle, not a spinner:
             a spinner says "the app is busy", this says "they are
             thinking", which is a different and truer thing. */}
         {isTurn && !isMe && (
           <span
             className="sb-think"
-            style={{ display: "block", fontSize: ts(13), color: C.textMuted, letterSpacing: "0.06em" }}
+            style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, letterSpacing: "0.06em" }}
           >
             {t("ludo.ceremony.thinking")}
           </span>
@@ -328,6 +335,22 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
           mode both sit here together, and this is also where you
           CHOOSE which one to spend — the choice used to live in the
           board's middle tray, which the spec removed. */}
+      {/* A seat with no dice in hand still shows a die — dim, at rest,
+          nothing to tap (§3: "opponents' dice are visible but dim").
+          Without this an opponent who has not rolled renders as an
+          avatar and two lines of text, which is what made a bot seat
+          read as a plain "Bot / Seat 2" row rather than a place at the
+          table. It also matters for §10: with no die and no ring, the
+          only thing saying "not your turn" was the words. */}
+      {(!dice || dice.length === 0) && !isMe && (
+        <span
+          style={{ display: "flex", flexShrink: 0, alignItems: "center", opacity: 0.42 }}
+          aria-hidden="true"
+        >
+          <Die value={row?.last_roll || 1} size={34} state="used" />
+        </span>
+      )}
+
       {dice && dice.length > 0 && (
         <span style={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
           {dice.map((d, i) => (

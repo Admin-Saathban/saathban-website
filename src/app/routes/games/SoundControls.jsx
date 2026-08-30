@@ -271,7 +271,7 @@ export function SoundPanel({ onClose }) {
 
 /* The opener — a quiet control that shows, in its icon and its label,
    whether sound is currently on. Drop it in any game header. */
-export function SoundButton({ onClick }) {
+export function SoundButton({ onClick, compact = false }) {
   const { t, ts } = useI18n();
   const [prefs, setPrefs] = useState(() => getSoundPrefs());
   useEffect(() => onSoundPrefs(setPrefs), []);
@@ -289,7 +289,9 @@ export function SoundButton({ onClick }) {
         alignItems: "center",
         gap: 6,
         minHeight: A11Y.minTapTargetPx,
-        padding: "0 14px",
+        padding: compact ? 0 : "0 14px",
+        minWidth: compact ? A11Y.minTapTargetPx : undefined,
+        justifyContent: "center",
         borderRadius: 50,
         border: `2px solid ${C.warmGray}`,
         background: C.white,
@@ -301,7 +303,9 @@ export function SoundButton({ onClick }) {
       }}
     >
       <span aria-hidden="true">{prefs.muted ? "🔇" : "🔊"}</span>
-      {t("games.sound.openCta")}
+      {/* Compact: the icon alone, still a full tap target and still
+          named for a screen reader by aria-label above (§10). */}
+      {!compact && t("games.sound.openCta")}
     </button>
   );
 }

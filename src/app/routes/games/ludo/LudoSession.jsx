@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
+import { COLORS as C } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
@@ -431,21 +431,29 @@ export default function LudoSession() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          margin: "8px 0 10px",
+          margin: game.status === "playing" ? "0 0 4px" : "8px 0 10px",
         }}
       >
-        <h1
-          style={{
-            fontFamily: meta.fonts.heading,
-            fontSize: ts(30),
-            fontWeight: 700,
-            color: C.green,
-            margin: 0,
-          }}
-        >
-          🎲 {t("ludo.title")}
-        </h1>
-        <SoundButton onClick={() => setSoundOpen((v) => !v)} />
+        {/* The name of the game earns its space in the lobby, where
+            there is no board yet. Once play starts the board IS the
+            screen (§1) and the title is 30px the board should have. */}
+        {game.status !== "playing" && (
+          <h1
+            style={{
+              fontFamily: meta.fonts.heading,
+              fontSize: ts(30),
+              fontWeight: 700,
+              color: C.green,
+              margin: 0,
+            }}
+          >
+            🎲 {t("ludo.title")}
+          </h1>
+        )}
+        <SoundButton
+          onClick={() => setSoundOpen((v) => !v)}
+          compact={game.status === "playing"}
+        />
       </div>
 
       {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
@@ -556,13 +564,16 @@ export default function LudoSession() {
               the border was costing the board ninety pixels. */}
           <div style={{ margin: "0 0 10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
-                {isMyTurn
-                  ? hasDice
-                    ? t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })
-                    : t("ludo.turn.yours")
-                  : t("ludo.turn.theirs", { name: seatName(currentRow, t) })}
-              </BodyText>
+              {/* Whose turn is said by the ring, the bouncing arrow and
+                  the plate's own "your turn" line (§2/§3). Repeating it
+                  here in full cost a line the board needed — so during
+                  play only the ACTIONABLE half survives: which dice you
+                  are holding and must now spend. */}
+              {isMyTurn && hasDice && (
+                <BodyText style={{ fontWeight: 700, margin: 0, flex: "1 1 180px" }}>
+                  {t("ludo.turn.choose", { dice: dice.map((d) => d.v).join(" + ") })}
+                </BodyText>
+              )}
             </div>
             {last && (
               <BodyText muted style={{ margin: "10px 0 0", fontSize: ts(18) }}>
@@ -784,23 +795,6 @@ export default function LudoSession() {
               })}
             </div>
           )}
-
-          <details style={{ marginTop: 14 }}>
-            <summary
-              style={{
-                fontSize: ts(A11Y.minBodyPx),
-                fontWeight: 600,
-                color: C.greenMuted,
-                cursor: "pointer",
-                minHeight: A11Y.minTapTargetPx,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              🧾 {t("ludo.rules.title")}
-            </summary>
-            <RulesPanel rules={rules} />
-          </details>
         </>
       )}
 

@@ -86,7 +86,14 @@ export default function EventsRoutes() {
         </nav>
 
         <Routes>
-          <Route index element={<EventsList />} />
+          {/* §12 — events are no longer a screen of their own: a
+              Saathban gathering and a neighbour's chai invitation are
+              the same question, so they are answered in one place.
+              The index sends people to What's on; the admin, calendar
+              and suggest screens keep their own routes because they
+              are different jobs, not different lists. */}
+          <Route index element={<Navigate to="/app/outdoor" replace />} />
+          <Route path="all" element={<EventsList />} />
           <Route
             path="calendar"
             element={role === "saath_icon" ? <MyCalendar /> : <Navigate to=".." replace />}

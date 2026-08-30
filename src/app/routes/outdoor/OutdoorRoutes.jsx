@@ -7,6 +7,7 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
+import WhatsOn from "./WhatsOn.jsx";
 import OutdoorHome from "./OutdoorHome.jsx";
 import PlaceView from "./PlaceView.jsx";
 
@@ -15,7 +16,12 @@ export default function OutdoorRoutes() {
     <>
       <AppHeader />
       <Routes>
-        <Route index element={<OutdoorHome />} />
+        {/* §12 — Out & about and Events are ONE screen. What's on is
+            that screen; the old place directory keeps its own route
+            because §12 still wants one quiet "Places near you" link at
+            the bottom, just not a directory as the front door. */}
+        <Route index element={<WhatsOn />} />
+        <Route path="places" element={<OutdoorHome />} />
         <Route path=":placeId" element={<PlaceView />} />
         <Route path="*" element={<Navigate to="/app/outdoor" replace />} />
       </Routes>

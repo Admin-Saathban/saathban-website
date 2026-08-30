@@ -60,7 +60,10 @@ export async function addPlace({ name, area, city, placeType, lat = null, lng = 
 export async function fetchLiveCheckins() {
   const { data, error } = await supabase
     .from("outdoor_checkins")
-    .select("id, place_id, profile_id, visibility, expires_at, ended_at")
+    // created_at is what "since 3:40" is made of (§12.4) — how long
+    // someone has been somewhere, so a person knows whether they have
+    // missed them.
+    .select("id, place_id, profile_id, visibility, created_at, expires_at, ended_at")
     .is("ended_at", null)
     .gt("expires_at", new Date().toISOString());
   if (error) throw error;
@@ -204,7 +207,39 @@ export function dropMirroredOutings(outings, activities) {
   return outings.filter((o) => !mirrored.has(o.id));
 }
 
-export const startActivityHere = (userId, args) => communityShareActivity(userId, args);
+/* §12's "Who can see it — My people / My area".
+
+   The community writer builds the payload and does not know about
+   audience, and that file belongs to another lane, so the choice is
+   recorded here: create the happening, then write the audience onto
+   the post the writer just returned.
+
+   If that second write is refused the happening still stands — losing
+   an invitation because a visibility flag would not save is the wrong
+   trade — but the caller is told, so the control is never silently
+   decorative. A switch that does nothing is worse than no switch. */
+export async function startActivityHere(userId, { audience = "people", ...args } = {}) {
+  const postId = await communityShareActivity(userId, args);
+  if (!postId) return { postId: null, audienceSaved: false };
+
+  /* MERGE, never replace. The writer normalises the payload (trimmed
+     activity, place_id, starts_at, limit, rsvp) and announce_activity
+     stamps `announced: true` onto it. Writing an object built from my
+     own arguments would silently undo both — and the visible symptom
+     would be an invitation announcing itself twice, days later, with
+     nothing pointing back here. */
+  const { data: row } = await supabase
+    .from("community_posts")
+    .select("payload")
+    .eq("id", postId)
+    .maybeSingle();
+  const { error } = await supabase
+    .from("community_posts")
+    .update({ payload: { ...(row?.payload || {}), audience } })
+    .eq("id", postId)
+    .eq("author_id", userId);
+  return { postId, audienceSaved: !error };
+}
 export const joinPlacedActivity = (postId) => communityJoinActivity(postId);
 
 export async function fetchBoard(placeId) {

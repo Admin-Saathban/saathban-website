@@ -21,6 +21,8 @@ const en = {
     appName: "Saathban",
     backToHome: "Back to home",
     remove: "Remove",
+    dismiss: "Close this note",
+    dismiss: "Close this note",
   },
 
   hub: {
@@ -981,6 +983,39 @@ const en = {
         newBadge: "Earned “{badge}” this week",
         quiet: "A quiet week — good company all the same.",
       },
+    },
+  },
+
+  /* §19 — what may interrupt a person. Every row says what actually
+     happens, never a category: "Someone sends you a message", not
+     "Messages". The grouping carries the rule that produced the
+     defaults, so the screen explains itself. */
+  notify: {
+    title: "What reaches you",
+    intro: "You can change any of this whenever you like.",
+    saveFailed: "That didn't save. Try once more?",
+    people: {
+      title: "Things people do",
+      note: "These are on, because someone is trying to reach you.",
+    },
+    app: {
+      title: "Things the app does",
+      note: "These are off. Turn on anything you'd find useful.",
+    },
+    kind: {
+      message: "Someone sends you a message",
+      your_move: "Someone's waiting on your move",
+      reminder_added: "Someone in your circle adds a reminder",
+      question_answered: "Saathban replies to your question",
+      reaction: "Someone reacts to your photo",
+      game_invite: "Someone invites you to a game",
+      family_message: "A message in your family group",
+      buddy_contact: "Your Saath-Buddy gets in touch",
+      badge: "You earn a badge",
+      allotment: "Someone new is introduced to you",
+      streak_nudge: "Nudges about keeping a streak",
+      log_reminder: "A reminder that you haven't logged today",
+      feed_activity: "Activity in the community feed",
     },
   },
 

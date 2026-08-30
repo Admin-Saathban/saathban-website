@@ -9,6 +9,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
 import NotificationsPage from "./NotificationsPage.jsx";
+import NotifySettings from "./NotifySettings.jsx";
 
 export default function NotificationsRoutes() {
   return (
@@ -16,6 +17,8 @@ export default function NotificationsRoutes() {
       <AppHeader />
       <Routes>
         <Route index element={<NotificationsPage />} />
+        {/* §19 — what may interrupt you. */}
+        <Route path="settings" element={<NotifySettings />} />
         <Route path="*" element={<Navigate to="/app/notifications" replace />} />
       </Routes>
     </>

@@ -349,6 +349,12 @@ export const GAME_MOTION_CSS = `
    thing would take away the answer along with the animation. */
 .sb-die-arrow { animation: saath-die-bounce 1.25s ease-in-out infinite; }
 /* A capture: the square flashes and fades. */
+/* Rendered by routes/games/ludo/LudoBoard.jsx, not by anything in
+   this file — so a grep here finds the definition and no consumer,
+   which reads exactly like dead code. It is not. The keyframe lives
+   here because this is where the games animations live; the board's
+   own BOARD_MOTION_CSS now carries a matching reduced-motion rule, so
+   coverage survives either file being tidied. Both are deliberate. */
 .sb-cell-flash { animation: saath-cell-flash 0.65s ease-out 1 forwards; }
 .sb-ceremony { animation: saath-ceremony-in 0.25s ease-out 1; }
 

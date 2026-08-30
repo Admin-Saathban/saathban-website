@@ -190,35 +190,25 @@ export function resolveShot(state, shot, mover, opts = {}) {
   let queenPocketed = state.queenPocketed;
   let queen = "none"; // none | pocketed_covered | pocketed_uncovered
 
-  /* Coins of mine still on the board after this shot — the number the
-     cover rule and the win condition both turn on. */
-  const myLeftAfterShot = nextPieces.filter((p) => p.owner === myColour && !p.pocketed).length;
-
-  if (queenPocketedThisShot) {
-    /* Covering means pocketing one of your own in the same shot — or,
-       if you have none left, pocketing her at all. Without that second
-       clause a player whose coins are all down can never cover her:
-       covering needs a coin they do not have, so the queen returns to
-       centre for ever and they can only win if the OPPONENT covers her.
-       A soft deadlock, which is the worst kind — nothing errors. */
-    if (scored.length > 0 || myLeftAfterShot === 0) {
-      queen = "pocketed_covered";
-      queenCovered = true;
-      queenPocketed = true;
-    } else {
-      // Uncovered: the queen returns to the centre (simplified rule).
-      queen = "pocketed_uncovered";
-      nextPieces = nextPieces.map((p) =>
-        p.id === "q" ? { ...p, pocketed: false, x: 0.5, y: 0.5, vx: 0, vy: 0 } : p
-      );
-    }
-  }
-
   // Fouls (simplified): striker in a pocket, or pocketing an opponent coin.
   let foul = false;
   let foulReason = null;
   if (strikerPocketed) { foul = true; foulReason = "striker_pocketed"; }
   else if (oppScored.length > 0) { foul = true; foulReason = "opponent_coin"; }
+
+  /* ORDER MATTERS HERE, and it is the whole of this rule: THE PENALTY IS
+     PAID BEFORE THE COVER IS DECIDED.
+
+     Covering the queen means having a coin of your own down to answer
+     for her. A coin that goes into a pocket and comes straight back out
+     as a foul penalty answers for nothing — so it cannot buy a cover.
+     Deciding the cover first (as this did until now) let a player sink
+     the queen, their only coin and the striker together and walk away
+     with a permanent cover bought by a coin that was back on the board
+     before the shot had finished resolving, and unscored at that.
+
+     So: pay the penalty, then look at the board and ask whether a coin
+     of theirs is still down. */
 
   /* Striker-pocketed penalty: one of the mover's pocketed coins comes
      back to the centre band. A coin sunk on THIS shot is the last
@@ -240,6 +230,32 @@ export function resolveShot(state, shot, mover, opts = {}) {
         p.id === owned.id ? { ...p, pocketed: false, x: 0.5, y: 0.42, vx: 0, vy: 0 } : p
       );
       if (justScored.has(owned.id)) scoredFinal = scored.filter((id) => id !== owned.id);
+    }
+  }
+
+  /* Coins of mine still on the board once the penalty has been paid —
+     the number the cover rule and the win condition both turn on. */
+  const myLeftAfterPenalty = nextPieces.filter((p) => p.owner === myColour && !p.pocketed).length;
+
+  if (queenPocketedThisShot) {
+    /* Covering means having one of your own down alongside her — judged
+       on the board AFTER the penalty, so `scoredFinal`, not `scored`.
+       Or, if you have none left at all, pocketing her covers her:
+       without that second clause a player whose coins are all down can
+       never cover her, since covering needs a coin they do not have.
+       The queen would return to centre for ever and they could only win
+       if the OPPONENT covered her. A soft deadlock, which is the worst
+       kind — nothing errors. */
+    if (scoredFinal.length > 0 || myLeftAfterPenalty === 0) {
+      queen = "pocketed_covered";
+      queenCovered = true;
+      queenPocketed = true;
+    } else {
+      // Uncovered: the queen returns to the centre (simplified rule).
+      queen = "pocketed_uncovered";
+      nextPieces = nextPieces.map((p) =>
+        p.id === "q" ? { ...p, pocketed: false, x: 0.5, y: 0.5, vx: 0, vy: 0 } : p
+      );
     }
   }
 

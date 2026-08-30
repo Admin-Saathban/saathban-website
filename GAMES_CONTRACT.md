@@ -210,21 +210,31 @@ returns one of your coins to the board, which puts `myLeft` back to 1
 and the win evaporates. So on the winning shot, sinking the striker
 loses it and sinking an opponent's coin does not. Asserted by case 12.
 
-**The queen can stay covered by a coin that came straight back.** The
-cover is decided before the striker penalty is paid. Sink the queen,
-your only pocketed coin, and the striker on one shot and all three
-happen: she is covered, the coin returns to the centre band, and the
-coin is **not** scored. The cover survives the coin that bought it, and
-it survives permanently, because `queenCovered` is a property of the
-board.
+**The penalty is paid BEFORE the cover is decided.** Covering the
+queen means having a coin of your own down to answer for her, and a
+coin that goes into a pocket and comes straight back out as a foul
+penalty answers for nothing. So `resolveShot` pays the striker penalty
+first and only then asks whether a coin of the mover's is still
+pocketed — the test is `scoredFinal`, after the penalty, never
+`scored`.
 
-Reachable only when the mover has no *earlier* pocketed coin — with one
-to spare the penalty prefers the older coin and the covering coin stays
-down, which is why it went unnoticed. Asserted by case 13. **This one
-is recorded as an open question rather than an intention**: nobody
-decided that a foul should buy a permanent cover for free, and if it is
-ever changed, the fix belongs in the ordering inside `resolveShot` —
-pay the penalty first, then decide the cover.
+What this means at the table: sink the queen, **your only coin** and the
+striker on one shot and she is **not** covered. The coin comes back to
+the centre band unscored, the board has nothing of yours down, and the
+queen returns to the centre for either player to try for again.
+
+Sink the queen alongside a coin that *survives* the penalty — because
+an older pocketed coin was there to pay it — and she **is** covered,
+even though the shot fouled. The rule is about the board once the debt
+is settled, not about whether the shot was clean. Asserted from both
+sides by cases 13 and 13b.
+
+This was a real bug, found by probing an interaction the contract had
+never named and fixed by user decision on 2026-08-30. Until then the
+cover was decided first, which handed out a permanent cover bought by a
+coin that was back on the board before the shot had finished resolving.
+Anything reading `queenCovered` from before that date may disagree with
+the engine.
 
 **Timeouts.** Carrom is `timeout_style = 'pass_turn'`. A lapsed turn
 is a **missed** turn: the miss is counted against that seat, the turn

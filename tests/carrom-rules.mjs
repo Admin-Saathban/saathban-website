@@ -48,8 +48,8 @@ const check = (name, ok, note = "") => {
    an earlier version of this file crashed at B4, skipped its own
    cleanup, and still read as green. Counting the checks turns a
    truncated run into a failed one. Update these when adding a case. */
-const EXPECTED_A = 39;    // measured from a full PART=A run, never estimated
-const EXPECTED_FULL = 59; // 39 rules + 19 live + the cleanup assertion
+const EXPECTED_A = 43;    // measured from a full PART=A run, never estimated
+const EXPECTED_FULL = 63; // 43 rules + 19 live + the cleanup assertion
 
 function finish(mode) {
   const want = mode === "A" ? EXPECTED_A : EXPECTED_FULL;
@@ -282,17 +282,20 @@ check("seat 0 plays white, seat 1 plays black", OWNER_OF[0] === "w" && OWNER_OF[
   check("…and the turn does not continue", r.continues === false);
 }
 
-/* ── 13. The queen stays covered by a coin that came straight back ──
-   Sink the queen, your only coin, and the striker on one shot. The
-   cover is decided first (own coin pocketed in the same shot), then the
-   striker penalty returns that very coin and un-scores it. The coin
-   that bought the cover is back on the board, unscored — and she stays
-   covered for good.
+/* ── 13. The penalty is paid BEFORE the cover is decided ──
+   Covering the queen means having a coin of your own down to answer for
+   her. A coin that goes into a pocket and comes straight back out as a
+   foul penalty answers for nothing, so it cannot buy a cover.
 
-   Reachable only with no earlier pocketed coin, which is why it hid:
-   with one to spare the penalty prefers the older coin and the covering
-   coin stays down. Asserted as the engine behaves; flagged in the
-   contract as the open question it is. ── */
+   Sink the queen, your only coin, and the striker on one shot: the
+   penalty returns that coin and un-scores it, and the board then has
+   nothing of yours down — so she is NOT covered and goes back to the
+   centre, where either player may try for her again.
+
+   The two halves of this case are the ordering. Deciding the cover
+   first — which is what the engine did until this was found — handed
+   out a permanent cover bought by a coin that was back on the board
+   before the shot had finished resolving. ── */
 {
   const start = boardWith({ whitePocketed: 0 });
   const mine = own(start, "w")[0];
@@ -305,13 +308,44 @@ check("seat 0 plays white, seat 1 plays black", OWNER_OF[0] === "w" && OWNER_OF[
     ),
   };
   const r = resolveShot(staged, { ...still, x: 0.001, y: 0.001 }, 0);
-  check("queen + own coin + striker on one shot → she is covered", r.endState.queenCovered === true, r.outcome.queen);
-  check("…the striker foul returns the covering coin to the board", (() => {
+  check("queen + your only coin + striker → she is NOT covered", r.endState.queenCovered === false, r.outcome.queen);
+  check("…the striker foul returns that coin to the board", (() => {
     const c = r.endState.pieces.find((p) => p.id === mine.id);
     return c && c.pocketed === false;
   })());
   check("…that coin is NOT scored (the foul pays its own penalty)", r.outcome.scored.includes(mine.id) === false, r.outcome.scored.join(","));
-  check("…and the queen stays covered anyway", r.endState.queenCovered === true && r.endState.pieces.find((p) => p.id === "q").pocketed === true);
+  check("…and the queen goes back to the centre", (() => {
+    const q = r.endState.pieces.find((p) => p.id === "q");
+    return q && q.pocketed === false && q.x === 0.5 && q.y === 0.5;
+  })());
+}
+
+/* ── 13b. …but a coin that is still down DOES cover her ──
+   The same shot with one coin already pocketed from an earlier turn.
+   The penalty prefers the older coin, so the coin sunk alongside the
+   queen stays down and answers for her: covered, even though the shot
+   fouled. The rule is about the board after the penalty, not about
+   whether the shot was clean. ── */
+{
+  const start = boardWith({ whitePocketed: 1 });
+  const mine = own(start, "w")[0];
+  const staged = {
+    ...start,
+    pieces: start.pieces.map((p) =>
+      p.id === mine.id || p.id === "q" ? { ...p, x: 0.999, y: 0.001 } : p
+    ),
+  };
+  const r = resolveShot(staged, { ...still, x: 0.001, y: 0.001 }, 0);
+  check("queen + a coin that survives the penalty → she IS covered", r.endState.queenCovered === true, r.outcome.queen);
+  check("…she stays pocketed", r.endState.pieces.find((p) => p.id === "q").pocketed === true);
+  check("…the coin sunk with her is still down", (() => {
+    const c = r.endState.pieces.find((p) => p.id === mine.id);
+    return c && c.pocketed === true;
+  })());
+  check("…and the older coin is the one that came back", (() => {
+    const back = r.endState.pieces.filter((p) => p.owner === "w" && !p.pocketed && p.y === 0.42);
+    return back.length === 1 && back[0].id !== mine.id;
+  })());
 }
 
 /* ─────────────────────────────────────────────────────────────

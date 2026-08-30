@@ -23,6 +23,18 @@ export const DEFAULT_RULES = {
   capture_before_home: false,
   exact_home: true,
   safe_squares: "standard",
+  /* THIRTY SECONDS, not sixty. A minute is a long time to sit
+     watching somebody else's turn, and the clock is the main thing
+     that makes a four-handed game drag.
+
+     It is written EXPLICITLY into every table's house_rules rather
+     than left to a client default, and that is the important part:
+     game_tick's own fallback is 60, so a ludo table whose house_rules
+     lacked the key would have the board counting down from 30 while
+     the server waited 60 — a visible clock that lies, and the player
+     blamed for a turn they were told they had lost. Configurable per
+     table; only the default moves. */
+  turn_seconds: 30,
   // One die or two. Two is the Desi table: both dice are rolled
   // together and assigned separately, and only a DOUBLE six repeats.
   dice_count: 1,
@@ -121,6 +133,18 @@ export async function fetchSession(sessionId) {
     names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
   }
 
+  /* THIS FALLBACK STAYS 60, and it is not an oversight.
+
+     game_tick decides when a turn has really lapsed, and ITS fallback
+     is 60. A table created before the new default carries no
+     turn_seconds at all, so dropping this to 30 would show that
+     table a clock counting from 30 while the server waited 60 — the
+     bar would empty, nothing would happen, and the player would be
+     told they had run out of time twice.
+
+     New tables carry turn_seconds explicitly (DEFAULT_RULES above), so
+     they never reach this line. It exists only for the old ones, and
+     for them 60 is the truth. */
   const turnSeconds = Number(session.house_rules?.turn_seconds) || 60;
   const status = session.status === "active" ? "playing" : session.status;
 

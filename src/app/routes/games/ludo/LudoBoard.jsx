@@ -29,6 +29,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COLORS as C } from "../../../../shared/tokens.js";
+import { SEAT_LIGHT, SEAT_DEEP } from "../seatColors.js";
 import Pawn from "../Pawn.jsx";
 import {
   TRACK,
@@ -39,6 +40,8 @@ import {
   SAFE_ABS,
   SEAT_COLORS,
   SEAT_TINTS,
+  armSeatOf,
+  START_ABS as STARTS,
   cellFor,
   povRotation,
 } from "./board.js";
@@ -113,6 +116,15 @@ export const BOARD_MOTION_CSS = `
     50%      { stroke-opacity: 1;    stroke-width: 4.6; }
   }
   .sb-pulse { animation: sb-pulse 1150ms ease-in-out infinite; }
+
+  /* The trail fades itself out. No JS timer decides when a cell stops
+     glowing — the animation ends and the element is removed a beat
+     later by the hook, so a dropped tick cannot leave the board lit. */
+  @keyframes sb-trail {
+    0%   { opacity: 0.55; }
+    100% { opacity: 0;    }
+  }
+  .sb-trail { animation: sb-trail 900ms ease-out both; }
   /* DISPLAY: NONE, NOT ANIMATION: NONE — and if this rule ever moves
      into gameFeel.jsx reduced-motion list, it must move as-is
      rather than being flattened into that list own animation:none rule.
@@ -139,28 +151,24 @@ export const BOARD_MOTION_CSS = `
        Switch the motion off and the ring must still be there, or
        somebody who asked for less motion is left with no cue at all. */
     .sb-pulse { animation: none; stroke-opacity: 1; stroke-width: 3.6; }
+    /* The trail is pure motion with nothing to say at rest, so it goes
+       entirely — like the spark, unlike the ring. */
+    .sb-trail { display: none; }
   }
 `;
 
 const CELL = 40; // viewBox units per grid cell
 const SIZE = 15 * CELL;
-const STEP_MS = 110; // one square of travel
+/* One square of travel. The user could not follow a move at all, so
+   this is deliberately unhurried: a goti crossing eight squares takes
+   about a second, which is slow enough to watch and short enough not
+   to be waited on. */
+const STEP_MS = 120;
+/* How long a captured goti takes to get home. It travels in a straight
+   line rather than back along the track: it is not walking the board,
+   it is being sent off it. */
+const FLIGHT_MS = 480;
 
-/* A shield, centred on (x, y) and about 2r across: flat shoulders,
-   straight flanks, and a rounded point at the bottom. Wider than it
-   is tall below the shoulder line, so it still reads as a shield at
-   the size a phone actually draws it. */
-function shieldPath(x, y, r) {
-  const w = r * 1.06;
-  const top = y - r * 0.92;
-  const shoulder = y + r * 0.18;
-  const point = y + r * 1.06;
-  return (
-    `M ${x - w} ${top} L ${x + w} ${top} L ${x + w} ${shoulder}` +
-    ` Q ${x + w} ${y + r * 0.7} ${x} ${point}` +
-    ` Q ${x - w} ${y + r * 0.7} ${x - w} ${shoulder} Z`
-  );
-}
 
 /* A label that stays upright however the board is turned. */
 function Upright({ x, y, spin, children, ...props }) {
@@ -220,6 +228,14 @@ function useCaptured(pieces) {
 
 function useWalk(pieces) {
   const [shown, setShown] = useState(pieces);
+  /* Pieces currently flying home, key "seat:index" → interpolated
+     [col, row]. A captured goti is NOT on the track any more, so its
+     position cannot be expressed as progress — it needs real
+     coordinates, and that is why this is separate from `shown`. */
+  const [flights, setFlights] = useState(() => new Map());
+  /* Cells the walker has just crossed, so the eye can see the path it
+     took rather than only where it ended up. */
+  const [trail, setTrail] = useState([]);
   const prevRef = useRef(pieces);
   const key = JSON.stringify(pieces);
 
@@ -232,46 +248,96 @@ function useWalk(pieces) {
     }
 
     const walkers = [];
+    const returners = [];
     let steps = 0;
-    pieces.forEach((row, s) =>
+    pieces.forEach((row, s2) =>
       row.forEach((p, i) => {
-        const from = Number(prev[s]?.[i] ?? p);
+        const from = Number(prev[s2]?.[i] ?? p);
         if (p > from && from > 0 && p <= 57) {
-          walkers.push([s, i, from, p]);
+          walkers.push([s2, i, from, p]);
           steps = Math.max(steps, p - from);
+        } else if (p === 0 && from > 0) {
+          /* Taken. It goes home the long way, visibly. */
+          returners.push([s2, i, cellFor(s2, from, i), cellFor(s2, 0, i)]);
         }
       })
     );
-    // Nothing walked, or a jump too long to be one move (a rematch, a
-    // fresh load, a voided chain snapping back): just show the truth.
-    if (!walkers.length || steps > 12) {
+
+    if (!walkers.length && !returners.length) {
+      setShown(pieces);
+      return undefined;
+    }
+    /* A jump too long to be one move — a rematch, a fresh load, a
+       voided chain snapping back — is not a move and must not be
+       animated as one. */
+    if (steps > 12) {
       setShown(pieces);
       return undefined;
     }
 
     const base = prev.map((r) => [...r]);
-    pieces.forEach((row, s) =>
+    pieces.forEach((row, s2) =>
       row.forEach((p, i) => {
-        if (!walkers.some((w) => w[0] === s && w[1] === i)) base[s][i] = p;
+        const moving =
+          walkers.some((w) => w[0] === s2 && w[1] === i) ||
+          returners.some((w) => w[0] === s2 && w[1] === i);
+        if (!moving) base[s2][i] = p;
       })
     );
+    /* A returner is off the board for the whole flight: hold it at 0
+       in `shown` and draw it from `flights` instead, or it would be
+       painted twice. */
+    returners.forEach(([s2, i]) => {
+      base[s2][i] = 0;
+    });
     setShown(base.map((r) => [...r]));
+    setTrail([]);
 
+    const flightTicks = Math.round(FLIGHT_MS / STEP_MS);
+    const total = Math.max(steps, returners.length ? flightTicks : 0);
     let step = 0;
+    const crossed = [];
+
     const id = setInterval(() => {
       step += 1;
+
       const next = base.map((r) => [...r]);
-      walkers.forEach(([s, i, from, to]) => {
-        next[s][i] = Math.min(to, from + step);
+      walkers.forEach(([s2, i, from, to]) => {
+        const at = Math.min(to, from + step);
+        next[s2][i] = at;
+        if (at > from) crossed.push(cellFor(s2, at, i));
       });
       setShown(next);
-      if (step >= steps) clearInterval(id);
+      if (crossed.length) setTrail([...crossed]);
+
+      if (returners.length) {
+        const t = Math.min(1, step / flightTicks);
+        /* Ease out: a taken goti leaves fast and settles. */
+        const e = 1 - (1 - t) * (1 - t);
+        const m = new Map();
+        returners.forEach(([s2, i, a, b]) => {
+          m.set(`${s2}:${i}`, [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]);
+        });
+        setFlights(t >= 1 ? new Map() : m);
+      }
+
+      if (step >= total) {
+        clearInterval(id);
+        setShown(pieces);
+        setFlights(new Map());
+        /* Let the trail linger a beat past the move, then clear it —
+           the point is to be readable after the goti has stopped. */
+        window.setTimeout(() => setTrail([]), 420);
+      }
     }, STEP_MS);
-    return () => clearInterval(id);
+
+    return () => {
+      clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return shown;
+  return { shown, flights, trail };
 }
 
 export default function LudoBoard({
@@ -287,7 +353,7 @@ export default function LudoBoard({
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
-  const pieces = useWalk(live);
+  const { shown: pieces, flights, trail } = useWalk(live);
   /* Fed the TRUTH, not the walked positions: a captured goti snaps
      home rather than strolling back, so the shake has to key off the
      real board or it would fire a beat late. */
@@ -366,23 +432,44 @@ export default function LudoBoard({
           <filter id="sb-lift" x="-8%" y="-8%" width="116%" height="116%">
             <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4a3a22" floodOpacity="0.22" />
           </filter>
-          {/* a gold chip for the eight safe squares, domed and embossed */}
-          <radialGradient id="sb-gold" cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stopColor="#FFF0B8" />
-            <stop offset="45%" stopColor="#F2C044" />
-            <stop offset="100%" stopColor="#C68A10" />
-          </radialGradient>
-          <filter id="sb-emboss" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="0.8" stdDeviation="0.7" floodColor="#7a5406" floodOpacity="0.45" />
-          </filter>
-          {/* each zone's face: lit at the top-left, deepening away */}
+          {/* (The gold chips are gone. A stop is now the coloured cell
+              itself — see the track below. Nothing on this board is
+              goti-shaped except a goti.) */}
+          {/* Each zone as a lit surface: a real gradient from the
+              colour's own light end to its own deep end, rather than
+              white-over-colour-over-black. Mixing toward black greys a
+              hue out; mixing toward a deeper version of itself keeps
+              it saturated, which is the whole point of the brief. */}
           {SEAT_COLORS.map((hex, seat) => (
-            <linearGradient key={seat} id={`sb-zone-${seat}`} x1="0" y1="0" x2="0.7" y2="1">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
-              <stop offset="40%" stopColor={hex} stopOpacity="1" />
-              <stop offset="100%" stopColor="#000000" stopOpacity="0.18" />
+            <linearGradient key={seat} id={`sb-zone-${seat}`} x1="0.1" y1="0" x2="0.9" y2="1">
+              <stop offset="0%" stopColor={SEAT_LIGHT[seat]} />
+              <stop offset="45%" stopColor={hex} />
+              <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
             </linearGradient>
           ))}
+          {/* The same again for a single STOP cell, steeper so one
+              40-unit square still reads as domed. */}
+          {SEAT_COLORS.map((hex, seat) => (
+            <linearGradient key={`a${seat}`} id={`sb-arm-${seat}`} x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0%" stopColor={SEAT_LIGHT[seat]} />
+              <stop offset="55%" stopColor={hex} />
+              <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
+            </linearGradient>
+          ))}
+          {/* The frame: timber, lit from above. */}
+          <linearGradient id="sb-frame" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#C8963F" />
+            <stop offset="35%" stopColor="#A2712A" />
+            <stop offset="100%" stopColor="#6E4715" />
+          </linearGradient>
+          {/* A cell bevel: light along the top edge, shadow along the
+              bottom, so a track square is pressed into the board
+              rather than painted on it. */}
+          <linearGradient id="sb-bevel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+            <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="100%" stopColor="#7A6238" stopOpacity="0.28" />
+          </linearGradient>
         </defs>
 
         {/* the board's paper, under everything */}
@@ -437,8 +524,9 @@ export default function LudoBoard({
 
         {/* ── The 52-square track ── */}
         {TRACK.map(([c, r], abs) => {
-          const startSeat = START_ABS.indexOf(abs);
           const isSafe = SAFE_ABS.includes(abs);
+          const isStart = STARTS.includes(abs);
+          const safeSeat = isSafe ? armSeatOf(abs) : -1;
           return (
             <g key={`t-${abs}`}>
               <rect
@@ -447,66 +535,50 @@ export default function LudoBoard({
                 width={CELL - 2}
                 height={CELL - 2}
                 rx={6}
-                fill={startSeat >= 0 ? SEAT_TINTS[startSeat] : "url(#sb-cell)"}
-                filter="url(#sb-inset)"
-                stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
-                strokeWidth={startSeat >= 0 ? 3 : 1}
-                opacity={1}
+                /* A STOP IS A COLOURED SQUARE. The eight safe cells are
+                   painted the colour of the ARM they sit on — a stop on
+                   the yellow arm is a yellow cell — so it reads at a
+                   glance, from across a table, without a glyph to
+                   decode. That is what the gold chips failed at: they
+                   were small, they were goti-shaped, and a board should
+                   have exactly one goti-shaped thing on it. */
+                fill={safeSeat >= 0 ? `url(#sb-arm-${safeSeat})` : "url(#sb-cell)"}
+                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "#E2D6BE"}
+                strokeWidth={safeSeat >= 0 ? 1.6 : 1}
               />
-              {/* A STAR MEANS SAFE — one glyph, one meaning, on all
-                  eight stop squares alike. It is deliberately not a
-                  seat colour: safety belongs to whoever is standing
-                  there, not to the seat whose arm it sits on. The
-                  start squares carry their zone's tint and no star,
-                  because on this board they are not safe. */}
-              {/* A GOLD CHIP, not an inked star. These eight squares
-                  are the only place on the board a goti is safe, and
-                  they should feel like something set INTO the card —
-                  a domed brass counter with a shadow under it — rather
-                  than something printed on top. The star sits on the
-                  chip so the meaning survives at any size, and it is
-                  still a shape rather than a colour: a person who
-                  cannot tell gold from cream still sees a star. */}
-              {isSafe && showStars && (
-                <g filter="url(#sb-emboss)">
-                  {/* THE CHIP IS THE SHIELD. The spec asks for a star
-                      AND a shield so that safety is carried by two
-                      shapes rather than one — right, because colour
-                      alone never carries meaning here and a lone star
-                      is a single point of failure for anyone who
-                      cannot make it out.
-
-                      But two glyphs crammed into a 40-unit cell fight
-                      each other and beat the numerals underneath. So
-                      the chip is SHAPED as a shield and the star sits
-                      on it: one object, two readable shapes, and the
-                      gold emboss my user asked for is untouched. */}
-                  <path
-                    d={shieldPath(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.34)}
-                    fill="url(#sb-gold)"
-                    stroke="#9A6B08"
-                    strokeWidth={0.9}
-                    strokeLinejoin="round"
-                  />
-                  <circle
-                    cx={c * CELL + CELL / 2 - CELL * 0.09}
-                    cy={r * CELL + CELL / 2 - CELL * 0.13}
-                    r={CELL * 0.1}
-                    fill="#FFFFFF"
-                    opacity={0.4}
-                  />
-                  <Upright
-                    x={c * CELL + CELL / 2}
-                    y={r * CELL + CELL / 2 + 6.4}
-                    spin={spin}
-                    fontSize={21}
-                    fontWeight="700"
-                    fill="#4A3204"
-                    aria-hidden="true"
-                  >
-                    ★
-                  </Upright>
-                </g>
+              {/* The bevel, over every cell: a highlight along the top
+                  edge and a shadow along the bottom. Drawn as an
+                  overlay rather than a filter so it costs one rect and
+                  survives whatever the cell underneath is painted. */}
+              <rect
+                x={c * CELL + 1}
+                y={r * CELL + 1}
+                width={CELL - 2}
+                height={CELL - 2}
+                rx={6}
+                fill="url(#sb-bevel)"
+                pointerEvents="none"
+              />
+              {/* A WHITE STAR marks the four cells where a goti ENTERS
+                  play. All eight coloured cells are stops; only these
+                  four are also a door, and the star is what separates
+                  them. White, because it has to read on four different
+                  saturated colours. */}
+              {isStart && (
+                <Upright
+                  x={c * CELL + CELL / 2}
+                  y={r * CELL + CELL / 2 + 7.5}
+                  spin={spin}
+                  fontSize={22}
+                  fontWeight="700"
+                  fill="#FFFFFF"
+                  stroke={SEAT_DEEP[safeSeat]}
+                  strokeWidth={0.9}
+                  paintOrder="stroke"
+                  aria-hidden="true"
+                >
+                  ★
+                </Upright>
               )}
             </g>
           );
@@ -548,7 +620,7 @@ export default function LudoBoard({
             <polygon
               key={`c-${seat}`}
               points={points}
-              fill={SEAT_COLORS[seat]}
+              fill={`url(#sb-zone-${seat})`}
               opacity={0.9}
               stroke={C.white}
               strokeWidth={2}
@@ -634,6 +706,28 @@ export default function LudoBoard({
             </g>
           );
         })}
+
+        {/* ── The trail ────────────────────────────────────────────
+             The cells a goti has just crossed, glowing briefly behind
+             it. Without this a move is a piece appearing somewhere
+             else; with it you can see the road it took, which is the
+             difference between watching a game and being told its
+             result. Fades on its own and is drawn UNDER the pieces so
+             it never competes with one. ── */}
+        {trail.map(([cc, rr], i) => (
+          <rect
+            key={`tr-${i}-${cc}-${rr}`}
+            className="sb-trail"
+            x={cc * CELL - CELL / 2 + 2}
+            y={rr * CELL - CELL / 2 + 2}
+            width={CELL - 4}
+            height={CELL - 4}
+            rx={7}
+            fill="#FFD23F"
+            pointerEvents="none"
+            aria-hidden="true"
+          />
+        ))}
 
         {/* ── Pieces ── */}
         {pieces.map((seatPieces, seat) =>
@@ -740,6 +834,48 @@ export default function LudoBoard({
             );
           })
         )}
+        {/* ── Sent home ───────────────────────────────────────────
+             A captured goti travels back to its yard where everyone
+             can see it go. It is drawn here, after the pieces, because
+             for the length of the flight it is the most important
+             thing on the board: it is the answer to "what just
+             happened to me". ── */}
+        {[...flights.entries()].map(([k, [cc, rr]]) => {
+          const [seat] = k.split(":").map(Number);
+          return (
+            <g key={`fly-${k}`}>
+              <ellipse cx={cc * CELL} cy={rr * CELL + 13} rx={11} ry={3.4} fill="#00000030" />
+              <Pawn seat={seat} cx={cc * CELL} cy={rr * CELL} r={15} spin={spin} />
+            </g>
+          );
+        })}
+
+        {/* THE FRAME, drawn last so it laps over every cell edge and
+            the board ends somewhere definite. Two strokes: the timber
+            itself, and a thin light line inside it for the lip. */}
+        <rect
+          x={2}
+          y={2}
+          width={SIZE - 4}
+          height={SIZE - 4}
+          rx={16}
+          fill="none"
+          stroke="url(#sb-frame)"
+          strokeWidth={9}
+          pointerEvents="none"
+        />
+        <rect
+          x={7}
+          y={7}
+          width={SIZE - 14}
+          height={SIZE - 14}
+          rx={12}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeOpacity={0.32}
+          strokeWidth={1.4}
+          pointerEvents="none"
+        />
       </svg>
 
     </div>

@@ -143,6 +143,21 @@ export const SAFE_ABS = [0, 8, 13, 21, 26, 34, 39, 47];
 /* Kept as the old name so nothing that imported it breaks silently. */
 export const STAR_ABS = SAFE_ABS;
 
+/* Which seat's ARM a track square physically sits on — not whose safe
+   square it is. Those differ: absolute 8 is seat 0's "eight past the
+   start", but it lies on the RIGHT arm, which is seat 1's.
+
+   The board colours a stop by the arm it is ON, because that is what
+   a player sees. A stop on the yellow arm is a yellow square. Each arm
+   ends up with exactly two: its own start, and another seat's star. */
+export function armSeatOf(abs) {
+  const [c, r] = TRACK[abs];
+  if (r <= 5 && c >= 6 && c <= 8) return 0; // top
+  if (c >= 9 && r >= 6 && r <= 8) return 1; // right
+  if (r >= 9 && c >= 6 && c <= 8) return 2; // bottom
+  return 3; // left
+}
+
 /* Re-exported so seat chips and the board can never disagree; the
    palette itself lives one level up, shared with the other boards. */
 export { SEAT_COLORS, SEAT_INK, SEAT_TINTS } from "../seatColors.js";

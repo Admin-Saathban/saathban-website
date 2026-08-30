@@ -90,6 +90,8 @@ export default function SessionPage() {
      A regression I introduced with the quick table, found because
      the smoke suite still drove the old form. */
   const [soft, setSoft] = useState(false);
+  /* People this person may ask, for the soft-table invite above. */
+  const [askable, setAskable] = useState([]);
   const [filledInfo, setFilledInfo] = useState(null); // respond → 'filled'
   const [inviteNames, setInviteNames] = useState({}); // invitee id → name
   const [loadError, setLoadError] = useState(false);
@@ -123,13 +125,25 @@ export default function SessionPage() {
       setChat(c);
       setLoadError(false);
       setNotMine(!s);
+      /* OUTSIDE THE LOBBY BRANCH, which is where I first put it —
+         inside an `if (status === "lobby")` whose whole purpose
+         this check is to survive. A §8 table is never in a lobby,
+         so it was asked about softness exactly never. */
+      if (s) tableIsSoft(sessionId).then(setSoft).catch(() => {});
+      if (s && s.created_by === profile.id) {
+        gamePeople()
+          .then((list) => {
+            const seated = new Set((s.seats || []).map((x) => x.profile_id).filter(Boolean));
+            setAskable((list || []).filter((p) => !seated.has(p.id)));
+          })
+          .catch(() => {});
+      }
       if (s?.status === "lobby") {
         const [mine, all] = await Promise.all([
           fetchMyInvites(profile.id).catch(() => []),
           fetchSessionInvites(sessionId).catch(() => []),
         ]);
         setMyInvite(mine.find((i) => i.session_id === sessionId) ?? null);
-        tableIsSoft(sessionId).then(setSoft).catch(() => {});
         setPendingInvites(all);
         if (all.length) {
           setInviteNames(await fetchNames(all.map((i) => i.invitee_id)).catch(() => ({})));
@@ -476,26 +490,37 @@ export default function SessionPage() {
           long as the table is still soft — nobody has played it —
           and it names a SEAT a bot is holding (0093). The bot goes
           on playing that seat until the person arrives, so asking
-          somebody does not stall the game for everyone who is
-          already at it. */}
-      {isHost && soft && session.status !== "lobby" && botSeats.length > 0 && (
+          somebody never stalls the game for the people already at
+          it.
+
+          ITS OWN LIST, not the lobby's `pickerStates`. That const
+          belongs to WaitingRoom, a different component further
+          down this file — referencing it from here was a name that
+          does not exist in this scope, and the only reason it did
+          not throw is that the `&&` guard short-circuited before
+          the JSX was ever evaluated. It would have crashed the
+          page the moment the feature started working. */}
+      {isHost && soft && session.status !== "lobby" && botSeats.length > 0 && askable.length > 0 && (
         <Card>
           <SectionLabel>{t("games.lobby.inviteTitle")}</SectionLabel>
-          <PeoplePicker
-            searchable
-            states={pickerStates}
-            maxPick={botSeats.length}
-            pickedCount={0}
-            onToggle={(p) =>
-              act(async () => {
-                /* The first seat a bot is holding. Which one hardly
-                   matters here — unlike ludo, these boards do not
-                   give a seat a colour somebody would choose. */
-                await inviteToSeat(session.id, p.id, botSeats[0]);
-                setSoft(await tableIsSoft(session.id).catch(() => false));
-              }, t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] }))
-            }
-          />
+          {askable.map((p) => (
+            <GhostBtn
+              key={p.id}
+              disabled={busy}
+              style={{ marginTop: 8, width: "100%" }}
+              onClick={() =>
+                act(async () => {
+                  /* The first seat a bot is holding. Which one hardly
+                     matters here — unlike ludo, these boards do not
+                     give a seat a colour anybody would choose. */
+                  await inviteToSeat(session.id, p.id, botSeats[0]);
+                  setAskable((list) => list.filter((x) => x.id !== p.id));
+                }, t("feedback.invitedToGame", { name: (p.full_name || "").split(" ")[0] }))
+              }
+            >
+              {p.full_name || t("ludo.seat.someone")}
+            </GhostBtn>
+          ))}
         </Card>
       )}
       {session.status === "lobby" && (

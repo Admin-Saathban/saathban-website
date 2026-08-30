@@ -31,23 +31,13 @@ import {
   estimatePointsToday,
 } from "../../lib/points.js";
 import YourTurnChips from "../games/YourTurnChips.jsx";
+import TodayReminders from "./TodayReminders.jsx";
+import HomeFeed from "./HomeFeed.jsx";
 
 /* Notifications, Settings, and My profile live in the AppHeader —
    the hub keeps cards for the places, not the chrome. My Circle is
    always here: an empty circle is a door to open, never a gap
    (SPEC.md, "The empty circle" — the page itself renders the door). */
-const CARDS = [
-  { to: "/app/community", emoji: "🪷", key: "hub.community" },
-  { to: "/app/games", emoji: "🎲", key: "hub.games" },
-  { to: "/app/events", emoji: "🎪", key: "hub.events" },
-  { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
-  { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
-  { to: "/app/milestones", emoji: "🏅", key: "hub.milestones" },
-  { to: "/app/history", emoji: "📖", key: "hub.history" },
-  { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
-  { to: "/app/people", emoji: "🫶", key: "hub.people" },
-  { to: "/app/circle", emoji: "🤝", key: "hub.circle" },
-];
 
 export default function IconHub() {
   const { t, ts, meta } = useI18n();
@@ -61,7 +51,6 @@ export default function IconHub() {
   const entries = dayEntries(prefs, new Date());
   const done = entries.filter((e) => isEntryDone(e, todayLog)).length;
 
-  const [reminders, setReminders] = useState([]);
   /* The same server-owned figure the log screen shows — the hub must
      not quote a different number for the same day. */
   const [progress, setProgress] = useState(null);
@@ -81,53 +70,19 @@ export default function IconHub() {
       isDone: isEntryDone,
       durableModules: DB_MODULES,
     });
-  const [unseenBadges, setUnseenBadges] = useState(0);
-
-  // Celebration hook: catch-up award, then count unseen celebrations —
-  // the Milestones card announces them; the screen itself plays them.
+  /* Catch-up award on arriving home. The unseen COUNT is gone with the
+     Milestones card that announced it — badges, streaks and
+     celebrations are all My Journey's now — but the award itself still
+     belongs here, because this is the screen a person opens. */
   useEffect(() => {
     if (!iconId) return undefined;
-    let alive = true;
-    (async () => {
-      try {
-        await awardMyBadges();
-        const earned = await fetchMyEarnedBadges();
-        if (alive) setUnseenBadges(earned.filter((b) => !b.seen_at).length);
-      } catch {
-        /* the hub never blocks on the celebration count */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [iconId]);
-
-  useEffect(() => {
-    if (!iconId) return undefined;
-    let alive = true;
-    (async () => {
-      const { data: rem } = await supabase
-        .from("reminders")
-        .select("id, label, emoji, remind_times, days_label")
-        .eq("icon_id", iconId)
-        .order("remind_time");
-      if (!alive) return;
-      setReminders(rem || []);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [iconId]);
-
-  const fmtTime = (hms) => {
-    const [h, m] = hms.split(":").map(Number);
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    return d.toLocaleTimeString(meta.dir === "rtl" ? "ur-PK" : "en-GB", {
-      hour: "numeric",
-      minute: "2-digit",
+    awardMyBadges().catch(() => {
+      /* the hub never blocks on a celebration */
     });
-  };
+    return undefined;
+  }, [iconId]);
+
+
 
   const cardStyle = {
     display: "flex",
@@ -173,117 +128,82 @@ export default function IconHub() {
               waiting on this Icon; renders null otherwise. */}
           <YourTurnChips />
 
-          {/* ── Today's log, one tap away ── */}
-          <Link
-            to="/app/home/log"
-            style={{
-              ...cardStyle,
-              border: `2.5px solid ${C.green}`,
-              marginBottom: 14,
-            }}
-          >
-            <span aria-hidden="true" style={{ fontSize: 34 }}>🌤️</span>
-            <span style={{ flex: 1 }}>
-              <span
-                style={{
-                  display: "block",
-                  fontFamily: meta.fonts.heading,
-                  fontSize: ts(22),
-                  fontWeight: 700,
-                  color: C.green,
-                }}
-              >
-                {t("hub.todaysLog")}
-              </span>
-              <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
-                {done > 0
-                  ? t("hub.logSummary", { done, total: entries.length, points: pointsToday })
-                  : t("hub.logEmpty")}
-              </span>
-            </span>
-            <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
-              {meta.dir === "rtl" ? "‹" : "›"}
-            </span>
-          </Link>
-
-          {/* ── Today's reminders ── */}
-          {reminders.length > 0 && (
-            <section
+          {/* ── Today's log ──
+              While anything is still to log it is the loudest thing on
+              the screen. Once every enabled module for today is done it
+              becomes a chip: still here, still one tap, but no longer
+              asking. Enabling a module or a new day rolling over puts
+              the full card back, because `entries` is recomputed from
+              prefs and today's date on every render. */}
+          {done >= entries.length && entries.length > 0 ? (
+            <Link
+              to="/app/home/log"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 16px",
+                marginBottom: 14,
+                borderRadius: 50,
+                border: `1.5px solid ${C.green}`,
                 background: C.white,
-                border: `2px solid ${C.warmGray}`,
-                borderRadius: 18,
-                padding: "16px 20px",
+                color: C.green,
+                textDecoration: "none",
+                fontSize: ts(17),
+                fontWeight: 700,
+              }}
+            >
+              <span aria-hidden="true">✓</span>
+              <span style={{ flex: 1 }}>
+                {t("hub.logDoneChip", { n: entries.length })}
+              </span>
+              <span aria-hidden="true" style={{ color: C.textMuted, fontSize: ts(16), fontWeight: 600 }}>
+                {t("hub.logChange")}
+              </span>
+            </Link>
+          ) : (
+            <Link
+              to="/app/home/log"
+              style={{
+                ...cardStyle,
+                border: `2.5px solid ${C.green}`,
                 marginBottom: 14,
               }}
             >
-              <h2
-                style={{
-                  fontFamily: meta.fonts.heading,
-                  fontSize: ts(20),
-                  fontWeight: 700,
-                  color: C.brown,
-                  margin: "0 0 10px",
-                }}
-              >
-                {t("hub.reminders")}
-              </h2>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                {reminders.map((r) => (
-                  <li
-                    key={r.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      gap: 10,
-                      fontSize: ts(A11Y.minBodyPx),
-                      lineHeight: 2,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span aria-hidden="true">{r.emoji}</span>
-                    <span style={{ fontWeight: 600 }}>{r.label}</span>
-                    <span dir="ltr" style={{ color: C.textMuted }}>
-                      {(r.remind_times || []).map(fmtTime).join(" · ")}
-                    </span>
-                    <span style={{ color: C.textMuted, fontSize: ts(15) }}>{r.days_label}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* ── Everywhere else ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {CARDS.map((c) => {
-              const celebrating = c.key === "hub.milestones" && unseenBadges > 0;
-              return (
-                <Link
-                  key={c.to}
-                  to={c.to}
+              <span aria-hidden="true" style={{ fontSize: 34 }}>🌤️</span>
+              <span style={{ flex: 1 }}>
+                <span
                   style={{
-                    ...cardStyle,
-                    minHeight: 96,
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    gap: 6,
-                    textAlign: "center",
-                    ...(celebrating ? { border: `2.5px solid ${C.green}` } : {}),
+                    display: "block",
+                    fontFamily: meta.fonts.heading,
+                    fontSize: ts(22),
+                    fontWeight: 700,
+                    color: C.green,
                   }}
                 >
-                  <span aria-hidden="true" style={{ fontSize: 30 }}>
-                    {celebrating ? "🎉" : c.emoji}
-                  </span>
-                  <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700 }}>{t(c.key)}</span>
-                  {celebrating && (
-                    <span style={{ fontSize: ts(15), color: C.green, fontWeight: 700 }}>
-                      {t("hub.celebrate")}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+                  {t("hub.todaysLog")}
+                </span>
+                <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
+                  {done > 0
+                    ? t("hub.logSummary", { done, total: entries.length, points: pointsToday })
+                    : t("hub.logEmpty")}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
+                {meta.dir === "rtl" ? "‹" : "›"}
+              </span>
+            </Link>
+          )}
+
+          {/* ── Today's reminders, one at a time ── */}
+          <TodayReminders iconId={iconId} />
+
+          {/* ── And then the people ──
+              Everywhere-else moved to the header menu, so what fills
+              the screen as the day's own business finishes is the
+              community rather than a grid of doors. */}
+          <HomeFeed />
         </div>
       </main>
     </>

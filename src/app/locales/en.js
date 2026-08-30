@@ -28,6 +28,30 @@ const en = {
     logSummary: "{done} of {total} logged — {points} points",
     logEmpty: "Nothing logged yet — the day is young.",
     reminders: "Today's reminders",
+    /* The log, once every enabled module is answered. It stays a door,
+       not a receipt: still one tap, no longer asking. */
+    logDoneChip: "Today's log is done",
+    logChange: "Change it",
+    /* Reminders. Never "overdue", never a tally of days kept — one
+       left untouched is simply still there tomorrow. */
+    remindersAllDone: "All your reminders are done for today",
+    reminderUndo: "Not yet",
+    remindersLeft: "{n} more after this",
+    reminderDone: "Done",
+    /* The community, filling the space the cards left. */
+    feed: {
+      title: "From your community",
+      all: "See all",
+      minsAgo: "{n} min ago",
+      hoursAgo: "{n} hr ago",
+      daysAgo: "{n} days ago",
+      badge: "earned {badge}",
+      score: "shared their day",
+      walk: "went for a walk",
+      activity: "shared something",
+      game: "opened a table",
+      event: "is going to an event",
+    },
     community: "Community",
     events: "Events",
     skills: "Skills",

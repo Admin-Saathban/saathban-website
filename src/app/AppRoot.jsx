@@ -163,6 +163,19 @@ function PendingJoinRedirect() {
   return null;
 }
 
+/* Milestones merged into My Journey (see the route below). An Icon
+   is sent to /app/history, which holds the badges, the streaks and
+   the calendar together. An admin stays on the message desk, which
+   shares this path and is a different feature entirely.
+
+   `replace` so the back button returns where the person came from
+   rather than bouncing them through the redirect again. */
+function MilestonesOrJourney() {
+  const { profile } = useSession();
+  if (profile?.role === "saath_icon") return <Navigate to="/app/history" replace />;
+  return <MilestonesRoutes />;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -237,11 +250,21 @@ export default function AppRoot() {
           {/* Milestones (0017): Icons get points, badges and
               celebrations; admins get the message desk on the same
               path. */}
+          {/* Milestones is My Journey's now: badges, streaks and
+              celebrations all live on one page rather than two that
+              each show half of the same year. An Icon arriving here —
+              from an old link, a notification, a bookmark — is sent to
+              the page that has their whole record.
+
+              ADMINS ARE NOT REDIRECTED. The admin message desk lives
+              on this same path, and it is not the Icon feature; the
+              merge must not take it away. That is why this is a
+              role-aware component rather than a plain <Navigate>. */}
           <Route
             path="milestones/*"
             element={
               <RequireAuth roles={["saath_icon", "admin"]}>
-                <MilestonesRoutes />
+                <MilestonesOrJourney />
               </RequireAuth>
             }
           />

@@ -40,6 +40,28 @@ const ur = {
     logSummary: "{total} میں سے {done} درج — {points} پوائنٹس",
     logEmpty: "ابھی کچھ درج نہیں — دن ابھی باقی ہے۔",
     reminders: "آج کی یاد دہانیاں",
+    /* روزنامچہ مکمل ہونے پر — دروازہ کھلا رہتا ہے، صرف تقاضا ختم ہو
+       جاتا ہے۔ */
+    logDoneChip: "آج کا روزنامچہ مکمل ہے",
+    logChange: "بدل لیں",
+    /* یاد دہانیاں: نہ کوئی گنتی، نہ کوئی تاخیر۔ */
+    remindersAllDone: "آج کی ساری یاد دہانیاں مکمل ہیں",
+    reminderUndo: "ابھی نہیں",
+    remindersLeft: "اس کے بعد {n} اور",
+    reminderDone: "ہو گیا",
+    feed: {
+      title: "آپ کی کمیونٹی سے",
+      all: "سب دیکھیں",
+      minsAgo: "{n} منٹ پہلے",
+      hoursAgo: "{n} گھنٹے پہلے",
+      daysAgo: "{n} دن پہلے",
+      badge: "{badge} حاصل کیا",
+      score: "اپنا دن بانٹا",
+      walk: "سیر کو گئے",
+      activity: "کچھ بانٹا",
+      game: "ایک میز کھولی",
+      event: "ایک تقریب میں جا رہے ہیں",
+    },
     community: "برادری",
     events: "تقریبات",
     skills: "ہنر",

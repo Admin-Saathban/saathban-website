@@ -21,6 +21,7 @@ import { TEXT_SIZES, useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import LogSetupPanel from "./home/LogSetupPanel.jsx";
+import WhoCanMessage from "./WhoCanMessage.jsx";
 
 /* A choice button: 48px floor, and the active state is border weight +
    a check mark, never colour alone (SPEC.md accessibility). */
@@ -236,6 +237,11 @@ export default function AppSettings() {
             </Link>
           </Section>
         )}
+
+        {/* ── Who may send a first message (§6.5). Above Language
+            because it is about other people reaching you, which is
+            the kind of thing somebody comes to Settings to change. */}
+        <WhoCanMessage />
 
         {/* ── Language ── */}
         <Section title={t("settings.language.title")} hint={t("settings.language.hint")} ts={ts}>

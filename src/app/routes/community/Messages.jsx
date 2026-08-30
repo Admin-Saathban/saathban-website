@@ -336,7 +336,10 @@ export default function Messages() {
           {/* One quiet row, at the bottom, saying only how many. */}
           {requestCount > 0 && (
             <Link
-              to="/app/people/requests"
+              /* §6 — message requests are NOT connection requests:
+                 they get their own guarded screen, with the safety
+                 line, the first message, and three large buttons. */
+              to="/app/community/messages/requests"
               style={{
                 display: "flex",
                 alignItems: "center",

@@ -23,6 +23,8 @@ import { Link, useParams } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
+import FirstMessageBox from "./FirstMessageBox.jsx";
+import { VoiceRecorder, VoicePlayer } from "./VoiceNote.jsx";
 import { useSession } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
 import { BodyText, GhostBtn, PrimaryBtn } from "../circle/ui.jsx";
@@ -38,6 +40,8 @@ import {
   canDeleteForEveryone,
   uploadChatImage,
   chatImageUrl,
+  uploadChatAudio,
+  chatAudioUrl,
 } from "./myPeopleStore.js";
 import { announceRead } from "../notifications/data.js";
 import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
@@ -86,6 +90,7 @@ export default function ThreadPage() {
   const [replyTo, setReplyTo] = useState(null);      // message being replied to
   const [menuFor, setMenuFor] = useState(null);      // message id with the ⋯ menu open
   const [imageUrls, setImageUrls] = useState({});    // image_path -> signed url
+  const [audioUrls, setAudioUrls] = useState({});    // audio_path -> signed url
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   // Bubbles on their way to the server (text/stickers only).
@@ -124,6 +129,14 @@ export default function ThreadPage() {
       if (paths.length) {
         const entries = await Promise.all(paths.map(async (p) => [p, await chatImageUrl(p)]));
         setImageUrls((cur) => ({ ...cur, ...Object.fromEntries(entries.filter(([, u]) => u)) }));
+      }
+      /* Voice notes live in their own participant-scoped bucket (0074)
+         and need their own signed URLs. preload="none" on the player
+         means signing a URL still downloads nothing until it is played. */
+      const apaths = msgs.filter((m) => m.audio_path).map((m) => m.audio_path);
+      if (apaths.length) {
+        const aentries = await Promise.all(apaths.map(async (p) => [p, await chatAudioUrl(p)]));
+        setAudioUrls((cur) => ({ ...cur, ...Object.fromEntries(aentries.filter(([, u]) => u)) }));
       }
       if (myId && msgs.some((m) => m.sender_id !== myId && !m.read_at)) {
         markThreadRead(reqId, myId);
@@ -331,6 +344,29 @@ export default function ThreadPage() {
     }
     setUploading(false);
   };
+  /* §6's Voice button. The recorder hands back a blob and its length;
+     the length is stored so the other person can see how long it is
+     before any of it is downloaded (0074). */
+  const onRecorded = async (blob, seconds, mime) => {
+    if (!requestId) return;
+    setUploading(true);
+    setError("");
+    try {
+      const path = await uploadChatAudio(requestId, blob, mime);
+      await sendDeep(requestId, myId, {
+        audioPath: path,
+        audioSeconds: seconds,
+        replyToId: replyTo?.id || null,
+      });
+      setReplyTo(null);
+      await refresh(requestId);
+    } catch (err) {
+      const k = err.message === "too-big" ? "photoTooBig" : "voiceFailed";
+      setError(t("people.thread." + k));
+    }
+    setUploading(false);
+  };
+
   const byId = Object.fromEntries((messages || []).map((m) => [m.id, m]));
   const quoteText = (m) =>
     !m ? t("people.thread.removed")
@@ -547,6 +583,21 @@ export default function ThreadPage() {
               </div>
             );
 
+            /* A voice note: playable in place, never a file to fetch. */
+            if (m.audio_path) {
+              return (
+                <div key={m.id} ref={setRef} style={{ display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", marginBottom: 8, ...flashStyle }}>
+                  {quote}
+                  <VoicePlayer
+                    url={audioUrls[m.audio_path]}
+                    seconds={m.audio_seconds}
+                    mine={mine}
+                  />
+                  {menu}
+                </div>
+              );
+            }
+
             /* A photo: inline, private signed URL, tap to view large. */
             if (m.image_path) {
               const url = imageUrls[m.image_path];
@@ -681,6 +732,9 @@ export default function ThreadPage() {
         {status && !open && (
           <BodyText muted>{t("people.thread.pendingNote", { name: first })}</BodyText>
         )}
+        {/* §6 — the ONE message a stranger may send. Renders only for
+            the requester, only while pending, only while unsent. */}
+        {status && !open && <FirstMessageBox requestId={requestId} name={first} />}
         {pendingMsgs.map((m) => (
           <div
             key={m.id}
@@ -768,6 +822,9 @@ export default function ThreadPage() {
           <span aria-hidden="true" style={{ fontSize: ts(22) }}>🌸</span>
           {t("people.thread.stickerCta")}
         </GhostBtn>
+        {/* §6 — the third labelled button. It asks for the microphone
+            at the moment it is tapped, never before. */}
+        <VoiceRecorder disabled={!open || uploading} onRecorded={onRecorded} />
         {/* ONE Photo button, not two. The phone's own sheet already
             offers the camera, and two controls for one idea is exactly
             what §6 replaces. */}

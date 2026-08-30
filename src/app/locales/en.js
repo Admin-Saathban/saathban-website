@@ -146,6 +146,25 @@ const en = {
       },
     },
 
+    /* §6.5 — the wording of the three options is the decision
+       document's own, and the sentence shown before 'Anyone' is
+       quoted from it exactly. */
+    whoCanMessage: {
+      title: "Who can send you a first message?",
+      hint:
+        "This is only about the FIRST message from somebody new. People you are connected to can always write to you, and you can always reply.",
+      met: "People I've met somewhere on Saathban",
+      metHint: "Sharing a group, a gathering, or a park board.",
+      anyone: "Anyone on Saathban",
+      connected: "Only people I'm connected to",
+      isDefault: "(default)",
+      anyoneSentence:
+        "You'll get requests from people you haven't met. Saathban never asks for money, and neither should anyone here.",
+      anyoneConfirm: "That's alright with me",
+      keepAsIs: "Keep it as it is",
+      saved: "Saved.",
+      error: "That didn't save. Please try again.",
+    },
     language: {
       title: "Language",
       hint: "Choose the language Saathban speaks with you in.",
@@ -1769,6 +1788,18 @@ const en = {
       game_ludo: "Ludo",
       game_carrom: "Carrom",
       game_snakes: "Snakes & Ladders",
+      /* §6 — the third labelled button. "voiceNote" names the player
+         for a screen reader; the bar is a progress bar, not a drawing
+         of the sound (see VoiceNote.jsx). */
+      voiceCta: "Voice",
+      voiceStop: "Send",
+      voiceCancel: "Throw away",
+      voicePlay: "Play the voice note",
+      voicePause: "Pause",
+      voiceNote: "Voice note",
+      voiceDenied: "Saathban could not use the microphone. You can allow it in your browser settings.",
+      voiceUnsupported: "This browser cannot record here. You can still send a photo or write.",
+      voiceFailed: "That voice note did not send. Please try again.",
       photoCta: "Photo",
       voiceCta: "Voice",
       stickerCta: "Sticker",

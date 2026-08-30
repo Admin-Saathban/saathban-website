@@ -512,6 +512,78 @@ export async function fetchThreadSummaries(userId) {
     .sort((a2, b2) => new Date(b2.at) - new Date(a2.at));
 }
 
+/* ─── §6 message requests: everything the guarded screen needs, in one
+   round of queries. The first message is read from the REQUEST, not
+   from dm_messages — 0073 keeps the thread shut until acceptance, so
+   there is exactly one message and exactly one place it can be.
+
+   how_we_met and profile_is_complete are definer functions: the
+   stranger's groups, events and board posts are not readable to the
+   recipient, and asking the database the narrow question is the only
+   lawful way to answer §6's "how they found you". ─── */
+export async function fetchMessageRequests(userId) {
+  const { data, error } = await supabase
+    .from("dm_requests")
+    .select("id, requester_id, first_message, created_at")
+    .eq("recipient_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = data || [];
+  if (!rows.length) return [];
+
+  const ids = [...new Set(rows.map((r) => r.requester_id))];
+  const { data: people } = await supabase
+    .from("safe_profiles")
+    .select("id, full_name, city")
+    .in("id", ids);
+  const byId = new Map((people || []).map((p) => [p.id, p]));
+
+  return Promise.all(
+    rows.map(async (r) => {
+      const [met, complete] = await Promise.all([
+        supabase.rpc("how_we_met", { p_other: r.requester_id })
+          .then(({ data: d }) => d || [])
+          .catch(() => []),
+        supabase.rpc("profile_is_complete", { p: r.requester_id })
+          .then(({ data: d }) => d !== false)
+          .catch(() => true),
+      ]);
+      const p = byId.get(r.requester_id) || {};
+      return {
+        id: r.id,
+        senderId: r.requester_id,
+        name: p.full_name || "",
+        city: p.city || "",
+        firstMessage: r.first_message || "",
+        met,
+        senderProfileComplete: complete,
+        at: r.created_at,
+      };
+    })
+  );
+}
+
+/* Accept or decline. Both go through the RPC so that acceptance moves
+   the first message into the thread — a bare UPDATE would open a room
+   and leave the sentence that opened it behind (0073). */
+export async function decideDmRequest(requestId, accept) {
+  const { data, error } = await supabase.rpc("decide_dm_request", {
+    p_request: requestId,
+    p_accept: accept,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/* The requester's one shot. The server refuses a second (0073). */
+export async function setDmFirstMessage(requestId, body) {
+  const { error } = await supabase.rpc("set_dm_first_message", {
+    p_request: requestId,
+    p_body: body,
+  });
+  if (error) throw new Error(error.message);
+}
 export async function respondToRequest(requestId, status) {
   const { error } = await supabase
     .from("dm_requests")

@@ -142,7 +142,7 @@ export async function fetchThreadDeep(requestId, myId) {
       supabase.from("dm_requests").select("id, requester_id, recipient_id, status").eq("id", requestId).maybeSingle(),
       supabase
         .from("dm_messages")
-        .select("id, sender_id, body, game_session_id, reply_to_id, deleted_at, image_path, created_at, read_at")
+        .select("id, sender_id, body, game_session_id, reply_to_id, deleted_at, image_path, audio_path, audio_seconds, created_at, read_at")
         .eq("request_id", requestId)
         .order("created_at", { ascending: true }),
       supabase.from("dm_message_hides").select("message_id").eq("profile_id", myId),
@@ -153,15 +153,17 @@ export async function fetchThreadDeep(requestId, myId) {
   return { request: req, messages: (msgs || []).filter((m) => !hidden.has(m.id)) };
 }
 
-export async function sendDeep(requestId, myId, { body = null, replyToId = null, imagePath = null, gameSessionId = null } = {}) {
+export async function sendDeep(requestId, myId, { body = null, replyToId = null, imagePath = null, audioPath = null, audioSeconds = null, gameSessionId = null } = {}) {
   const text = (body || "").trim() || null;
-  if (!text && !imagePath && !gameSessionId) return;
+  if (!text && !imagePath && !audioPath && !gameSessionId) return;
   const { error } = await supabase.from("dm_messages").insert({
     request_id: requestId,
     sender_id: myId,
     body: text,
     reply_to_id: replyToId,
     image_path: imagePath,
+    audio_path: audioPath,
+    audio_seconds: audioSeconds,
     game_session_id: gameSessionId,
   });
   if (error) throw new Error(error.message);
@@ -194,6 +196,35 @@ export async function uploadChatImage(requestId, file) {
   if (error) throw new Error(error.message);
   return path;
 }
+
+/* §6 voice notes. A SEPARATE bucket from dm-images and from the
+   daily-log voice-notes bucket: 0074 explains why reusing the latter
+   would have exposed a private note to the sender's whole circle. */
+const DM_AUDIO_BUCKET = "dm-audio";
+
+export async function uploadChatAudio(requestId, blob, mime) {
+  if (!/^audio\//.test(mime || "")) throw new Error("bad-type");
+  if (blob.size > 5 * 1024 * 1024) throw new Error("too-big");
+  const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
+  const path = `${requestId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from(DM_AUDIO_BUCKET)
+    .upload(path, blob, { contentType: mime, upsert: false });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+export async function chatAudioUrl(path) {
+  const hit = audioUrlCache.get(path);
+  if (hit && hit.exp > Date.now()) return hit.url;
+  const { data, error } = await supabase.storage
+    .from(DM_AUDIO_BUCKET)
+    .createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return null;
+  audioUrlCache.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60 * 1000 });
+  return data.signedUrl;
+}
+const audioUrlCache = new Map();
 
 /* Private bucket → short-lived signed URLs, cached per path. */
 const urlCache = new Map();

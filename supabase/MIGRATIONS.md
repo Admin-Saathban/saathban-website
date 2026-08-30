@@ -172,6 +172,20 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0074 — a voice in the thread (saathban-website-38, 2026-08-30) — **APPLIED**
+
+§6. dm-audio bucket, folder-per-thread, mirroring dm-images. NOT the
+existing voice-notes bucket, whose read policy is owner-or-mood-circle
+and would have exposed a private note to the sender whole circle.
+dm_messages gains audio_path + audio_seconds.
+
+## 0073 — the first message (saathban-website-38, 2026-08-30) — **APPLIED**
+
+§6. dm_requests.first_message: ONE nullable slot, so "one shot only"
+is the shape of the table rather than a counter. set_dm_first_message
+fills it once; decide_dm_request moves it into the thread on accept.
+how_we_met answers "how they found you".
+
 ## 0072 — the family group (saathban-website-38, 2026-08-30) — **APPLIED**
 
 §10. groups.family_of + ensure_family_group. The Icon cannot be removed

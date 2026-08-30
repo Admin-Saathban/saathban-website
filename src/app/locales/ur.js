@@ -78,6 +78,7 @@ const ur = {
     navLabel: "بنیادی حصے",
     /* صرف پٹی کے لیے مختصر نام۔ */
     peopleShort: "اپنے",
+    groupsShort: "گروپ",
     tierWeekly: "کبھی کبھار",
     tierRare: "شاذ و نادر",
     events: "تقریبات",

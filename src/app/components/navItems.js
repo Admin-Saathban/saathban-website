@@ -43,7 +43,7 @@ export function barItems(role, { buddyActive = true } = {}) {
     return [
       home,
       games,
-      { to: "/app/groups", key: "hub.groups", emoji: "🧑‍🤝‍🧑" },
+      { to: "/app/groups", key: "hub.groupsShort", emoji: "🧑‍🤝‍🧑" },
       { to: "/app/outdoor", key: "hub.outdoor", emoji: "🌳" },
       more,
     ];

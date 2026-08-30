@@ -73,6 +73,13 @@ const en = {
     navLabel: "Main areas",
     /* Bar-only short forms. The screens keep their full names. */
     peopleShort: "People",
+    /* NAVIGATION_SPEC §1 names this tab "Groups". The screen keeps
+       "Friend groups" — a bar label and a page title are allowed to
+       differ, and at 390px "Friend groups" was ellipsed to "Friend
+       gro…" while squeezing the four labels beside it into "Ho…",
+       "Gam…" and "Mo…". A label that has to be truncated is a label
+       nobody reads, which is the whole reason §3 forbids icon-only. */
+    groupsShort: "Groups",
     tierWeekly: "Every so often",
     tierRare: "Now and then",
     events: "Events",

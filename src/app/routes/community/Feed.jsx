@@ -9,7 +9,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { claimOpenSeat } from "../../lib/games.js";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -665,6 +665,9 @@ export default function Feed() {
      null — plenty of people have never filled them in — and a null
      never matches, so those posts simply fall to the last band
      instead of the ordering breaking. */
+  /* The Feed renders at /app/community AND inside Home. Only the
+     former is a page that needs naming — see the heading below. */
+  const onHome = !useLocation().pathname.startsWith("/app/community");
   const myArea = profile?.area || null;
   const myCity = profile?.city || null;
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
@@ -1049,18 +1052,29 @@ export default function Feed() {
         />
       )}
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <h1
-          style={{
-            fontFamily: meta.fonts.heading,
-            fontSize: ts(32),
-            fontWeight: 700,
-            color: C.green,
-            margin: "0 0 8px",
-            flex: 1,
-          }}
-        >
-          {t("community.feed.title")}
-        </h1>
+        {/* "Community" is a heading for the /app/community screen and
+           noise on Home, where §4 allows the header, the composer, the
+           log row and the feed and nothing else. A 32px display line
+           costs about 50px to name the thing a person is already
+           looking at — and Home has no tab called Community to be
+           consistent with any more, since §1 merged it in.
+
+           Kept on its own route, where it is the page title and the
+           only thing saying where you are. */}
+        {!onHome && (
+          <h1
+            style={{
+              fontFamily: meta.fonts.heading,
+              fontSize: ts(32),
+              fontWeight: 700,
+              color: C.green,
+              margin: "0 0 8px",
+              flex: 1,
+            }}
+          >
+            {t("community.feed.title")}
+          </h1>
+        )}
         {/* Doors only for those the surfaces will actually admit — a
             suspended Buddy keeps the page's gentle no-access note, not
             two links that refuse on arrival (PARITY.md). */}

@@ -22,6 +22,7 @@ import { useSession } from "../lib/session.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import LogSetupPanel from "./home/LogSetupPanel.jsx";
 import WhoCanMessage from "./WhoCanMessage.jsx";
+import AccountSettings from "./AccountSettings.jsx";
 
 /* A choice button: 48px floor, and the active state is border weight +
    a check mark, never colour alone (SPEC.md accessibility). */
@@ -237,6 +238,14 @@ export default function AppSettings() {
             </Link>
           </Section>
         )}
+
+        {/* ── §7: the half that was missing entirely — the email
+               you sign in with, a password (or a first one), who can
+               see your profile and your check-ins, notifications, and
+               a way out. ── */}
+        <Section title={t("settings.accountTitle")} hint={t("settings.accountHint")} ts={ts}>
+          <AccountSettings />
+        </Section>
 
         {/* ── Who may send a first message (§6.5). Above Language
             because it is about other people reaching you, which is

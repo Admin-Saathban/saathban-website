@@ -22,6 +22,7 @@ import { useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import { moreGroups } from "../components/navItems.js";
+import { shouldPulse } from "./profile/profileFields.js";
 import useBuddyActive from "../components/useBuddyActive.js";
 import { BAR_HEIGHT } from "../components/BottomBar.jsx";
 
@@ -34,9 +35,29 @@ export default function MorePage() {
      properly, gave them the full one. */
   const buddyActive = useBuddyActive(role);
   const groups = moreGroups(role, { buddyActive });
+  /* PRODUCT_DECISIONS §8 / TONIGHT.md §6 — the soft dot. The user
+     completed their profile without ever being told it was
+     incomplete, because nothing anywhere said so. It is an
+     invitation, not an error: no red, no badge count, no percentage.
+     It stops once dismissed and returns at most weekly. */
+  const pulseProfile = shouldPulse(profile);
+
+  const DOT_CSS = `
+    @keyframes saath-pulse-dot {
+      0%, 100% { opacity: 0.55; transform: scale(0.9); }
+      50%      { opacity: 1;    transform: scale(1.12); }
+    }
+    .sb-pulse-dot { animation: saath-pulse-dot 2.4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      /* Stops moving, stays visible: the dot is the message, the
+         pulse is only emphasis. */
+      .sb-pulse-dot { animation: none; opacity: 1; }
+    }
+  `;
 
   return (
     <>
+      <style>{DOT_CSS}</style>
       <AppHeader />
       <main
         style={{
@@ -93,7 +114,35 @@ export default function MorePage() {
                     <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1 }}>
                       {item.emoji}
                     </span>
-                    <span>{t(item.key)}</span>
+                    <span style={{ flex: 1 }}>{t(item.key)}</span>
+                    {item.to === "/app/profile" && pulseProfile && (
+                      /* Carried by POSITION and a word, never by the
+                         dot alone (§0.1): a person who cannot see the
+                         colour still reads "something to add". */
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: ts(A11Y.minBodyPx),
+                          fontWeight: 600,
+                          color: C.greenMuted,
+                        }}
+                      >
+                        {t("profile.somethingToAdd")}
+                        <span
+                          className="sb-pulse-dot"
+                          aria-hidden="true"
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: C.sage,
+                            flexShrink: 0,
+                          }}
+                        />
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>

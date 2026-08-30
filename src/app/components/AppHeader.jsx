@@ -11,7 +11,6 @@
    flexbox + logical properties.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
@@ -24,8 +23,7 @@ export default function AppHeader() {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname, key: locationKey } = useLocation();
 
   const home = profile ? roleHomePath(profile.role) : "/app";
   // Every inner page gets a way back without hunting for the logo:
@@ -63,6 +61,10 @@ export default function AppHeader() {
   };
 
   const backArrow = meta.dir === "rtl" ? "→" : "←";
+  /* "default" is the first entry in this tab's history: nothing to go
+     back to, so Home is the only honest destination. */
+  const hasHistory = locationKey !== "default";
+  const goBack = () => (hasHistory ? navigate(-1) : navigate(home));
 
 /* Everywhere an Icon goes, now that the home screen is the day's own
      business rather than a grid of doors. These used to be ten cards
@@ -83,26 +85,6 @@ export default function AppHeader() {
      Milestones is absent too — it is My Journey's now (see AppRoot's
      redirect), and two entries for one place is how a person decides
      they have missed something. */
-  const ICON_PLACES = [
-    { to: "/app/games", emoji: "🎲", key: "hub.games" },
-    { to: "/app/events", emoji: "🎪", key: "hub.events" },
-    { to: "/app/groups", emoji: "🧑‍🤝‍🧑", key: "hub.groups" },
-    { to: "/app/skills", emoji: "🌱", key: "hub.skills" },
-    { to: "/app/history", emoji: "📖", key: "hub.history" },
-    { to: "/app/outdoor", emoji: "🌳", key: "hub.outdoor" },
-    { to: "/app/people", emoji: "🫶", key: "hub.people" },
-    { to: "/app/circle", emoji: "🤝", key: "hub.circle" },
-  ];
-
-  /* The places go in the MENU only — never inline in the header bar,
-     where eight more links would crush the mark and the bell at any
-     width. The two chrome links keep the inline desktop behaviour
-     they had. */
-  const placeLinks =
-    profile?.role === "saath_icon"
-      ? ICON_PLACES.map((p) => ({ to: p.to, label: `${p.emoji} ${t(p.key)}` }))
-      : [];
-
   return (
     <header
       className="sb-header"
@@ -146,23 +128,22 @@ export default function AppHeader() {
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
           <Link
             to={home}
-            onClick={() => setMenuOpen(false)}
             style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, flexShrink: 0 }}
           >
             <Logo height={26} />
           </Link>
           {showBack && (
-            <Link
-              to={home}
-              onClick={() => setMenuOpen(false)}
-              aria-label={t("common.backToHome")}
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label={hasHistory ? t("common.back") : t("common.backToHome")}
               style={{ ...controlStyle, paddingInline: 8 }}
             >
               <span aria-hidden="true">{backArrow}</span>
               <span className="sbh-back-label" style={{ marginInlineStart: 6 }}>
-                {t("common.backToHome")}
+                {hasHistory ? t("common.back") : t("common.backToHome")}
               </span>
-            </Link>
+            </button>
           )}
         </div>
 

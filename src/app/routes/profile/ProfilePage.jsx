@@ -17,6 +17,8 @@ import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { STRINGS } from "./strings.js";
 import { fetchMyProfile, updateMyProfile } from "./data.js";
 import { LANGUAGES, INTERESTS, ABOUT_PROMPTS } from "./profileFields.js";
+import { signedAvatarUrl, uploadAvatar, ACCEPTED, MAX_BYTES } from "./avatar.js";
+import { useRef } from "react";
 import { useI18n as useT } from "../../lib/i18n.jsx";
 
 /* Tappable, multi-select, and never colour alone: a chosen chip
@@ -65,6 +67,9 @@ export default function ProfilePage() {
   const [role, setRole] = useState(null);
   const [status, setStatus] = useState("idle"); // idle | saving | saved
   const [error, setError] = useState("");
+  const [avatar, setAvatar] = useState(null);   // signed url, or null
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -85,6 +90,9 @@ export default function ProfilePage() {
           about: p.about || "",
           about_prompt: p.about_prompt || ABOUT_PROMPTS[0],
         });
+        /* The stored value is a PATH; a private bucket needs it
+           signed before it can be shown. */
+        if (p.avatar_url) signedAvatarUrl(p.avatar_url).then((u) => alive && setAvatar(u));
       } catch {
         if (alive) setError(s.loadError);
       }
@@ -163,6 +171,63 @@ export default function ProfilePage() {
           <p aria-busy="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>···</p>
         ) : (
           <form onSubmit={onSubmit} noValidate>
+            {/* §8: the photo is the biggest factor in whether somebody
+                connects, so it is first rather than buried under the
+                text fields. A warm illustrated initial stands in for a
+                grey silhouette until there is one. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 76, height: 76, borderRadius: "50%", flexShrink: 0,
+                  background: avatar ? `center/cover url(${avatar})` : C.sage,
+                  color: C.cream, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: ts(30), fontWeight: 800, border: `3px solid ${C.white}`,
+                  boxShadow: "0 2px 10px rgba(45,36,24,0.18)",
+                }}
+              >
+                {avatar ? "" : (form.full_name || "•").trim().charAt(0).toUpperCase()}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={photoBusy}
+                  style={{
+                    minHeight: A11Y.minTapTargetPx, padding: "0 18px", borderRadius: 50,
+                    border: `2px solid ${C.green}`, background: C.white, color: C.green,
+                    fontSize: ts(A11Y.minBodyPx), fontWeight: 700, fontFamily: "inherit",
+                    cursor: photoBusy ? "default" : "pointer",
+                  }}
+                >
+                  {photoBusy ? t("profile.photoBusy") : avatar ? t("profile.photoChange") : t("profile.photoAdd")}
+                </button>
+                <p style={hintStyle}>{t("profile.photoHint")}</p>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={ACCEPTED}
+                capture="user"
+                style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  if (file.size > MAX_BYTES) { setError(t("profile.photoTooBig")); return; }
+                  setError(""); setPhotoBusy(true);
+                  try {
+                    const path = await uploadAvatar(profile.id, file);
+                    setAvatar(await signedAvatarUrl(path));
+                    await refreshProfile();
+                  } catch {
+                    setError(t("profile.photoFailed"));
+                  }
+                  setPhotoBusy(false);
+                }}
+              />
+            </div>
+
             <div style={{ marginBottom: 20 }}>
               <label htmlFor="pf-name" style={labelStyle}>{s.nameLabel}</label>
               <input id="pf-name" style={inputStyle} value={form.full_name} onChange={onChange("full_name")} autoComplete="name" />

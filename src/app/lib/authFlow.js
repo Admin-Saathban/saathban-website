@@ -65,6 +65,8 @@ function profileRow(userId, src) {
     full_name: (src.full_name || "").trim(),
     phone: clean(src.phone),
     city: clean(src.city),
+    area: clean(src.area),
+    date_of_birth: clean(src.date_of_birth),
     country: clean(src.country),
     relationship: clean(src.relationship),
     languages: Array.isArray(src.languages)

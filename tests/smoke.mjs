@@ -141,12 +141,22 @@ for (const [email, label, home, foreign] of ROLES) {
   const { ctx, page } = await pageFor(browser, session);
   await goto(page, "/app/home");
   // Wait for the thing being asserted, not for a guessed duration.
-  await page.locator("text=Community").first().waitFor({ timeout: 15000 }).catch(() => {});
+  await page.locator("text=/log|روزنامچہ/i").first().waitFor({ timeout: 15000 }).catch(() => {});
   const hubText = (await page.evaluate(() => document.body.innerText)).trim();
+  /* The hub is no longer a grid of destination cards: the day's own
+     business is on it and everywhere else moved to the header menu.
+     So this asserts the NEW shape — the log, and the community filling
+     the space — plus the fact that the grid is genuinely gone rather
+     than merely renamed. */
   check(
-    "icon: hub renders area cards",
-    hubText.includes("Community") && hubText.includes("Events"),
+    "icon: hub leads with the day, not a grid",
+    /log|روزنامچہ/i.test(hubText) && /community|کمیونٹی/i.test(hubText),
     hubText.slice(0, 60).split(String.fromCharCode(10)).join(" | ")
+  );
+  check(
+    "icon: the destination grid is gone from home",
+    !["Events", "Friend groups", "Out & about", "My Circle", "Milestones"].some((w) => hubText.includes(w)),
+    ["Events", "Friend groups", "Out & about", "My Circle", "Milestones"].filter((w) => hubText.includes(w)).join(", ") || "gone"
   );
   await goto(page, "/app/home/log");
   const moodHeader = page

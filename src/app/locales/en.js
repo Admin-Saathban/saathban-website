@@ -312,6 +312,11 @@ const en = {
   },
 
   home: {
+    company: {
+      one: "{name}'s logged today too.",
+      two: "{a} and {b} have logged today too.",
+      many: "{n} of your people have logged today.",
+    },
     greetingMorning: "Good morning",
     greetingAfternoon: "Good afternoon",
     greetingEvening: "Good evening",

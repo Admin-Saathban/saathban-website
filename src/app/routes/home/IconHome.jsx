@@ -27,6 +27,7 @@ import CalendarStrip from "./CalendarStrip.jsx";
 import GreetingCharacter from "./GreetingCharacter.jsx";
 import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import ScoreShare from "./ScoreShare.jsx";
+import CompanyLine from "./CompanyLine.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs, DB_MODULES } from "./logStore.js";
@@ -294,6 +295,13 @@ export default function IconHome() {
             circleMembers={MOCK_ICON.circleMembers}
           />
         </div>
+
+        {/* §5's social third, and it goes LAST — never in the middle.
+            A line about other people in the middle of a log turns
+            logging into performing. It renders nothing at all for
+            somebody with nobody: §0.6, a section that would be empty
+            is absent, not an empty box announcing a gap. */}
+        <CompanyLine iconId={iconId} />
       </div>
       </main>
     </>

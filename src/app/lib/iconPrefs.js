@@ -7,7 +7,11 @@
    SPEC.md: "Each module is opt-in from Settings." Mood is the one
    exception — always on, always first (the character's tone depends
    on it; the DB trigger re-adds it if a client ever drops it).
-   Everything else defaults OFF until enabled here.
+   SLEEP AND WATER ARE ALSO ON at the start (PRODUCT_DECISIONS §5):
+   three questions rather than one, because a log with a single
+   question is not yet a habit. Medicines, meals and movement default
+   OFF — medicines especially, because they need setting up first and
+   an empty medicine list on day one is a bad first impression.
 
    Shapes:
      enabledModules: ["mood", ...]
@@ -39,7 +43,11 @@ export const TRACKER_TYPES = ["yesno", "count", "note"];
 export const MEAL_TAGS = ["protein", "carbs", "veg", "fruit", "dairy", "sweet"];
 
 const DEFAULTS = Object.freeze({
-  enabledModules: ["mood"],
+  /* §5's defaults. Three on, not one: a log with a single question is
+     not yet a habit. Medicines, meals and movement stay OFF —
+     medicines especially, because they need setting up first and an
+     empty medicine list on day one is a bad first impression. */
+  enabledModules: ["mood", "sleep", "water"],
   medications: [],
   mealItems: [],
   trackers: [],

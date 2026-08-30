@@ -310,6 +310,11 @@ const ur = {
   },
 
   home: {
+    company: {
+      one: "{name} نے بھی آج درج کیا۔",
+      two: "{a} اور {b} نے بھی آج درج کیا۔",
+      many: "آپ کے {n} اپنوں نے آج درج کیا۔",
+    },
     greetingMorning: "صبح بخیر",
     greetingAfternoon: "دوپہر بخیر",
     greetingEvening: "شام بخیر",

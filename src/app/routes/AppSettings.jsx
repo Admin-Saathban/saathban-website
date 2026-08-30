@@ -22,6 +22,7 @@ import { useSession } from "../lib/session.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import LogSetupPanel from "./home/LogSetupPanel.jsx";
 import WhoCanMessage from "./WhoCanMessage.jsx";
+import TaggingSetting from "./TaggingSetting.jsx";
 import AccountSettings from "./AccountSettings.jsx";
 
 /* A choice button: 48px floor, and the active state is border weight +
@@ -250,6 +251,10 @@ export default function AppSettings() {
             because it is about other people reaching you, which is
             the kind of thing somebody comes to Settings to change. */}
         <WhoCanMessage />
+
+        {/* POSTS_SPEC §5 — the third of the tagged person's three
+            protections, and the only one that acts before the fact. */}
+        <TaggingSetting />
 
         {/* ── Language ── */}
         <Section title={t("settings.language.title")} hint={t("settings.language.hint")} ts={ts}>

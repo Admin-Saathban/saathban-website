@@ -108,6 +108,16 @@ export async function copyLink(postId) {
   }
 }
 
+/* §5 — the tagged person can take their own name off. 0077's policy
+   lets either of them do it; this is the tagged person's door, and
+   it is deliberately silent: somebody removing their name from a
+   post does not owe the author a notification about it. */
+export async function removeTag(postId, personId) {
+  const { error } = await supabase.from("post_tags").delete()
+    .eq("post_id", postId).eq("person_id", personId);
+  if (error) throw new Error(error.message);
+}
+
 /* ─── §6 Help posts ─── */
 
 export async function fetchHelpExtras(postIds) {

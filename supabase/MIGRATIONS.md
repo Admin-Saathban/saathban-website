@@ -175,6 +175,12 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0079 — being tagged is told (saathban-website-38, 2026-08-30) — **APPLIED**
+
+POSTS_SPEC §5. A trigger on post_tags: the tagged person is notified
+and the link lands on the post, where the tag can be removed. Never
+fires when somebody tags themselves.
+
 ## 0078 — a voice in the feed (saathban-website-38, 2026-08-30) — **APPLIED**
 
 POSTS_SPEC §7. community_posts.audio_path/audio_seconds, plus the two

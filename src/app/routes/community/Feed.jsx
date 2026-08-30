@@ -46,6 +46,8 @@ import Composer, { ComposerRow } from "./Composer.jsx";
 import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
 import { VoicePlayer } from "../people/VoiceNote.jsx";
+import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {
   colourOf,
   postAudioUrl,
@@ -62,6 +64,7 @@ import {
   setVisibility as setPostVisibility,
   setRepliesOff,
   setPinned,
+  removeTag,
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 
@@ -391,6 +394,9 @@ function PostCard({
   onToggleReaction,
   onAction,
   helpStatus,
+  taggedNames,
+  iAmTagged,
+  onUntag,
   helpNames,
   iOffered,
   onMenu,
@@ -411,6 +417,13 @@ function PostCard({
   const [comments, setComments] = useState(null); // null = not loaded
   const [commentAuthors, setCommentAuthors] = useState({});
   const [commentBody, setCommentBody] = useState("");
+  /* §7 — replies to a post are text AND stickers, and never voice:
+     "only the poster may use voice". A thread of twenty audio clips
+     is unlistenable, unsearchable, and unscannable by a moderator, so
+     there is deliberately no recorder here — the absence is the rule.
+     A sticker travels as the body ':sticker/<id>:' on the wire that
+     already exists (STICKERS_WIRING.md), so no column changed. */
+  const [stickersOpen, setStickersOpen] = useState(false);
   const [commentReporting, setCommentReporting] = useState(null); // comment id
   const own = post.author_id === myId;
 
@@ -439,6 +452,18 @@ function PostCard({
       setCommentAuthors(await fetchAuthors(rows.map((r) => r.author_id)));
     } catch {
       /* the composer keeps the text; nothing lost */
+    }
+  };
+
+  const sendSticker = async (id) => {
+    setStickersOpen(false);
+    try {
+      await addComment(post.id, myId, stickerRef(id));
+      const rows = await fetchComments(post.id);
+      setComments(rows);
+      setCommentAuthors(await fetchAuthors(rows.map((r) => r.author_id)));
+    } catch {
+      /* nothing typed, nothing to lose */
     }
   };
 
@@ -518,6 +543,30 @@ function PostCard({
       ) : (
         <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
       ))}
+
+      {/* §5 — who is named on this post, and a way off it for the
+          person named. Without this the tag existed only in the
+          database: nobody could see it and the promise that you can
+          remove it had nothing to attach to. */}
+      {taggedNames && taggedNames.length > 0 && (
+        <p style={{ margin: "6px 0 0", fontSize: ts(16), color: C.textMuted }}>
+          🫶 {t("posts.withNames", { names: taggedNames.join(", ") })}
+          {iAmTagged && (
+            <button
+              type="button"
+              onClick={onUntag}
+              style={{
+                marginInlineStart: 10, minHeight: A11Y.minTapTargetPx,
+                border: "none", background: "none", color: C.brown,
+                fontFamily: "inherit", fontSize: ts(16), fontWeight: 700,
+                textDecoration: "underline", cursor: "pointer",
+              }}
+            >
+              {t("posts.removeMe")}
+            </button>
+          )}
+        </p>
+      )}
 
       {/* §7 — a voice post: a card with a play button and its length,
           so nothing is downloaded until somebody decides to listen. */}
@@ -644,6 +693,9 @@ function PostCard({
                     {t("community.feed.menuReport")}
                   </button>
                 </div>
+                {parseStickerRef(cm.body) && (
+                  <Sticker id={parseStickerRef(cm.body)} size={96} />
+                )}
                 <BodyText style={{ margin: "2px 0 0" }}>{cm.body}</BodyText>
                 {commentReporting === cm.id && (
                   <ReportForm
@@ -658,17 +710,32 @@ function PostCard({
             ))
           )}
           {canWrite && (
-            <form onSubmit={sendComment} style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <input
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                placeholder={t("community.feed.commentPlaceholder")}
-                style={{ flex: 1 }}
-              />
-              <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
-                {t("community.feed.commentCta")}
-              </GhostBtn>
-            </form>
+            <>
+              {stickersOpen && (
+                <div style={{ marginTop: 8 }}>
+                  <StickerPicker onPick={sendSticker} label={t("community.feed.stickerLabel")} />
+                </div>
+              )}
+              <form onSubmit={sendComment} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  placeholder={t("community.feed.commentPlaceholder")}
+                  style={{ flex: 1 }}
+                />
+                <GhostBtn
+                  onClick={() => setStickersOpen((v) => !v)}
+                  aria-expanded={stickersOpen}
+                  aria-label={t("community.feed.stickerLabel")}
+                  style={{ padding: "0 14px" }}
+                >
+                  🌸
+                </GhostBtn>
+                <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
+                  {t("community.feed.commentCta")}
+                </GhostBtn>
+              </form>
+            </>
           )}
         </div>
       )}
@@ -833,7 +900,21 @@ export default function Feed() {
     const ids = (posts || []).map((p) => p.id);
     if (!ids.length) return undefined;
     fetchHelpExtras(ids)
-      .then((x) => { if (!dead) setExtras(x); })
+      .then(async (x) => {
+        if (dead) return;
+        setExtras(x);
+        /* Names for the people tagged and the people offering — they
+           are not post authors, so they are not in `authors` yet, and
+           a tag that renders as an empty string is worse than none. */
+        const extraIds = [
+          ...x.tags.map((r) => r.person_id),
+          ...x.offers.map((r) => r.helper_id),
+        ].filter(Boolean);
+        if (extraIds.length) {
+          const more = await fetchAuthors(extraIds).catch(() => ({}));
+          if (!dead) setAuthors((cur) => ({ ...more, ...cur }));
+        }
+      })
       .catch(() => {});
     return () => { dead = true; };
   }, [posts]);
@@ -1412,6 +1493,15 @@ export default function Feed() {
                 joinInfo={joins[p.id]}
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
+                taggedNames={extras.tags
+                  .filter((x) => x.post_id === p.id)
+                  .map((x) => authors[x.person_id]?.full_name || "")
+                  .filter(Boolean)}
+                iAmTagged={extras.tags.some((x) => x.post_id === p.id && x.person_id === myId)}
+                onUntag={async () => {
+                  await removeTag(p.id, myId);
+                  setExtras(await fetchHelpExtras((posts || []).map((x) => x.id)));
+                }}
                 helpStatus={
                   p.style_tag === "help"
                     ? {

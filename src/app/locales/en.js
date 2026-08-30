@@ -2204,6 +2204,15 @@ const en = {
       closePh: "Add a line if you like — \"my nephew did it\"",
       closeCta: "Close it",
     },
+    withNames: "With {names}",
+    removeMe: "Take my name off",
+    tagging: {
+      title: "Can people add your name to their posts?",
+      hint: "When somebody names you in something they write, you are told, and you can take your name off. You can also switch it off completely — then nobody can add your name at all.",
+      on: "Yes, people can name me",
+      off: "No, nobody can name me",
+      failed: "That did not save. Please try again.",
+    },
     menu: {
       title: "This post",
       pin: "Pin to your profile",

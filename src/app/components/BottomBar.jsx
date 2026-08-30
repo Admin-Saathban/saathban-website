@@ -78,7 +78,25 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
       </span>
       <span
         style={{
-          fontSize: ts(15),
+          /* THE BAR LABEL STOPS GROWING AT 1.2x, AND ONLY HERE.
+
+             §8 says every screen is tested at every text size, and
+             this is the screen that fails it. Five labels share 390px
+             of fixed-height bar; at the largest setting 15px becomes
+             22.5 and every one of them ellipses — in Urdu at largest
+             the bar read "لھ…", "دوستوں کے گ…", "باہر کی…", "…مہ".
+             That is icon-only navigation arrived at by accident,
+             which §3 forbids outright, and it is a worse outcome for
+             the person who chose the largest text than a slightly
+             smaller label they can actually read.
+
+             Capped rather than frozen: it still grows from 15 to 18px
+             across the four settings, which is the range that fits.
+             Everything the bar leads TO obeys the setting in full,
+             and the icon plus the accessible name carry the meaning
+             either way — this is the one place §3 already allowed to
+             sit under the body floor for exactly this reason. */
+          fontSize: "calc(15px * min(var(--sb-text-scale, 1), 1.2))",
           lineHeight: 2.45,
           maxWidth: "100%",
           overflow: "hidden",

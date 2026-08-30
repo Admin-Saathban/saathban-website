@@ -28,6 +28,9 @@ import { MOOD_BY_VALUE } from "./famCopy.js";
 import PersonCard from "./PersonCard.jsx";
 import YourTurnChips from "../games/YourTurnChips.jsx";
 import { fetchSharedMoments, momentDayLabel } from "./famMoments.js";
+import FamilyGroup from "./FamilyGroup.jsx";
+import MomentStickers from "./MomentStickers.jsx";
+import { fetchPersonPresence } from "../people/myPeopleStore.js";
 
 const MOOD_CLASS = ["mood", "sleep", "exercise", "diet", "water"];
 
@@ -89,12 +92,48 @@ function SharedMoments({ view }) {
         const line = momentLine(m, t, lang);
         if (!line) return null;
         return (
-          <BodyText key={m.id} style={{ margin: "0 0 6px" }}>
-            {line}
-            <span style={{ color: C.textMuted, fontSize: ts(15) }}> · {momentDayLabel(m.created_at, t)}</span>
-          </BodyText>
+          <div key={m.id}>
+            <BodyText style={{ margin: "0 0 4px" }}>
+              {line}
+              <span style={{ color: C.textMuted, fontSize: ts(15) }}> · {momentDayLabel(m.created_at, t)}</span>
+            </BodyText>
+            {/* §10 — the one-tap sticker, on the thing they shared. */}
+            <MomentStickers postId={m.id} />
+          </div>
         );
       })}
+    </div>
+  );
+}
+
+/* "She's at Model Town Park right now" — §10 names this exact line as
+   the kind of thing a Fam member opens the app for. It is a CHECK-IN,
+   which their person made themselves and which shows a place, never a
+   pin — not location sharing, which stays closed until it is asked for
+   and is a different grant entirely. RLS decides whether the row
+   arrives at all; nothing that does not arrive is mentioned. */
+function PresenceLine({ iconId, name }) {
+  const { t, ts } = useI18n();
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    if (!iconId) return undefined;
+    let dead = false;
+    fetchPersonPresence(iconId)
+      .then((p) => { if (!dead) setLive(p); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, [iconId]);
+  if (!live || (!live.checkinPlace && !live.inGame)) return null;
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0 14px" }}>
+      {live.checkinPlace && (
+        <Pill tone="green">📍 {t("fam.presence.at", { name, place: live.checkinPlace })}</Pill>
+      )}
+      {live.inGame && (
+        <Link to={`/app/games/s/${live.inGame.sessionId}`} style={{ textDecoration: "none" }}>
+          <Pill tone="brown">🎲 {t("fam.presence.inGame", { name })}</Pill>
+        </Link>
+      )}
     </div>
   );
 }
@@ -126,10 +165,12 @@ function IconCard({ view }) {
         )}
       </div>
       {view.city && (
-        <BodyText muted style={{ margin: "4px 0 16px" }}>
+        <BodyText muted style={{ margin: "4px 0 6px" }}>
           {view.city}
         </BodyText>
       )}
+
+      <PresenceLine iconId={view.iconId} name={first} />
 
       <p
         style={{
@@ -353,6 +394,18 @@ export default function FamDashboard() {
       ) : (
         views.map((v) => <IconCard key={v.membershipId} view={v} />)
       )}
+
+      {/* §10 puts the family group's newest message among the things a
+          Fam member opens the app for, so it sits with them — after the
+          person's card, which comes first. Absent until there are two
+          Fam members; the RPC returns null and null draws nothing. */}
+      {(views || []).map((v) => (
+        <FamilyGroup
+          key={v.iconId}
+          iconId={v.iconId}
+          iconName={(v.name || "").split(" ")[0]}
+        />
+      ))}
 
       {/* Fam plays too: chips when a table waits on them. A first-timer
           needs the word "Games" before "Your move — Carrom" (thumb test):

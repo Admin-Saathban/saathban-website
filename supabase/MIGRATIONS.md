@@ -171,6 +171,13 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0072 — the family group (saathban-website-38, 2026-08-30) — **APPLIED**
+
+§10. groups.family_of + ensure_family_group. The Icon cannot be removed
+from her own family group (BEFORE DELETE trigger, cascade allowed
+through so the group stays deletable), and the roll is synced to the
+circle in both directions rather than kept as a second list.
+
 ## 0071 — a link that points at a person (saathban-website-38, 2026-08-30) — **APPLIED**
 
 §7 personal invite links. personal_invites + create/open/accept, all

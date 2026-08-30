@@ -83,6 +83,29 @@ function Arrow({ kind, cell, angle, seat, seatsInPlay }) {
   );
 }
 
+/* Six directions on a ring, deliberately not eight: an odd scatter
+   reads as a burst, a regular one reads as a compass rose. */
+const SPARKS = Array.from({ length: 6 }, (_, i) => {
+  const a = (i / 6) * Math.PI * 2 + 0.35;
+  return [Math.cos(a), Math.sin(a)];
+});
+
+export const BOARD_MOTION_CSS = `
+  @keyframes sb-spark {
+    0%   { opacity: 0;   transform: scale(0.25); }
+    30%  { opacity: 0.95; }
+    100% { opacity: 0;   transform: scale(1); }
+  }
+  .sb-spark {
+    transform-box: fill-box;
+    transform-origin: 0% 50%;
+    animation: sb-spark 620ms ease-out both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sb-spark { display: none; }
+  }
+`;
+
 const CELL = 40; // viewBox units per grid cell
 const SIZE = 15 * CELL;
 const STEP_MS = 110; // one square of travel
@@ -244,6 +267,7 @@ export default function LudoBoard({
 
   return (
     <div style={{ position: "relative", maxWidth: 560, margin: "0 auto" }}>
+      <style>{BOARD_MOTION_CSS}</style>
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
@@ -252,12 +276,68 @@ export default function LudoBoard({
           width: "100%",
           height: "auto",
           display: "block",
-          background: C.cream,
+          background: "transparent",
           borderRadius: 18,
-          border: `2px solid ${C.warmGray}`,
+          filter: "drop-shadow(0 4px 10px rgba(74,58,34,0.20))",
           transform: spin ? `rotate(${spin}deg)` : undefined,
         }}
       >
+        {/* ── The material ──────────────────────────────────────────
+             A ludo board is a physical object: printed card with a
+             sheen, cells pressed slightly into it, zones that catch
+             the light at their edge. None of that is decoration for
+             its own sake — depth is what tells you a cell is a place a
+             goti can stand and a yard is a container it sits inside.
+             All gradients and filters, no assets. ── */}
+        <defs>
+          {/* the board's own paper, warmer at the edges than the middle */}
+          <radialGradient id="sb-felt" cx="50%" cy="42%" r="72%">
+            <stop offset="0%" stopColor="#FFFDF7" />
+            <stop offset="70%" stopColor="#FAF3E6" />
+            <stop offset="100%" stopColor="#EFE2CB" />
+          </radialGradient>
+          {/* a track cell: light from above, pressed in at the top */}
+          <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="55%" stopColor="#FDFAF3" />
+            <stop offset="100%" stopColor="#F2E9D8" />
+          </linearGradient>
+          {/* the gentle press: a soft dark line inside the top edge */}
+          <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
+            <feOffset dx="0" dy="0.7" in="SourceAlpha" result="o" />
+            <feGaussianBlur in="o" stdDeviation="0.7" result="b" />
+            <feComposite in="b" in2="SourceAlpha" operator="arithmetic"
+              k2="-1" k3="1" result="sh" />
+            <feColorMatrix in="sh" type="matrix"
+              values="0 0 0 0 0.36  0 0 0 0 0.29  0 0 0 0 0.18  0 0 0 0.30 0" result="tint" />
+            <feComposite in="tint" in2="SourceGraphic" operator="over" />
+          </filter>
+          {/* the whole board lifted a little off the page */}
+          <filter id="sb-lift" x="-8%" y="-8%" width="116%" height="116%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4a3a22" floodOpacity="0.22" />
+          </filter>
+          {/* a gold chip for the eight safe squares, domed and embossed */}
+          <radialGradient id="sb-gold" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor="#FFF0B8" />
+            <stop offset="45%" stopColor="#F2C044" />
+            <stop offset="100%" stopColor="#C68A10" />
+          </radialGradient>
+          <filter id="sb-emboss" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0.8" stdDeviation="0.7" floodColor="#7a5406" floodOpacity="0.45" />
+          </filter>
+          {/* each zone's face: lit at the top-left, deepening away */}
+          {SEAT_COLORS.map((hex, seat) => (
+            <linearGradient key={seat} id={`sb-zone-${seat}`} x1="0" y1="0" x2="0.7" y2="1">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
+              <stop offset="40%" stopColor={hex} stopOpacity="1" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.18" />
+            </linearGradient>
+          ))}
+        </defs>
+
+        {/* the board's paper, under everything */}
+        <rect x={0} y={0} width={SIZE} height={SIZE} rx={14} fill="url(#sb-felt)" />
+
         {/* ── Yards: a 6×6 block with a 2×2 court of four spots ── */}
         {YARD_ORIGIN.map(([c, r], seat) => (
           <g key={`yard-${seat}`} opacity={seat < seatsInPlay ? 1 : 0.25}>
@@ -269,6 +349,17 @@ export default function LudoBoard({
               rx={16}
               fill={SEAT_COLORS[seat]}
               opacity={0.9}
+            />
+            {/* the lit face over the flat colour */}
+            <rect
+              x={c * CELL + 4}
+              y={r * CELL + 4}
+              width={6 * CELL - 8}
+              height={6 * CELL - 8}
+              rx={16}
+              fill={`url(#sb-zone-${seat})`}
+              style={{ mixBlendMode: "multiply" }}
+              opacity={0.55}
             />
             <rect
               x={(c + 1) * CELL}
@@ -306,7 +397,8 @@ export default function LudoBoard({
                 width={CELL - 2}
                 height={CELL - 2}
                 rx={6}
-                fill={startSeat >= 0 ? SEAT_TINTS[startSeat] : C.white}
+                fill={startSeat >= 0 ? SEAT_TINTS[startSeat] : "url(#sb-cell)"}
+                filter="url(#sb-inset)"
                 stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
                 strokeWidth={startSeat >= 0 ? 3 : 1}
                 opacity={startSeat >= 0 && startSeat >= seatsInPlay ? 0.3 : 1}
@@ -317,17 +409,42 @@ export default function LudoBoard({
                   there, not to the seat whose arm it sits on. The
                   start squares carry their zone's tint and no star,
                   because on this board they are not safe. */}
+              {/* A GOLD CHIP, not an inked star. These eight squares
+                  are the only place on the board a goti is safe, and
+                  they should feel like something set INTO the card —
+                  a domed brass counter with a shadow under it — rather
+                  than something printed on top. The star sits on the
+                  chip so the meaning survives at any size, and it is
+                  still a shape rather than a colour: a person who
+                  cannot tell gold from cream still sees a star. */}
               {isSafe && showStars && (
-                <Upright
-                  x={c * CELL + CELL / 2}
-                  y={r * CELL + CELL / 2 + 9}
-                  spin={spin}
-                  fontSize={26}
-                  fill="#2F2A24"
-                  aria-hidden="true"
-                >
-                  ★
-                </Upright>
+                <g filter="url(#sb-emboss)">
+                  <circle
+                    cx={c * CELL + CELL / 2}
+                    cy={r * CELL + CELL / 2}
+                    r={CELL * 0.34}
+                    fill="url(#sb-gold)"
+                    stroke="#9A6B08"
+                    strokeWidth={0.8}
+                  />
+                  <circle
+                    cx={c * CELL + CELL / 2 - CELL * 0.09}
+                    cy={r * CELL + CELL / 2 - CELL * 0.11}
+                    r={CELL * 0.12}
+                    fill="#FFFFFF"
+                    opacity={0.42}
+                  />
+                  <Upright
+                    x={c * CELL + CELL / 2}
+                    y={r * CELL + CELL / 2 + 6.5}
+                    spin={spin}
+                    fontSize={19}
+                    fill="#6B4906"
+                    aria-hidden="true"
+                  >
+                    ★
+                  </Upright>
+                </g>
               )}
             </g>
           );
@@ -393,6 +510,35 @@ export default function LudoBoard({
                but the thing that HAPPENED happened here, and a player
                watching the other end of the board would otherwise
                never see it. */}
+        {/* ── The sparkle ────────────────────────────────────────
+             The flash below tints the square; this throws a few
+             shards off it. Two different jobs: the flash says WHERE,
+             and there is no other way to know when the capture
+             happened at the far end of a board you were not watching.
+             The sparkle says the moment mattered.
+
+             Purely additive and purely brief — it plays once and
+             leaves nothing behind, and prefers-reduced-motion removes
+             it entirely (the flash stays, because that one carries
+             information rather than delight). ── */}
+        {[...captured.values()].map(([cc, rr], i) =>
+          SPARKS.map(([dx, dy], k) => (
+            <line
+              key={`spark-${i}-${k}`}
+              className="sb-spark"
+              x1={cc * CELL}
+              y1={rr * CELL}
+              x2={cc * CELL + dx * CELL * 0.62}
+              y2={rr * CELL + dy * CELL * 0.62}
+              stroke="#F2C044"
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              style={{ animationDelay: `${k * 22}ms` }}
+              pointerEvents="none"
+              aria-hidden="true"
+            />
+          ))
+        )}
         {[...captured.values()].map(([cc, rr], i) => (
           <rect
             key={`flash-${i}`}
@@ -455,7 +601,11 @@ export default function LudoBoard({
             const seatsHere = [...new Set(group.map((g) => g.seat))];
             const slot = seatsHere.indexOf(seat);
             const mineIdx = group.filter((g, gi) => g.seat === seat && gi <= k).length - 1;
-            const spread = seatsHere.length > 1 ? 15 : 0;
+            const towerHere = group.some((g) => {
+              const same = group.filter((x) => x.seat === g.seat).length;
+              return same >= 2 && g.p >= 1 && g.p <= 56;
+            });
+            const spread = seatsHere.length > 1 ? (towerHere ? 26 : 15) : 0;
             const climb = isJota ? 13 : 0;
             const stackX = cc * CELL + (slot - (seatsHere.length - 1) / 2) * spread;
             const cx = stackX;

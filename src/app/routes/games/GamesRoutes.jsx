@@ -12,6 +12,7 @@ import GamesHome from "./GamesHome.jsx";
 import SessionPage from "./SessionPage.jsx";
 import NewGame from "./NewGame.jsx";
 import PuzzlePage from "./PuzzlePage.jsx";
+import TableHistory from "./TableHistory.jsx";
 
 export default function GamesRoutes() {
   return (
@@ -24,6 +25,8 @@ export default function GamesRoutes() {
         <Route path="new/:gameKey" element={<NewGame />} />
         <Route path="s/:sessionId" element={<SessionPage />} />
         <Route path="puzzle" element={<PuzzlePage />} />
+        {/* D2 — every table you have played, browsable. */}
+        <Route path="history" element={<TableHistory />} />
         <Route path="*" element={<Navigate to="/app/games" replace />} />
       </Routes>
     </>

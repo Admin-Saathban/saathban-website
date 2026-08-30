@@ -49,6 +49,65 @@ export async function fetchMySessions(profileId) {
     });
 }
 
+/* D2 — the tables you have played, newest first, with everyone who
+   sat at them.
+
+   Deliberately NOT a record. No wins, no losses, no counts: this
+   returns who was there and when, and nothing that could be totalled.
+   The backlog says "warm, never a performance record", and the way to
+   guarantee that is to not fetch the numbers in the first place —
+   a UI can be talked into showing a field it has; it cannot show one
+   it never received. `winner_seat` is in SESSION_COLS and reaches the
+   caller, but nothing here aggregates it and nothing should.
+
+   Paginated by finished_at rather than by offset, so a table
+   finishing while someone reads page one cannot shift page two and
+   duplicate a row. */
+export async function fetchTableHistory(profileId, { limit = 20, before = null } = {}) {
+  let q = supabase
+    .from("game_sessions")
+    .select(`${SESSION_COLS}, game_seats!inner(profile_id)`)
+    .eq("game_seats.profile_id", profileId)
+    .eq("status", "finished")
+    .order("finished_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (before) q = q.lt("finished_at", before);
+  const { data, error } = await q;
+  if (error) throw error;
+  const sessions = (data ?? []).map(({ game_seats, ...s }) => s);
+  if (!sessions.length) return [];
+
+  /* Everyone at those tables, in one round trip rather than one per
+     row — a history page that fires twenty queries is a history page
+     that arrives late on a phone. */
+  const ids = sessions.map((s) => s.id);
+  const { data: seats, error: sErr } = await supabase
+    .from("game_seats")
+    .select("session_id, seat_no, profile_id, is_bot")
+    .in("session_id", ids)
+    .order("seat_no");
+  if (sErr) throw error;
+
+  const people = [...new Set((seats ?? []).map((s) => s.profile_id).filter(Boolean))];
+  let names = new Map();
+  if (people.length) {
+    const { data: profiles } = await supabase.from("safe_profiles").select("id, full_name").in("id", people);
+    names = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  }
+
+  const bySession = new Map();
+  for (const s of seats ?? []) {
+    if (!bySession.has(s.session_id)) bySession.set(s.session_id, []);
+    bySession.get(s.session_id).push({
+      seat: s.seat_no,
+      is_bot: s.is_bot,
+      is_me: s.profile_id === profileId,
+      name: s.is_bot ? null : names.get(s.profile_id) || null,
+    });
+  }
+  return sessions.map((s) => ({ ...s, players: bySession.get(s.id) ?? [] }));
+}
+
 export async function fetchSession(sessionId) {
   const [{ data: session, error: e1 }, { data: seats, error: e2 }] = await Promise.all([
     supabase.from("game_sessions").select(SESSION_COLS).eq("id", sessionId).maybeSingle(),

@@ -469,10 +469,12 @@ export default function GamesHome() {
           ) : (
             <>
               {recent.map(renderTable)}
+              {/* Was a dead end: a line saying "and 112 more" with
+                  nowhere to go. D2 gives it a destination. */}
               {past.length > recent.length && (
-                <BodyText muted style={{ margin: "4px 0 0" }}>
+                <GhostBtn onClick={() => navigate("/app/games/history")} style={{ width: "100%" }}>
                   {t("games.home.pastMore", { n: past.length - recent.length })}
-                </BodyText>
+                </GhostBtn>
               )}
               <GhostBtn onClick={() => setPastOpen(false)} aria-expanded>
                 {t("games.home.pastHide")}

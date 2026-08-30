@@ -4,8 +4,25 @@ Distilled from the user's reference screenshots (Ludo King-style mobile play).
 Attach those screenshots alongside this file. Where this spec and the
 screenshots disagree, the screenshots win.
 
-Our palette stays warmer than the reference (Saathban cream/green chrome),
-but **the board itself is classic vivid ludo** — that is the game's identity.
+**A GAME DOES NOT SHARE THE APP'S PALETTE AT ALL.**
+
+> **AMENDED 30 Aug 2026 by `GAMES_IMMERSION_SPEC.md` §1.1 and §2.** This line
+> used to read: *"Our palette stays warmer than the reference (Saathban
+> cream/green chrome), but the board itself is classic vivid ludo."*
+>
+> The second half was right and stays. The first half is struck, and it did
+> real damage: "Saathban cream/green chrome" was read as an instruction to
+> keep the app's chrome around the board, which is exactly the thing the owner
+> objects to — *"you are inside Saathban and the game is just there."*
+>
+> A game screen has **its own dark table surface** — deep, warm, in the region
+> of a very dark maroon or aubergine, reading as felt or lacquer rather than
+> as a page. No cream, no app header, no bottom bar. See
+> `GAMES_IMMERSION_SPEC.md` §2, which is authoritative over this file for
+> anything about the frame around the board.
+
+The board itself remains **classic vivid ludo** — that is the game's identity,
+and it was never the problem.
 
 ---
 

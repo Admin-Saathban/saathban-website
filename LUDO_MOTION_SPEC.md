@@ -15,8 +15,25 @@ ranks, no purchases — see LUDO_UI_SPEC.md §9.
 **The board is a bright white grid with saturated corner zones.** Key
 differences from ours:
 
-- Track cells are **white with thin black gridlines** — high contrast, easy for
-  old eyes. Not tinted, not textured.
+- Track cells are **warm off-white with soft dark-grey gridlines**, a subtle
+  inner shadow and a gentle bevel, so the track reads as recessed.
+
+  > **AMENDED 30 Aug 2026 by `GAMES_IMMERSION_SPEC.md` §1.1.** This line used
+  > to read "white with thin black gridlines — high contrast, easy for old
+  > eyes. **Not tinted, not textured.**" That instruction contradicted
+  > `GAMES_BACKLOG.md` B2, which asks the board for gradients, bevelled cells
+  > and a dimensional frame. `TONIGHT.md` pointed a lane at this file, so the
+  > lane built a flat white board — correctly, to the wrong spec.
+  >
+  > **B2 wins. "Not tinted, not textured" is struck.** Contrast for older eyes
+  > comes from a strong value difference between the cell and the goti sitting
+  > on it, not from flat white. A recessed warm cell under a glossy saturated
+  > token is a bigger value step than a white cell under the same token, and
+  > it does not look like a spreadsheet.
+  >
+  > Anything else in this file about board COLOUR is subordinate to
+  > `GAMES_IMMERSION_SPEC.md` §4. Geometry, motion timings and rules here are
+  > untouched and remain authoritative.
 - Each colour's **home column** runs in that colour, six cells deep.
 - **Zones fill their whole quadrant** in flat saturated colour with a slightly
   darker inset panel holding the four token wells.

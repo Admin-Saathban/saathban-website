@@ -1341,6 +1341,43 @@ const en = {
       },
     },
   },
+  groups: {
+    type: {
+      walking:   { name: "Walking",        emoji: "🚶", desc: "We walk together, at an easy pace." },
+      chai:      { name: "Chai and talk",  emoji: "☕", desc: "We meet for chai and good conversation." },
+      books:     { name: "Books",          emoji: "📚", desc: "We read, and we talk about what we read." },
+      family:    { name: "Family",         emoji: "🏡", desc: "Our family, in one place." },
+      gardening: { name: "Gardening",      emoji: "🌱", desc: "We grow things and swap what we learn." },
+      other:     { name: "Something else", emoji: "✨", desc: "" },
+    },
+    new: {
+      back: "Back",
+      next: "Next",
+      typeTitle: "What kind of group?",
+      nameTitle: "What's it called?",
+      nameSub: "You can change this later.",
+      namePh: "Give it a name",
+      privacyTitle: "Who can join?",
+      anyoneName: "Anyone",
+      anyoneWhat: "Shows up in search. People join themselves.",
+      inviteName: "Only people you let in",
+      inviteWhat: "Hidden. You approve each person.",
+      inviteTitle: "Ask a few people in",
+      inviteSub: "You can ask more later. A group with one person is fine.",
+      make: "Make the group",
+      making: "Making it…",
+      skip: "Skip for now",
+    },
+    /* §4 — a group event is an Out & about happening that inherits the
+       group's privacy. The line under a private group's event says so
+       plainly, because a person posting a meeting place deserves to
+       know who can read it. */
+    event: {
+      add: "Plan something",
+      privateNote: "Only members of this group will see this.",
+      publicNote: "This will show in Out and about, like any other happening.",
+    },
+  },
   calendar: {
     title: "Your calendar",
     today: "Today",
@@ -1806,6 +1843,86 @@ const en = {
   },
 
   // ─── People: profile view + DM thread (routes/people/) ───
+  /* ── The Messages world (MESSAGES_SPEC.md). Its own top-level
+     group because it is an app inside the app, not a corner of
+     Community. The previews say WHAT KIND of thing was last said —
+     §3 forbids a blank line, because a row that says nothing is the
+     one a person taps to find out what it was. ── */
+  msg: {
+    title: "Messages",
+    back: "Back",
+    compose: "Write to someone",
+    tab: {
+      chats: "Chats",
+      requests: "Requests",
+      menu: "Menu",
+    },
+    searchPh: "Search by name",
+    someone: "Someone",
+    unreadAria: "Unread",
+    emptyTitle: "No conversations yet",
+    emptyBody: "When you write to someone, or they write to you, it will be here.",
+    emptyCta: "Find someone to write to",
+    noMatches: "Nobody by that name",
+    preview: {
+      new: "Say hello",
+      liked: "Liked your message",
+      withdrawn: "Message withdrawn",
+      voice: "Voice note · {len}",
+      photo: "Photo",
+      game: "Asked you to play",
+      text: "{text}",
+    },
+    drifted: {
+      label: "Not heard from",
+      dismiss: "Hide these for now",
+    },
+    hello: {
+      title: "Say hello to {name}",
+      close: "Close",
+      send: "Send",
+      voice: "Say it out loud instead",
+      photo: "Send a photo instead",
+      failed: "That did not send. Please try again.",
+      /* Four, and one is picked per opening. If everybody sent the
+         same sentence it would read as a robot within a week. */
+      line_a: "Assalam-o-alaikum {name}, you came to mind today. How have you been?",
+      line_b: "Hello {name} — it has been a little while. I hope you are well.",
+      line_c: "{name}, I was thinking of you this morning. How are things?",
+      line_d: "Hello {name}. No reason at all, just saying hello.",
+    },
+    req: {
+      error: "That did not go through. Please try again in a moment.",
+      emptyTitle: "Nothing waiting",
+      emptyBody: "People you have not met write here first, one message at a time.",
+      accept: "Accept",
+      notNow: "Not now",
+      report: "Report this",
+      common: "{n} friends in common",
+      commonOne: "1 friend in common",
+      notNowMeans: "Not now means {name} cannot write to you again.",
+    },
+    menu: {
+      archived: "Archived chats",
+      blocked: "Blocked people",
+      whoCanWrite: "Who can write to you",
+      presence: "Show when you're online",
+      presenceSub: "Friends only",
+      receipts: "Read receipts",
+      receiptsSub: "Let people see when you have read their message",
+      sound: "Sound and notifications",
+      textSize: "Text size in chats",
+      saveFailed: "That did not save. Please try again.",
+    },
+    archived: {
+      empty: "Nothing archived.",
+      restore: "Bring back",
+    },
+    blocked: {
+      empty: "You have not blocked anyone.",
+      unblock: "Unblock",
+    },
+  },
   people: {
     perms: {
       mood: "Mood & daily logs",
@@ -1967,6 +2084,9 @@ const en = {
       voiceUnsupported: "This browser cannot record here. You can still send a photo or write.",
       voiceFailed: "That voice note did not send. Please try again.",
       photoCta: "Photo",
+      heart: "Like this message",
+      unheart: "Remove your like",
+      theyHearted: "They liked this",
       voiceCta: "Voice",
       stickerCta: "Sticker",
       stickersCta: "Stickers",
@@ -2854,9 +2974,9 @@ const en = {
     joinedTable: "You're at the table ✓",
     groupCreated: "Group created ✓",
     groupJoined: "You've joined {name} ✓",
-    groupLeft: "You've left the group.",
+    groupLeft: "You've left {group}.",
     groupPosted: "Shared with the group ✓",
-    memberInvited: "Invitation sent to {name}",
+    memberInvited: "Asked {name} — they will see it in their Groups and can accept.",
     // skills
     interestNoted: "We'll tell you the moment it opens ✓",
   },

@@ -173,6 +173,14 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0076 — the Messages world (saathban-website-38, 2026-08-30) — **APPLIED**
+
+MESSAGES_SPEC §3/§5/§6. dm_message_likes (message,person) so one heart
+per person IS the primary key and there is no counter; dm_archived per
+person; show_presence / read_receipts / last_seen_at on profiles, and
+appended to safe_profiles AFTER the columns another lane added since
+0070. Read receipts change no write path.
+
 ## 0075 — a calendar that repeats (saathban-website-38, 2026-08-30) — **APPLIED**
 
 TONIGHT §3.5. repeat_rule / repeat_days / repeat_until, and entry_times

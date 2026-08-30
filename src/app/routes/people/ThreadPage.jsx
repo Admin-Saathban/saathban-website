@@ -24,6 +24,7 @@ import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import FirstMessageBox from "./FirstMessageBox.jsx";
+import { fetchLikes, toggleLike } from "../messages/messagesData.js";
 import { VoiceRecorder, VoicePlayer } from "./VoiceNote.jsx";
 import { useSession } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
@@ -90,6 +91,11 @@ export default function ThreadPage() {
   const [replyTo, setReplyTo] = useState(null);      // message being replied to
   const [menuFor, setMenuFor] = useState(null);      // message id with the ⋯ menu open
   const [imageUrls, setImageUrls] = useState({});    // image_path -> signed url
+  /* MESSAGES_SPEC §6 — one heart, one tap. Two sets rather than a
+     count: §6 forbids a counter, and with exactly two people in a
+     thread "who liked it" is fully answered by these two. */
+  const [heartsMine, setHeartsMine] = useState(() => new Set());
+  const [heartsTheirs, setHeartsTheirs] = useState(() => new Set());
   const [audioUrls, setAudioUrls] = useState({});    // audio_path -> signed url
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -124,6 +130,20 @@ export default function ThreadPage() {
       } else {
         setLastGame(null);
       }
+      /* Hearts, alongside the messages they sit on. */
+      try {
+        const likes = await fetchLikes(msgs.map((m) => m.id));
+        const mine = new Set();
+        const theirs = new Set();
+        for (const l of likes) {
+          (l.profile_id === myId ? mine : theirs).add(l.message_id);
+        }
+        setHeartsMine(mine);
+        setHeartsTheirs(theirs);
+      } catch {
+        /* a heart that will not load must not cost anyone their thread */
+      }
+
       // Private bucket: resolve short-lived signed URLs for any photos.
       const paths = msgs.filter((m) => m.image_path).map((m) => m.image_path);
       if (paths.length) {
@@ -367,6 +387,29 @@ export default function ThreadPage() {
     setUploading(false);
   };
 
+  /* §6 — tap to give it, tap again to take it back. Optimistic,
+     because a heart that waits for the network stops being a warm
+     reflex; it rolls back if the write is refused. No toast, no
+     points, no badge — §6 and POINTS.md both say a reaction earns
+     nothing, and that is deliberate. */
+  const toggleHeart = async (m) => {
+    const had = heartsMine.has(m.id);
+    setHeartsMine((cur) => {
+      const next = new Set(cur);
+      if (had) next.delete(m.id); else next.add(m.id);
+      return next;
+    });
+    try {
+      await toggleLike(m.id, myId, had);
+    } catch {
+      setHeartsMine((cur) => {
+        const next = new Set(cur);
+        if (had) next.add(m.id); else next.delete(m.id);
+        return next;
+      });
+    }
+  };
+
   const byId = Object.fromEntries((messages || []).map((m) => [m.id, m]));
   const quoteText = (m) =>
     !m ? t("people.thread.removed")
@@ -555,6 +598,33 @@ export default function ThreadPage() {
                (sender, 15 min) / Report (incoming). Absent, never disabled. */
             const menu = (
               <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                {/* §6 — ONE heart, ONE tap. No long-press (a gesture
+                    many older people never discover) and no six-emoji
+                    picker (which turns a warm gesture into a decision). */}
+                {!m.deleted_at && (
+                  <button
+                    type="button"
+                    onClick={() => toggleHeart(m)}
+                    aria-pressed={heartsMine.has(m.id)}
+                    aria-label={t(heartsMine.has(m.id) ? "people.thread.unheart" : "people.thread.heart")}
+                    style={{
+                      minHeight: A11Y.minTapTargetPx,
+                      minWidth: A11Y.minTapTargetPx,
+                      background: "none",
+                      border: "none",
+                      fontSize: ts(20),
+                      cursor: "pointer",
+                      opacity: heartsMine.has(m.id) || heartsTheirs.has(m.id) ? 1 : 0.45,
+                    }}
+                  >
+                    <span aria-hidden="true">{heartsMine.has(m.id) ? "❤️" : "🤍"}</span>
+                  </button>
+                )}
+                {/* Their heart, when it is not also mine — said as a
+                    mark, never as a number. */}
+                {heartsTheirs.has(m.id) && !heartsMine.has(m.id) && (
+                  <span aria-label={t("people.thread.theyHearted")} style={{ fontSize: ts(16) }}>❤️</span>
+                )}
                 <button
                   type="button"
                   aria-expanded={menuFor === m.id}

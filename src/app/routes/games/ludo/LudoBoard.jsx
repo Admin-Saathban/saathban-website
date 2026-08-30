@@ -372,7 +372,7 @@ export default function LudoBoard({
 
         {/* ── Yards: a 6×6 block with a 2×2 court of four spots ── */}
         {YARD_ORIGIN.map(([c, r], seat) => (
-          <g key={`yard-${seat}`} opacity={seat < seatsInPlay ? 1 : 0.25}>
+          <g key={`yard-${seat}`}>
             <rect
               x={c * CELL + 4}
               y={r * CELL + 4}
@@ -433,7 +433,7 @@ export default function LudoBoard({
                 filter="url(#sb-inset)"
                 stroke={startSeat >= 0 ? SEAT_COLORS[startSeat] : C.warmGray}
                 strokeWidth={startSeat >= 0 ? 3 : 1}
-                opacity={startSeat >= 0 && startSeat >= seatsInPlay ? 0.3 : 1}
+                opacity={1}
               />
               {/* A STAR MEANS SAFE — one glyph, one meaning, on all
                   eight stop squares alike. It is deliberately not a
@@ -513,7 +513,6 @@ export default function LudoBoard({
               height={CELL - 2}
               rx={6}
               fill={SEAT_COLORS[seat]}
-              opacity={seat < seatsInPlay ? 1 : 0.15}
             />
           ))
         )}
@@ -532,7 +531,7 @@ export default function LudoBoard({
               key={`c-${seat}`}
               points={points}
               fill={SEAT_COLORS[seat]}
-              opacity={seat < seatsInPlay ? 0.9 : 0.15}
+              opacity={0.9}
               stroke={C.white}
               strokeWidth={2}
             />

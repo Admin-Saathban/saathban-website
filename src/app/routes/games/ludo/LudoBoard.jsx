@@ -154,6 +154,28 @@ export const BOARD_MOTION_CSS = `
     /* The trail is pure motion with nothing to say at rest, so it goes
        entirely — like the spark, unlike the ring. */
     .sb-trail { display: none; }
+
+    /* THE CAPTURE FLASH, covered HERE even though its keyframe lives in
+       gameFeel.jsx.
+
+       Not duplication for its own sake. This board renders four sb-
+       classes; three had their reduced-motion rule in this file and the
+       fourth had it only in gameFeel.jsx — a file that does not render
+       it. Anyone tidying that file would find .sb-cell-flash in a list,
+       grep for a consumer, find none, and remove it. The flash would
+       then animate for people who had asked for less motion, and it
+       would GO QUIET rather than error: nothing breaks, no test fails,
+       and the only person who finds out is the one it was meant to
+       protect. (Found by the game-feel lane, pointing my own warning
+       back at me.)
+
+       animation:none rather than display:none, and for the pulse's
+       reason rather than the spark's: this flash says WHERE a capture
+       happened, which is the only way to know when it happened at the
+       far end of a board you were not watching. Stopped rather than
+       hidden, it holds the cell tinted until the hook unmounts it —
+       the information without the motion. */
+    .sb-cell-flash { animation: none; }
   }
 `;
 

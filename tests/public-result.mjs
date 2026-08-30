@@ -178,6 +178,20 @@ console.log("\n── the door is exactly that wide ──\n");
     ["game_sessions", "game_sessions?select=*&limit=1"],
     ["game_seats", "game_seats?select=*&limit=1"],
     ["game_messages", "game_messages?select=*&limit=1"],
+    /* These two are here because an inventory of anon privileges found
+       them, not because anyone suspected them. `anon` holds a
+       table-level SELECT grant on both — inherited, not deliberate —
+       and what actually keeps a stranger out is RLS whose policies
+       reference things anon cannot reach (`is_super_admin` for one, a
+       `circle_members` lookup for the other), so the refusal arrives as
+       "permission denied for function" rather than for the table.
+
+       That is defence by accident. It holds today and it is one policy
+       edit from not holding, and neither edit would look like it was
+       touching anonymous access. Pinned here so the next person finds
+       out from a red test instead of from a stranger. */
+    ["audit_log", "audit_log?select=*&limit=1"],
+    ["reminder_dones", "reminder_dones?select=*&limit=1"],
   ];
   for (const [name, path] of closed) {
     const r = await anonRest(path);

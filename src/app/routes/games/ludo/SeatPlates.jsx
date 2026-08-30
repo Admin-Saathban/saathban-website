@@ -195,17 +195,18 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
            was verified on it drew a pale grey cube that read as
            "nothing here".
 
-           EMPTY, not a guess. A die nobody has thrown shows no pips:
-           inventing a face for it is how an opponent came to be
-           permanently displaying a one. For the person whose throw it
-           is, ghosted pips hint at what the button does. */
-        active ? (
-          <span aria-hidden="true" style={{ lineHeight: 0, opacity: 0.3 }}>
-            <DieFace value={5} size={34} ink="#2F2A24" />
-          </span>
-        ) : (
-          <span aria-hidden="true" style={{ display: "block", width: 34, height: 34 }} />
-        )
+           GHOSTED, not blank, and not a guess either. Three versions
+           of this got it wrong in different directions: a hardcoded
+           `|| 1` claimed a number nobody rolled; then a truly empty
+           face fixed the lie and produced a plain white square that
+           read as an empty card rather than a die. Faint pips at a
+           quarter opacity are unmistakably a die and claim nothing —
+           the eye reads them as the texture of an object, not as a
+           score. Brighter for the person about to throw it, where
+           they also hint at what the button does. */
+        <span aria-hidden="true" style={{ lineHeight: 0, opacity: active ? 0.3 : 0.22 }}>
+          <DieFace value={5} size={34} ink="#2F2A24" />
+        </span>
       )}
       {/* The tick sits OUTSIDE the face, on the corner, so it never
           sits on top of the pips it is describing. */}

@@ -101,6 +101,22 @@ export const BOARD_MOTION_CSS = `
     transform-origin: 0% 50%;
     animation: sb-spark 620ms ease-out both;
   }
+  /* DISPLAY: NONE, NOT ANIMATION: NONE — and if this rule ever moves
+     into gameFeel.jsx reduced-motion list, it must move as-is
+     rather than being flattened into that list own animation:none rule.
+
+     The difference is what the thing looks like at rest. The capture
+     flash and the rest of gameFeel's classes decorate elements that
+     have a resting state, so switching the animation off leaves them
+     sitting there correctly. A burst has no resting state: with
+     animation:none and fill-mode both, six shards would freeze mid-throw
+     on the board and stay for the 620ms until React cleared them —
+     worse than never drawing them, and worst for exactly the people
+     who asked for less motion.
+
+     Flattening it would look like tidying. (Found by the ludo-table
+     lane, who argued for animation: none first and then talked
+     themselves out of it.) */
   @media (prefers-reduced-motion: reduce) {
     .sb-spark { display: none; }
   }

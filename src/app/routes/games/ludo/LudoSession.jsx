@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
@@ -446,7 +446,7 @@ export default function LudoSession() {
         {/* The name of the game earns its space in the lobby, where
             there is no board yet. Once play starts the board IS the
             screen (§1) and the title is 30px the board should have. */}
-        {game.status !== "playing" && (
+        {game.status !== "playing" ? (
           <h1
             style={{
               fontFamily: meta.fonts.heading,
@@ -456,8 +456,29 @@ export default function LudoSession() {
               margin: 0,
             }}
           >
-            🎲 {t("ludo.title")}
+            {game.title || `🎲 ${t("ludo.title")}`}
           </h1>
+        ) : (
+          /* During play the row survives to hold the sound icon, and
+             the width beside it is empty. A table's name costs nothing
+             THERE, so §1 keeps its board and D1 keeps its name. An
+             unnamed table renders the row exactly as before. */
+          game.title && (
+            <p
+              style={{
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 700,
+                color: C.greenMuted,
+                margin: 0,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {game.title}
+            </p>
+          )
         )}
         <SoundButton
           onClick={() => setSoundOpen((v) => !v)}
@@ -815,6 +836,7 @@ export default function LudoSession() {
       {game.status === "finished" && (
         <LudoCelebration
           seats={seats}
+          tableTitle={game.title}
           winnerSeat={game.winner_seat}
           myId={myId}
           seatName={seatName}

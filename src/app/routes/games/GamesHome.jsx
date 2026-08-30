@@ -172,8 +172,16 @@ export default function GamesHome() {
         >
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: ts(20), fontWeight: 700, margin: "0 0 4px" }}>
-              {g ? gameName(g, lang) : s.game_key}
+              {s.title || (g ? gameName(g, lang) : s.game_key)}
             </p>
+            {/* Named tables still say which game they are — a history
+                list of occasions you cannot identify is its own
+                problem. */}
+            {s.title && (
+              <BodyText muted style={{ margin: "0 0 2px" }}>
+                {g ? gameName(g, lang) : s.game_key}
+              </BodyText>
+            )}
             <BodyText muted style={{ margin: 0 }}>
               {nextStep(s)}
             </BodyText>
@@ -243,10 +251,18 @@ export default function GamesHome() {
                   "Snakes & Ladders" into three broken lines. */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: ts(22), fontWeight: 800, margin: "0 0 4px" }}>
-                  {byKey[activeGame.game_key]
-                    ? gameName(byKey[activeGame.game_key], lang)
-                    : activeGame.game_key}
+                  {activeGame.title ||
+                    (byKey[activeGame.game_key]
+                      ? gameName(byKey[activeGame.game_key], lang)
+                      : activeGame.game_key)}
                 </p>
+                {activeGame.title && (
+                  <BodyText muted style={{ margin: "0 0 2px" }}>
+                    {byKey[activeGame.game_key]
+                      ? gameName(byKey[activeGame.game_key], lang)
+                      : activeGame.game_key}
+                  </BodyText>
+                )}
                 <BodyText muted style={{ margin: "0 0 10px" }}>
                   {nextStep(activeGame)}
                 </BodyText>

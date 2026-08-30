@@ -167,6 +167,11 @@ export async function fetchSession(sessionId) {
   return {
     id: session.id,
     status,
+    /* The table's name (0049). The rails select * but MAP explicitly,
+       so a new column reaches the board only if it is named here —
+       which is the point of an adapter, and also the way a new field
+       silently goes missing. */
+    title: session.title || null,
     join_code: session.join_code,
     house_rules: session.house_rules,
     created_by: session.created_by,

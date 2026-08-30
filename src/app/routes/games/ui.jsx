@@ -68,6 +68,43 @@ export function GamesScreen({ children, backTo, backLabel, width = 640 }) {
   );
 }
 
+/* The heading for a table, in one place so every screen makes the
+   same choice. A NAMED table leads with its name and keeps the game
+   as the quiet line underneath — "Sunday chai match" is what the
+   person came for, and which game it is can be read off the board.
+   An UNNAMED table renders exactly what it always rendered: the game,
+   alone. There is deliberately no placeholder and no "Untitled
+   table", because naming is optional and an empty slot would nag. */
+export function TableHeading({ title, gameName, ts, style }) {
+  const named = Boolean(title);
+  return (
+    <div style={{ minWidth: 0, ...style }}>
+      <h1
+        style={{
+          fontSize: ts(named ? 24 : 28),
+          fontWeight: 800,
+          margin: 0,
+          color: C.brown,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {named ? title : gameName}
+      </h1>
+      {named && (
+        <p
+          style={{
+            fontSize: ts(A11Y.minBodyPx),
+            color: C.textMuted,
+            margin: "2px 0 0",
+          }}
+        >
+          {gameName}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function Card({ children, style }) {
   return (
     <section

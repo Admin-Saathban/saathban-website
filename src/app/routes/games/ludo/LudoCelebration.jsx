@@ -126,6 +126,7 @@ function Action({ onClick, disabled, children, primary }) {
 
 export default function LudoCelebration({
   seats,
+  tableTitle,
   winnerSeat,
   myId,
   seatName,
@@ -189,6 +190,22 @@ export default function LudoCelebration({
       >
         {watching ? t("ludo.celebrate.overTitle") : t("ludo.celebrate.title")}
       </h1>
+
+      {/* The occasion, under the outcome. This is the line a person
+          reads back in six months and remembers the afternoon by. */}
+      {tableTitle && (
+        <p
+          style={{
+            fontSize: ts(20),
+            fontWeight: 600,
+            color: C.brown,
+            margin: "-8px 0 0",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {tableTitle}
+        </p>
+      )}
 
       {winner && (
         <>

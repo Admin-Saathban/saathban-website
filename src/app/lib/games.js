@@ -31,7 +31,7 @@ export async function fetchGames() {
 // ── Sessions ────────────────────────────────────────────────────────
 
 const SESSION_COLS =
-  "id, game_key, status, seats_total, house_rules, join_code, current_seat, turn_started_at, winner_seat, created_by, created_at, started_at, finished_at";
+  "id, game_key, status, seats_total, house_rules, join_code, current_seat, turn_started_at, winner_seat, created_by, created_at, started_at, finished_at, title";
 
 export async function fetchMySessions(profileId) {
   const { data, error } = await supabase
@@ -90,11 +90,18 @@ export async function fetchMoves(sessionId, afterId = 0) {
 
 // ── Engine RPCs (server-validated; the client only asks) ────────────
 
-export async function createSession(gameKey, seats, houseRules = {}) {
+/* `title` is optional and stays optional. Passing nothing — which is
+   what every other caller does — creates a table with no name, and
+   every screen that shows a name simply shows what it showed before.
+   The server normalises and caps it (0049) because there are two doors
+   into session creation, and a rule enforced in one of them is not a
+   rule. */
+export async function createSession(gameKey, seats, houseRules = {}, title = null) {
   const { data, error } = await supabase.rpc("create_game_session", {
     p_game: gameKey,
     p_seats: seats,
     p_house_rules: houseRules,
+    p_title: title || null,
   });
   if (error) throw error;
   return data; // session id
@@ -125,28 +132,6 @@ export async function respondInvite(inviteId, accept) {
 /* The caller's invitable connections — circle ∪ friends ∪ group
    co-members, deduped, eligibility- and block-filtered SERVER-side so
    the picker can never show someone and then fail. */
-/* How many tables this person has FINISHED — the number table themes
-   are earned from (backlog C1). Derived, never stored: a fact belongs
-   in a table only if it could not be recomputed from what already
-   happened, and this one can, for ever. (Registrar's ruling; stickers
-   differ because gift and stake make them path-dependent.)
-
-   Counts a table played against BOTS exactly like one played against
-   people. The person this app exists for is playing at eleven at night
-   with nobody free, and counting only human tables would hand every
-   reward to whoever has company.
-
-   head:true, so it costs a COUNT rather than a page of rows. */
-export async function fetchGamesFinished(profileId) {
-  const { count, error } = await supabase
-    .from("game_seats")
-    .select("session_id, game_sessions!inner(status)", { count: "exact", head: true })
-    .eq("profile_id", profileId)
-    .eq("game_sessions.status", "finished");
-  if (error) throw error;
-  return count ?? 0;
-}
-
 export async function gamePeople() {
   const { data, error } = await supabase.rpc("game_people");
   if (error) throw error;

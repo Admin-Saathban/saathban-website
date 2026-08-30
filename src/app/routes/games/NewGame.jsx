@@ -38,7 +38,6 @@ import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import {
   fetchGames,
-  fetchGamesFinished,
   createSession,
   fetchMySessions,
   liveSessionOf,
@@ -49,8 +48,6 @@ import { createShare } from "../community/communityData.js";
 import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
-import ThemePicker from "./ThemePicker.jsx";
-import { DEFAULT_THEME } from "./themes.js";
 import { GamesScreen, BodyText, GhostBtn } from "./ui.jsx";
 
 /* The faces sheet. One tap seats someone and closes — this is a
@@ -124,6 +121,10 @@ export default function NewGame() {
      clearing the gate resumes exactly that table rather than a
      default one. */
   const heldSetup = useRef(null);
+  /* What this table is called. Optional forever: somebody opening a
+     table because they want to play RIGHT NOW must not be stopped to
+     title it, so this is never required and never validated at you. */
+  const [title, setTitle] = useState("");
   /* The board everyone at this table will play on. Themes beyond the
      free two are EARNED by playing, and earned-ness is derived from
      finished tables rather than stored — so this is a count, not a
@@ -143,19 +144,6 @@ export default function NewGame() {
       alive = false;
     };
   }, [gameKey]);
-
-  useEffect(() => {
-    let alive = true;
-    fetchGamesFinished(profile.id)
-      .then((n) => alive && setGamesFinished(n))
-      /* A count that will not load must not block setting up a game:
-         the free boards are always there, so falling back to zero
-         costs a person nothing they had. */
-      .catch(() => alive && setGamesFinished(0));
-    return () => {
-      alive = false;
-    };
-  }, [profile.id]);
 
   /* Carrom passes turns rather than playing itself: a bot seat there
      is an empty chair with a clock, and start_with_bots refuses it
@@ -187,7 +175,6 @@ export default function NewGame() {
     setBusy(true);
     try {
       const house = { seat_colours: colours };
-      house.table_theme = theme;
       if (game.key === "ludo") {
         house.dice_count = diceCount;
         /* Ludo's turn is 30 seconds, and it must be WRITTEN here rather
@@ -201,7 +188,7 @@ export default function NewGame() {
            room. */
         house.turn_seconds = 30;
       }
-      const id = await createSession(game.key, seats, house);
+      const id = await createSession(game.key, seats, house, title);
       try {
         sessionStorage.setItem("saathban.app.freshTable", id);
       } catch {
@@ -285,6 +272,57 @@ export default function NewGame() {
         {name}
       </h1>
 
+      {/* A name is what makes a table findable a month later — "Sunday
+          chai match" rather than the fourth of nine identical Ludos in
+          a list. It sits above the chairs because it is about the
+          OCCASION, not the setup. */}
+      <label style={{ display: "block", marginBottom: 18 }}>
+        <span
+          style={{
+            display: "block",
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 600,
+            color: C.textMain,
+            marginBottom: 6,
+          }}
+        >
+          {t("games.setup.nameLabel")}
+        </span>
+        <input
+          type="text"
+          value={title}
+          maxLength={60}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t("games.setup.namePlaceholder")}
+          dir={meta.dir}
+          style={{
+            width: "100%",
+            minHeight: A11Y.minTapTargetPx,
+            padding: "10px 14px",
+            fontFamily: "inherit",
+            fontSize: ts(A11Y.minBodyPx),
+            color: C.textMain,
+            background: C.white,
+            border: `2px solid ${C.warmGray}`,
+            borderRadius: 14,
+            textAlign: "start",
+          }}
+        />
+        {/* Said here rather than buried in a policy: an open table's
+            name is read by whoever joins it, including people the host
+            has never met. */}
+        <span
+          style={{
+            display: "block",
+            fontSize: ts(A11Y.minBodyPx),
+            color: C.textMuted,
+            marginTop: 6,
+          }}
+        >
+          {t("games.setup.nameHint")}
+        </span>
+      </label>
+
       {blockedBy && (
         <OneTableGate
           live={blockedBy}
@@ -307,9 +345,6 @@ export default function NewGame() {
         botsAllowed={botsAllowed}
         canPostOpen={canPostOpen}
         showDice={game.key === "ludo"}
-        extras={
-          <ThemePicker value={theme} onPick={setTheme} gamesFinished={gamesFinished} />
-        }
         onPickPeople={(seat) => setSheetSeat(seat)}
         onStart={start}
       />

@@ -56,7 +56,7 @@ import SnakesBoard from "./snakes/SnakesBoard.jsx";
 import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
-import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, TableHeading } from "./ui.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../lib/gameFeel.jsx";
 import { SoundButton, SoundPanel } from "./SoundControls.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
@@ -377,7 +377,7 @@ export default function SessionPage() {
           🎲 {t("games.ceremony.start")}
         </div>
       )}
-      <h1 style={{ fontSize: ts(28), margin: "0 0 12px", color: C.brown }}>{gameName}</h1>
+      <TableHeading title={session?.title} gameName={gameName} ts={ts} style={{ margin: "0 0 12px" }} />
         <Card>
           <BodyText style={{ margin: 0, fontWeight: 600 }}>{t("games.wait.calledOff")}</BodyText>
         </Card>
@@ -407,7 +407,7 @@ export default function SessionPage() {
           marginBottom: 12,
         }}
       >
-        <h1 style={{ fontSize: ts(28), margin: 0, color: C.brown }}>{gameName}</h1>
+        <TableHeading title={session.title} gameName={gameName} ts={ts} />
         <SoundButton onClick={() => setSoundOpen((v) => !v)} />
       </div>
 

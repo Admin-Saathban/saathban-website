@@ -227,11 +227,6 @@ export default function SeatSetup({
      so offering the toys there asks a question the game cannot answer
      — and the caption underneath would be describing nothing. */
   showDice = true,
-  /* Anything the caller wants between the dice and Start — the table
-     theme picker lives here. A slot rather than a prop per feature, so
-     this screen does not grow a branch every time setup gains a
-     choice. Defaulted to nothing, so existing callers are unchanged. */
-  extras = null,
 }) {
   const { t, ts } = useI18n();
   const [seats, setSeats] = useState(Math.max(2, minSeats));
@@ -455,8 +450,6 @@ export default function SeatSetup({
 
         </>
       )}
-
-      {extras}
 
       {/* ── Start ── */}
       <button

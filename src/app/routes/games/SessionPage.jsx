@@ -37,6 +37,13 @@ import {
 import PeoplePicker from "./PeoplePicker.jsx";
 import ShareTableButton from "./ShareTableButton.jsx";
 import TablePresence from "./TablePresence.jsx";
+/* The waiting room shows the table you are waiting AT. Ludo's board
+   lives on its own screen once play starts, so the rails page had
+   nothing to show and became the lobby purgatory this redesign exists
+   to kill. Rendered here greyed and inert — no state, no options, no
+   tap handler — it is scenery, and the real board takes over the
+   moment the game begins. */
+import LudoBoard from "./ludo/LudoBoard.jsx";
 /* The quick-chat sheet belongs to the games lane (routes/games/ludo/).
    Imported rather than copied: two lists of ten phrases would drift
    within a day, and the Urdu is theirs. If it is promoted to
@@ -617,6 +624,17 @@ function WaitingRoom({
   const openAllocations = session.seats_total - filled - pendingInvites.length;
 
   /* Seat chips, in seat order: who's here, who we're waiting on. */
+  /* Each seat says its OWN state. The unbound-invite fallback used to be
+     `pendingInvites.filter(…)[0]` evaluated per seat, which handed the
+     SAME first invitee to every empty seat — a four-seat table with one
+     person invited read "Waiting for Smoke Fam…" three times. An invite
+     is now CONSUMED as it is placed, so a seat shows an invitee only if
+     an invitation is genuinely outstanding for it, and everything left
+     over is an open seat anyone may take. */
+  const unboundQueue = pendingInvites.filter(
+    (inv) => !takenSeatNos.has(inv.seat_no) && !pendingBySeat[inv.seat_no]
+  );
+  let unboundNext = 0;
   const chips = Array.from({ length: session.seats_total }, (_, i) => {
     const no = i + 1;
     const seat = session.seats.find((x) => x.seat_no === no);
@@ -631,10 +649,9 @@ function WaitingRoom({
         state: seat.is_bot ? "bot" : seat.profile_id === profile.id ? "you" : "seated",
       };
     }
-    // An invite may name a seat, or simply be outstanding for the table.
-    const asked = pendingBySeat[no]
-      || pendingInvites.filter((inv) => !takenSeatNos.has(inv.seat_no))[0];
+    const asked = pendingBySeat[no] || unboundQueue[unboundNext];
     if (asked) {
+      if (!pendingBySeat[no]) unboundNext += 1; // spent — never reused
       return {
         key: no,
         name: t("games.wait.waitingFor", { name: inviteNames[asked.invitee_id] || "…" }),
@@ -646,6 +663,27 @@ function WaitingRoom({
 
   return (
     <>
+      {session.game_key === "ludo" && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "relative",
+            opacity: 0.45,
+            filter: "saturate(0.75)",
+            pointerEvents: "none",
+            marginBottom: 14,
+          }}
+        >
+          <LudoBoard
+            state={null}
+            seatsInPlay={session.seats_total}
+            options={[]}
+            currentSeat={-1}
+            onPieceTap={() => {}}
+          />
+        </div>
+      )}
+
       {/* The seats — the chess.com read: who is at this table. */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
         {chips.map((c) => (

@@ -1257,6 +1257,12 @@ const en = {
      locale block at all — a §0.1 gap wider than tonight and worth
      someone taking. This block is the start of one. */
   admin: {
+    navMilestones: "Milestones",
+    audienceEveryone: "Everyone (all active accounts)",
+    spaceCommunity: "Community feed",
+    spaceOutdoor: "Out & about",
+    spaceGatherings: "Manage gatherings",
+    spaceGroups: "Friend groups",
     notCalled: "Not yet called",
     recordCall: "Record the call",
     firstApplication: "First application from this applicant.",

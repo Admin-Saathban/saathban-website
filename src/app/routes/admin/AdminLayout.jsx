@@ -99,13 +99,13 @@ export default function AdminLayout() {
   ).length;
 
   const navItems = [
-    { to: "buddies", label: "Buddy review", count: openBuddyCount },
-    { to: "questions", label: "Questions", count: openQuestions },
-    { to: "broadcasts", label: "Broadcasts", count: 0 },
-    { to: "moderation", label: "Moderation", count: openReportCount },
+    { to: "buddies", label: t("admin.buddyReview"), count: openBuddyCount },
+    { to: "questions", label: t("admin.questions"), count: openQuestions },
+    { to: "broadcasts", label: t("admin.broadcasts"), count: 0 },
+    { to: "moderation", label: t("admin.moderation"), count: openReportCount },
     // The milestone-message desk lives outside the admin shell
     // (shared route with the Icon view — 0017).
-    { to: "/app/milestones", label: "Milestones", count: 0 },
+    { to: "/app/milestones", label: t("admin.navMilestones"), count: 0 },
   ];
 
   return (
@@ -206,10 +206,16 @@ export default function AdminLayout() {
           }}
         >{t("admin.viewSpaces")}</div>
         {[
-          { to: "/app/community", label: "Community feed" },
-          { to: "/app/outdoor", label: "Outdoor places" },
-          { to: "/app/events", label: "Gatherings" },
-          { to: "/app/groups", label: "Friend groups" },
+          /* "Gatherings" pointed at /app/events, which §12 turned into a
+             redirect to /app/outdoor — so it landed an admin on What is
+             on, the SAME page as the row directly above it. Two entries,
+             one destination, which is precisely the "half the doors open
+             the same room" complaint. An admin wanting gatherings wants
+             to MANAGE them. */
+          { to: "/app/community", label: t("admin.spaceCommunity") },
+          { to: "/app/outdoor", label: t("admin.spaceOutdoor") },
+          { to: "/app/events/manage", label: t("admin.spaceGatherings") },
+          { to: "/app/groups", label: t("admin.spaceGroups") },
         ].map((item) => (
           <NavLink
             key={item.to}

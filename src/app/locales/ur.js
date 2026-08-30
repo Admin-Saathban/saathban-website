@@ -1198,6 +1198,12 @@ const ur = {
   },
   /* §18 — منتظم کے کام کی فہرست۔ */
   admin: {
+    navMilestones: "سنگِ میل",
+    audienceEveryone: "سب (تمام فعال کھاتے)",
+    spaceCommunity: "کمیونٹی",
+    spaceOutdoor: "باہر کیا ہو رہا ہے",
+    spaceGatherings: "محفلوں کا انتظام",
+    spaceGroups: "دوستوں کے گروپ",
     notCalled: "ابھی فون نہیں کیا",
     recordCall: "کال درج کریں",
     firstApplication: "اس درخواست گزار کی پہلی درخواست۔",

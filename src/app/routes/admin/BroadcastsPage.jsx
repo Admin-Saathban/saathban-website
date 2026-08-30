@@ -31,13 +31,19 @@ const inputStyle = {
   padding: "12px 14px",
 };
 
+/* The "everyone" row is translated; the role rows are built from
+   ROLE_DISPLAY, which is already the one place display names live.
+   audienceLabel() resolves whichever shape an entry carries, so a
+   translated row and a derived row can sit in the same list. */
 const AUDIENCES = [
-  { value: "", label: "Everyone (all active accounts)" },
+  { value: "", labelKey: "admin.audienceEveryone" },
   ...Object.entries(ROLE_DISPLAY).map(([value, label]) => ({
     value,
     label: `${label} accounts only`,
   })),
 ];
+
+const audienceLabel = (a, t) => (a ? (a.labelKey ? t(a.labelKey) : a.label) : "");
 
 export default function BroadcastsPage() {
   const { t } = useI18n();
@@ -64,7 +70,7 @@ export default function BroadcastsPage() {
       setSent({
         title: title.trim(),
         count,
-        audience: AUDIENCES.find((a) => a.value === role)?.label,
+        audience: audienceLabel(AUDIENCES.find((a) => a.value === role), t),
       });
       setTitle("");
       setBody("");
@@ -134,7 +140,7 @@ export default function BroadcastsPage() {
             >
               {AUDIENCES.map((a) => (
                 <option key={a.value} value={a.value}>
-                  {a.label}
+                  {audienceLabel(a, t)}
                 </option>
               ))}
             </select>

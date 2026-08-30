@@ -42,6 +42,7 @@ import {
 import { announceRead } from "../notifications/data.js";
 import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
 import { startCarromInThread } from "../games/carrom/rails.js";
+import { createSession, inviteToGame } from "../../lib/games.js";
 import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
 import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 
@@ -77,6 +78,8 @@ export default function ThreadPage() {
   const [draft, setDraft] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [lastGame, setLastGame] = useState(null);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   // Chat depth (0034): reply quote, per-message action menu, photos.
@@ -101,6 +104,21 @@ export default function ThreadPage() {
       const { request: req, messages: msgs } = await fetchThreadDeep(reqId, myId);
       setStatus(req?.status ?? null);
       setMessages(msgs);
+      /* §6 remembers what you last played with this person — read off
+         the thread rather than stored anywhere. The newest message
+         carrying a game names the game. */
+      const played = msgs.filter((m) => m.game_session_id).map((m) => m.game_session_id);
+      if (played.length) {
+        const { data: sess } = await supabase
+          .from("game_sessions")
+          .select("id, game_key, created_at")
+          .in("id", played)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        setLastGame(sess?.[0]?.game_key || null);
+      } else {
+        setLastGame(null);
+      }
       // Private bucket: resolve short-lived signed URLs for any photos.
       const paths = msgs.filter((m) => m.image_path).map((m) => m.image_path);
       if (paths.length) {
@@ -213,7 +231,12 @@ export default function ThreadPage() {
   /* "Play carrom": create the session + invite this person (their bell
      gets the rails invitation with a deep link), then drop the board
      into the thread as a game-attachment message. */
-  const playCarrom = async () => {
+  /* WHICH GAME WE OFFER FIRST IS DERIVED, NOT STORED (§6: remembers
+     what you last played with that person). The thread already holds
+     the answer — the newest message carrying a game — so there is no
+     preference to save, nothing to go stale, and it is right on every
+     device the moment it is right on one. */
+  const playGame = async (gameKey) => {
     if (!profileId || starting || !requestId) return;
     setStarting(true);
     setError("");
@@ -242,7 +265,17 @@ export default function ThreadPage() {
           return;
         }
       }
-      const sessionId = await startCarromInThread(profileId);
+      /* Carrom renders inline in the thread; ludo and snakes get a
+         two-seat table with the other person invited, and the card
+         that lands here offers them the seat. */
+      const sessionId =
+        gameKey === "carrom"
+          ? await startCarromInThread(profileId)
+          : await (async () => {
+              const id = await createSession(gameKey, 2, {});
+              await inviteToGame(id, profileId);
+              return id;
+            })();
       await sendDeep(requestId, myId, { gameSessionId: sessionId });
       await refresh(requestId);
     } catch {
@@ -306,6 +339,10 @@ export default function ThreadPage() {
     : m.game_session_id ? "🎯"
     : (m.body || "").slice(0, 80);
 
+  /* Three names, from the locale rather than the registry: the chooser
+     must render before any network call, and a chooser that flickers
+     into existence is worse than one that is simply there. */
+  const gameName = (k) => t(`people.thread.game_${k}`);
   const first = person?.full_name?.split(" ")[0] || "";
   const open = status === "accepted";
 
@@ -325,8 +362,24 @@ export default function ThreadPage() {
           💬 {person?.full_name || "…"}
         </h1>
         {open && (
-          <GhostBtn disabled={starting} onClick={playCarrom}>
-            🎯 {carrom.playCarromCta}
+          <GhostBtn
+            disabled={starting}
+            onClick={() => (lastGame ? playGame(lastGame) : setChooserOpen(true))}
+            aria-label={
+              lastGame
+                ? t("people.thread.playAgainNamed", { game: gameName(lastGame) })
+                : t("people.thread.playCta")
+            }
+          >
+            {/* Second time is ONE TAP: if this thread has a game in it
+                already, the button plays that game again rather than
+                asking the same question twice. */}
+            🎲 {lastGame ? t(`people.thread.playAgainNamed`, { game: gameName(lastGame) }) : t("people.thread.playCta")}
+          </GhostBtn>
+        )}
+        {open && lastGame && (
+          <GhostBtn disabled={starting} onClick={() => setChooserOpen(true)} style={{ padding: "0 14px" }}>
+            {t("people.thread.playOther")}
           </GhostBtn>
         )}
         <Link
@@ -345,6 +398,54 @@ export default function ThreadPage() {
           {t("people.thread.backToProfile", { name: first })}
         </Link>
       </div>
+
+      {chooserOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("people.thread.playCta")}
+          style={{
+            position: "fixed", inset: 0, zIndex: 70, background: "rgba(45,36,24,0.45)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+          }}
+          onClick={() => setChooserOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 640, background: C.bg,
+              borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "18px 16px 24px",
+            }}
+          >
+            <h2 style={{ fontSize: ts(22), fontWeight: 800, color: C.brown, margin: "0 0 12px" }}>
+              {t("people.thread.playWhich")}
+            </h2>
+            {["ludo", "carrom", "snakes"].map((k) => (
+              <button
+                key={k}
+                type="button"
+                disabled={starting}
+                onClick={() => { setChooserOpen(false); playGame(k); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, width: "100%",
+                  minHeight: 72, padding: "12px 18px", marginBottom: 10,
+                  background: C.white, border: `2px solid ${C.warmGray}`, borderRadius: 18,
+                  fontFamily: "inherit", fontSize: ts(20), fontWeight: 700,
+                  color: C.textMain, textAlign: "start", cursor: "pointer",
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: ts(26) }}>
+                  {k === "ludo" ? "🎲" : k === "carrom" ? "🎯" : "🪜"}
+                </span>
+                {gameName(k)}
+              </button>
+            ))}
+            <GhostBtn onClick={() => setChooserOpen(false)} style={{ width: "100%" }}>
+              {t("outdoor.place.formCancel")}
+            </GhostBtn>
+          </div>
+        </div>
+      )}
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
@@ -660,17 +761,24 @@ export default function ThreadPage() {
         <GhostBtn
           onClick={() => setPickerOpen((o) => !o)}
           aria-expanded={pickerOpen}
-          aria-label={t("people.thread.stickersCta")}
+          aria-label={t("people.thread.stickerCta")}
           disabled={!open}
-          style={{ padding: "0 14px", fontSize: ts(24) }}
+          style={{ padding: "0 16px", gap: 8 }}
         >
-          🌸
+          <span aria-hidden="true" style={{ fontSize: ts(22) }}>🌸</span>
+          {t("people.thread.stickerCta")}
         </GhostBtn>
-        <GhostBtn onClick={() => cameraRef.current?.click()} aria-label={t("people.thread.camera")} disabled={!open || uploading} style={{ padding: "0 14px", fontSize: ts(24) }}>
-          📷
-        </GhostBtn>
-        <GhostBtn onClick={() => galleryRef.current?.click()} aria-label={t("people.thread.gallery")} disabled={!open || uploading} style={{ padding: "0 14px", fontSize: ts(24) }}>
-          🖼️
+        {/* ONE Photo button, not two. The phone's own sheet already
+            offers the camera, and two controls for one idea is exactly
+            what §6 replaces. */}
+        <GhostBtn
+          onClick={() => galleryRef.current?.click()}
+          aria-label={t("people.thread.photoCta")}
+          disabled={!open || uploading}
+          style={{ padding: "0 16px", gap: 8 }}
+        >
+          <span aria-hidden="true" style={{ fontSize: ts(22) }}>📷</span>
+          {t("people.thread.photoCta")}
         </GhostBtn>
         <input
           value={draft}

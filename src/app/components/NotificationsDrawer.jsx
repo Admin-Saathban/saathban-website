@@ -71,7 +71,7 @@ export default function NotificationsDrawer({ open, onClose }) {
 
   const go = (to) => {
     if (!to) return;
-    openFullScreen(navigate, to, meta.dir === "rtl" ? "left" : "right");
+    openFullScreen(navigate, to, "end");
   };
 
   const statusLine = (r) =>

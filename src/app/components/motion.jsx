@@ -24,8 +24,8 @@
 
    `src/app/lib/motion.jsx` exists too, and it is NOT dead code: the
    messages lane imports its MotionStyles in MessagesWorld and
-   SayHelloSheet. It owns the SHEET, the push transition and the §11
-   fresh-highlight. This file owns FULL-SCREEN ARRIVAL and the DRAWER,
+   SayHelloSheet. It owns the SHEET and the push transition. This
+   file owns FULL-SCREEN ARRIVAL and the DRAWER,
    which lib has no vocabulary for — §4's grow-from-its-button is only
    here.
 
@@ -35,6 +35,16 @@
    last silently won. Fixed by division rather than by merge: sheets
    are lib's alone, and the dim here is `.sb-drawer-dim`. The two
    files now share no class name at all.
+
+   TWO CLASS NAMES STILL MEAN ONE CONTAINER. `.sb-full-right` here
+   and `.sb-push` there are both §2's full-screen arrival: same
+   220ms, and until 20e36b7 two different easing curves, so a
+   person opening Messages watched a different motion from one
+   opening Saved. Too small for anyone to file, which is precisely
+   what MOTION_SPEC's opening line is about. Lane 38 converged
+   theirs onto this file's curve — four screens to their two, and
+   this file is the one that claims full-screen arrival. What is
+   left is one container wearing two names.
 
    This is a truce, not the destination. MOTION_SPEC's whole point is
    one vocabulary, and two files is one and a half. The merge is lib's
@@ -69,8 +79,46 @@ export function wantsLessMotion() {
    because it is a fact about the JOURNEY, not about the page: the
    same profile screen arrives from the left off the header avatar and
    from the right off a search result. */
-export function openFullScreen(navigate, to, from = "right", state = {}) {
-  navigate(to, { state: { ...state, sbFrom: from } });
+/* Which physical edge the app's inline-start is on right now.
+
+   i18n puts dir on a wrapper DIV inside body, not on <html>, so
+   documentElement.dir is empty and reading it would silently
+   report ltr forever. The wrapper is the only element in the app
+   subtree carrying an explicit dir. */
+function docDir() {
+  try {
+    return document.querySelector("[dir]")?.getAttribute("dir") === "rtl" ? "rtl" : "ltr";
+  } catch {
+    return "ltr";
+  }
+}
+
+/* `from` may be LOGICAL ("start" | "end") or physical ("left" |
+   "right"). Prefer logical.
+
+   Physical was the whole API until now, and four of the six call
+   sites hard-coded "left" or "right" — so in Urdu, where the header
+   mirrors and the avatar moves to the right while search and
+   messages move to the left, every one of them arrived from the
+   opposite edge to the button that was pressed. §1's rule, broken
+   in exactly the language it is hardest to notice in. Lane 38
+   spotted the risk from outside and could not verify it without
+   editing my callers; they were right.
+
+   Two call sites had the mirror written out as a ternary and were
+   correct. That is the tell: a rule every caller must remember is a
+   rule some caller will forget, so the mirror moves in here and the
+   ternaries go. Resolution happens at DISPATCH, not on arrival,
+   because the history entry should record the physical edge it
+   actually came from — if someone switches language mid-session,
+   going back should still reverse the animation they saw. */
+export function openFullScreen(navigate, to, from = "end", state = {}) {
+  const rtl = docDir() === "rtl";
+  const physical =
+    from === "start" ? (rtl ? "right" : "left")
+    : from === "end" ? (rtl ? "left" : "right")
+    : from;
+  navigate(to, { state: { ...state, sbFrom: physical } });
 }
 
 /* The CSS for every container. Injected once by MotionStyles rather

@@ -47,7 +47,7 @@ export default function HeaderAvatar() {
   return (
     <button
       type="button"
-      onClick={() => openFullScreen(navigate, "/app/profile", "left")}
+      onClick={() => openFullScreen(navigate, "/app/profile", "start")}
       aria-label={pulse ? `${t("hub.profile")} — ${t("profile.somethingToAdd")}` : t("hub.profile")}
       style={{
         position: "relative",

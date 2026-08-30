@@ -292,7 +292,7 @@ export default function SearchPage() {
     }
   };
 
-  const go = (to) => openFullScreen(navigate, to, "right");
+  const go = (to) => openFullScreen(navigate, to, "end");
   const empty =
     res &&
     !res.people.length &&

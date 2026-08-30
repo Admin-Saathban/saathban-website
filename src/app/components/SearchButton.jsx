@@ -16,7 +16,7 @@ export default function SearchButton() {
   return (
     <button
       type="button"
-      onClick={() => openFullScreen(navigate, "/app/search", "right")}
+      onClick={() => openFullScreen(navigate, "/app/search", "end")}
       aria-label={t("search.open")}
       style={{
         display: "inline-flex",

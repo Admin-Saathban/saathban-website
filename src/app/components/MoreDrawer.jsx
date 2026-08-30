@@ -64,7 +64,7 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
     /* The destination arrives from the side the drawer is on, which is
        the side the More button is on. The drawer stays in history
        underneath, so back comes home to it. */
-    openFullScreen(navigate, to, meta.dir === "rtl" ? "left" : "right");
+    openFullScreen(navigate, to, "end");
   };
 
   return (

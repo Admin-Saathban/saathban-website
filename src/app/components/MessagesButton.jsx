@@ -51,7 +51,7 @@ export default function MessagesButton() {
   return (
     <button
       type="button"
-      onClick={() => openFullScreen(navigate, "/app/community/messages", "right")}
+      onClick={() => openFullScreen(navigate, "/app/community/messages", "end")}
       aria-label={label}
       style={{
         position: "relative",

@@ -1604,6 +1604,19 @@ const en = {
       filled: "That table has filled up — ask your friend to set another, or start your own.",
       slow: "That's a lot of codes — take a breath and try again in a few minutes.",
     },
+      ceremony: {
+        setting: "Setting the table…",
+        start: "Khelte hain!",
+        leaveTitle: "Leave the table?",
+        leaveLobby: "Your seat opens up for someone else. You can always come back.",
+        leaveInPlay: "The game carries on without you — your seat plays on so nobody is left stranded.",
+        stay: "Stay",
+        leaveConfirm: "Leave the table",
+      },
+      presence: {
+        emptySeat: "Open seat",
+        thinking: "{name} is thinking",
+      },
     join: {
       sendLink: "Send a link",
       shareTitle: "{game} on Saathban",

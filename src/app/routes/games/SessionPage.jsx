@@ -36,6 +36,12 @@ import {
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
 import ShareTableButton from "./ShareTableButton.jsx";
+import TablePresence from "./TablePresence.jsx";
+/* The quick-chat sheet belongs to the games lane (routes/games/ludo/).
+   Imported rather than copied: two lists of ten phrases would drift
+   within a day, and the Urdu is theirs. If it is promoted to
+   routes/games/ later, this import is the only line that changes. */
+import QuickChat from "./ludo/QuickChat.jsx";
 /* Carrom has its own board on the rails; ludo has its own route.
    Everything else is the reference Race to 100 board below. */
 import CarromRailsController from "./carrom/CarromRailsController.jsx";
@@ -67,6 +73,11 @@ export default function SessionPage() {
   const [loadError, setLoadError] = useState(false);
   const [notMine, setNotMine] = useState(false); // RLS: not a table I'm at
   const [busy, setBusy] = useState(false);
+  /* The moment a lobby becomes a game. Shown once, briefly, and never
+     replayed on a refresh of an already-running table. */
+  const [started, setStarted] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const wasLobby = useRef(false);
   const toastThenGo = useToastThenGo();
   const [now, setNow] = useState(Date.now());
   const tickedFor = useRef(null);
@@ -118,6 +129,17 @@ export default function SessionPage() {
       clearInterval(clock);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (session?.status === "lobby") wasLobby.current = true;
+    if (session?.status === "active" && wasLobby.current) {
+      wasLobby.current = false;
+      setStarted(true);
+      const h = setTimeout(() => setStarted(false), 1800);
+      return () => clearTimeout(h);
+    }
+    return undefined;
+  }, [session?.status]);
 
   const game = useMemo(
     () => games.find((g) => g.key === session?.game_key),
@@ -288,7 +310,7 @@ export default function SessionPage() {
             <PrimaryBtn onClick={refresh}>{t("games.board.retryCta")}</PrimaryBtn>
           </>
         ) : (
-          <BodyText muted role="status">···</BodyText>
+          <BodyText muted role="status">{t("games.ceremony.setting")}</BodyText>
         )}
       </GamesScreen>
     );
@@ -302,7 +324,53 @@ export default function SessionPage() {
   if (session.status === "cancelled") {
     return (
       <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
-        <h1 style={{ fontSize: ts(28), margin: "0 0 12px", color: C.brown }}>{gameName}</h1>
+        {confirmLeave && (
+        <Card style={{ borderColor: C.brown, borderWidth: 2 }}>
+          <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 6px" }}>
+            {t("games.ceremony.leaveTitle")}
+          </p>
+          <BodyText muted style={{ marginBottom: 12 }}>
+            {session.status === "active"
+              ? t("games.ceremony.leaveInPlay")
+              : t("games.ceremony.leaveLobby")}
+          </BodyText>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <PrimaryBtn onClick={() => setConfirmLeave(false)}>
+              {t("games.ceremony.stay")}
+            </PrimaryBtn>
+            <GhostBtn
+              disabled={busy}
+              onClick={() => {
+                setConfirmLeave(false);
+                leaveTable();
+              }}
+            >
+              {t("games.ceremony.leaveConfirm")}
+            </GhostBtn>
+          </div>
+        </Card>
+      )}
+
+      {started && (
+        <div
+          role="status"
+          style={{
+            textAlign: "center",
+            fontFamily: "inherit",
+            fontSize: ts(26),
+            fontWeight: 800,
+            color: C.green,
+            background: C.white,
+            border: `2.5px solid ${C.green}`,
+            borderRadius: 18,
+            padding: "10px 16px",
+            marginBottom: 12,
+          }}
+        >
+          🎲 {t("games.ceremony.start")}
+        </div>
+      )}
+      <h1 style={{ fontSize: ts(28), margin: "0 0 12px", color: C.brown }}>{gameName}</h1>
         <Card>
           <BodyText style={{ margin: 0, fontWeight: 600 }}>{t("games.wait.calledOff")}</BodyText>
         </Card>
@@ -383,16 +451,20 @@ export default function SessionPage() {
           navigate={navigate}
           onCallOff={callOff}
           onLeave={leaveTable}
+          onAskLeave={() => setConfirmLeave(true)}
           t={t}
           ts={ts}
         />
       )}
 
       {session.status !== "lobby" && session.game_key === "carrom" && (
-        <CarromRailsController sessionId={session.id} />
+        <TablePresence session={session} chat={chat} profile={profile}>
+          <CarromRailsController sessionId={session.id} />
+        </TablePresence>
       )}
 
       {session.status !== "lobby" && session.game_key !== "carrom" && (
+        <TablePresence session={session} chat={chat} profile={profile}>
         <Board
           session={session}
           mySeat={mySeat}
@@ -415,6 +487,24 @@ export default function SessionPage() {
           }
           t={t}
           ts={ts}
+        />
+        </TablePresence>
+      )}
+
+      {/* Two taps, no typing: the presets land in the same chat table
+          the panel below reads, so a remark is history as well as a
+          bubble. */}
+      {mySeat && session.status === "active" && (
+        <QuickChat
+          disabled={busy}
+          onSend={async (text) => {
+            try {
+              await sendChat(session.id, profile.id, { body: text });
+              await refresh();
+            } catch {
+              pushToast(t("games.actionError"), { tone: "error", key: "games" });
+            }
+          }}
         />
       )}
 
@@ -509,7 +599,7 @@ function SeatChip({ name, state, seatNo, ts }) {
 function WaitingRoom({
   session, game, mySeat, isHost, isInvitee,
   pendingInvites = [], inviteNames = {}, profile, busy, act, navigate,
-  onCallOff, onLeave, t, ts,
+  onCallOff, onLeave, onAskLeave, t, ts,
 }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [posted, setPosted] = useState(false);
@@ -596,7 +686,7 @@ function WaitingRoom({
           </GhostBtn>
           <GhostBtn
             disabled={busy}
-            onClick={() => (isHost ? onCallOff() : onLeave())}
+            onClick={() => (isHost ? onCallOff() : onAskLeave())}
             style={{ padding: "0 16px" }}
           >
             {isHost ? t("games.wait.cancel") : t("games.wait.leave")}

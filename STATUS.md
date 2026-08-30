@@ -228,7 +228,14 @@ they each catch a different class, and none substitutes for another.
 server and "verified" against origin are different claims, and they
 diverged today. State which one you mean when you report a run.
 
-**3. `git commit -- <pathspec>` ignores your index.** It commits the
+**3. `git commit -- <pathspec>` THROWS YOUR CAREFUL STAGING AWAY AT
+THE LAST STEP.** Not merely "ignores the index" — that reads like a
+footnote. You hunk-stage exactly your own lines, feel safe, then add
+`-- <paths>` and git commits the WORKING TREE at those paths instead,
+discarding everything you just did. Four lanes have been caught by it
+in one day, including one who had built the hunk-staging discipline
+correctly and lost it on the final command. For a shared file: stage
+hunks, then `git commit` with NO pathspec. It commits the
 working tree at those paths, silently discarding hunk-level staging —
 this swept one lane's locale keys into another lane's commit twice.
 Pathspec ONLY when you own every changed line in those files; for

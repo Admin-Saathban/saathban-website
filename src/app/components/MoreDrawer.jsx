@@ -117,7 +117,20 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
                   {item.emoji}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", lineHeight: 1.3 }}>{t(item.key)}</span>
+                  {/* THE LINE BOX IS THE LANGUAGE'S, NOT A CONSTANT.
+
+                     1.3 is fine for Latin and wrong for Nastaliq,
+                     whose letters hang off a descending diagonal —
+                     at the largest text size "سیکھیں ساتھ بن کے ساتھ"
+                     wraps to two lines and the tails of the first
+                     collide with the heads of the second. meta
+                     carries 1.6 for English and 2.1 for Urdu for
+                     exactly this. This is the overlap the tokens file
+                     warns about, found by looking at the Urdu
+                     screenshot at the largest size. */}
+                  <span style={{ display: "block", lineHeight: meta.lineHeight }}>
+                    {t(item.key)}
+                  </span>
                   {count !== null && (
                     <span
                       style={{

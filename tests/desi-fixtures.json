@@ -1,0 +1,24 @@
+{
+  "_why": "Positions for tests/desi-rules-played.mjs. They are created with service credentials rather than by the suite, because a seated player may not PATCH game_sessions — that is RLS working correctly and is itself covered by tests/undo.mjs and the leave suite. The suite RE-VERIFIES each position from the database before judging any rule against it, so a wrong id here fails loudly instead of quietly reporting a rule broken.",
+  "_lesson": "The first version of these ids was mislabelled: they were mapped by a join on join_code that did not line up, so every tag pointed at the wrong board. Reading the positions back is what caught it. Never trust the label on a fixture.",
+  "virgin_jota": {
+    "id": "99b977d9-09eb-4e86-b860-c6534283415b",
+    "expect": { "pieces": [[10, 10, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "pairs_moved": {}, "die": 4 }
+  },
+  "moved_jota_even": {
+    "id": "be39bd40-774f-4a15-9fb4-84312fed764e",
+    "expect": { "pieces": [[10, 10, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "pairs_moved": { "0:10": true }, "die": 4 }
+  },
+  "moved_jota_odd": {
+    "id": "c044e183-16f1-4eec-a719-9a46d8021316",
+    "expect": { "pieces": [[10, 10, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "pairs_moved": { "0:10": true }, "die": 3 }
+  },
+  "sixes_chain": {
+    "id": "70068036-79c2-432a-a3ac-aa68bb63751c",
+    "expect": { "pieces": [[10, 0, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "chain": 2, "die": 6 }
+  },
+  "two_dice": {
+    "id": "00fb742f-72f3-4a60-945b-b07c1aa36245",
+    "expect": { "pieces": [[10, 20, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "dice_count": 2 }
+  }
+}

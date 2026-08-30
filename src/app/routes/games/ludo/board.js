@@ -193,6 +193,66 @@ export function cellFor(seat, p, pieceIdx) {
    screen coordinates run y-down). Labels and numerals counter-rotate
    by the same amount so nothing ever reads upside down. A watcher with
    no seat gets the neutral orientation. */
+/* NEAR MISSES: every enemy a moving goti passed within one square of
+   and did NOT take.
+
+   Pure ring arithmetic, and it lives here rather than in the board
+   component for exactly that reason — it is the kind of thing that
+   looks obviously right and is off by one, so the suite gets to judge
+   it square by square instead of a person watching bots and hoping.
+
+   `prev` and `next` are the whole piece table before and after. A
+   goti is walked from its old progress to its new one, and at every
+   intermediate square the shortest distance round the 52-cell ring to
+   each enemy is measured. Distance exactly one is a near miss.
+
+   Deliberately NOT reported: an enemy actually landed on. That is a
+   capture, it has its own flash, and calling the worst moment of
+   somebody's game a near miss would be the cruel version of this
+   feature. Enemies still in a yard, in a home column, or home are not
+   on the ring at all and cannot be passed.
+
+   Cells are returned de-duplicated: a goti stepping past a stationary
+   enemy is within one square of it TWICE, going in and coming out,
+   and that is one near miss to a human being, not two. */
+export function nearMissCells(prev, next) {
+  const enemies = [];
+  (prev || []).forEach((row, seat) =>
+    (row || []).forEach((p, i) => {
+      if (p >= 1 && p <= 51) enemies.push({ seat, abs: absOf(seat, p), cell: cellFor(seat, p, i) });
+    })
+  );
+
+  const seen = new Set();
+  const out = [];
+  (next || []).forEach((row, seat) =>
+    (row || []).forEach((to, i) => {
+      const from = Number(prev?.[seat]?.[i] ?? 0);
+      if (to <= from) return; // captured home, or did not move
+      /* Where it came to rest, if it came to rest on the ring at all.
+         The square BEFORE an enemy is one away from it, so without
+         this every capture would also report a near miss on the very
+         goti it just took. */
+      const landed = to >= 1 && to <= 51 ? absOf(seat, to) : null;
+      for (let q = Math.max(from + 1, 1); q <= Math.min(to, 51); q++) {
+        const abs = absOf(seat, q);
+        enemies.forEach((e) => {
+          if (e.seat === seat) return;
+          if (e.abs === landed) return; // taken, or shared — not passed
+          /* Shortest way round the ring, either direction. */
+          const d = Math.abs((((abs - e.abs + 52) % 52) + 26) % 52 - 26);
+          if (d !== 1) return;
+          const key = `${e.cell[0]},${e.cell[1]}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push(e.cell);
+        });
+      }
+    })
+  );
+  return out;
+}
+
 export function povRotation(mySeat) {
   switch (mySeat) {
     case 0: return 180; // top-right    → bottom-left

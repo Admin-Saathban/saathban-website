@@ -22,6 +22,7 @@ import {
   absOf,
   cellFor,
   povRotation,
+  nearMissCells,
 } from "../src/app/routes/games/ludo/board.js";
 
 let failures = 0;
@@ -267,6 +268,69 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
     check("every start square is safe in the engine too",
       START_ABS.every((a) => engineSafe.includes(a)), START_ABS.join(","));
   }
+}
+
+/* ── Near misses ─────────────────────────────
+   The board draws a ring where an enemy was passed within one square
+   and survived. It is the kind of arithmetic that looks obviously
+   right and is off by one, so it is judged here square by square
+   rather than by watching bots play and hoping one happens. */
+{
+  const empty = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  const board = (fn) => { const b = empty.map((r) => [...r]); fn(b); return b; };
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  /* Seat 1 at p=44 stands on abs 4. Seat 0 walking 2 -> 8 covers abs
+     1..7, so it is one square off at abs 3 and again at abs 5. */
+  check("absOf(1,44) really is abs 4", absOf(1, 44) === 4, String(absOf(1, 44)));
+  const prev = board((b) => { b[0][1] = 2; b[1][0] = 44; });
+  const hits = nearMissCells(prev, board((b) => { b[0][1] = 8; b[1][0] = 44; }));
+  check("passing an enemy at one square's distance is a near miss",
+    hits.length === 1, JSON.stringify(hits));
+  check("the ring is drawn on the ENEMY's square, not the mover's",
+    hits.length === 1 && same(hits[0], cellFor(1, 44, 0)), JSON.stringify(hits[0]));
+  check("one enemy passed once counts once, going in and coming out",
+    new Set(hits.map(String)).size === hits.length, JSON.stringify(hits));
+
+  /* Landing on it is a capture. Capture has its own flash, and calling
+     the worst moment of somebody's game a near miss would be cruel. */
+  check("absOf(0,5) is the enemy's own square", absOf(0, 5) === 4, String(absOf(0, 5)));
+  const onto = nearMissCells(prev, board((b) => { b[0][1] = 5; b[1][0] = 44; }));
+  check("landing ON an enemy is a capture, never a near miss",
+    !onto.some((c) => same(c, cellFor(1, 44, 0))), JSON.stringify(onto));
+
+  check("absOf(1,46) is abs 6", absOf(1, 46) === 6, String(absOf(1, 46)));
+  check("two squares away is not a near miss",
+    nearMissCells(board((b) => { b[0][1] = 2; b[1][0] = 46; }),
+                  board((b) => { b[0][1] = 4; b[1][0] = 46; })).length === 0, "");
+
+  check("your own goti is never a near miss",
+    nearMissCells(board((b) => { b[0][1] = 2; b[0][2] = 8; }),
+                  board((b) => { b[0][1] = 6; b[0][2] = 8; })).length === 0, "");
+
+  /* Off the ring entirely: yard, home column, home. */
+  [0, 52, 55, 57].forEach((p) => {
+    check("an enemy at progress " + p + " is off the ring and cannot be passed",
+      nearMissCells(board((b) => { b[0][1] = 2; b[1][0] = p; }),
+                    board((b) => { b[0][1] = 8; b[1][0] = p; })).length === 0, "");
+  });
+
+  check("a captured goti travelling home passes nobody",
+    nearMissCells(board((b) => { b[0][1] = 20; b[1][0] = 44; }),
+                  board((b) => { b[0][1] = 0;  b[1][0] = 44; })).length === 0, "");
+
+  /* THE SEAM. abs 51 and abs 0 are neighbours, and an implementation
+     that subtracts without the modulus misses every near miss across
+     it — the busiest stretch of the ring, since abs 0 is a start. */
+  check("seat 2 at p=27 sits on abs 0", absOf(2, 27) === 0, String(absOf(2, 27)));
+  /* Seat 0 can never be tested here: its lap runs abs 0..50 and ends
+     on its own arm's tip, so abs 51 is a square it never stands on.
+     Seat 1 is the one whose walk crosses the seam. */
+  check("seat 0's lap never reaches abs 51", absOf(0, 51) === 50, String(absOf(0, 51)));
+  check("seat 1 at p=39 sits on abs 51", absOf(1, 39) === 51, String(absOf(1, 39)));
+  check("abs 51 and abs 0 are neighbours across the seam",
+    nearMissCells(board((b) => { b[1][1] = 38; b[2][0] = 27; }),
+                  board((b) => { b[1][1] = 39; b[2][0] = 27; })).length === 1, "");
 }
 
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nall green");

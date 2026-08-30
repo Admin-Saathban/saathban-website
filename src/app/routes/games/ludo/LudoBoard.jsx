@@ -38,6 +38,8 @@ import {
   YARD_SPOTS,
   START_ABS,
   SAFE_ABS,
+  absOf,
+  nearMissCells,
   SEAT_COLORS,
   SEAT_TINTS,
   armSeatOf,
@@ -125,6 +127,48 @@ export const BOARD_MOTION_CSS = `
     100% { opacity: 0;    }
   }
   .sb-trail { animation: sb-trail 900ms ease-out both; }
+
+  /* A goti arriving home: a ring that opens and fades once. */
+  @keyframes sb-home {
+    0%   { r: 8;  opacity: 0;    stroke-width: 3.4; }
+    35%  {        opacity: 0.95;                    }
+    100% { r: 20; opacity: 0;    stroke-width: 1.2; }
+  }
+  .sb-home { animation: sb-home 900ms ease-out both; }
+
+  /* Taken, and tumbling home. Rotation pivots on the piece's own box,
+     never the viewport origin. */
+  @keyframes sb-tumble-home {
+    from { transform: rotate(0deg);   }
+    to   { transform: rotate(400deg); }
+  }
+  .sb-tumble-home {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: sb-tumble-home 480ms linear both;
+  }
+
+  /* Three sixes. The board itself, not the page — translate only, so
+     nothing pivots and nothing reflows. */
+  @keyframes sb-shake {
+    0%, 100% { transform: translate(0, 0); }
+    15%  { transform: translate(-5px, 1px); }
+    30%  { transform: translate(4px, -2px); }
+    45%  { transform: translate(-3px, 2px); }
+    60%  { transform: translate(3px, 1px); }
+    80%  { transform: translate(-2px, 0); }
+  }
+  .sb-shake { animation: sb-shake 520ms ease-in-out both; }
+
+  /* A near miss: two quick pulses, then gone. Opacity and stroke only
+     — the ring sits on a piece and must not move it. */
+  @keyframes sb-closecall {
+    0%, 100% { opacity: 0;    stroke-width: 2; }
+    25%      { opacity: 0.95; stroke-width: 4; }
+    50%      { opacity: 0.25; stroke-width: 2; }
+    75%      { opacity: 0.9;  stroke-width: 3.6; }
+  }
+  .sb-closecall { animation: sb-closecall 1000ms ease-in-out both; }
   /* DISPLAY: NONE, NOT ANIMATION: NONE — and if this rule ever moves
      into gameFeel.jsx reduced-motion list, it must move as-is
      rather than being flattened into that list own animation:none rule.
@@ -176,6 +220,19 @@ export const BOARD_MOTION_CSS = `
        hidden, it holds the cell tinted until the hook unmounts it —
        the information without the motion. */
     .sb-cell-flash { animation: none; }
+    /* The home ring and the tumble are pure flourish over something
+       the board already states — the goti IS home, the goti IS
+       travelling — so they stop rather than vanish, leaving the ring
+       drawn and the piece upright. The shake has nothing to say at
+       rest and is the one thing here most likely to be unpleasant for
+       someone who asked for less motion, so it goes entirely. */
+    .sb-home { animation: none; opacity: 0.9; }
+    .sb-tumble-home { animation: none; }
+    .sb-shake { animation: none; }
+    /* The near miss says something the board does not otherwise say,
+       so it stays drawn — stopped, at full strength, for as long as
+       the hook keeps it. */
+    .sb-closecall { animation: none; opacity: 0.9; }
   }
 `;
 
@@ -279,6 +336,13 @@ function useWalk(pieces) {
   /* Cells the walker has just crossed, so the eye can see the path it
      took rather than only where it ended up. */
   const [trail, setTrail] = useState([]);
+  /* Gotis that reached home on THIS change, so the celebration fires
+     once and on the right piece rather than on every piece already
+     home. */
+  const [arrivedHome, setArrivedHome] = useState(() => new Set());
+  /* Cells where an opponent went past within a square of somebody —
+     the near miss nobody notices until it is pointed out. */
+  const [closeCalls, setCloseCalls] = useState([]);
   const prevRef = useRef(pieces);
   const key = JSON.stringify(pieces);
 
@@ -299,8 +363,18 @@ function useWalk(pieces) {
       setShown(pieces);
       setFlights(new Map());
       setTrail([]);
+      setArrivedHome(new Set());
+      setCloseCalls([]);
       return undefined;
     }
+
+    /* Arrivals: 57 now, not 57 before. */
+    const home = new Set();
+    pieces.forEach((row, s2) =>
+      row.forEach((p, i) => {
+        if (p === 57 && Number(prev[s2]?.[i] ?? 0) !== 57) home.add(`${s2}:${i}`);
+      })
+    );
 
     const walkers = [];
     const returners = [];
@@ -348,6 +422,15 @@ function useWalk(pieces) {
     setShown(base.map((r) => [...r]));
     setTrail([]);
 
+    /* CLOSE CALLS — the arithmetic is in board.js and under test.
+       Read off the committed boards, so a ring marks the square the
+       near miss happened at rather than wherever the goti ended up. */
+    const near = nearMissCells(prev, pieces);
+    if (near.length) {
+      setCloseCalls(near.slice(0, 4));
+      window.setTimeout(() => setCloseCalls([]), 1100);
+    }
+
     const flightTicks = Math.round(FLIGHT_MS / STEP_MS);
     const total = Math.max(steps, returners.length ? flightTicks : 0);
     let step = 0;
@@ -380,6 +463,12 @@ function useWalk(pieces) {
         clearInterval(id);
         setShown(pieces);
         setFlights(new Map());
+        /* The celebration starts when the goti ARRIVES, not when the
+           move began — it has to be on the square to be cheered. */
+        if (home.size) {
+          setArrivedHome(home);
+          window.setTimeout(() => setArrivedHome(new Set()), 1500);
+        }
         /* Let the trail linger a beat past the move, then clear it —
            the point is to be readable after the goti has stopped. */
         window.setTimeout(() => setTrail([]), 420);
@@ -392,7 +481,49 @@ function useWalk(pieces) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { shown, flights, trail };
+  return { shown, flights, trail, arrivedHome, closeCalls };
+}
+
+/* THE MOOD OF EVERY GOTI ON THE TRACK.
+
+   Smug: standing on one of the eight stops, where nothing can take it.
+   Worried: an enemy sits one to six squares BEHIND it — the range a
+   single die can cross — and it is neither on a stop nor doubled up
+   into a jota, because a lone goti is the only kind a single can take.
+
+   This is arithmetic the player could do themselves by counting
+   backwards round the ring from each of their pieces. The board doing
+   it is the whole point: it turns a thing you must audit into a thing
+   you can see.
+
+   Deliberately NOT a face for being behind, losing, or slow. Danger
+   and safety only. */
+function moodsOf(pieces) {
+  const mood = new Map();
+  const at = [];
+  pieces.forEach((row, seat) =>
+    row.forEach((p) => {
+      if (p >= 1 && p <= 51) at.push({ seat, abs: absOf(seat, p), p });
+    })
+  );
+  pieces.forEach((row, seat) =>
+    row.forEach((p, i) => {
+      if (!(p >= 1 && p <= 51)) return;
+      const abs = absOf(seat, p);
+      if (SAFE_ABS.includes(abs)) {
+        mood.set(`${seat}:${i}`, "smug");
+        return;
+      }
+      /* A pair cannot be taken by a single, so it does not fret. */
+      const mine = row.filter((q) => q === p).length;
+      if (mine >= 2) return;
+      const hunted = at.some(
+        (o) => o.seat !== seat && ((abs - o.abs + 52) % 52) >= 1 && ((abs - o.abs + 52) % 52) <= 6
+      );
+      if (hunted) mood.set(`${seat}:${i}`, "worried");
+    })
+  );
+  return mood;
 }
 
 export default function LudoBoard({
@@ -408,7 +539,35 @@ export default function LudoBoard({
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
-  const { shown: pieces, flights, trail } = useWalk(live);
+  const { shown: pieces, flights, trail, arrivedHome, closeCalls } = useWalk(live);
+  /* THE TABLE SHAKES ON THE EDGE OF A RUN.
+
+     Not a celebration — the opposite. ludo_chain_stands is
+     `p_len not in (3, 6, 9)`, so at three sixes every move of the run
+     is provisional: one non-six and the whole thing is wiped back.
+     Six and nine are the same cliff, which is why this is % 3 and not
+     === 3; the session's own copy already says "on the edge" at all
+     three.
+
+     It cannot collide with the void message. ludo_resolve_chain sets
+     chain to 0 in the same statement that sets chain_void, so a board
+     showing chain 3 is a run still standing, and a board showing the
+     void has chain 0 and does not shake. Nobody gets a flourish and a
+     penalty in one beat.
+
+     state.chain is the engine's count, so this is not a client guess,
+     and it shakes for everyone at the table rather than the roller
+     alone — the tension is the room's. */
+  const chainLen = Number(state?.chain) || 0;
+  const shake = chainLen > 0 && chainLen % 3 === 0;
+  /* Fed the WALKED positions, not the truth — deliberately, and the
+     opposite of useCaptured on the next line. A face belongs where the
+     eye currently sees the goti: if it read the server's board, a
+     piece would look worried about a threat that is two squares from
+     where it is being drawn, or look smug on a stop it has not
+     visibly reached yet. useCaptured wants the truth because a capture
+     is an event, not a position. */
+  const moods = moodsOf(pieces);
   /* Fed the TRUTH, not the walked positions: a captured goti snaps
      home rather than strolling back, so the shake has to key off the
      real board or it would fire a beat late. */
@@ -440,6 +599,7 @@ export default function LudoBoard({
     <div style={{ position: "relative", maxWidth: 560, margin: "0 auto" }}>
       <style>{BOARD_MOTION_CSS}</style>
       <svg
+        className={shake ? "sb-shake" : undefined}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
         aria-label="Ludo board"
@@ -784,6 +944,22 @@ export default function LudoBoard({
           />
         ))}
 
+        {/* ── Close calls: they went right past you ── */}
+        {closeCalls.map(([cc, rr], i) => (
+          <circle
+            key={`cc-${i}-${cc}-${rr}`}
+            className="sb-closecall"
+            cx={cc * CELL}
+            cy={rr * CELL}
+            r={CELL * 0.46}
+            fill="none"
+            stroke="#FF7A1A"
+            strokeWidth={3}
+            pointerEvents="none"
+            aria-hidden="true"
+          />
+        ))}
+
         {/* ── Pieces ── */}
         {pieces.map((seatPieces, seat) =>
           seatPieces.map((p, i) => {
@@ -883,7 +1059,31 @@ export default function LudoBoard({
                     strokeDasharray="6 5"
                   />
                 )}
-                <Pawn seat={seat} cx={cx} cy={cy} r={p >= 57 ? 10 : 15} spin={spin} />
+                <Pawn
+                  seat={seat}
+                  cx={cx}
+                  cy={cy}
+                  r={p >= 57 ? 10 : 15}
+                  spin={spin}
+                  mood={moods.get(`${seat}:${i}`) || null}
+                />
+                {/* HOME. A goti that has just finished takes a moment
+                    about it — the one unambiguously good thing that
+                    can happen to a piece, and it used to happen in
+                    total silence. */}
+                {arrivedHome.has(`${seat}:${i}`) && (
+                  <circle
+                    className="sb-home"
+                    cx={cx}
+                    cy={cy}
+                    r={13}
+                    fill="none"
+                    stroke="#FFD23F"
+                    strokeWidth={2.6}
+                    pointerEvents="none"
+                    aria-hidden="true"
+                  />
+                )}
                 {canTap && <circle cx={cx} cy={cy} r={26} fill="transparent" />}
               </g>
             );
@@ -900,7 +1100,13 @@ export default function LudoBoard({
           return (
             <g key={`fly-${k}`}>
               <ellipse cx={cc * CELL} cy={rr * CELL + 13} rx={11} ry={3.4} fill="#00000030" />
-              <Pawn seat={seat} cx={cc * CELL} cy={rr * CELL} r={15} spin={spin} />
+              {/* It spins on the way home. Rotation about the piece's
+                  OWN centre — transform-box fill-box — because a bare
+                  rotate on an SVG child pivots on the viewport origin
+                  and would fling it off the board. */}
+              <g className="sb-tumble-home">
+                <Pawn seat={seat} cx={cc * CELL} cy={rr * CELL} r={15} spin={spin} />
+              </g>
             </g>
           );
         })}

@@ -30,7 +30,57 @@ import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 
 /* cx, cy: centre of the square the piece stands on.
    r: roughly the radius it should occupy. */
-export default function Pawn({ seat = 0, cx, cy, r = 15, showSeat = true, dim = false, spin = 0 }) {
+/* A goti's face.
+
+   Two eyes and a mouth, and only ever when there is something to feel:
+   a piece that is neither in danger nor safe has no face at all, so
+   the ones that DO carry meaning stand out instead of being lost in a
+   board of expressions.
+
+   WORRIED is an enemy within reach behind you. SMUG is standing on a
+   stop where nothing can touch you. Both are things a player could
+   work out by counting squares, which is exactly why they are worth
+   drawing: the board doing the counting is the difference between a
+   game you can follow and one you have to audit.
+
+   Never a face for being BEHIND, or slow, or losing. Danger and safety
+   only — the standing rule is cheeky, never cruel, and a goti that
+   looked sad about its owner's position would be the cruel version. */
+function Face({ mood }) {
+  if (!mood) return null;
+  const worried = mood === "worried";
+  return (
+    <g aria-hidden="true">
+      <circle cx="-2.1" cy="-6.6" r="0.95" fill="#20180C" />
+      <circle cx="2.1" cy="-6.6" r="0.95" fill="#20180C" />
+      {worried ? (
+        <>
+          {/* brows tipped in, and a small flat mouth */}
+          <path d="M -3.4 -8.6 L -1.1 -7.9" stroke="#20180C" strokeWidth="0.7" strokeLinecap="round" />
+          <path d="M 3.4 -8.6 L 1.1 -7.9" stroke="#20180C" strokeWidth="0.7" strokeLinecap="round" />
+          <path d="M -1.8 -4.1 Q 0 -5.1 1.8 -4.1" fill="none" stroke="#20180C" strokeWidth="0.75" strokeLinecap="round" />
+        </>
+      ) : (
+        /* smug: one raised brow and a small crooked smile */
+        <>
+          <path d="M 1.0 -8.5 Q 2.2 -9.2 3.4 -8.6" fill="none" stroke="#20180C" strokeWidth="0.7" strokeLinecap="round" />
+          <path d="M -1.9 -4.4 Q 0.2 -3.2 2.0 -4.9" fill="none" stroke="#20180C" strokeWidth="0.8" strokeLinecap="round" />
+        </>
+      )}
+    </g>
+  );
+}
+
+export default function Pawn({
+  seat = 0,
+  cx,
+  cy,
+  r = 15,
+  showSeat = true,
+  dim = false,
+  spin = 0,
+  mood = null,
+}) {
   const idx = seat % SEAT_COLORS.length;
   const fill = SEAT_COLORS[idx];
   const ink = SEAT_INK[idx];
@@ -79,6 +129,9 @@ export default function Pawn({ seat = 0, cx, cy, r = 15, showSeat = true, dim = 
           the eye reads as "shiny" rather than "pale" */}
       <ellipse cx="-1.9" cy="-8" rx="2.0" ry="1.35" fill="#ffffff" opacity="0.9" transform="rotate(-25 -1.9 -8)" />
       <ellipse cx="1.6" cy="-4.2" rx="1.5" ry="0.9" fill="#ffffff" opacity="0.28" transform="rotate(-20 1.6 -4.2)" />
+      {/* The face rides above the gloss, or the specular sits on top of
+          an eye and reads as a cataract. */}
+      <Face mood={mood} />
       {showSeat && (
         <text
           x="0"

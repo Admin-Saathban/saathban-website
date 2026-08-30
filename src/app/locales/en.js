@@ -1020,6 +1020,44 @@ const en = {
      happens, never a category: "Someone sends you a message", not
      "Messages". The grouping carries the rule that produced the
      defaults, so the screen explains itself. */
+  /* §13 — the calendar. Every action is named as the thing a person
+     would DO, never as a feature: "Tell my circle", not "Share
+     status". The kinds are plain words for the same reason — a person
+     choosing "an appointment" over "a visit" is telling the app which
+     action they will want later. */
+  calendar: {
+    title: "Your calendar",
+    today: "Today",
+    tomorrow: "Tomorrow",
+    add: "Put something in",
+    addTitle: "What shall we add?",
+    whatPlaceholder: "What is it?",
+    whoPlaceholder: "Who is it about?",
+    save: "Add it",
+    cancel: "Not now",
+    needTitleAndDay: "It needs a name and a day.",
+    saveFailed: "That didn't save. Try once more?",
+    emptyTitle: "Nothing in the calendar yet.",
+    emptyBody: "Gatherings you say yes to will appear here, and you can add anything of your own.",
+    failed: "This didn't load. It's the connection, not your calendar.",
+    kind: {
+      appointment: "An appointment",
+      visiting: "A visit",
+      birthday: "A birthday",
+      custom_reminder: "A reminder",
+      personal: "A note",
+      outing: "Something on",
+    },
+    action: {
+      openEvent: "Open it",
+      messageGoing: "Message who's going",
+      openHappening: "See what's on",
+      messageThem: "Message {name}",
+      postAWish: "Post a wish",
+      tellMyCircle: "Tell my circle I'm out",
+    },
+  },
+
   notify: {
     title: "What reaches you",
     intro: "You can change any of this whenever you like.",
@@ -1471,11 +1509,65 @@ const en = {
       groupInvited: "Group invitation sent.",
       blockCta: "Block this person",
     },
+    /* §7 — inviting people from outside. The copy carries the rule:
+       a personal link connects on THEIR tap, a group link only asks.
+       Nothing here counts invitations or thanks anyone with a number:
+       §7 says "no rewards for inviting, a warm acknowledgement only". */
+    invite: {
+      title: "Invite someone you know",
+      intro: "Send a link. When they open it, it brings them to you.",
+      oneTitle: "For one person",
+      oneBody:
+        "Send this to somebody directly. It opens your page, and one tap connects the two of you. It only works for the person who opens it first.",
+      oneCta: "Make a link for one person",
+      groupTitle: "For a group",
+      groupBody:
+        "One link you can put in a family or neighbourhood group. Anyone who opens it asks to connect, and you decide each one.",
+      groupCta: "Get my group link",
+      linkLabel: "Your link",
+      readyMsg:
+        "It's {name}. I'm on Saathban — company, games, and a reason to get out of the house. Come and say hello.",
+      whatsappCta: "Send on WhatsApp",
+      shareCta: "Share",
+      copyCta: "Copy the link",
+      copied: "Copied. Paste it wherever you like.",
+      shared: "Sent.",
+      unavailable: "Copying didn't work here — the link is above, ready to select.",
+      warm: "Thank you for bringing someone in.",
+      tooMany: "That is plenty of invitations for one day. There will be more tomorrow.",
+      error: "That didn't work. Please try again in a moment.",
+      newOne: "Make another link",
+    },
+    hello: {
+      working: "One moment…",
+      goneTitle: "This link has expired",
+      goneBody:
+        "Links last a month, and a personal one belongs to the person it was sent to. Ask for a fresh one and it will work.",
+      ownTitle: "This is your own link",
+      ownBody: "Send it to somebody else and it will bring them to you.",
+      blockedTitle: "Not just now",
+      blockedBody: "Your account can't use the community at the moment.",
+      backHome: "Go to my home",
+    },
+    invited: {
+      heading: "{name} invited you to Saathban",
+      personalBody:
+        "Nothing has happened yet. Connect when you're ready — and you don't have to.",
+      groupBody: "If you'd like to connect, {name} will see your request and decide.",
+      connectCta: "Connect with {name}",
+      askCta: "Ask to connect",
+      connected: "You're connected.",
+      requested: "Asked — {name} will see it.",
+      already: "You're already connected.",
+      gone: "This invitation has expired.",
+      error: "That didn't go through. Please try again.",
+    },
     list: {
       title: "My People",
       intro: "Everyone you're connected with, in one place.",
       searchPh: "Search by name, city, or group",
       requestsCta: "Requests",
+      inviteCta: "Invite someone",
       empty: "When you connect with someone — through your circle, a friendship, or a group — they'll appear here.",
       noMatches: "No one matches that search.",
       away: "away from Saathban",
@@ -1558,6 +1650,42 @@ const en = {
     },
   },
 
+  // ─── The first three screens (routes/onboarding/) ───
+  onboarding: {
+    next: "Carry on",
+    mood: {
+      title: "How are you today?",
+      /* Responding, not confirming. Never "logged ✓". */
+      response: "Achha laga sun kar.",
+      firstDay: "That's your first day logged.",
+    },
+    modules: {
+      title: "Here's what we'll keep track of",
+      changeAny: "You can change any of this whenever you like.",
+      cta: "Theek hai",
+      on: "on",
+      off: "off",
+      mood: "How you're feeling",
+      sleep: "How you slept",
+      water: "Water through the day",
+      /* Shown but off. Medicines need setting up first — an empty
+         list on day one is a bad first impression. */
+      medication: "Medicines",
+      diet: "Meals",
+      exercise: "Moving about",
+    },
+    invite: {
+      title: "Who should we let in?",
+      note: "Someone who'd like to know how your days are going. You can do this later just as easily.",
+      label: "Their email",
+      placeholder: "name@example.com",
+      send: "Send an invitation",
+      /* The same weight as the invite, never a grey link beneath it:
+         nobody is made to admit they have nobody. */
+      skip: "Skip for now",
+    },
+  },
+
   // ─── Ludo (routes/games/ludo/) ───
   ludo: {
     title: "Ludo",
@@ -1618,6 +1746,16 @@ const en = {
       careful: "One more six and all three are void — a fourth would bring them back.",
       onTheEdge: "These sixes count for nothing as things stand. One more six redeems them all.",
       voided: "Teen chakkay! 😅 All of it void — the board is as it was.",
+    },
+    undo: {
+      cta: "Take that move back",
+      why: {
+        they_have_rolled: "Too late for that one — the next player has already rolled.",
+        not_your_move: "That was not your move to take back.",
+        already_undone: "You have already taken that one back.",
+        nothing_to_undo: "There is nothing to take back just now.",
+        error: "That did not go through. Nothing has changed on the board.",
+      },
     },
     jota: {
       chooseTitle: "Two of your gotis are on that square.",
@@ -1859,6 +1997,7 @@ const en = {
       diceCaptionOne: "One die, the way it has always been played.",
       diceCaption: "Two dice — the Desi table.",
       autoOnlyMove: "Move for me when there's only one choice",
+      undoOn: "Let me take a move back",
     },
     new: {
       hint: "Who are you playing?",

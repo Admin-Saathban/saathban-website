@@ -82,7 +82,6 @@ export default function GamesHome() {
   // The table standing in the way, when someone tries for a second.
   const [blockedBy, setBlockedBy] = useState(null);
   const [pastOpen, setPastOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [streak, setStreak] = useState(0);
 
   useEffect(() => {
@@ -440,23 +439,11 @@ export default function GamesHome() {
              person to compare three things before they'd decided they
              wanted a game at all; now it's one button, and the choice
              of game comes after. ── */}
-      {!pickerOpen ? (
-        <PrimaryBtn
-          onClick={() => {
-            const inTheWay = liveSessionOf(sessions);
-            if (inTheWay) {
-              setBlockedBy(inTheWay);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-              return;
-            }
-            setPickerOpen(true);
-          }}
-          style={{ width: "100%", marginBottom: 16 }}
-        >
-          ✚ {t("games.home.startCta")}
-        </PrimaryBtn>
-      ) : (
-        <>
+      {/* §9: the games, always on the screen and never behind a
+          button. This was a `pickerOpen` ternary that started
+          false, so the screen a person met had no games on it —
+          only controls for reaching them. It is also why §8's
+          tap-to-open-a-table had nothing to tap. */}
           <SectionLabel>{t("games.home.pickTitle")}</SectionLabel>
           {turnGames.map((g) => (
             <button
@@ -495,9 +482,6 @@ export default function GamesHome() {
               </span>
             </button>
           ))}
-          <GhostBtn onClick={() => setPickerOpen(false)}>{t("outdoor.place.formCancel")}</GhostBtn>
-        </>
-      )}
 
       {/* ── Past games: folded away. Finished tables must never
              stack up the screen; three at a time, behind a link. ── */}

@@ -19,6 +19,28 @@
    REDUCED MOTION (§3): transitions become instant. Not slower, not
    smaller — instant. Nothing bounces, nothing scales. The screen still
    arrives; it simply does not travel.
+
+   ── WHY THERE ARE TWO MOTION FILES, AND WHICH IS WHICH ──
+
+   `src/app/lib/motion.jsx` exists too, and it is NOT dead code: the
+   messages lane imports its MotionStyles in MessagesWorld and
+   SayHelloSheet. It owns the SHEET, the push transition and the §11
+   fresh-highlight. This file owns FULL-SCREEN ARRIVAL and the DRAWER,
+   which lib has no vocabulary for — §4's grow-from-its-button is only
+   here.
+
+   They were written independently and collided on two class names,
+   `.sb-dim` and `.sb-sheet`, with different durations. Both are
+   mounted at once on the messages screen, so whichever <style> came
+   last silently won. Fixed by division rather than by merge: sheets
+   are lib's alone, and the dim here is `.sb-drawer-dim`. The two
+   files now share no class name at all.
+
+   This is a truce, not the destination. MOTION_SPEC's whole point is
+   one vocabulary, and two files is one and a half. The merge is lib's
+   to accept, because folding this in means editing the messages
+   lane's imports — so it is written down here rather than done to
+   them without asking.
    ════════════════════════════════════════════════ */
 
 export const TIMING = {
@@ -56,7 +78,6 @@ export function openFullScreen(navigate, to, from = "right", state = {}) {
 export const MOTION_CSS = `
 @keyframes sb-in-right { from { transform: translateX(100%); } to { transform: none; } }
 @keyframes sb-in-left  { from { transform: translateX(-100%); } to { transform: none; } }
-@keyframes sb-in-up    { from { transform: translateY(100%); } to { transform: none; } }
 
 /* A drawer GROWS from its button (§4): small at that corner, then up
    and out into place. Not a flat slide — the difference is what makes
@@ -69,24 +90,23 @@ export const MOTION_CSS = `
   from { transform: scale(0.25) translate(38%, -38%); opacity: 0; }
   to   { transform: none; opacity: 1; }
 }
-@keyframes sb-dim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sb-drawer-dim-in { from { opacity: 0; } to { opacity: 1; } }
 
 .sb-full-right { animation: sb-in-right ${TIMING.fullIn}ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .sb-full-left  { animation: sb-in-left  ${TIMING.fullIn}ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.sb-sheet      { animation: sb-in-up    ${TIMING.sheetUp}ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Slight overshoot on open, per §3's easing column. */
 .sb-drawer-br  { animation: sb-grow-br ${TIMING.drawerOpen}ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
                  transform-origin: bottom right; }
 .sb-drawer-tr  { animation: sb-grow-tr ${TIMING.drawerOpen}ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
                  transform-origin: top right; }
-.sb-dim        { animation: sb-dim-in ${TIMING.drawerOpen}ms ease-out both; }
+.sb-drawer-dim { animation: sb-drawer-dim-in ${TIMING.drawerOpen}ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   /* Instant, not merely calmer. The container still appears — it just
      does not travel, scale or bounce to get there. */
-  .sb-full-right, .sb-full-left, .sb-sheet,
-  .sb-drawer-br, .sb-drawer-tr, .sb-dim {
+  .sb-full-right, .sb-full-left,
+  .sb-drawer-br, .sb-drawer-tr, .sb-drawer-dim {
     animation: none !important;
   }
 }

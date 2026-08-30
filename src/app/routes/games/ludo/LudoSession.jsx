@@ -1173,6 +1173,7 @@ export default function LudoSession() {
                 muted
                 style={{
                   margin: playing ? "4px 0 0" : "10px 0 0",
+                  color: playing ? GAME.inkMuted : undefined,
                   fontSize: ts(18),
                   /* ONE LINE on the play screen. This is the running
                      commentary — useful, never urgent — and when it
@@ -1223,7 +1224,7 @@ export default function LudoSession() {
           {playing && awaySeats.length > 0 && (
             <BodyText
               role="status"
-              style={{ margin: "4px 0 0", textAlign: "center", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, flex: "0 0 auto" }}
+              style={{ margin: "4px 0 0", textAlign: "center", fontSize: ts(A11Y.minBodyPx), color: GAME.inkMuted, flex: "0 0 auto" }}
             >
               {t("ludo.table.botTookOver", {
                 names: awaySeats.map((r) => r.name || t("ludo.seat.someone")).join(", "),
@@ -1233,7 +1234,14 @@ export default function LudoSession() {
 
           {/* ── What to do next, in one sentence ── */}
           {isMyTurn && hasDice && (
-            <BodyText style={{ fontWeight: 700, margin: "10px 0 0", textAlign: "center" }}>
+            <BodyText
+              style={{
+                fontWeight: 700,
+                margin: "10px 0 0",
+                textAlign: "center",
+                color: GAME.ink,
+              }}
+            >
               {spendable > 1 ? t("ludo.turn.pickDie") : t("ludo.turn.pickPiece")}
             </BodyText>
           )}
@@ -1249,8 +1257,9 @@ export default function LudoSession() {
                 width: "100%",
                 minHeight: 52,
                 marginTop: 8,
-                borderColor: C.brown,
-                color: C.textMain,
+                borderColor: GAME.controlEdge,
+                background: GAME.control,
+                color: GAME.ink,
                 flex: "0 0 auto",
               }}
             >
@@ -1263,12 +1272,12 @@ export default function LudoSession() {
             onClose={() => setUndoNote(null)}
           />
           {autoNote && (
-            <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: C.green }}>
+            <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: "#8FE3B0" }}>
               {t("ludo.turn.autoPlayed")}
             </BodyText>
           )}
           {isMyTurn && deadDice.length > 0 && (
-            <BodyText muted role="status" style={{ margin: "6px 0 0", textAlign: "center" }}>
+            <BodyText muted role="status" style={{ margin: "6px 0 0", textAlign: "center", color: GAME.inkMuted }}>
               {t("ludo.dice.wastedNote", { n: deadDice.map((d) => d.v).join(", ") })}
             </BodyText>
           )}

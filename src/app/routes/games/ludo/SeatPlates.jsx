@@ -34,6 +34,7 @@
 import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
+import { GAME } from "../gameSurface.js";
 /* The seat→corner geometry lives in a plain module so a test can
      import it without a browser — see seatCorners.js for why it needs
      one. screenCorner is re-exported here because callers have always
@@ -353,7 +354,8 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
             display: "block",
             fontSize: ts(16),
             fontWeight: 700,
-            color: C.textMain,
+            /* Light on the table, dark on the cream card. */
+            color: isTurn ? C.textMain : GAME.ink,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -371,8 +373,8 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
               marginTop: 2,
               padding: "1px 7px",
               borderRadius: 8,
-              background: C.warmGray,
-              color: C.textMain,
+              background: "rgba(255,255,255,0.16)",
+              color: GAME.ink,
               fontSize: ts(13),
               fontWeight: 800,
               letterSpacing: "0.04em",

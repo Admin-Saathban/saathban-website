@@ -1,39 +1,50 @@
 /* ════════════════════════════════════════════════
-   /app/home — the Saath-Icon hub, the after-sign-in landing.
+   /app/home — Home. NAVIGATION_SPEC §4.
 
-   Greeting + today-at-a-glance (log summary, today's reminders), then
-   large cards to everywhere an Icon goes: Today's log first and one
-   tap away, then Community, Events, Skills, Notifications, Profile,
-   Settings. My Circle appears only once the circle has a member or a
-   pending request (SPEC.md: circle stays out of main navigation until
-   it has a member — Settings remains its permanent home).
+   Top to bottom: header, composer, today's log as ONE ROW, and then
+   the feed. Nothing else.
 
-   The AppHeader mark lands here for Icons (roleHomePath → /app/home).
-   Cards keep the accessibility floors: ≥48px targets, ≥18px text,
-   meaning never carried by colour alone.
+   WHAT LEFT, AND WHY IT IS NOT A REGRESSION
+
+   The three tiles (Out & about, Friend groups, Grow) are gone. They
+   were added on 29 August with the reasoning that two ways into one
+   room is not a defect, which was true — but with them present the
+   feed began below the fold, and Home is the feed. Two of the three
+   are bottom-bar tabs now and Grow is in More, so nothing became
+   unreachable; it stopped costing the first screenful.
+
+   The greeting no longer owns a heading. It moved INSIDE the log row,
+   which is the §4 change that buys the most vertical space: a row
+   that says "Good morning, Ayesha" and "Today's log — 1 of 2" does
+   the work the h1 and the bordered card did between them.
+
+   THE LOG ROW HAS NO BORDER, and that is §4.1's rule rather than a
+   style preference: an outline means you can tap it. Everything on
+   Home that is not a control loses its outline, so the ones that keep
+   theirs mean something again. The row is still tappable — the whole
+   row is the target, and the chevron says so.
+
+   "Your move — Ludo" is gone. Owner's ruling: a game is entered
+   deliberately and left deliberately, and a nudge back into a
+   half-finished board turns it into a chore.
+
+   The composer is the posts lane's ComposerRow and arrives with the
+   Feed, which is why none is built here.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
-import { useDailyLogs , DB_MODULES } from "./logStore.js";
+import { useDailyLogs } from "./logStore.js";
 import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import { greetingKeyForHour, isoDate } from "./homeMock.js";
 import AppHeader from "../../components/AppHeader.jsx";
-import supabase from "../../lib/supabase.js";
-import {
-  awardMyBadges,
-  fetchMyEarnedBadges,
-  fetchMyProgress,
-  estimatePointsToday,
-} from "../../lib/points.js";
-import YourTurnChips from "../games/YourTurnChips.jsx";
+import { awardMyBadges } from "../../lib/points.js";
 import TodayReminders from "./TodayReminders.jsx";
 import Feed from "../community/Feed.jsx";
-import HomeStrip from "./HomeStrip.jsx";
 
 /* Notifications, Settings, and My profile live in the AppHeader —
    the hub keeps cards for the places, not the chrome. My Circle is
@@ -51,26 +62,11 @@ export default function IconHub() {
   const todayLog = logsByDate[isoDate(new Date())] || {};
   const entries = dayEntries(prefs, new Date());
   const done = entries.filter((e) => isEntryDone(e, todayLog)).length;
+  /* "All done" only means anything when there was something to do —
+     an Icon with every module switched off has done == entries == 0,
+     and telling them the day is complete is a receipt for nothing. */
+  const allDone = entries.length > 0 && done >= entries.length;
 
-  /* The same server-owned figure the log screen shows — the hub must
-     not quote a different number for the same day. */
-  const [progress, setProgress] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    fetchMyProgress()
-      .then((p) => alive && setProgress(p))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-  const pointsToday =
-    progress?.points_today ??
-    estimatePointsToday(entries, todayLog, {
-      cap: progress?.daily_cap ?? 60,
-      isDone: isEntryDone,
-      durableModules: DB_MODULES,
-    });
   /* Catch-up award on arriving home. The unseen COUNT is gone with the
      Milestones card that announced it — badges, streaks and
      celebrations are all My Journey's now — but the award itself still
@@ -85,18 +81,6 @@ export default function IconHub() {
 
 
 
-  const cardStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-    minHeight: 84,
-    padding: "16px 20px",
-    background: C.white,
-    border: `2px solid ${C.warmGray}`,
-    borderRadius: 18,
-    textDecoration: "none",
-    color: C.textMain,
-  };
 
   return (
     <>
@@ -111,99 +95,74 @@ export default function IconHub() {
         }}
       >
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
-          <h1
+          {/* ── §4 item 3: TODAY'S LOG, AS ONE ROW ──
+
+              The greeting lives inside it. Previously this was an h1
+              saying "Good morning, Ayesha" followed by an 84px card
+              with a 2.5px green outline — two blocks and about 150px
+              to say one thing. Now it is a row: the sun, the greeting,
+              the count beneath it, a chevron.
+
+              NO BORDER (§4.1). An outline means you can tap it, and
+              the whole row is already tappable, so the outline was
+              spending contrast on a boundary nobody needed. The fill
+              and the chevron do that work.
+
+              The done state is not a separate component any more. It
+              is the same row with a tick where the sun was and a
+              different line under the greeting, because a row that
+              turns into a pill when you finish moves the feed up and
+              down under a person's thumb. */}
+          <Link
+            to="/app/home/log"
             style={{
-              fontFamily: meta.fonts.heading,
-              fontSize: ts(30),
-              fontWeight: 700,
-              color: C.green,
-              margin: "6px 0 20px",
-              lineHeight: Math.max(1.25, meta.lineHeight - 0.4),
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              minHeight: 64,
+              padding: "10px 6px",
+              marginBottom: 6,
+              textDecoration: "none",
+              color: C.textMain,
             }}
           >
-            {t(greetingKeyForHour(new Date().getHours()))}
-            {firstName ? (meta.dir === "rtl" ? "، " : ", ") + firstName : ""}
-          </h1>
-
-          {/* GAMES_WIRING §2: green "your move" chips when a table is
-              waiting on this Icon; renders null otherwise. */}
-          <YourTurnChips />
-
-          {/* ── Today's log ──
-              While anything is still to log it is the loudest thing on
-              the screen. Once every enabled module for today is done it
-              becomes a chip: still here, still one tap, but no longer
-              asking. Enabling a module or a new day rolling over puts
-              the full card back, because `entries` is recomputed from
-              prefs and today's date on every render. */}
-          {done >= entries.length && entries.length > 0 ? (
-            <Link
-              to="/app/home/log"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                minHeight: A11Y.minTapTargetPx,
-                padding: "0 16px",
-                marginBottom: 14,
-                borderRadius: 50,
-                border: `1.5px solid ${C.green}`,
-                background: C.white,
-                color: C.green,
-                textDecoration: "none",
-                fontSize: ts(17),
-                fontWeight: 700,
-              }}
+            <span aria-hidden="true" style={{ fontSize: 30, lineHeight: 1, flexShrink: 0 }}>
+              {allDone ? "✅" : "🌤️"}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  display: "block",
+                  fontFamily: meta.fonts.heading,
+                  fontSize: ts(20),
+                  fontWeight: 700,
+                  color: C.green,
+                  lineHeight: 1.25,
+                }}
+              >
+                {t(greetingKeyForHour(new Date().getHours()))}
+                {firstName ? (meta.dir === "rtl" ? "، " : ", ") + firstName : ""}
+              </span>
+              <span style={{ display: "block", fontSize: ts(15), color: C.textMuted, marginTop: 1 }}>
+                {allDone
+                  ? t("hub.logLineDone")
+                  : t("hub.logLine", { done, total: entries.length })}
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              style={{ fontSize: ts(22), color: C.textMuted, fontWeight: 700, flexShrink: 0 }}
             >
-              <span aria-hidden="true">✓</span>
-              <span style={{ flex: 1 }}>
-                {t("hub.logDoneChip", { n: entries.length })}
-              </span>
-              <span aria-hidden="true" style={{ color: C.textMuted, fontSize: ts(16), fontWeight: 600 }}>
-                {t("hub.logChange")}
-              </span>
-            </Link>
-          ) : (
-            <Link
-              to="/app/home/log"
-              style={{
-                ...cardStyle,
-                border: `2.5px solid ${C.green}`,
-                marginBottom: 14,
-              }}
-            >
-              <span aria-hidden="true" style={{ fontSize: 34 }}>🌤️</span>
-              <span style={{ flex: 1 }}>
-                <span
-                  style={{
-                    display: "block",
-                    fontFamily: meta.fonts.heading,
-                    fontSize: ts(22),
-                    fontWeight: 700,
-                    color: C.green,
-                  }}
-                >
-                  {t("hub.todaysLog")}
-                </span>
-                <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
-                  {done > 0
-                    ? t("hub.logSummary", { done, total: entries.length, points: pointsToday })
-                    : t("hub.logEmpty")}
-                </span>
-              </span>
-              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
-                {meta.dir === "rtl" ? "‹" : "›"}
-              </span>
-            </Link>
-          )}
+              {meta.dir === "rtl" ? "‹" : "›"}
+            </span>
+          </Link>
 
-          {/* ── Today's reminders, one at a time ── */}
-          <TodayReminders iconId={iconId} />
-
-          {/* ── §4: three doors that must not need a menu ──
-              Out & about, Friend groups and Grow sit here, under the
-              day's things and above the feed, as labelled entries. */}
-          <HomeStrip />
+          {/* Reminders stay. §4 lists what Home holds and what was
+             deleted, and this is in neither list — an omission, not a
+             ruling. One of the things it carries is the medication
+             tick-off, and dropping a medicines surface off Home on a
+             reading of "nothing else" is not a call to make quietly.
+             Flagged for the owner instead. */}
 
           {/* ── And then the people ──
               THE REAL FEED, not a reader of it. TONIGHT.md §1: home

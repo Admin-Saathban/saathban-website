@@ -47,6 +47,8 @@ const ur = {
        جاتا ہے۔ */
     logDoneChip: "آج کا روزنامچہ مکمل ہے",
     logChange: "بدل لیں",
+    logLine: "آج کا حال — {total} میں سے {done}",
+    logLineDone: "آج کا حال — مکمل",
     /* یاد دہانیاں: نہ کوئی گنتی، نہ کوئی تاخیر۔ */
     remindersAllDone: "آج کی ساری یاد دہانیاں مکمل ہیں",
     reminderUndo: "ابھی نہیں",

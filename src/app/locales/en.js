@@ -36,6 +36,10 @@ const en = {
        not a receipt: still one tap, no longer asking. */
     logDoneChip: "Today's log is done",
     logChange: "Change it",
+    /* NAVIGATION_SPEC §4 — the log is ONE ROW now, and the greeting
+       lives inside it rather than owning a heading of its own. */
+    logLine: "Today's log — {done} of {total}",
+    logLineDone: "Today's log — all done",
     /* Reminders. Never "overdue", never a tally of days kept — one
        left untouched is simply still there tomorrow. */
     remindersAllDone: "All your reminders are done for today",

@@ -3120,7 +3120,10 @@ const en = {
     requestSent: "Request sent to {name}",
     requestAccepted: "You're connected with {name} ✓",
     requestDeclined: "Quietly declined.",
-    reported: "Thank you — our team will look at this.",
+    /* AUDIT_11 NAME IT — a report has no screen to land on, so the
+       line has to say what happens next and roughly when. "Our team
+       will look at this" left a person wondering for how long. */
+    reported: "Thank you. A moderator will read this within a few hours.",
     blocked: "Blocked. You won't see them here.",
     unblocked: "Unblocked.",
     // circle + reminders

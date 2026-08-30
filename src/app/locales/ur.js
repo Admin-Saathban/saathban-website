@@ -2947,7 +2947,7 @@ const ur = {
     requestSent: "{name} کو درخواست بھیج دی",
     requestAccepted: "اب آپ {name} سے جڑ گئے ✓",
     requestDeclined: "خاموشی سے انکار کر دیا۔",
-    reported: "شکریہ — ہماری ٹیم دیکھ لے گی۔",
+    reported: "شکریہ۔ ایک نگران چند گھنٹوں میں اسے پڑھ لے گا۔",
     blocked: "بلاک کر دیا۔ اب یہاں نظر نہیں آئیں گے۔",
     unblocked: "بلاک ہٹا دیا۔",
     inviteSent: "{name} کو دعوت بھیج دی",

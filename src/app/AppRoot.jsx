@@ -26,6 +26,7 @@ import AdminLayout from "./routes/admin/AdminLayout.jsx";
 import BuddyQueue from "./routes/admin/BuddyQueue.jsx";
 import BuddyApplication from "./routes/admin/BuddyApplication.jsx";
 import ModerationQueue from "./routes/admin/ModerationQueue.jsx";
+import Worklist from "./routes/admin/Worklist.jsx";
 import BroadcastsPage from "./routes/admin/BroadcastsPage.jsx";
 import QuestionsQueue from "./routes/admin/QuestionsQueue.jsx";
 import HomeRoutes from "./routes/home/HomeRoutes.jsx";
@@ -289,7 +290,13 @@ export default function AppRoot() {
               </RequireAuth>
             }
           >
-            <Route index element={<Navigate to="buddies" replace />} />
+            {/* §18 — the front door is a worklist, not a section.
+                It also has to be: the index used to send everyone to
+                the vetting queue, which a MODERATOR cannot read at
+                all (0053), so their admin experience began with an
+                empty page. The worklist is filtered by what you can
+                act on, so it is correct for every level. */}
+            <Route index element={<Worklist />} />
             <Route path="buddies" element={<BuddyQueue />} />
             <Route path="buddies/:id" element={<BuddyApplication />} />
             <Route path="questions" element={<QuestionsQueue />} />

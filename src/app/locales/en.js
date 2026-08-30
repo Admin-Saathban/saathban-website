@@ -1195,6 +1195,28 @@ const en = {
       },
     },
   },
+  /* §18 — the admin worklist. Rows name the THING waiting, never
+     a queue: "Someone reported something", not "Moderation (3)".
+
+     NOTE: the other admin screens carry hardcoded English and have no
+     locale block at all — a §0.1 gap wider than tonight and worth
+     someone taking. This block is the start of one. */
+  admin: {
+    work: {
+      title: "What needs you",
+      intro: "Oldest first. Tap anything to open it.",
+      clear: "Nothing is waiting. The desk is clear.",
+      waiting: "Waiting a while",
+      justNow: "Just now",
+      hours: "{n} hours ago",
+      days: "{n} days ago",
+      kind: {
+        report: "Someone reported something",
+        application: "A Saath-Buddy is waiting to be reviewed",
+        question: "Someone asked Saathban a question",
+      },
+    },
+  },
   calendar: {
     title: "Your calendar",
     today: "Today",

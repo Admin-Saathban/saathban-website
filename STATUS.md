@@ -263,7 +263,36 @@ lets it through" — which would have re-established the false claim with
 a measurement attached to it. Read `PIPESTATUS[0]`, or run the command
 unpiped when the exit code is the answer you are after.
 
-The family 1..1e is one idea: **the instrument answers the question it
+**1f. A red build is not evidence until it survives a run ALONE —
+`dist/` is a shared resource.** Four lanes share one working tree, so
+they share one output directory, and two `vite build` runs at the same
+time write the same files. Tested rather than assumed, in an isolated
+copy so the experiment did not create the contention it was studying:
+
+    one build alone (control)   →  exit 0
+    two concurrently, run 1     →  exit 0 and exit 1
+    two concurrently, run 2     →  exit 1 and exit 0
+
+The failure is `EPERM, Permission denied` on a static asset both
+processes were copying into `dist/`. Another session hit the same
+category with a different face — `[vite:html-inline-proxy] No matching
+HTML proxy module found`, pointing at `index.html`, which is the
+marketing site and nobody's current work. **That is the danger: the
+error names a file you did not touch, so it reads as a real regression
+in someone else's code.** They re-ran it twice alone, got green twice,
+and told us instead of hunting a phantom.
+
+I reproduced the CATEGORY, not that specific error, and say so
+deliberately — the general mechanism (two processes writing one
+`dist/`) is simpler than the per-process html-proxy cache first
+proposed, and covers both faces.
+
+So: before believing a build failure, run it again with nobody else
+building. Same shape as the database channel (see "Database load
+discipline"), and the same lesson we learned there about measuring
+while another lane holds the resource.
+
+The family 1..1f is one idea: **the instrument answers the question it
 was pointed at, which is not always the question asked.** A build
 resolves modules, `node --check` parses, a pipe reports its tail, an
 HTTP 200 says a server replied. None of them is lying; each is being

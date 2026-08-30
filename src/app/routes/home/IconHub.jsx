@@ -46,6 +46,7 @@ import Icon from "../../components/Icon.jsx";
 import { awardMyBadges } from "../../lib/points.js";
 import TodayReminders from "./TodayReminders.jsx";
 import Feed from "../community/Feed.jsx";
+import { PostComposer } from "../community/Composer.jsx";
 
 /* Notifications, Settings, and My profile live in the AppHeader —
    the hub keeps cards for the places, not the chrome. My Circle is
@@ -96,6 +97,23 @@ export default function IconHub() {
         }}
       >
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          {/* ── §4 item 2: THE COMPOSER, ABOVE THE LOG ──
+
+              Content first, which is the point of the redesign. It sat
+              below the log row until now for a structural reason rather
+              than a chosen one: the composer lived inside Feed, and Feed
+              renders after the log.
+
+              Lane 38 owns that file and designed this seam —
+              <PostComposer /> needs no props and announces a landed post
+              on the window, so the feed below still does §11's
+              reload-and-highlight without owning the thing that was
+              typed into.
+
+              Not sticky, and no floating button (MOTION §5): it scrolls
+              away with the feed like any other content. */}
+          <PostComposer />
+
           {/* ── §4 item 3: TODAY'S LOG, AS ONE ROW ──
 
               The greeting lives inside it. Previously this was an h1
@@ -173,7 +191,7 @@ export default function IconHub() {
               composer, Everyone/Friends filter, Connect, origin
               labels, automatic widening. A thinner second copy is what
               made them two screens in the first place. */}
-          <Feed />
+          <Feed composer={false} />
         </div>
       </main>
     </>

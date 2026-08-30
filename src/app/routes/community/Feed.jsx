@@ -743,7 +743,11 @@ function PostCard({
   );
 }
 
-export default function Feed() {
+/* `composer` — Lane 38's contract. Home mounts <PostComposer /> above
+   the log row (§4: header, composer, log, feed), so the Feed must not
+   draw a second one. It still owns everything §11 asks for: it listens
+   for the post landing, reloads, and marks the new row fresh. */
+export default function Feed({ composer = true }) {
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
@@ -774,6 +778,39 @@ export default function Feed() {
   const [menuPost, setMenuPost] = useState(null);
   /* §6/§10 — offers, saves and follows for what is on screen. */
   const [extras, setExtras] = useState({ offers: [], saves: [], follows: [], tags: [] });
+
+  /* §11 stays intact with the composer anywhere on the page: the
+     optimistic row appears on "posting", and the reload plus the
+     highlight happen on "posted". Only registered when the composer
+     is external — otherwise share() below already does both and the
+     feed would load twice. */
+  useEffect(() => {
+    if (composer) return undefined;
+    const onPosting = (ev) => {
+      const { key, body: b, hasPhoto } = ev.detail || {};
+      if (key) setPendingPosts((cur) => [...cur, { key, body: b, hasPhoto }]);
+    };
+    const onPosted = async (ev) => {
+      const { id, key, tagsFailed } = ev.detail || {};
+      await load();
+      setPendingPosts((cur) => cur.filter((x) => x.key !== key));
+      if (tagsFailed) raiseToast(t("posts.tagFailed"), { tone: "error", key: "tag" });
+      setTimeout(() => { if (id) fresh.mark(id); }, 0);
+    };
+    const onFailed = (ev) => {
+      const { key } = ev.detail || {};
+      setPendingPosts((cur) => cur.filter((x) => x.key !== key));
+    };
+    window.addEventListener("saath:posting", onPosting);
+    window.addEventListener("saath:posted", onPosted);
+    window.addEventListener("saath:post-failed", onFailed);
+    return () => {
+      window.removeEventListener("saath:posting", onPosting);
+      window.removeEventListener("saath:posted", onPosted);
+      window.removeEventListener("saath:post-failed", onFailed);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composer]);
 
   const openComposer = (start) => {
     setComposerStart(start);
@@ -1118,7 +1155,7 @@ export default function Feed() {
     <CommunityScreen>
       {/* §1 — full screen, opened from the row in the feed. */}
       <Composer
-        open={composerOpen}
+        open={composer && composerOpen}
         startWith={composerStart}
         busy={posting}
         onClose={() => setComposerOpen(false)}
@@ -1240,7 +1277,7 @@ export default function Feed() {
                   place a post should be. No avatar: the header already
                   carries that face, and two of the same face on one
                   screen is noise. */}
-              <ComposerRow onOpen={openComposer} />
+              {composer && <ComposerRow onOpen={openComposer} />}
               {isIcon && (
                 <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
                   🙌 {t("community.shares.activityCta")}

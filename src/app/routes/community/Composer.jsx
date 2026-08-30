@@ -38,6 +38,9 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { SWATCHES, STYLE_TAGS, VISIBILITIES } from "./postsData.js";
 import { fetchMyPeople } from "../people/myPeopleStore.js";
 import { VoiceRecorder, VoicePlayer } from "../people/VoiceNote.jsx";
+/* PostComposer only — see the block at the foot of this file. */
+import { createPost } from "./communityData.js";
+import { useToast } from "../../lib/feedback.jsx";
 
 /* ── The row that lives in the feed ── */
 export function ComposerRow({ onOpen }) {
@@ -481,5 +484,98 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   PostComposer — the composer, mountable anywhere.
+
+   NAVIGATION_SPEC §4 orders Home as header, composer, today's log row,
+   then feed. The composer lived inside Feed, and the log row belongs to
+   IconHub, so on Home it drew BELOW the log — content second. The owner
+   ruled twice that it must be above.
+
+   The seam is Lane 38's design and their words: a self-contained
+   component that needs no props, and a `saath:posted` CustomEvent so
+   that whatever is showing the feed can react to a successful post
+   without owning the composer. Written here rather than by them only
+   because they offered it explicitly while their own night was
+   elsewhere — the contract is theirs unchanged.
+
+   WHY AN EVENT AND NOT A CALLBACK. §11 requires sharing to LAND on the
+   post: the feed reloads, scrolls to the new row and highlights it. If
+   the composer is mounted in IconHub and the feed in Feed, a callback
+   would have to be threaded through a component that renders neither.
+   An event is how lib/sound.js already does this, so it is the pattern
+   the repo has rather than a new one.
+
+   Two events, not one, because losing the optimistic row would be a
+   real regression on a slow connection:
+     saath:posting  {key, body, hasPhoto}  — a row to show at once
+     saath:posted   {id, key, tagsFailed}  — it landed; reload and mark
+
+   THE FAILURE STAYS HERE, deliberately, and that is Lane 38's rule
+   preserved: a refusal has no result and no home to land on, so it
+   keeps its line, its Retry, and the words coming back to the composer.
+   The composer is the only thing that still holds those words.
+   ════════════════════════════════════════════════ */
+export function PostComposer() {
+  const { t } = useI18n();
+  const { profile } = useSession();
+  const { toast: raiseToast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const share = async (opts) => {
+    const draftBody = (opts?.body || "").trim();
+    /* §7 — a voice post may carry no words at all. */
+    if ((!draftBody && !opts?.audio) || busy) return false;
+    const key = `pending-${Date.now()}`;
+    setBusy(true);
+    window.dispatchEvent(
+      new CustomEvent("saath:posting", {
+        detail: { key, body: draftBody, hasPhoto: !!opts.file },
+      })
+    );
+    try {
+      const row = await createPost(profile.id, draftBody, opts.file || null, {
+        visibility: opts.visibility,
+        colour: opts.colour,
+        styleTag: opts.styleTag,
+        helpWanted: opts.helpWanted,
+        tagged: opts.tagged || [],
+        audio: opts.audio || null,
+      });
+      window.dispatchEvent(
+        new CustomEvent("saath:posted", {
+          detail: { id: row?.id, key, tagsFailed: !!row?.tagsFailed },
+        })
+      );
+      return true;
+    } catch {
+      window.dispatchEvent(new CustomEvent("saath:post-failed", { detail: { key } }));
+      raiseToast(t("feedback.postFailed"), {
+        tone: "error",
+        actionLabel: t("feedback.retry"),
+        onAction: () => share(opts),
+      });
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!profile) return null;
+  return (
+    <>
+      <ComposerRow onOpen={() => setOpen(true)} />
+      <Composer
+        open={open}
+        startWith={null}
+        onClose={() => setOpen(false)}
+        onShare={share}
+        busy={busy}
+      />
+    </>
   );
 }

@@ -55,9 +55,9 @@ function initialOf(name) {
 
    The ring only exists while it is that player's turn: a ring drawn
    on everyone would be four clocks, three of them lying. */
-function Avatar({ name, colour, ink, isTurn, remaining, seconds, label }) {
+function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact }) {
   const { t, ts } = useI18n();
-  const size = isTurn ? 60 : 44;
+  const size = compact ? (isTurn ? 48 : 38) : isTurn ? 60 : 44;
   const r = size / 2 - 3;
   const circumference = 2 * Math.PI * r;
   const left = Math.max(0, Math.min(1, remaining ?? 1));
@@ -250,7 +250,7 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
   );
 }
 
-function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie, remaining, seconds, rolling }) {
+function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie, remaining, seconds, rolling, compact }) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   const colour = SEAT_COLORS[seat];
@@ -260,9 +260,9 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
         display: "flex",
         flexDirection: align === "end" ? "row-reverse" : "row",
         alignItems: "center",
-        gap: 9,
+        gap: compact ? 7 : 9,
         minWidth: 0,
-        padding: "6px 10px",
+        padding: compact ? "2px 8px" : "6px 10px",
         borderRadius: 16,
         background: isTurn ? "#fffdf5" : "transparent",
         border: isTurn ? `2px solid ${colour}` : "2px solid transparent",
@@ -270,6 +270,7 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
       }}
     >
       <Avatar
+        compact={compact}
         name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
         colour={colour}
         ink={SEAT_INK[seat]}
@@ -308,12 +309,23 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
             never colour alone), and here in words at the floor size. */}
         {isTurn && (
           <span
-            style={{
-              display: "block",
-              fontSize: ts(A11Y.minBodyPx),
-              color: colour,
-              fontWeight: 700,
-            }}
+            style={
+              compact
+                ? {
+              position: "absolute",
+              width: 1,
+              height: 1,
+              overflow: "hidden",
+              clip: "rect(0 0 0 0)",
+              whiteSpace: "nowrap",
+            }
+                : {
+                    display: "block",
+                    fontSize: ts(A11Y.minBodyPx),
+                    color: colour,
+                    fontWeight: 700,
+                  }
+            }
           >
             {isMe ? t("ludo.seat.yourTurn") : t("ludo.seat.turn")}
           </span>
@@ -323,8 +335,19 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
             thinking", which is a different and truer thing. */}
         {isTurn && !isMe && (
           <span
-            className="sb-think"
-            style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, letterSpacing: "0.06em" }}
+            className={compact ? undefined : "sb-think"}
+            style={
+              compact
+                ? {
+              position: "absolute",
+              width: 1,
+              height: 1,
+              overflow: "hidden",
+              clip: "rect(0 0 0 0)",
+              whiteSpace: "nowrap",
+            }
+                : { display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, letterSpacing: "0.06em" }
+            }
           >
             {t("ludo.ceremony.thinking")}
           </span>
@@ -408,6 +431,9 @@ export default function SeatPlates({
      to spend. Only ever offered on your own plate. */
   onPickDie,
   rolling,
+  /* Short screens (roughly <720px tall): the plate gives its height
+     back to the board without giving up anything it says. */
+  compact,
   /* The turn clock, for the ring. `secondsLeft` counts down and
      `turnSeconds` is the whole turn, so the ring can show a share
      rather than a number. Omit both and no ring is drawn. */
@@ -436,7 +462,13 @@ export default function SeatPlates({
         alignItems: "center",
         gap: 8,
         maxWidth: 560,
-        margin: where === "top" ? "0 auto 10px" : "10px auto 0",
+        margin: compact
+          ? where === "top"
+            ? "0 auto 4px"
+            : "4px auto 0"
+          : where === "top"
+          ? "0 auto 10px"
+          : "10px auto 0",
       }}
     >
       {plates.map((seat, i) => (
@@ -461,6 +493,7 @@ export default function SeatPlates({
               canRoll={!!canRoll && seat === currentSeat}
               onPickDie={onPickDie}
               rolling={rolling}
+              compact={compact}
               remaining={seat === currentSeat ? remaining : null}
               seconds={seat === currentSeat ? secondsLeft : null}
             />

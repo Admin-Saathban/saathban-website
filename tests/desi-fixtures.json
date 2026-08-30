@@ -1,6 +1,7 @@
 {
   "_why": "Positions for tests/desi-rules-played.mjs. They are created with service credentials rather than by the suite, because a seated player may not PATCH game_sessions — that is RLS working correctly and is itself covered by tests/undo.mjs and the leave suite. The suite RE-VERIFIES each position from the database before judging any rule against it, so a wrong id here fails loudly instead of quietly reporting a rule broken.",
   "_lesson": "The first version of these ids was mislabelled: they were mapped by a join on join_code that did not line up, so every tag pointed at the wrong board. Reading the positions back is what caught it. Never trust the label on a fixture.",
+  "_single_use": "THESE ARE CONSUMED BY BEING LOOKED AT. LudoSession drives bot seats itself — it calls game_tick whenever the current seat is a bot, regardless of any clock — so merely opening one of these tables plays it on. A second run of this suite will find four boards advanced to near-finished and report the fixtures wrong, which is the guard working, not the rules breaking. Reset the five positions before each run.",
   "virgin_jota": {
     "id": "99b977d9-09eb-4e86-b860-c6534283415b",
     "expect": { "pieces": [[10, 10, 0, 0], [30, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], "pairs_moved": {}, "die": 4 }

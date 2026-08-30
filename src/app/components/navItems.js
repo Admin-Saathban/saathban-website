@@ -36,9 +36,9 @@ export function barItems(role, { buddyActive = true } = {}) {
        Community, and the user never found it. */
     return [
       home,
-      { to: "/app/community/messages", key: "hub.messages", emoji: "💬" },
       games,
-      { to: "/app/people", key: "hub.peopleShort", emoji: "🫶" },
+      { to: "/app/groups", key: "hub.groups", emoji: "🧑‍🤝‍🧑" },
+      { to: "/app/outdoor", key: "hub.outdoor", emoji: "🌳" },
       more,
     ];
   }
@@ -66,44 +66,42 @@ export function barItems(role, { buddyActive = true } = {}) {
   return [];
 }
 
-/* More, in two groups: weekly-ish, then rare (§3). */
-export function moreGroups(role, { buddyActive = true } = {}) {
+/* More — NAVIGATION_SPEC §6: SEVEN ROWS, NO GROUP HEADERS.
+
+   "Every so often" and "Now and then" were synonyms. A person could
+   not predict which group held what, so the labels cost a glance and
+   returned nothing. Seven rows do not need chapters.
+
+   Gone from here because they live elsewhere now: My profile and
+   Notifications are in the header (§3); Out & about and Groups are
+   bar tabs (§1); My Circle is deleted outright (§2.2) — it was People
+   wearing a different hat, and circle membership surfaces where it is
+   used: on a person, in Fam, in Settings.
+
+   The Icon guard on My Journey is the games/links lane's finding and
+   is kept: /app/history is guarded to saath_icon, so offering it to a
+   Fam member is a door onto a redirect. A row that bounces you is
+   worse than a row that is not there. */
+export function moreGroups(role) {
   const icon = role === "saath_icon";
-  const buddy = role === "saath_buddy";
-  const canRoam = !buddy || buddyActive;
 
-  const weekly = [
-    canRoam && { to: "/app/outdoor", key: "hub.outdoor", emoji: "🌳" },
-    canRoam && { to: "/app/groups", key: "hub.groups", emoji: "🧑‍🤝‍🧑" },
-    /* TONIGHT §3.1 — My Journey was offered to EVERY role, and
-       /app/history is guarded to saath_icon. So a Fam member tapping it
-       was bounced to their own home, and a Buddy to theirs: a door onto
-       a redirect, which is precisely the "menu item that opens the
-       wrong room" the user reported. Walked as Fam on the deployed
-       preview: "My Journey" claimed /app/history and landed /app/fam.
-
-       Same reasoning as My Circle two groups down, and the same fix. */
-    icon && { to: "/app/history", key: "hub.journey", emoji: "🧭" },
-    /* Kept even while its shelves are empty — §16. */
-    { to: "/app/skills", key: "hub.grow", emoji: "🌱" },
+  const rows = [
     { to: "/app/calendar", key: "hub.calendar", emoji: "📅" },
-  ].filter(Boolean);
-
-  const rare = [
-    { to: "/app/notifications", key: "hub.notifications", emoji: "🔔" },
-    /* My Circle is the Icon's own — session.jsx guards /app/circle to
-       saath_icon, so offering it to anyone else is a door into a
-       redirect. */
-    icon && { to: "/app/circle", key: "hub.circle", emoji: "⭕" },
-    { to: "/app/profile", key: "hub.profile", emoji: "🙂" },
+    icon && { to: "/app/history", key: "hub.journey", emoji: "🧭" },
+    /* Kept even while its shelves are empty — §16: the interest
+       counts are the demand data. */
+    { to: "/app/skills", key: "hub.grow", emoji: "🌱" },
+    { to: "/app/badges", key: "hub.badges", emoji: "🎖️" },
+    { to: "/app/saved", key: "hub.saved", emoji: "🔖" },
     { to: "/app/settings", key: "hub.settings", emoji: "⚙️" },
+    { to: "/app/help", key: "hub.help", emoji: "💬" },
   ].filter(Boolean);
 
-  return [
-    { id: "weekly", labelKey: "hub.tierWeekly", items: weekly },
-    { id: "rare", labelKey: "hub.tierRare", items: rare },
-  ].filter((g) => g.items.length > 0);
+  /* One group, no label. The shape stays a list of groups so callers
+     and the destination test rig do not have to change. */
+  return [{ id: "all", labelKey: null, items: rows }];
 }
+
 
 /* Every destination a role can reach, bar and More together. Used by
    the test rig to prove nothing is reachable from neither. */

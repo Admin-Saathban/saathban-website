@@ -1,64 +1,45 @@
 /* ════════════════════════════════════════════════
-   AppHeader — the small persistent bar for signed-in areas.
+   AppHeader — NAVIGATION_SPEC §3.
 
-   Desktop: mark → role home, dir-aware "Back to home" on inner pages,
-   then bell · My profile · Settings · Sign out.
+   Left to right: profile avatar · SAATHBAN · search · bell · messages.
 
-   Phone (≤640px): collapses to essentials — mark, icon-only back
-   arrow, bell, and a menu button opening a large-tap-target panel
-   with My profile / Settings / Sign out. Nothing overlaps at any
-   width; every control keeps the 48px floor. RTL flips free via
-   flexbox + logical properties.
+   THE AVATAR IS TOP-LEFT AND OPENS FROM THE LEFT. That is not a
+   detail: MOTION_SPEC §1 says a thing arrives from where you touched
+   it, and the profile is the stated test case for the rule working in
+   both directions. Search sits on the right and opens from the right.
+   Bell and messages grow from their own corner.
+
+   NO HAMBURGER. It was deleted on 29 August and stays deleted —
+   NAVIGATION_SPEC §0 lists that as unchanged and correct. Navigation
+   is the bottom bar and the More drawer, nowhere else.
+
+   Back is one step of history, also unchanged from 29 August, and
+   appears only where there is something to go back to.
    ════════════════════════════════════════════════ */
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
-import supabase from "../lib/supabase.js";
 import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";
 import Logo from "./Logo.jsx";
+import HeaderAvatar from "./HeaderAvatar.jsx";
+import MessagesButton from "./MessagesButton.jsx";
+import SearchButton from "./SearchButton.jsx";
 
 export default function AppHeader() {
-  const { t, ts, meta } = useI18n();
+  const { t, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
   const { pathname, key: locationKey } = useLocation();
 
   const home = profile ? roleHomePath(profile.role) : "/app";
-  // Every inner page gets a way back without hunting for the logo:
-  // shown whenever this isn't the role's own home. Admin pages under
-  // the admin shell keep their sidebar instead.
+  /* A way back on every inner page, except the admin shell, which has
+     its own sidebar. */
   const showBack =
     Boolean(profile) &&
     pathname !== home &&
     !(profile.role === "admin" && pathname.startsWith("/app/admin"));
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      /* already signed out — fine */
-    }
-    navigate("/app/auth", { replace: true });
-  };
-
-  const controlStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: A11Y.minTapTargetPx,
-    padding: "0 12px",
-    border: "none",
-    background: "none",
-    color: C.brown,
-    fontSize: ts(A11Y.minBodyPx),
-    fontWeight: 600,
-    fontFamily: "inherit",
-    textDecoration: "none",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  };
 
   const backArrow = meta.dir === "rtl" ? "→" : "←";
   /* "default" is the first entry in this tab's history: nothing to go
@@ -66,25 +47,6 @@ export default function AppHeader() {
   const hasHistory = locationKey !== "default";
   const goBack = () => (hasHistory ? navigate(-1) : navigate(home));
 
-/* Everywhere an Icon goes, now that the home screen is the day's own
-     business rather than a grid of doors. These used to be ten cards
-     below the log; the home screen empties as the day completes, and
-     what fills the space is the community rather than navigation.
-
-     ICON ONLY. Every other role keeps the navigation it has — a Buddy
-     has no My Circle and no My Journey, and moving a Fam member's
-     doors around is not what was asked for. The routes themselves are
-     role-gated in AppRoot regardless; this is about not offering
-     somebody a door that would bounce them.
-
-     Community is deliberately absent: its feed is ON the home screen,
-     with its own way through to the whole of it. A menu entry for the
-     thing already filling the screen is a door to the room you are
-     standing in.
-
-     Milestones is absent too — it is My Journey's now (see AppRoot's
-     redirect), and two entries for one place is how a person decides
-     they have missed something. */
   return (
     <header
       className="sb-header"
@@ -93,67 +55,68 @@ export default function AppHeader() {
         top: 0,
         zIndex: 20,
         background: C.bg,
-        borderBottom: `1px solid ${C.warmGray}`,
-        padding: "6px 12px",
+        /* §4.1 — an outline means you can tap it. The header is not a
+           control, so it separates by whitespace rather than a border
+           that reads like one. */
+        padding: "6px 10px",
       }}
     >
-      <style>{`
-        /* !important: these classes must beat the elements' inline
-           display values from the shared control style. */
-        .sb-header .sbh-desktop { display: inline-flex !important; }
-        .sb-header .sbh-mobile { display: none !important; }
-        .sb-header .sbh-back-label { display: inline; }
-        /* An Icon's places live behind the menu button at EVERY width,
-           so the button and its panel cannot be phone-only. */
-        .sb-header .sbh-always { display: inline-flex !important; }
-        .sb-header .sbh-panel { display: flex !important; }
-        @media (max-width: 640px) {
-          .sb-header .sbh-desktop { display: none !important; }
-          .sb-header .sbh-mobile { display: inline-flex !important; }
-          .sb-header .sbh-menu { display: flex !important; }
-          .sb-header .sbh-back-label { display: none; }
-        }
-      `}</style>
-
       <div
         style={{
           maxWidth: 960,
           margin: "0 auto",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 6,
+          gap: 4,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-          <Link
-            to={home}
-            style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, flexShrink: 0 }}
-          >
-            <Logo height={26} />
-          </Link>
-          {showBack && (
-            <button
-              type="button"
-              onClick={goBack}
-              aria-label={hasHistory ? t("common.back") : t("common.backToHome")}
-              style={{ ...controlStyle, paddingInline: 8 }}
-            >
-              <span aria-hidden="true">{backArrow}</span>
-              <span className="sbh-back-label" style={{ marginInlineStart: 6 }}>
-                {hasHistory ? t("common.back") : t("common.backToHome")}
-              </span>
-            </button>
-          )}
-        </div>
+        {/* Top-left: the person. Opens from the left (MOTION §1). */}
+        <HeaderAvatar />
 
-        {/* Just the bell. Navigation lives in the bottom bar and in
-            More — one menu, not two (TONIGHT.md §3). */}
+        {showBack && (
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label={hasHistory ? t("common.back") : t("common.backToHome")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: A11Y.minTapTargetPx,
+              minWidth: 36,
+              border: "none",
+              background: "none",
+              color: C.textMain,
+              fontSize: 20,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <span aria-hidden="true">{backArrow}</span>
+          </button>
+        )}
+
+        <Link
+          to={home}
+          aria-label="Saathban"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: A11Y.minTapTargetPx,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <Logo height={30} />
+        </Link>
+
         <nav style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+          <SearchButton />
           <NotificationsBell />
+          <MessagesButton />
         </nav>
       </div>
-
     </header>
   );
 }

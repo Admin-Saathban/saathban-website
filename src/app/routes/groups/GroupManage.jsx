@@ -42,6 +42,7 @@ import {
   fetchGroup, fetchMembers, amIGroupAdmin,
   fetchJoinRequests, respondJoinRequest,
   setCoAdmin, removeMember, updateGroup, fetchGroupReports,
+  deleteGroup, transferGroupOwnership,
 } from "./groupsStore.js";
 import ReportedMedia from "../admin/ReportedMedia.jsx";
 
@@ -65,6 +66,11 @@ export default function GroupManage() {
   const [saved, setSaved] = useState(false);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState(false);
+  /* §7.3 is the one destructive control in this screen, so it is the
+     one place a confirm step is warranted — everything else here is
+     reversible. */
+  const [closeGroup, setCloseGroup] = useState(false);
+  const [handOver, setHandOver] = useState(false);
 
   const iAmOwner = group && group.created_by === myId;
 
@@ -356,6 +362,87 @@ export default function GroupManage() {
           </>
         )}
       </Card>
+
+      {/* ── §7.3 — owner only ──
+          "The OWNER is the only one who can delete the group or hand
+           ownership over." A co-admin helps run it; they do not get
+           to end it, and the database refuses them too (0069 uses
+           is_group_creator, deliberately NOT is_group_admin).
+
+          Placed last on purpose: somebody scrolling to the help box
+          should not pass "close this group" to reach it. */}
+      {iAmOwner && (
+        <>
+          <SectionLabel>{t("groups.manage.ownerOnly")}</SectionLabel>
+          <Card>
+            {/* Handing over: only to somebody already in the group,
+                since making a stranger responsible for a room they
+                have never been in is not a hand-over. */}
+            {handOver ? (
+              <>
+                <BodyText style={{ marginTop: 0 }}>{t("groups.manage.handOverWho")}</BodyText>
+                {members.filter((m) => m.member_id !== myId).length === 0 ? (
+                  <BodyText muted style={{ margin: 0 }}>{t("groups.manage.handOverNobody")}</BodyText>
+                ) : (
+                  members.filter((m) => m.member_id !== myId).map((m) => (
+                    <GhostBtn
+                      key={m.member_id}
+                      disabled={busy === m.member_id}
+                      onClick={() =>
+                        act(async () => {
+                          await transferGroupOwnership(id, m.member_id);
+                          setHandOver(false);
+                        }, m.member_id)
+                      }
+                      style={{ display: "block", marginBottom: 8 }}
+                    >
+                      {m.person?.full_name || t("groups.manage.someone")}
+                    </GhostBtn>
+                  ))
+                )}
+                <GhostBtn onClick={() => setHandOver(false)}>{t("groups.manage.notNow")}</GhostBtn>
+              </>
+            ) : (
+              <GhostBtn onClick={() => setHandOver(true)}>{t("groups.manage.handOver")}</GhostBtn>
+            )}
+
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.warmGray}` }}>
+              {closeGroup ? (
+                <>
+                  {/* Says what actually happens, and to whom. "Are you
+                      sure?" tells a person nothing about what they are
+                      about to lose. */}
+                  <BodyText style={{ marginTop: 0, fontWeight: 700 }}>
+                    {t("groups.manage.closeSure", { name: group.name, n: members.length })}
+                  </BodyText>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <PrimaryBtn
+                      disabled={busy === "close"}
+                      onClick={() =>
+                        act(async () => {
+                          await deleteGroup(id);
+                          navigate("/app/groups", { replace: true });
+                        }, "close")
+                      }
+                      style={{ background: C.error, borderColor: C.error }}
+                    >
+                      {t("groups.manage.closeConfirm")}
+                    </PrimaryBtn>
+                    <GhostBtn onClick={() => setCloseGroup(false)}>{t("groups.manage.notNow")}</GhostBtn>
+                  </div>
+                </>
+              ) : (
+                <GhostBtn
+                  onClick={() => setCloseGroup(true)}
+                  style={{ color: C.error, borderColor: C.error }}
+                >
+                  {t("groups.manage.close")}
+                </GhostBtn>
+              )}
+            </div>
+          </Card>
+        </>
+      )}
     </Screen>
   );
 }

@@ -41,10 +41,10 @@ const rpc = async (s, fn, args) => {
   let body = null; try { body = t ? JSON.parse(t) : null; } catch { body = t; }
   return { status: r.status, body };
 };
-const must = (label, res, want = [200, 201, 204]) => {
+const must = async (label, res, want = [200, 201, 204]) => {
   if (!want.includes(res.status)) {
     console.error(`FIXTURE FAILED ${label}: HTTP ${res.status} ${JSON.stringify(res.body).slice(0, 180)}`);
-    process.exit(2);
+    await bail(2);
   }
   return res;
 };
@@ -52,14 +52,33 @@ const must = (label, res, want = [200, 201, 204]) => {
 const owner = await login("smoke-icon@saathban.dev");
 const stranger = await login("test-buddy@saathban.dev");
 
-for (const g of (await rest(owner, `groups?select=id&name=like.S6TEST*`)).body || []) {
-  await rest(owner, `group_posts?group_id=eq.${g.id}`, { method: "DELETE" });
-  await rest(owner, `groups?id=eq.${g.id}`, { method: "DELETE" });
-}
+/* ── Fixtures must not outlive the run ──
+   These groups are public, and a public group is offered to real
+   people on the search screen. See 0069's header. */
+const sweep = async (label) => {
+  const rows = (await rest(owner, `groups?select=id,name&name=like.S6TEST*`)).body;
+  for (const g of (Array.isArray(rows) ? rows : [])) {
+    await rpc(owner, "delete_group", { p_group: g.id });
+  }
+  const left = (await rest(owner, `groups?select=id&name=like.S6TEST*`)).body;
+  const n = Array.isArray(left) ? left.length : -1;
+  if (n !== 0) {
+    /* Loud, and non-zero exit: a leaked public fixture is content in
+       the app, not untidiness. */
+    console.error(`SWEEP FAILED (${label}): ${n} S6TEST group(s) still present.`);
+    console.error("They are visible to real people under \"Groups near you\". Remove them before leaving this.");
+    process.exit(3);
+  }
+};
+await sweep("before");
+
+/* Any early exit sweeps too — a fixture failure used to leave the
+   groups it had already made. */
+const bail = async (code) => { await sweep("bail"); process.exit(code); };
 
 const mk = async (name, privacy) =>
-  must(`create ${privacy}`, await rpc(owner, "create_group",
-    { p_name: name, p_description: null, p_privacy: privacy })).body;
+  (await must(`create ${privacy}`, await rpc(owner, "create_group",
+    { p_name: name, p_description: null, p_privacy: privacy }))).body;
 
 const pub = await mk("S6TEST open walkers", "anyone");
 const priv = await mk("S6TEST closed walkers", "invite_only");
@@ -88,10 +107,10 @@ check("a public group you have NOT joined stays out of your feed",
 /* §8 — one pinned post per group, enforced by the index rather than
    by the RPC alone. Pinning a second must move the pin, not add one. */
 const post = async (group, body) =>
-  must("post", await rest(owner, "group_posts", {
+  (await must("post", await rest(owner, "group_posts", {
     method: "POST", headers: { ...H(owner), Prefer: "return=representation" },
     body: JSON.stringify({ group_id: group, author_id: owner.user.id, body }),
-  }), [201]).body[0];
+  }), [201])).body[0];
 
 const p1 = await post(pub, "S6TEST first");
 const p2 = await post(pub, "S6TEST second");
@@ -107,9 +126,6 @@ const strangerPin = await rpc(stranger, "pin_group_post", { p_post: p1.id });
 check("somebody who does not run the group cannot pin a post",
   strangerPin.status >= 400, `HTTP ${strangerPin.status}`);
 
-for (const g of [pub, priv]) {
-  await rest(owner, `group_posts?group_id=eq.${g}`, { method: "DELETE" });
-  await rest(owner, `groups?id=eq.${g}`, { method: "DELETE" });
-}
+await sweep("after");
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

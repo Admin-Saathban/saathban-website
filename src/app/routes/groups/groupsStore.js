@@ -376,3 +376,23 @@ export async function seedWelcome(groupId, body) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+
+/* ── §7.3 — the owner alone may close a group or hand it over ──
+   0069 added both; before it there was no delete path at all, not
+   even for the owner. Deliberately routed through the RPCs rather
+   than a table delete: `groups` has no delete policy, so a REST
+   DELETE here would return 204 and do nothing, which is exactly how
+   47 fixture groups ended up on the search screen. */
+export async function deleteGroup(groupId) {
+  const { error } = await supabase.rpc("delete_group", { p_group: groupId });
+  if (error) throw new Error(error.message);
+}
+
+export async function transferGroupOwnership(groupId, toMemberId) {
+  const { error } = await supabase.rpc("transfer_group_ownership", {
+    p_group: groupId,
+    p_to: toMemberId,
+  });
+  if (error) throw new Error(error.message);
+}

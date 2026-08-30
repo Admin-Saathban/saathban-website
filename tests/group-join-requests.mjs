@@ -39,10 +39,10 @@ const rpc = async (s, fn, args) => {
   try { body = t ? JSON.parse(t) : null; } catch { body = t; }
   return { status: r.status, body };
 };
-const must = (label, res, want = [200, 201, 204]) => {
+const must = async (label, res, want = [200, 201, 204]) => {
   if (!want.includes(res.status)) {
     console.error(`FIXTURE FAILED ${label}: HTTP ${res.status} ${JSON.stringify(res.body).slice(0, 200)}`);
-    process.exit(2);
+    await bail(2);
   }
   return res;
 };
@@ -50,15 +50,34 @@ const must = (label, res, want = [200, 201, 204]) => {
 const owner = await login("smoke-icon@saathban.dev");
 const asker = await login("test-buddy@saathban.dev");
 
-for (const g of (await rest(owner, `groups?select=id&name=like.S7TEST*`)).body || []) {
-  await rest(owner, `group_join_requests?group_id=eq.${g.id}`, { method: "DELETE" });
-  await rest(owner, `groups?id=eq.${g.id}`, { method: "DELETE" });
-}
+/* ── Fixtures must not outlive the run ──
+   These groups are public, and a public group is offered to real
+   people on the search screen. See 0069's header. */
+const sweep = async (label) => {
+  const rows = (await rest(owner, `groups?select=id,name&name=like.S7TEST*`)).body;
+  for (const g of (Array.isArray(rows) ? rows : [])) {
+    await rpc(owner, "delete_group", { p_group: g.id });
+  }
+  const left = (await rest(owner, `groups?select=id&name=like.S7TEST*`)).body;
+  const n = Array.isArray(left) ? left.length : -1;
+  if (n !== 0) {
+    /* Loud, and non-zero exit: a leaked public fixture is content in
+       the app, not untidiness. */
+    console.error(`SWEEP FAILED (${label}): ${n} S7TEST group(s) still present.`);
+    console.error("They are visible to real people under \"Groups near you\". Remove them before leaving this.");
+    process.exit(3);
+  }
+};
+await sweep("before");
 
-const pub = must("public group", await rpc(owner, "create_group",
-  { p_name: "S7TEST open walkers", p_description: null, p_privacy: "anyone" })).body;
-const priv = must("private group", await rpc(owner, "create_group",
-  { p_name: "S7TEST closed walkers", p_description: null, p_privacy: "invite_only" })).body;
+/* Any early exit sweeps too — a fixture failure used to leave the
+   groups it had already made. */
+const bail = async (code) => { await sweep("bail"); process.exit(code); };
+
+const pub = (await must("public group", await rpc(owner, "create_group",
+  { p_name: "S7TEST open walkers", p_description: null, p_privacy: "anyone" }))).body;
+const priv = (await must("private group", await rpc(owner, "create_group",
+  { p_name: "S7TEST closed walkers", p_description: null, p_privacy: "invite_only" }))).body;
 
 /* ── Asking ── */
 const ask = await rpc(asker, "request_to_join_group", { p_group: pub, p_message: "I walk most mornings" });
@@ -124,9 +143,36 @@ if (ask2.status === 200) {
     hijack.status >= 400, `HTTP ${hijack.status}`);
 }
 
-for (const g of [pub, priv]) {
-  await rest(owner, `group_join_requests?group_id=eq.${g}`, { method: "DELETE" });
-  await rest(owner, `groups?id=eq.${g}`, { method: "DELETE" });
-}
+/* ── §7.3: closing a group, and handing it over ──
+   0069 exists because there was NO delete path at all — not even
+   for the owner — which is also why this suite quietly accumulated
+   47 public fixture groups into the search screen. The rule being
+   asserted is that it is owner-only: a co-admin helps run a group,
+   they do not get to end it. */
+await rpc(owner, "set_group_co_admin", { p_group: pub, p_member: asker.user.id, p_make: true });
+
+const coAdminDeletes = await rpc(asker, "delete_group", { p_group: pub });
+check("a CO-ADMIN cannot close somebody else's group",
+  coAdminDeletes.status >= 400, `HTTP ${coAdminDeletes.status}`);
+
+const handToStranger = await rpc(owner, "transfer_group_ownership",
+  { p_group: pub, p_to: "00000000-0000-4000-8000-000000000000" });
+check("a group cannot be handed to someone who is not in it",
+  handToStranger.status >= 400, `HTTP ${handToStranger.status}`);
+
+const stillThere = await rest(owner, `groups?select=id&id=eq.${pub}`);
+check("CONTROL: the group survived both refusals",
+  Array.isArray(stillThere.body) && stillThere.body.length === 1,
+  `${stillThere.body?.length} rows`);
+
+const ownerDeletes = await rpc(owner, "delete_group", { p_group: priv });
+check("CONTROL: the OWNER can close their own group",
+  ownerDeletes.status < 400, `HTTP ${ownerDeletes.status}`);
+
+const gone = await rest(owner, `groups?select=id&id=eq.${priv}`);
+check("and it is actually gone, not merely reported gone",
+  Array.isArray(gone.body) && gone.body.length === 0, `${gone.body?.length} rows`);
+
+await sweep("after");
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

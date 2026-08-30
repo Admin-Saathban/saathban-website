@@ -62,28 +62,50 @@ const stranger = await login("test-buddy@saathban.dev"); // in neither
 const must = async (label, res, want = [200, 201, 204]) => {
   if (!want.includes(res.status)) {
     console.error(`FIXTURE FAILED ${label}: HTTP ${res.status} ${JSON.stringify(res.body).slice(0, 200)}`);
-    process.exit(2);
+    await bail(2);
   }
   return res;
 };
 
-/* Clean up anything a previous run left.
+/* ── Clean up: outings by note, then the groups themselves ──
 
-   Delete the OUTINGS BY NOTE, not by group_id. A mutation run — the
-   way you prove this test can still fail — is precisely the run that
+   TWO different traps in one function, both learned the hard way.
+
+   The OUTINGS go by note, not by group_id. A mutation run — the way
+   you prove this test can still fail — is precisely the run that
    writes rows with group_id null, and a cleanup keyed on group_id
-   walks straight past them. Those orphans then match the "readable as
-   text" assertion on the NEXT run and report a leak that isn't there.
-   Cleaning by the S4TEST prefix catches every row the file can
-   create, however it was mutated. */
-const sweep = async () => {
+   walks past them. Those orphans then match the "readable as text"
+   assertion on the next run and report a leak that is not there.
+
+   The GROUPS go through delete_group (0069), not a REST DELETE.
+   `groups` has no delete policy, so the old DELETE matched zero rows
+   and returned 204 — a success shape for an operation that did
+   nothing. Forty-seven fixture groups accumulated at one per run, and
+   since they are public they became the whole of "Groups near you" on
+   the search screen for real people.
+
+   And it CHECKS, which is the only part that would have caught that. */
+const sweep = async (label) => {
   await rest(owner, `outdoor_outings?note=like.S4TEST*`, { method: "DELETE" });
-  for (const g of (await rest(owner, `groups?select=id&name=like.S4TEST*`)).body || []) {
-    await rest(owner, `outdoor_outings?group_id=eq.${g.id}`, { method: "DELETE" });
-    await rest(owner, `groups?id=eq.${g.id}`, { method: "DELETE" });
+  const rows = (await rest(owner, `groups?select=id,name&name=like.S4TEST*`)).body;
+  for (const g of (Array.isArray(rows) ? rows : [])) {
+    await rpc(owner, "delete_group", { p_group: g.id });
+  }
+  const left = (await rest(owner, `groups?select=id&name=like.S4TEST*`)).body;
+  const n = Array.isArray(left) ? left.length : -1;
+  if (n !== 0) {
+    console.error(`SWEEP FAILED (${label}): ${n} S4TEST group(s) still present.`);
+    console.error("A leaked public fixture is content in the app, not untidiness.");
+    process.exit(3);
   }
 };
-await sweep();
+
+/* Any early exit sweeps too — a fixture failure used to leave behind
+   the groups it had already made. */
+const bail = async (code) => { await sweep("bail"); process.exit(code); };
+
+await sweep("before");
+
 
 /* Created the way the APP creates them — through create_group, not a
    raw insert. `groups` has no insert policy at all (correctly: an Icon
@@ -109,7 +131,7 @@ await must("member accepts",
 
 /* A place to meet at, and the two events. */
 const place = ((await rest(owner, "outdoor_places?select=id&limit=1")).body || [])[0];
-if (!place) { console.error("FIXTURE FAILED: no place to meet at"); process.exit(2); }
+if (!place) { console.error("FIXTURE FAILED: no place to meet at"); await bail(2); }
 
 const mkEvent = async (group, note) =>
   (await must(`create event for ${note}`,
@@ -216,7 +238,7 @@ check("CONTROL: and the member still sees the store-written event",
   `${memberDirect2.body?.length ?? memberDirect2.status} rows`);
 
 /* ── Tidy up ── */
-await sweep();
+await sweep("after");
 
 console.log(`\n${failures} failed.`);
 process.exit(failures ? 1 : 0);

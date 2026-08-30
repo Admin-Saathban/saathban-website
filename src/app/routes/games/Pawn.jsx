@@ -110,6 +110,13 @@ export default function Pawn({
   dim = false,
   spin = 0,
   mood = null,
+  /* Leaning into the run home. LUDO_MOTION_SPEC §3 asks for a slight
+     inward tilt on the home column, and it is doing real work rather
+     than decorating: the home column is the only place a goti travels
+     that is not the ring, and the lean is how the board says so
+     without a label. Small on purpose — a piece that looks like it is
+     falling over is not a piece that looks like it is turning. */
+  tilt = false,
   label = null,
 }) {
   const idx = seat % SEAT_COLORS.length;
@@ -130,7 +137,7 @@ export default function Pawn({
     /* A piece stands up whichever way the board is turned, so the
        POV rotation is undone here before anything is drawn. */
     <g
-      transform={`translate(${cx} ${cy})${spin ? ` rotate(${-spin})` : ""} scale(${s})`}
+      transform={`translate(${cx} ${cy})${spin ? ` rotate(${-spin})` : ""}${tilt ? " rotate(-7)" : ""} scale(${s})`}
       opacity={dim ? 0.45 : 1}
     >
       <defs>
@@ -150,9 +157,18 @@ export default function Pawn({
 
       {/* CONTACT SHADOW, two parts. The wide soft one is the shade a
           solid object gathers around itself; the tight dark one is
-          where it actually touches down. Either alone reads as blur. */}
-      <ellipse cx="0.8" cy="6.2" rx="14.4" ry="4.6" fill="#00000026" />
-      <ellipse cx="0" cy="4.8" rx="10.6" ry="2.9" fill="#00000038" />
+          where it actually touches down. Either alone reads as blur.
+
+          IN ITS OWN GROUP, because a lifting goti must leave its
+          shadow on the board. Animating the whole piece upward takes
+          the shadow with it, and a shadow that rises with the object
+          casting it is the one thing that reads instantly as fake.
+          The hop shrinks this to 0.7 while the token climbs. */}
+      <g className="sb-goti-shadow">
+        <ellipse cx="0.8" cy="6.2" rx="14.4" ry="4.6" fill="#00000026" />
+        <ellipse cx="0" cy="4.8" rx="10.6" ry="2.9" fill="#00000038" />
+      </g>
+      <g className="sb-goti-body">
 
       {/* the side wall — the same disc, dropped, so the token has a
           thickness you can see instead of being a printed circle */}
@@ -205,6 +221,7 @@ export default function Pawn({
           </g>
         </g>
       )}
+      </g>
       {label && <title>{label}</title>}
     </g>
   );

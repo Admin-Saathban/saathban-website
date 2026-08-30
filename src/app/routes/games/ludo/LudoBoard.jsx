@@ -140,12 +140,15 @@ export const BOARD_MOTION_CSS = `
      never the viewport origin. */
   @keyframes sb-tumble-home {
     from { transform: rotate(0deg);   }
-    to   { transform: rotate(400deg); }
+    to   { transform: rotate(360deg); }
   }
   .sb-tumble-home {
     transform-box: fill-box;
     transform-origin: 50% 50%;
-    animation: sb-tumble-home 480ms linear both;
+    /* ONE turn over the arc, and the arc is 600ms. A spin on a
+       different clock from the journey it rides reads as two things
+       happening at once. */
+    animation: sb-tumble-home 600ms linear both;
   }
 
   /* Three sixes. The board itself, not the page — translate only, so
@@ -159,6 +162,59 @@ export const BOARD_MOTION_CSS = `
     80%  { transform: translate(-2px, 0); }
   }
   .sb-shake { animation: sb-shake 520ms ease-in-out both; }
+
+  /* THE HOP — LUDO_MOTION_SPEC §3: 140ms, ease-out, a 10px lift with
+     the shadow shrinking to 0.7. Ten units in a 40-unit cell is a
+     quarter of a square, which is the height the reference lifts to.
+     The token rises and lands inside the same 140ms the step takes,
+     so the cadence the eye counts is unchanged — the lift is what
+     makes each count VISIBLE rather than a slide. */
+  @keyframes sb-hop-body {
+    0%   { transform: translateY(0); }
+    45%  { transform: translateY(-10px); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes sb-hop-shadow {
+    0%   { transform: scale(1);   opacity: 1; }
+    45%  { transform: scale(0.7); opacity: 0.72; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  .sb-hop .sb-goti-body {
+    animation: sb-hop-body 140ms ease-out both;
+  }
+  .sb-hop .sb-goti-shadow {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: sb-hop-shadow 140ms ease-out both;
+  }
+
+  /* TAKEN. Two hundred milliseconds of not believing it, on the
+     square where it happened, before the journey home. */
+  @keyframes sb-flinch {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-2.5px) rotate(-6deg); }
+    45%      { transform: translateX(2.5px)  rotate(5deg); }
+    70%      { transform: translateX(-1.5px) rotate(-3deg); }
+  }
+  .sb-flinch {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: sb-flinch 200ms ease-in-out both;
+  }
+
+  /* HOME: 1.0 -> 1.25 -> 1.0 over 400ms. The one unambiguously good
+     thing that can happen to a piece, and it used to happen at the
+     same size as everything else. */
+  @keyframes sb-home-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .sb-home-pop {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: sb-home-pop 400ms ease-out both;
+  }
 
   /* A near miss: two quick pulses, then gone. Opacity and stroke only
      — the ring sits on a piece and must not move it. */
@@ -233,6 +289,14 @@ export const BOARD_MOTION_CSS = `
        so it stays drawn — stopped, at full strength, for as long as
        the hook keeps it. */
     .sb-closecall { animation: none; opacity: 0.9; }
+    /* The hop, the flinch and the home pop are all motion over a
+       board that already shows the truth — the goti IS on that
+       square. They stop; nothing disappears and nothing is left
+       mid-lift, because every one of them ends where it began. */
+    .sb-hop .sb-goti-body { animation: none; }
+    .sb-hop .sb-goti-shadow { animation: none; }
+    .sb-flinch { animation: none; }
+    .sb-home-pop { animation: none; }
   }
 `;
 
@@ -280,11 +344,18 @@ function wantsLessMotion() {
   }
 }
 
-const STEP_MS = 120;
+/* LUDO_MOTION_SPEC §3. These are the spec's numbers, not tuned ones —
+   140ms a cell is the cadence the eye can count at, which is the whole
+   reason the table is given per-hop timing rather than a duration for
+   the move as a whole. */
+const STEP_MS = 140;   // one cell
+const HOP_MS = 140;    // the lift that goes with it
+const SHAKE_MS = 200;  // a taken goti flinches before it travels
+const ARC_MS = 600;    // and then goes home the long way
 /* How long a captured goti takes to get home. It travels in a straight
    line rather than back along the track: it is not walking the board,
    it is being sent off it. */
-const FLIGHT_MS = 480;
+const FLIGHT_MS = ARC_MS;
 
 
 /* A label that stays upright however the board is turned. */
@@ -360,6 +431,13 @@ function useWalk(pieces) {
   /* Cells where an opponent went past within a square of somebody —
      the near miss nobody notices until it is pointed out. */
   const [closeCalls, setCloseCalls] = useState([]);
+  /* "seat:i" → the cell number it just hopped onto. The VALUE has to
+     change every hop, because that is what restarts the lift. */
+  const [hops, setHops] = useState(() => new Map());
+  /* NO SEPARATE FLINCH STATE. It used to be a second Set describing
+     the same gotis as `flights`, and two states describing one thing
+     can disagree — which they did. The phase rides inside the flight
+     entry now: flights is "seat:i" -> { at: [col, row], phase }. */
   const prevRef = useRef(pieces);
   const key = JSON.stringify(pieces);
 
@@ -382,6 +460,7 @@ function useWalk(pieces) {
       setTrail([]);
       setArrivedHome(new Set());
       setCloseCalls([]);
+      setHops(new Map());
       return undefined;
     }
 
@@ -448,38 +527,109 @@ function useWalk(pieces) {
       window.setTimeout(() => setCloseCalls([]), 1100);
     }
 
-    const flightTicks = Math.round(FLIGHT_MS / STEP_MS);
-    const total = Math.max(steps, returners.length ? flightTicks : 0);
-    let step = 0;
+    /* ONE CLOCK, NOT TWO.
+
+       This used to be a 120ms setInterval doing both jobs: it advanced
+       the walkers a cell per tick AND stepped a captured goti along a
+       straight line toward its yard. That second job was the problem —
+       a 600ms arc sampled on a 140ms interval is four positions, which
+       is not an arc, it is a diagonal with corners. So the walk now
+       runs off requestAnimationFrame and reads the clock: walkers
+       advance at floor(elapsed / STEP_MS) and keep their exact
+       per-cell cadence, while the flight gets every frame the display
+       will give it.
+
+       Both finish before the true board is committed, so a capture
+       that happens on the same move as a walk cannot snap either one
+       short. */
+    const walkMs = steps * STEP_MS;
+    const flightMs = returners.length ? SHAKE_MS + ARC_MS : 0;
+    const totalMs = Math.max(walkMs, flightMs);
+
+    /* Where a taken goti flies. A straight line home reads as a piece
+       being dragged; a curve reads as one being thrown, which is what
+       the moment deserves. The control point is the midpoint pushed
+       out perpendicular to the line, so the bow always bends away
+       from the board's middle rather than through it. */
+    const arcs = returners.map(([s2, i, a, b]) => {
+      const mx = (a[0] + b[0]) / 2;
+      const my = (a[1] + b[1]) / 2;
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy) || 1;
+      /* Perpendicular, pointing away from the centre of the board. */
+      let px = -dy / len;
+      let py = dx / len;
+      if ((mx - 7) * px + (my - 7) * py < 0) { px = -px; py = -py; }
+      const bow = Math.min(3.2, len * 0.34);
+      return { key: `${s2}:${i}`, a, b, c: [mx + px * bow, my + py * bow] };
+    });
+
+    const started = performance.now();
+    let raf = 0;
+    let lastStep = -1;
     const crossed = [];
 
-    const id = setInterval(() => {
-      step += 1;
+    const frame = (now) => {
+      const elapsed = now - started;
 
-      const next = base.map((r) => [...r]);
-      walkers.forEach(([s2, i, from, to]) => {
-        const at = Math.min(to, from + step);
-        next[s2][i] = at;
-        if (at > from) crossed.push(cellFor(s2, at, i));
-      });
-      setShown(next);
-      if (crossed.length) setTrail([...crossed]);
-
-      if (returners.length) {
-        const t = Math.min(1, step / flightTicks);
-        /* Ease out: a taken goti leaves fast and settles. */
-        const e = 1 - (1 - t) * (1 - t);
-        const m = new Map();
-        returners.forEach(([s2, i, a, b]) => {
-          m.set(`${s2}:${i}`, [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]);
+      /* ── The walkers, one cell at a time ── */
+      const stepNow = Math.min(steps, Math.floor(elapsed / STEP_MS));
+      if (stepNow !== lastStep) {
+        lastStep = stepNow;
+        const next = base.map((r) => [...r]);
+        const hopping = new Map();
+        walkers.forEach(([s2, i, fromP, toP]) => {
+          const at = Math.min(toP, fromP + stepNow);
+          next[s2][i] = at;
+          if (at > fromP) {
+            crossed.push(cellFor(s2, at, i));
+            /* The hop counter restarts the lift animation on each new
+               cell. Without a value that CHANGES, the animation plays
+               once on the first square and the rest of the move
+               slides. */
+            if (at < toP || stepNow <= steps) hopping.set(`${s2}:${i}`, at);
+          }
         });
-        setFlights(t >= 1 ? new Map() : m);
+        setShown(next);
+        setHops(hopping);
+        if (crossed.length) setTrail([...crossed]);
       }
 
-      if (step >= total) {
-        clearInterval(id);
+      /* ── The taken goti: flinch, then fly ── */
+      if (returners.length) {
+        if (elapsed < SHAKE_MS) {
+          /* It has not left yet. It is still on the square it was
+             taken on, having a moment about it. */
+          const m = new Map();
+          arcs.forEach((g) => m.set(g.key, { at: g.a, phase: "flinch" }));
+          setFlights(m);
+        } else {
+          const u = Math.min(1, (elapsed - SHAKE_MS) / ARC_MS);
+          /* Ease out, then a small overshoot and settle at the very
+             end — the bounce the spec asks for, done in position so
+             it reads as weight rather than as a wobble. */
+          const e =
+            u < 0.86
+              ? 1 - Math.pow(1 - u / 0.86, 2.2) * 1.0
+              : 1 + Math.sin((u - 0.86) / 0.14 * Math.PI) * 0.06;
+          const m = new Map();
+          arcs.forEach((g) => {
+            const t = Math.max(0, e);
+            const it = 1 - t;
+            /* Quadratic Bézier: start, control, end. */
+            const x = it * it * g.a[0] + 2 * it * t * g.c[0] + t * t * g.b[0];
+            const y = it * it * g.a[1] + 2 * it * t * g.c[1] + t * t * g.b[1];
+            m.set(g.key, { at: [x, y], phase: "arc" });
+          });
+          setFlights(m);
+        }
+      }
+
+      if (elapsed >= totalMs) {
         setShown(pieces);
         setFlights(new Map());
+        setHops(new Map());
         /* The celebration starts when the goti ARRIVES, not when the
            move began — it has to be on the square to be cheered. */
         if (home.size) {
@@ -489,16 +639,19 @@ function useWalk(pieces) {
         /* Let the trail linger a beat past the move, then clear it —
            the point is to be readable after the goti has stopped. */
         window.setTimeout(() => setTrail([]), 420);
+        return;
       }
-    }, STEP_MS);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
 
     return () => {
-      clearInterval(id);
+      cancelAnimationFrame(raf);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { shown, flights, trail, arrivedHome, closeCalls };
+  return { shown, flights, trail, arrivedHome, closeCalls, hops };
 }
 
 /* THE MOOD OF EVERY GOTI ON THE TRACK.
@@ -564,7 +717,7 @@ export default function LudoBoard({
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
-  const { shown: pieces, flights, trail, arrivedHome, closeCalls } = useWalk(live);
+  const { shown: pieces, flights, trail, arrivedHome, closeCalls, hops } = useWalk(live);
   /* THE TABLE SHAKES ON THE EDGE OF A RUN.
 
      Not a celebration — the opposite. ludo_chain_stands is
@@ -1200,7 +1353,7 @@ export default function LudoBoard({
                 key={`p-${seat}-${i}`}
                 className={`${canTap ? "sb-press-svg" : ""}${
                   captured.has(`${seat}:${i}`) ? " sb-nudge" : ""
-                }`}
+                }${arrivedHome.has(`${seat}:${i}`) ? " sb-home-pop" : ""}`}
                 onClick={canTap ? () => onPieceTap(i) : undefined}
                 style={{ cursor: canTap ? "pointer" : "default" }}
               >
@@ -1247,6 +1400,20 @@ export default function LudoBoard({
                     strokeDasharray="6 5"
                   />
                 )}
+                {/* THE HOP. A key that changes every cell is what
+                    restarts the lift — a CSS animation on an element
+                    React merely re-positions plays once and then the
+                    rest of the move slides. Wrapped rather than
+                    applied to the Pawn itself so the class has
+                    somewhere to live that nothing else owns.
+
+                    The home column gets a slight inward tilt, per
+                    §3: the goti leans into the turn it is making. */}
+                <g
+                  key={`hop-${hops.get(`${seat}:${i}`) ?? "still"}`}
+                  className={hops.has(`${seat}:${i}`) ? "sb-hop" : undefined}
+                  style={p >= 52 && p < 57 ? { transformBox: "fill-box", transformOrigin: "50% 100%" } : undefined}
+                >
                 <Pawn
                   seat={seat}
                   cx={cx}
@@ -1265,7 +1432,9 @@ export default function LudoBoard({
                   spin={spin}
                   mood={moods.get(`${seat}:${i}`) || null}
                   label={pieceLabel(seat, i)}
+                  tilt={p >= 52 && p < 57}
                 />
+                </g>
                 {/* HOME. A goti that has just finished takes a moment
                     about it — the one unambiguously good thing that
                     can happen to a piece, and it used to happen in
@@ -1300,7 +1469,8 @@ export default function LudoBoard({
              for the length of the flight it is the most important
              thing on the board: it is the answer to "what just
              happened to me". ── */}
-        {[...flights.entries()].map(([k, [cc, rr]]) => {
+        {[...flights.entries()].map(([k, fl]) => {
+          const [cc, rr] = fl.at;
           const [seat] = k.split(":").map(Number);
           return (
             <g key={`fly-${k}`}>
@@ -1309,7 +1479,13 @@ export default function LudoBoard({
                   OWN centre — transform-box fill-box — because a bare
                   rotate on an SVG child pivots on the viewport origin
                   and would fling it off the board. */}
-              <g className="sb-tumble-home">
+              {/* Two beats, not one. It FLINCHES where it was taken
+                  for 200ms — the person whose goti it was needs a
+                  moment to see it happen on the square it happened on
+                  — and only then travels, spinning once over the
+                  600ms arc. Going straight into the flight read as
+                  the piece simply vanishing from the fight. */}
+              <g className={fl.phase === "flinch" ? "sb-flinch" : "sb-tumble-home"}>
                 <Pawn
                   seat={seat}
                   cx={cc * CELL}

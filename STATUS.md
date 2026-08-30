@@ -484,6 +484,55 @@ the tooling for.
   left uncommitted.
 
 ## Round log
+- **Ludo table fits the phone; smoke stops lying (2026-08-29, tip `8e35a96`,
+  preview `saathban-website-7ys4wvb9a`):** pushed `6350c67..8e35a96` — my
+  `c002ab5` plus six lane commits that were sitting unpushed.
+  **§1/§3 (the user's two graded gaps).** During play the "Ludo" title is
+  hidden, Sound is a compact icon (still 48px, still aria-labelled), the turn
+  line keeps only its actionable half, and the house-rules disclosure leaves
+  the play screen — the rules now sit fully open in the lobby, which is more
+  discoverable, not less. An opponent holding no dice shows a dim resting die,
+  so a bot reads as a plate rather than the "Bot / Seat 2" text row the user
+  saw. The turn ring is deliberately NOT drawn on an idle seat (a countdown
+  with no clock behind it means nothing) — verified that an opponent gets the
+  real ring on its own turn: one sweeping arc, dasharray 169.6 offset 5.65.
+  §10: the plate's three sub-floor strings are at 18px, the countdown numeral
+  included, since it exists so the ring's colour is never the only warning.
+  **Measured, not eyeballed, at 390x844 and re-measured at the pushed tip**
+  because d3's board overhaul (`6350c67`) landed AFTER my measurement commit:
+  English board 224-590 (366px of 390), roll ends 741, action row 801; Urdu
+  roll 763, action row 829; fold 844. Confirmed against the DEPLOYED preview,
+  not only a local build — identical numbers.
+  **Two waiting-room bugs from session a42cd3d6 are gone on this build:** seats
+  are named correctly and the board renders in the waiting room.
+  **Smoke suite: 40 checks, 2 failing** (both the riddle people strip,
+  data-dependent, untouched — they belong to that screen's lane). It had been
+  CRASHING partway through on a click that could never land, hiding every
+  check after it. Two false reports fixed, both worse than the crash: the hub
+  check raced hydration and reported missing cards on a page that renders
+  them; the join-code check was passing on a number that is NOT the code — it
+  scraped body text for six digits, but the code lives behind the Share code
+  toggle and isn't in that text, so once a board started rendering in the
+  waiting room it matched the board's own numerals, passed, then failed the
+  join it fed.
+  **Fixture discipline — my fault, now structural.** Every ludo script I run
+  opens by calling `leave_game_session` on all of smoke-icon's live tables so
+  a leftover can't block create. That cancelled two lanes' tables underneath
+  them mid-run (one ten-minute game, three board fixtures). Announce the
+  account you're driving the way we announce the DB channel. The suite now
+  clears live tables before creating one, because the games home refuses a
+  second table while one runs and a leftover previously failed the create flow
+  as though the create flow were broken.
+  **Left alone deliberately:** `LudoSession.jsx:411`'s `|| 60` stays at 60.
+  `game_tick`'s server fallback is 60, so a client-side 30 on a table whose
+  `house_rules` lack `turn_seconds` would draw a ring emptying while the
+  server waits. New tables carry the value explicitly.
+  **Still owed:** the leave-mid-game notice ("X left — the bot is playing their
+  seat"); `leave_game_session` returns `{result, seat}` and `seat:"bot"` is
+  that sentence's case, `seat:"released"` a lobby seat wanting a different one.
+  Engine half already verified by d3. Also `LUDO_UI_SPEC.md` is UNTRACKED at
+  the repo root — the whole team works from it and it is not on origin; its
+  author should commit it.
 - **Carrom/dispatch bugs + Snakes & Ladders (2026-08-29, `262fda7`, preview `saathban-website-ped79l9r9`):** user retest found 🎯 in a DM leading to a Race-to-100-looking screen and one session rendering blank. Causes and fixes: (a) SessionPage rendered the generic reference board for ANY game key — now dispatches carrom → CarromRailsController, ludo → its own screen once ACTIVE (the lobby stays on the rails, which owns the invite card/picker/code), else the reference board; (b) the DM inline embed had no lobby state, so the invitee saw a dead board and every DM table stayed in the lobby — the embed now offers "Take my seat" in-thread and shows the host a waiting line; (c) the "blank" session was a NON-PARTICIPANT view on a pre-3699012 deploy (RLS correctly returns no row) — it now reads "This table is private to its players", and a loading-or-failed session says so with a retry instead of a bare page; (d) bell poll 60s → 6s with visibility/focus refresh. **Race to 100 → Snakes & Ladders** (0035 applied): registry key race100 → snakes, both languages, existing sessions migrated, `game_exec_snakes()` with classic rules (server dice, ladders/snakes via `snakes_board_jump()`, exact roll needed for 100), SVG board in the brand palette with the move narrated in words. **Hygiene:** 40 junk messages purged from the real test-icon ↔ test-fam thread; the smoke suite now writes as dedicated `smoke-icon`/`smoke-fam` accounts (seeded, in each other's circle) so retest threads stay clean. Verified on the preview as both players: snakes create → invite → accept → auto-start → roll → both sides see the new cell; ludo lands on the ludo board and records a roll; carrom board inline for both, striker drag → play_turn. Ludo's one FAIL line in my run was a bad assertion (ludo legitimately has a Roll button), not a product bug.
 - **Together/My-People/parity integration + full matrix (2026-08-29,
   tip `3d802a8`, preview `saathban-website-kfu76nujc`):** integrated

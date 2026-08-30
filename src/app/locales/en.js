@@ -2047,7 +2047,11 @@ const en = {
       safeStandard: "Standard",
       safeNone: "None",
     },
+    table: {
+      botTookOver: "{names} stepped away — a bot is playing their seat.",
+    },
     seat: {
+      botHasSeat: "BOT",
       bot: "Bot",
       someone: "A player",
       you: "you",

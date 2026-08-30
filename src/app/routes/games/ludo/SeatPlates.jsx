@@ -177,7 +177,7 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
         background: "#FFFFFF",
         border: `2px solid ${active ? colour : "#CFC4AE"}`,
         boxShadow: active ? `0 3px 10px ${colour}44` : "0 1px 3px rgba(74,58,34,0.18)",
-        opacity: active ? 1 : 0.82,
+        opacity: active ? 1 : value ? 0.82 : 0.95,
       }}
     >
       {value ? (
@@ -191,13 +191,21 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
         </span>
       ) : (
         /* A blank face rather than 🎲 — the emoji renders as a
-           different object on every platform, and on the machine
-           this was verified on it drew a pale grey cube that read as
-           "nothing here". Five dots waiting for a number is
-           unmistakably a die about to be thrown. */
-        <span aria-hidden="true" style={{ lineHeight: 0, opacity: 0.35 }}>
-          <DieFace value={5} size={34} ink="#2F2A24" />
-        </span>
+           different object on every platform, and on the machine this
+           was verified on it drew a pale grey cube that read as
+           "nothing here".
+
+           EMPTY, not a guess. A die nobody has thrown shows no pips:
+           inventing a face for it is how an opponent came to be
+           permanently displaying a one. For the person whose throw it
+           is, ghosted pips hint at what the button does. */
+        active ? (
+          <span aria-hidden="true" style={{ lineHeight: 0, opacity: 0.3 }}>
+            <DieFace value={5} size={34} ink="#2F2A24" />
+          </span>
+        ) : (
+          <span aria-hidden="true" style={{ display: "block", width: 34, height: 34 }} />
+        )
       )}
       {/* The tick sits OUTSIDE the face, on the corner, so it never
           sits on top of the pips it is describing. */}
@@ -281,6 +289,16 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   const colour = SEAT_COLORS[seat];
+  /* A SEAT THE BOT HAS TAKEN OVER.
+
+     TONIGHT.md wants the leaver's plate to say so. The data cannot
+     quite say "left", though: presence is only 'active' or 'away',
+     and a seat goes 'away' both when somebody deliberately leaves and
+     when they miss three turns — a dead battery, a train tunnel, a
+     grandchild wanting the phone. The badge therefore says the thing
+     that is true in BOTH cases and accuses nobody of walking out: the
+     bot has this seat now. */
+  const takenOver = !row?.is_bot && row?.presence === "away";
   return (
     <div
       style={{
@@ -338,6 +356,25 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
           {name}
           {isMe ? ` (${t("ludo.seat.you")})` : ""}
         </span>
+        {takenOver && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignSelf: align === "end" ? "flex-end" : "flex-start",
+              alignItems: "center",
+              marginTop: 2,
+              padding: "1px 7px",
+              borderRadius: 8,
+              background: C.warmGray,
+              color: C.textMain,
+              fontSize: ts(13),
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+            }}
+          >
+            {t("ludo.seat.botHasSeat")}
+          </span>
+        )}
         {/* Only when it says something. "Seat 2" under a seat that is
             simply sitting there is a label nobody reads, and the room
             it costs is room the board needs (§1). Whose turn it is
@@ -402,11 +439,8 @@ function Plate({ seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDi
           table. It also matters for §10: with no die and no ring, the
           only thing saying "not your turn" was the words. */}
       {(!dice || dice.length === 0) && !isMe && (
-        <span
-          style={{ display: "flex", flexShrink: 0, alignItems: "center", opacity: 0.42 }}
-          aria-hidden="true"
-        >
-          <Die value={row?.last_roll || 1} size={34} state="used" />
+        <span style={{ display: "flex", flexShrink: 0, alignItems: "center" }} aria-hidden="true">
+          <SeatDie value={null} spent={false} active={false} mine={false} colour={colour} />
         </span>
       )}
 

@@ -605,6 +605,8 @@ export default function LudoSession() {
   const mySeatRow = seats.find((s) => s.profile_id === myId);
   const currentRow = seats.find((s) => s.seat === game.current_seat);
   const playing = game.status === "playing";
+  /* Seats whose person is not answering, so the bot is playing them. */
+  const awaySeats = (seats || []).filter((r) => !r.is_bot && r.presence === "away");
   const isMyTurn = playing && currentRow?.profile_id === myId;
   /* WHERE THE DICE LIVE — settled by LUDO_UI_SPEC §3, "next to their
      own avatar, not in the board's middle". Two users had asked for
@@ -1160,6 +1162,25 @@ export default function LudoSession() {
 
           {/* ── The four players, at the four corners, outside the
                  board. Yours follows your yard down to the near side. ── */}
+          {/* SOMEBODY'S SEAT IS BEING PLAYED FOR THEM.
+
+              One line, and only while it is true. The table keeps
+              playing either way — the bot takes the turn — but a game
+              that quietly changes who it is against without saying so
+              is a game that has lied to the people still at it. Named
+              rather than counted, because "1 player away" is a
+              statistic and "Ammi's seat" is a person. */}
+          {playing && awaySeats.length > 0 && (
+            <BodyText
+              role="status"
+              style={{ margin: "4px 0 0", textAlign: "center", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, flex: "0 0 auto" }}
+            >
+              {t("ludo.table.botTookOver", {
+                names: awaySeats.map((r) => r.name || t("ludo.seat.someone")).join(", "),
+              })}
+            </BodyText>
+          )}
+
           {/* ── What to do next, in one sentence ── */}
           {isMyTurn && hasDice && (
             <BodyText style={{ fontWeight: 700, margin: "10px 0 0", textAlign: "center" }}>

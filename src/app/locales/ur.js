@@ -1959,7 +1959,11 @@ const ur = {
       safeStandard: "معیاری",
       safeNone: "کوئی نہیں",
     },
+    table: {
+      botTookOver: "{names} چلے گئے — اُن کی جگہ بوٹ کھیل رہا ہے۔",
+    },
     seat: {
+      botHasSeat: "بوٹ",
       bot: "بوٹ",
       someone: "ایک کھلاڑی",
       you: "آپ",

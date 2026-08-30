@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   0057 — "send a link" as a seat option (PRODUCT_DECISIONS §17)
+   0060 — "send a link" as a seat option (PRODUCT_DECISIONS §17)
 
    Seat options become person · bot · open to community · SEND A LINK.
 

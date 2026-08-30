@@ -165,7 +165,19 @@ export default function NewGame() {
     setBusy(true);
     try {
       const house = { seat_colours: colours };
-      if (game.key === "ludo") house.dice_count = diceCount;
+      if (game.key === "ludo") {
+        house.dice_count = diceCount;
+        /* Ludo's turn is 30 seconds, and it must be WRITTEN here rather
+           than left to a default. The server's fallback is 60 —
+           `coalesce((house_rules->>'turn_seconds')::int, 60)` in
+           game_tick — so a table created without the key would count
+           down from 30 on the board while the server waited 60: the bar
+           empties, nothing happens, and the person is told twice that
+           they ran out of time. The rails lane sets the same value for
+           tables opened their way; this is the other door into the same
+           room. */
+        house.turn_seconds = 30;
+      }
       const id = await createSession(game.key, seats, house);
       try {
         sessionStorage.setItem("saathban.app.freshTable", id);

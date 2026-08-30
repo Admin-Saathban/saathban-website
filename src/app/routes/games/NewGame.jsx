@@ -38,6 +38,7 @@ import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import {
   fetchGames,
+  fetchGamesFinished,
   createSession,
   fetchMySessions,
   liveSessionOf,
@@ -48,6 +49,8 @@ import { createShare } from "../community/communityData.js";
 import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
+import ThemePicker from "./ThemePicker.jsx";
+import { DEFAULT_THEME } from "./themes.js";
 import { GamesScreen, BodyText, GhostBtn } from "./ui.jsx";
 
 /* The faces sheet. One tap seats someone and closes — this is a
@@ -121,6 +124,12 @@ export default function NewGame() {
      clearing the gate resumes exactly that table rather than a
      default one. */
   const heldSetup = useRef(null);
+  /* The board everyone at this table will play on. Themes beyond the
+     free two are EARNED by playing, and earned-ness is derived from
+     finished tables rather than stored — so this is a count, not a
+     balance, and there is nothing here to spend or lose. */
+  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [gamesFinished, setGamesFinished] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -134,6 +143,19 @@ export default function NewGame() {
       alive = false;
     };
   }, [gameKey]);
+
+  useEffect(() => {
+    let alive = true;
+    fetchGamesFinished(profile.id)
+      .then((n) => alive && setGamesFinished(n))
+      /* A count that will not load must not block setting up a game:
+         the free boards are always there, so falling back to zero
+         costs a person nothing they had. */
+      .catch(() => alive && setGamesFinished(0));
+    return () => {
+      alive = false;
+    };
+  }, [profile.id]);
 
   /* Carrom passes turns rather than playing itself: a bot seat there
      is an empty chair with a clock, and start_with_bots refuses it
@@ -165,6 +187,7 @@ export default function NewGame() {
     setBusy(true);
     try {
       const house = { seat_colours: colours };
+      house.table_theme = theme;
       if (game.key === "ludo") {
         house.dice_count = diceCount;
         /* Ludo's turn is 30 seconds, and it must be WRITTEN here rather
@@ -284,6 +307,9 @@ export default function NewGame() {
         botsAllowed={botsAllowed}
         canPostOpen={canPostOpen}
         showDice={game.key === "ludo"}
+        extras={
+          <ThemePicker value={theme} onPick={setTheme} gamesFinished={gamesFinished} />
+        }
         onPickPeople={(seat) => setSheetSeat(seat)}
         onStart={start}
       />

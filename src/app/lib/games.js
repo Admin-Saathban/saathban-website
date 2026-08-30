@@ -16,7 +16,13 @@ export function puzzleToday() {
 export async function fetchGames() {
   const { data, error } = await supabase
     .from("games")
-    .select("key, name_en, name_ur, tagline_en, tagline_ur, kind, min_seats, max_seats, enabled")
+    /* timeout_style matters to the CLIENT, not just the rails: carrom
+       is pass_turn, which has no bot player, and start_with_bots
+       refuses it (0043). Without this column every caller computed
+       `timeout_style !== "pass_turn"` against undefined and got true,
+       so the bot option was offered for carrom and only refused at the
+       server. */
+    .select("key, name_en, name_ur, tagline_en, tagline_ur, kind, min_seats, max_seats, enabled, timeout_style")
     .order("key");
   if (error) throw error;
   return data ?? [];

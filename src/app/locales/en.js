@@ -1497,6 +1497,11 @@ const en = {
        the screen itself is pictures, and these are what a screen
        reader says in their place. */
     setup: {
+      /* The faces sheet behind the person choice. */
+      sheet: {
+        title: "Who is playing?",
+        close: "Close",
+      },
       addSeat: "Add a player",
       removeSeat: "Remove this player",
       colour: {

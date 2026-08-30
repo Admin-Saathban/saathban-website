@@ -125,12 +125,19 @@ function ColourRow({ mine, takenBy, seat, onPick, t }) {
   );
 }
 
-/* 👤 / 🤖 / 🪷 — who fills this chair. */
-function FillChoice({ value, onChange, t, ts }) {
+/* 👤 / 🤖 / 🪷 — who fills this chair.
+
+   Not every game offers all three. Carrom passes turns rather than
+   playing itself, so a bot seat there is an empty chair with a clock
+   — start_with_bots refuses it server-side (0043), and a face you can
+   tap that the server will reject is worse than one that isn't
+   offered. Posting a table to the community is an Icon's to give, so
+   that face only appears for someone who may. */
+function FillChoice({ value, onChange, t, ts, botsAllowed = true, canPostOpen = true }) {
   const OPTIONS = [
     ["person", "👤", t("games.setup.fill.person")],
-    ["bot", "🤖", t("games.setup.fill.bot")],
-    ["open", "🪷", t("games.setup.fill.open")],
+    ...(botsAllowed ? [["bot", "🤖", t("games.setup.fill.bot")]] : []),
+    ...(canPostOpen ? [["open", "🪷", t("games.setup.fill.open")]] : []),
   ];
   return (
     <div role="radiogroup" style={{ display: "flex", gap: 6 }}>
@@ -209,6 +216,17 @@ export default function SeatSetup({
   busy,
   people = [],
   onPickPeople,
+  /* seat number → the person the host has chosen for that chair, so a
+     row can show a face and a name instead of the word "person". The
+     parent owns the sheet they were chosen from. */
+  seated = {},
+  botsAllowed = true,
+  canPostOpen = true,
+  /* Only ludo has a dice rule worth choosing: one die or the two-dice
+     Desi table. Snakes rolls its own single die and carrom has none,
+     so offering the toys there asks a question the game cannot answer
+     — and the caption underneath would be describing nothing. */
+  showDice = true,
 }) {
   const { t, ts } = useI18n();
   const [seats, setSeats] = useState(Math.max(2, minSeats));
@@ -216,8 +234,20 @@ export default function SeatSetup({
   /* colours[seat] = index into SEAT_COLORS. You are seat 0 and start
      on green; the rest take what is left, in order, and can be
      changed. */
-  const [colours, setColours] = useState([0, 1, 2, 3]);
-  const [fill, setFill] = useState(["me", "bot", "bot", "bot"]);
+  /* You start on GREEN — looked up, never hardcoded. The ring has
+     re-phased twice today and seat 0 is currently yellow, so an index
+     literal here would quietly hand the host the wrong goti the next
+     time the board turns. The others take what is left, in order. */
+  const [colours, setColours] = useState(() => {
+    const green = Math.max(0, (SEAT_COLOR_NAMES || []).indexOf("green"));
+    return [green, ...SEAT_COLORS.map((_, i) => i).filter((i) => i !== green)];
+  });
+  /* Default fillings follow what the game can actually do: bots where
+     bots can play, otherwise an open chair someone can claim. */
+  const [fill, setFill] = useState(() => {
+    const other = botsAllowed ? "bot" : canPostOpen ? "open" : "person";
+    return ["me", other, other, other];
+  });
   const [popped, setPopped] = useState(-1);
 
   const takenBy = {};
@@ -291,8 +321,58 @@ export default function SeatSetup({
                 t={t}
               />
 
-              {!isMe && (
+              {/* A chosen person takes the chair's place in the row:
+                  their face and their name, not the word "person".
+                  Tapping it reopens the sheet, because the commonest
+                  correction is picking someone else. */}
+              {!isMe && fill[seat] === "person" && seated[seat] && (
+                <button
+                  type="button"
+                  onClick={() => onPickPeople?.(seat)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    minHeight: A11Y.minTapTargetPx,
+                    padding: "0 12px 0 6px",
+                    borderRadius: 50,
+                    border: `2px solid ${C.green}`,
+                    background: "#EEF3E8",
+                    fontFamily: "inherit",
+                    fontSize: ts(17),
+                    fontWeight: 700,
+                    color: C.textMain,
+                    cursor: "pointer",
+                    maxWidth: "100%",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "50%",
+                      background: C.olive,
+                      color: C.cream,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: ts(15),
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {(seated[seat].full_name || "?").trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {seated[seat].full_name}
+                  </span>
+                </button>
+              )}
+
+              {!isMe && !(fill[seat] === "person" && seated[seat]) && (
                 <FillChoice
+                  botsAllowed={botsAllowed}
+                  canPostOpen={canPostOpen}
                   value={fill[seat]}
                   onChange={(v) => {
                     setFill((cur) => {
@@ -357,6 +437,8 @@ export default function SeatSetup({
       </div>
 
       {/* ── The dice ── */}
+      {showDice && (
+        <>
       <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
         <DiceToy count={1} chosen={diceCount === 1} onPick={() => setDiceCount(1)} t={t} />
         <DiceToy count={2} chosen={diceCount === 2} onPick={() => setDiceCount(2)} t={t} />
@@ -365,6 +447,9 @@ export default function SeatSetup({
       <p style={{ margin: "0 0 20px", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, textAlign: "center" }}>
         {diceCount === 2 ? t("games.setup.diceCaption") : t("games.setup.diceCaptionOne")}
       </p>
+
+        </>
+      )}
 
       {/* ── Start ── */}
       <button

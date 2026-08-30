@@ -1461,6 +1461,11 @@ const ur = {
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
     setup: {
+      /* چہروں کی شیٹ */
+      sheet: {
+        title: "کون کھیل رہا ہے؟",
+        close: "بند کریں",
+      },
       addSeat: "ایک کھلاڑی شامل کریں",
       removeSeat: "یہ کھلاڑی ہٹا دیں",
       colour: {

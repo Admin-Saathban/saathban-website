@@ -46,3 +46,10 @@ export const SEAT_INK = ["#3B2E12", "#FFFFFF", "#FFFFFF", "#FFFFFF"];
    resting spots — bright enough to name the zone, pale enough that a
    star or a token drawn on top of it still reads. */
 export const SEAT_TINTS = ["#FDF0C8", "#DAE7F7", "#FBDDDA", "#D8F0E1"];
+
+/* The i18n key suffix for each seat colour, in the same order as
+   SEAT_COLORS. It lives here, beside the hexes, because the order has
+   now changed twice — and a screen reader announcing "green" while the
+   goti is yellow is worse than announcing nothing. One array moves,
+   both stay true. */
+export const SEAT_COLOR_NAMES = ["yellow", "blue", "red", "green"];

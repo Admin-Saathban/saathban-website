@@ -36,7 +36,7 @@
 import { useState } from "react";
 import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
-import { SEAT_COLORS } from "../seatColors.js";
+import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../seatColors.js";
 import Pawn from "../Pawn.jsx";
 
 export const SETUP_MOTION_CSS = `
@@ -117,7 +117,7 @@ function ColourRow({ mine, takenBy, seat, onPick, t }) {
             chosen={mine === colour}
             taken={takenElsewhere}
             onPick={() => onPick(colour)}
-            label={t(`games.setup.colour.${["green", "red", "blue", "yellow"][colour]}`)}
+            label={t(`games.setup.colour.${SEAT_COLOR_NAMES[colour]}`)}
           />
         );
       })}

@@ -274,12 +274,26 @@ disguises, and every instance looked like something else at first:
   is not committed yet, that pins a pre-their-work blob into your
   index, and it stays pinned through their commit and into yours. The
   unstage performed specifically to keep a peer's files OUT of a
-  commit is what deleted them, twice. Either leave their staged file
-  alone and let them commit first, or once their commit exists use
-  `git restore --source=<their commit> --staged <paths>`. That form is
-  also the repair tool: it rewrites the index from a known-good commit
-  and leaves the working tree untouched, so undoing one of these
-  cannot cost the author what they still have in flight.
+  commit is what deleted them, twice. **Leave their staged file alone
+  and let them commit first. There is no safe form.**
+
+  I originally wrote here that `git restore --source=<their commit>
+  --staged <paths>` was an acceptable exception. The standing rule
+  above now forbids it outright and is right to: it still writes
+  another lane's path in a shared index on the strength of my belief
+  about which commit is current, and being wrong about that is exactly
+  how 357 lines went twice. A rule with a clever exception is a rule
+  nobody follows under pressure.
+
+  Note also what the rule trades away deliberately. Pathspec commits
+  are sanctioned as the ONLY method despite their known weakness — a
+  peer's uncommitted lines inside a file you are also editing ride
+  along into your commit. That failure is small and visible in
+  `git show HEAD --stat`. The unstage failure is large and invisible.
+  The trade is deliberate, so do not read clause 3 as covering more
+  than it does: checking the file list catches the wrong FILE, never
+  the wrong HUNK. When a peer has uncommitted work in a file you also
+  changed, the answer is to wait for them, not to get clever.
 - **Verify by building the COMMITTED tree, not your working tree.**
   `git archive HEAD` into a temp directory, or a detached worktree,
   and build that. All three of today's breakages were invisible from

@@ -155,7 +155,7 @@ export default function HelpPage() {
                 role="alert"
                 style={{ fontSize: ts(16), color: C.brown, fontWeight: 700, margin: "0 0 12px" }}
               >
-                ⚠ {error}
+                {error}
               </p>
             )}
 

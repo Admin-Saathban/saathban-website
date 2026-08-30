@@ -23,17 +23,22 @@
 
 import { roleHomePath } from "../lib/session.jsx";
 
-/* The bar itself: at most five, labelled, never icon-alone (§3). */
+/* The bar itself: at most five, labelled, never icon-alone (§3).
+
+   `icon` is a name in components/Icon.jsx, not an emoji. Emoji were
+   the single largest reason the app read as a prototype: every one is
+   drawn by whoever made the font, so five of them side by side share
+   no stroke weight and no palette. */
 export function barItems(role, { buddyActive = true } = {}) {
-  const home = { to: roleHomePath(role), key: "hub.home", emoji: "🏠", end: true };
-  const games = { to: "/app/games", key: "hub.games", emoji: "🎲" };
+  const home = { to: roleHomePath(role), key: "hub.home", icon: "home", end: true };
+  const games = { to: "/app/games", key: "hub.games", icon: "games" };
 /* More is no longer a destination — NAVIGATION_SPEC §6 makes it a
    drawer. It keeps a `to` so /app/more still resolves for a
    bookmark or a deep link, but `drawer` is what the bar reads: the
    bar renders this one as a button that opens the panel rather than
    as a NavLink that navigates away from where you are. Going to a
    whole other screen to pick a screen is the thing §6 removes. */
-  const more = { to: "/app/more", key: "hub.more", emoji: "☰", drawer: "more" };
+  const more = { to: "/app/more", key: "hub.more", icon: "more", drawer: "more" };
 
   if (role === "saath_icon") {
     /* §1 merged Home and Community into one screen, so a Community
@@ -43,8 +48,8 @@ export function barItems(role, { buddyActive = true } = {}) {
     return [
       home,
       games,
-      { to: "/app/groups", key: "hub.groupsShort", emoji: "🧑‍🤝‍🧑" },
-      { to: "/app/outdoor", key: "hub.outdoor", emoji: "🌳" },
+      { to: "/app/groups", key: "hub.groupsShort", icon: "groups" },
+      { to: "/app/outdoor", key: "hub.outdoor", icon: "outdoor" },
       more,
     ];
   }
@@ -52,7 +57,7 @@ export function barItems(role, { buddyActive = true } = {}) {
   if (role === "family_member") {
     return [
       home,
-      { to: "/app/community/messages", key: "hub.messages", emoji: "💬" },
+      { to: "/app/community/messages", key: "hub.messages", icon: "messages" },
       games,
       more,
     ];
@@ -64,7 +69,7 @@ export function barItems(role, { buddyActive = true } = {}) {
        rather than present-and-dead: the vetting screen is their whole
        app until they are through it. */
     return buddyActive
-      ? [home, { to: "/app/community/messages", key: "hub.messages", emoji: "💬" }, games, more]
+      ? [home, { to: "/app/community/messages", key: "hub.messages", icon: "messages" }, games, more]
       : [home, more];
   }
 
@@ -92,15 +97,15 @@ export function moreGroups(role) {
   const icon = role === "saath_icon";
 
   const rows = [
-    { to: "/app/calendar", key: "hub.calendar", emoji: "📅" },
-    icon && { to: "/app/history", key: "hub.journey", emoji: "🧭" },
+    { to: "/app/calendar", key: "hub.calendar", icon: "calendar" },
+    icon && { to: "/app/history", key: "hub.journey", icon: "journey" },
     /* Kept even while its shelves are empty — §16: the interest
        counts are the demand data. */
-    { to: "/app/skills", key: "hub.grow", emoji: "🌱" },
-    { to: "/app/badges", key: "hub.badges", emoji: "🎖️" },
-    { to: "/app/saved", key: "hub.saved", emoji: "🔖" },
-    { to: "/app/settings", key: "hub.settings", emoji: "⚙️" },
-    { to: "/app/help", key: "hub.help", emoji: "💬" },
+    { to: "/app/skills", key: "hub.grow", icon: "grow" },
+    { to: "/app/badges", key: "hub.badges", icon: "badges" },
+    { to: "/app/saved", key: "hub.saved", icon: "saved" },
+    { to: "/app/settings", key: "hub.settings", icon: "settings" },
+    { to: "/app/help", key: "hub.help", icon: "help" },
   ].filter(Boolean);
 
   /* One group, no label. The shape stays a list of groups so callers

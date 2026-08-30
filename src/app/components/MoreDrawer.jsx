@@ -31,6 +31,7 @@ import Drawer from "./Drawer.jsx";
 import { moreGroups } from "./navItems.js";
 import { openFullScreen } from "./motion.jsx";
 import { countToday } from "./moreCount.js";
+import Icon from "./Icon.jsx";
 
 export const MORE_DRAWER_ID = "more";
 
@@ -113,9 +114,7 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
                   cursor: "pointer",
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>
-                  {item.emoji}
-                </span>
+                <Icon name={item.icon} size={22} style={{ color: C.green }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   {/* THE LINE BOX IS THE LANGUAGE'S, NOT A CONSTANT.
 
@@ -145,12 +144,12 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
                     </span>
                   )}
                 </span>
-                <span
-                  aria-hidden="true"
-                  style={{ color: C.textMuted, fontSize: ts(20), fontWeight: 700, flexShrink: 0 }}
-                >
-                  {meta.dir === "rtl" ? "‹" : "›"}
-                </span>
+                {/* The chevron mirrors with the script, like the drawer. */}
+                <Icon
+                  name={meta.dir === "rtl" ? "chevronBack" : "chevron"}
+                  size={20}
+                  style={{ color: C.textMuted }}
+                />
               </button>
             </li>
           );

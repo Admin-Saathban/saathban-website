@@ -73,7 +73,7 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
                 padding: "6px 2px",
               }}
             >
-              <span style={{ fontSize: ts(18), fontWeight: 500, color: C.textMuted }}>
+              <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 500, color: C.textMuted }}>
                 {isToday ? t("home.today") : shortDay}
               </span>
               <span style={{ fontSize: ts(21), fontWeight: 700, lineHeight: 1.15 }}>
@@ -82,7 +82,7 @@ export default function CalendarStrip({ days, selectedOffset, onSelect }) {
               <span
                 aria-hidden="true"
                 style={{
-                  fontSize: ts(18),
+                  fontSize: ts(A11Y.minBodyPx),
                   lineHeight: "20px",
                   height: 20,
                   fontWeight: 700,

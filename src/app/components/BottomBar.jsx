@@ -27,6 +27,7 @@ import { NavLink } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { barItems } from "./navItems.js";
+import Icon from "./Icon.jsx";
 
 /* NASTALIQ NEEDS THE ROOM AND ENGLISH DOES NOT MIND HAVING IT.
 
@@ -73,9 +74,10 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
 
   const Inside = ({ item }) => (
     <>
-      <span aria-hidden="true" style={{ fontSize: 21, lineHeight: 1 }}>
-        {item.emoji}
-      </span>
+      {/* A drawn glyph, not an emoji. aria-hidden by default — the
+          label below says it, and a reader announcing both says it
+          twice. */}
+      <Icon name={item.icon} size={22} />
       <span
         style={{
           /* THE BAR LABEL STOPS GROWING AT 1.2x, AND ONLY HERE.

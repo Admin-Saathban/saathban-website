@@ -167,3 +167,36 @@ export async function suggestedGroups(limit = 5) {
   if (error) throw error;
   return (data || []).filter((g) => !mine.has(g.id)).slice(0, limit);
 }
+
+/* ── Asking to join (NAVIGATION_SPEC §5, migration 0086/0087) ── */
+
+export async function requestToJoinGroup(groupId, message = null) {
+  const { error } = await supabase.rpc("request_to_join_group", {
+    p_group: groupId,
+    p_message: message,
+  });
+  if (error) throw error;
+}
+
+/* My own knocks, by group. The DECLINED ones matter as much as the
+   pending ones: 0086 keeps a declined row precisely so this row can say
+   "not this time" instead of silently reverting to "Ask", which would
+   leave a person asking over and over with no idea anything had
+   happened. RLS ("requester reads own") scopes it; the filter is here
+   anyway rather than trusting a policy to be the query. */
+export async function myJoinRequests() {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) return {};
+  const { data, error } = await supabase
+    .from("group_join_requests")
+    .select("group_id, status, created_at")
+    .eq("requester_id", uid)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  /* Newest first, so the first row seen for a group is its current
+     state — a person who was declined and asked again is 'pending'. */
+  const byGroup = {};
+  for (const r of data || []) if (!byGroup[r.group_id]) byGroup[r.group_id] = r.status;
+  return byGroup;
+}

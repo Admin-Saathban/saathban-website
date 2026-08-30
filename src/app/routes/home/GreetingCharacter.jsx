@@ -4,7 +4,7 @@
    character work lands. Its speech bubble is driven by the tone matrix
    in homeMock.js: mood-aware because mood is always logged first. */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 function SproutCharacter() {
@@ -83,7 +83,7 @@ export default function GreetingCharacter({ greeting, name, line }) {
             border: `2px solid ${C.warmGray}`,
             borderRadius: "18px 18px 18px 4px",
             padding: "14px 18px",
-            fontSize: ts(19),
+            fontSize: ts(17),
             lineHeight: 1.55,
             color: C.textMain,
           }}

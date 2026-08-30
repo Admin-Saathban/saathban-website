@@ -132,6 +132,10 @@ const en = {
     join: "Join",
     ask: "Ask to join",
     asked: "Asked",
+    /* 0086 keeps a declined row so this row can say what happened.
+       No reason and no finality: they can ask again, and tapping it
+       does exactly that. */
+    notThisTime: "Not this time — ask again",
     joined: "You are in",
     openIt: "Open",
     members: "{n} members",

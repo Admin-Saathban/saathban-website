@@ -33,6 +33,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
+import Icon from "../../components/Icon.jsx";
 import { arrivalClass, openFullScreen } from "../../components/motion.jsx";
 import {
   searchPeople,
@@ -44,6 +45,8 @@ import {
   rememberSearch,
   forgetRecents,
   suggestedGroups,
+  requestToJoinGroup,
+  myJoinRequests,
 } from "./searchData.js";
 
 const DEBOUNCE_MS = 260;
@@ -62,18 +65,22 @@ function Row({ children, onClick, label }) {
           alignItems: "center",
           gap: 12,
           minHeight: 56,
-          padding: "10px 12px",
-          borderRadius: 14,
-          /* §4.1 — an outline means you can tap it. This is tappable,
-             but a list of eight outlined boxes is a cage; the fill and
-             the whitespace carry it, and the whole row is the target. */
+          /* FULL BLEED, NO CORNER, NO SIDE MARGIN (§4.1 + the owner's
+             30 August pass). A row used to be a rounded white card
+             inset from both edges: that spent about 32px of a 390px
+             screen on gutter, and the rounded corner said "card" when
+             §4.1 reserves an outline for "you can tap this". The row
+             is plain white to both edges now, and the grey ground
+             between rows is what separates them. */
+          padding: "10px 16px",
+          borderRadius: 0,
           border: "none",
           background: C.white,
           color: C.textMain,
           textAlign: "start",
           fontFamily: "inherit",
           cursor: "pointer",
-          marginBottom: 8,
+          marginBottom: 1,
         }}
       >
         {children}
@@ -92,7 +99,7 @@ function Group({ title, children }) {
           fontSize: ts(17),
           fontWeight: 700,
           color: C.textMuted,
-          margin: "0 0 8px",
+          margin: "0 16px 8px",
           /* No border, no pill: §4.1 says a heading is not a control. */
           letterSpacing: 0.2,
         }}
@@ -101,6 +108,111 @@ function Group({ title, children }) {
       </h2>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{children}</ul>
     </section>
+  );
+}
+
+/* §5 puts the action ON the row. Which action depends on three facts
+   the row already knows: whether you are in the group, whether it is
+   open to anyone, and what happened the last time you asked.
+
+   "Not this time" exists because 0086 KEEPS a declined row. Without
+   it the button would quietly return to "Ask to join" and a person
+   would ask again and again, never learning that anything had
+   happened. The row is the place they asked, so the row is where the
+   answer belongs. */
+function GroupRow({ g, mine, asked, onAsk, onOpen, busy }) {
+  const { t, ts } = useI18n();
+  const isMember = mine.has(g.id);
+  const state = asked[g.id];
+  const open = g.privacy === "anyone";
+
+  const action = isMember
+    ? { label: t("search.joined"), act: null }
+    : state === "pending"
+    ? { label: t("search.asked"), act: null }
+    : state === "declined"
+    ? { label: t("search.notThisTime"), act: onAsk }
+    : open
+    ? { label: t("search.ask"), act: onAsk }
+    /* Invite-only, never asked: there is nothing honest to offer.
+       0086 refuses a knock on an invite_only group outright, so a
+       button here would be a button that fails. */
+    : { label: null, act: null };
+
+  return (
+    <li>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          minHeight: 56,
+          padding: "10px 16px",
+          background: C.white,
+          marginBottom: 1,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onOpen}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            border: "none",
+            background: "none",
+            padding: 0,
+            textAlign: "start",
+            fontFamily: "inherit",
+            color: C.textMain,
+            cursor: "pointer",
+          }}
+        >
+          <Icon name="groups" size={22} style={{ color: C.green }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: ts(17), fontWeight: 600, lineHeight: 1.3 }}>
+              {g.name}
+            </span>
+            {!open && (
+              <span style={{ display: "block", fontSize: ts(14), color: C.textMuted, marginTop: 2 }}>
+                {t("search.privateGroup")}
+              </span>
+            )}
+          </span>
+        </button>
+
+        {action.label && (action.act ? (
+          <button
+            type="button"
+            onClick={action.act}
+            disabled={busy}
+            style={{
+              flexShrink: 0,
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 16px",
+              borderRadius: 50,
+              /* An outline, because §4.1 reserves one for exactly this:
+                 a thing you can tap. It is the only outline on the row. */
+              border: `2px solid ${C.green}`,
+              background: "transparent",
+              color: C.green,
+              fontSize: ts(15),
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: busy ? "default" : "pointer",
+            }}
+          >
+            {action.label}
+          </button>
+        ) : (
+          <span style={{ flexShrink: 0, fontSize: ts(15), fontWeight: 600, color: C.textMuted }}>
+            {action.label}
+          </span>
+        ))}
+      </div>
+    </li>
   );
 }
 
@@ -115,6 +227,10 @@ export default function SearchPage() {
   const [mine, setMine] = useState(new Set());
   const [recents, setRecents] = useState(loadRecents);
   const [suggested, setSuggested] = useState([]);
+  /* group id -> "pending" | "approved" | "declined". §5 puts the action
+     ON the row, which means the row also has to carry what happened to
+     it last time. */
+  const [asked, setAsked] = useState({});
   const boxRef = useRef(null);
 
   /* The keyboard should already be up. Somebody who tapped a magnifier
@@ -126,6 +242,7 @@ export default function SearchPage() {
        first keystroke, because the whole point is that something is
        already there when the screen opens. */
     suggestedGroups().then(setSuggested).catch(() => {});
+    myJoinRequests().then(setAsked).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -158,6 +275,23 @@ export default function SearchPage() {
     };
   }, [q]);
 
+  const [asking, setAsking] = useState(null);
+  const ask = async (id) => {
+    setAsking(id);
+    try {
+      await requestToJoinGroup(id);
+      /* MOTION_SPEC §7 — no toast. The row changing to "Asked" IS the
+         confirmation; a banner saying the same thing is the app
+         congratulating itself. */
+      setAsked(await myJoinRequests());
+    } catch {
+      /* A refusal from the RPC (invite only, already a member, blocked)
+         leaves the row exactly as it was. Nothing is claimed. */
+    } finally {
+      setAsking(null);
+    }
+  };
+
   const go = (to) => openFullScreen(navigate, to, "right");
   const empty =
     res &&
@@ -179,14 +313,16 @@ export default function SearchPage() {
           background: C.bg,
           color: C.textMain,
           fontFamily: meta.fonts.body,
-          padding: "12px 16px 80px",
+          /* No side padding: the rows bleed to the screen edges. The
+             search box puts its own back. */
+          padding: "12px 0 80px",
         }}
       >
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <label htmlFor="sb-search" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
             {t("search.title")}
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "0 16px" }}>
             <input
               id="sb-search"
               ref={boxRef}
@@ -227,7 +363,7 @@ export default function SearchPage() {
                   cursor: "pointer",
                 }}
               >
-                <span aria-hidden="true">✕</span>
+                <Icon name="close" size={20} />
               </button>
             )}
           </div>
@@ -239,7 +375,7 @@ export default function SearchPage() {
                 <Group title={t("search.recent")}>
                   {recents.map((r) => (
                     <Row key={r} onClick={() => setQ(r)} label={r}>
-                      <span aria-hidden="true" style={{ fontSize: 20 }}>🕘</span>
+                      <Icon name="time" size={20} style={{ color: C.textMuted }} />
                       <span style={name}>{r}</span>
                     </Row>
                   ))}
@@ -268,19 +404,15 @@ export default function SearchPage() {
               {suggested.length > 0 && (
                 <Group title={t("search.suggested")}>
                   {suggested.map((g) => (
-                    <Row key={g.id} onClick={() => go(`/app/groups/${g.id}`)} label={g.name}>
-                      <span aria-hidden="true" style={{ fontSize: 22 }}>🧑‍🤝‍🧑</span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={name}>{g.name}</span>
-                        {g.description && <span style={sub}>{g.description}</span>}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        style={{ color: C.green, fontSize: ts(16), fontWeight: 700, flexShrink: 0 }}
-                      >
-                        {t("search.openIt")}
-                      </span>
-                    </Row>
+                    <GroupRow
+                      key={g.id}
+                      g={g}
+                      mine={mine}
+                      asked={asked}
+                      busy={asking === g.id}
+                      onAsk={() => ask(g.id)}
+                      onOpen={() => go(`/app/groups/${g.id}`)}
+                    />
                   ))}
                 </Group>
               )}
@@ -290,7 +422,7 @@ export default function SearchPage() {
                    screen says what search is FOR, which is a different
                    job from "try a shorter word": that is advice about
                    a search that has not happened yet. */
-                <p style={{ fontSize: ts(16), color: C.textMuted, lineHeight: 1.6, margin: "8px 0 0" }}>
+                <p style={{ fontSize: ts(16), color: C.textMuted, lineHeight: 1.6, margin: "8px 16px 0" }}>
                   {t("search.beforeTyping")}
                 </p>
               )}
@@ -305,10 +437,10 @@ export default function SearchPage() {
 
           {res && !busy && empty && (
             <>
-              <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, margin: "0 0 6px" }}>
+              <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, margin: "0 16px 6px" }}>
                 {t("search.nothing")}
               </p>
-              <p style={{ fontSize: ts(16), color: C.textMuted, margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: ts(16), color: C.textMuted, margin: "0 16px", lineHeight: 1.6 }}>
                 {t("search.nothingHint")}
               </p>
             </>
@@ -353,21 +485,15 @@ export default function SearchPage() {
               {res.groups.length > 0 && (
                 <Group title={t("search.groups")}>
                   {res.groups.map((g) => (
-                    <Row key={g.id} onClick={() => go(`/app/groups/${g.id}`)} label={g.name}>
-                      <span aria-hidden="true" style={{ fontSize: 22 }}>🧑‍🤝‍🧑</span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={name}>{g.name}</span>
-                        <span style={sub}>
-                          {g.privacy === "anyone" ? "" : t("search.privateGroup")}
-                        </span>
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        style={{ color: C.green, fontSize: ts(16), fontWeight: 700, flexShrink: 0 }}
-                      >
-                        {mine.has(g.id) ? t("search.joined") : t("search.openIt")}
-                      </span>
-                    </Row>
+                    <GroupRow
+                      key={g.id}
+                      g={g}
+                      mine={mine}
+                      asked={asked}
+                      busy={asking === g.id}
+                      onAsk={() => ask(g.id)}
+                      onOpen={() => go(`/app/groups/${g.id}`)}
+                    />
                   ))}
                 </Group>
               )}
@@ -376,7 +502,7 @@ export default function SearchPage() {
                 <Group title={t("search.outdoor")}>
                   {res.places.map((pl) => (
                     <Row key={pl.id} onClick={() => go(`/app/outdoor/${pl.id}`)} label={pl.name}>
-                      <span aria-hidden="true" style={{ fontSize: 22 }}>🌳</span>
+                      <Icon name="outdoor" size={22} style={{ color: C.green }} />
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={name}>{pl.name}</span>
                         <span style={sub}>
@@ -403,7 +529,7 @@ export default function SearchPage() {
                       onClick={() => go(`/app/community?post=${p.id}`)}
                       label={(p.body || "").slice(0, 80)}
                     >
-                      <span aria-hidden="true" style={{ fontSize: 22 }}>💬</span>
+                      <Icon name="messages" size={22} style={{ color: C.green }} />
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span
                           style={{

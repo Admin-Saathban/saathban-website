@@ -197,7 +197,7 @@ export default function TodayReminders({ iconId }) {
         <h2
           style={{
             fontFamily: meta.fonts.heading,
-            fontSize: ts(19),
+            fontSize: ts(17),
             fontWeight: 700,
             color: C.brown,
             margin: "0 0 8px",

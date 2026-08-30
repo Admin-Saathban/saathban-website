@@ -17,6 +17,7 @@ import { useDrawer } from "../../components/Drawer.jsx";
 import { NOTIFICATIONS_DRAWER_ID } from "../../components/NotificationsDrawer.jsx";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 import { STRINGS } from "./strings.js";
 import { fetchUnreadCount, NOTIFICATIONS_READ_EVENT } from "./data.js";
 
@@ -84,7 +85,7 @@ export default function NotificationsBell() {
         fontSize: ts(22),
       }}
     >
-      <span aria-hidden="true">🔔</span>
+      <Icon name="bell" size={22} />
       {count > 0 && (
         <span
           aria-hidden="true"

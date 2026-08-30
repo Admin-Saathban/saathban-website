@@ -14,7 +14,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import {
   MOCK_ICON,
@@ -191,13 +191,13 @@ export default function IconHome() {
           background: C.bg,
           fontFamily: meta.fonts.body,
           color: C.textMain,
-          fontSize: ts(18),
+          fontSize: ts(A11Y.minBodyPx),
         }}
       >
       <style>{css}</style>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px" }}>
-        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
           {now.toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
         </p>
 
@@ -220,7 +220,7 @@ export default function IconHome() {
         {selectedOffset < 0 && (
           <p
             style={{
-              fontSize: ts(18),
+              fontSize: ts(A11Y.minBodyPx),
               lineHeight: 1.5,
               color: C.brown,
               background: "rgba(255,255,255,0.7)",
@@ -240,7 +240,7 @@ export default function IconHome() {
                 border: "none",
                 padding: "0 4px",
                 color: C.green,
-                fontSize: ts(18),
+                fontSize: ts(A11Y.minBodyPx),
                 fontWeight: 700,
                 fontFamily: "inherit",
                 textDecoration: "underline",
@@ -272,7 +272,7 @@ export default function IconHome() {
           <p
             role="status"
             style={{
-              fontSize: ts(18),
+              fontSize: ts(A11Y.minBodyPx),
               lineHeight: 1.5,
               color: C.textMuted,
               margin: "-8px 0 14px",

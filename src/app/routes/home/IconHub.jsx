@@ -42,6 +42,7 @@ import { useDailyLogs } from "./logStore.js";
 import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import { greetingKeyForHour, isoDate } from "./homeMock.js";
 import AppHeader from "../../components/AppHeader.jsx";
+import Icon from "../../components/Icon.jsx";
 import { awardMyBadges } from "../../lib/points.js";
 import TodayReminders from "./TodayReminders.jsx";
 import Feed from "../community/Feed.jsx";
@@ -126,9 +127,11 @@ export default function IconHub() {
               color: C.textMain,
             }}
           >
-            <span aria-hidden="true" style={{ fontSize: 30, lineHeight: 1, flexShrink: 0 }}>
-              {allDone ? "✅" : "🌤️"}
-            </span>
+            <Icon
+              name={allDone ? "check" : "log"}
+              size={26}
+              style={{ color: C.green }}
+            />
             <span style={{ flex: 1, minWidth: 0 }}>
               <span
                 style={{
@@ -149,12 +152,11 @@ export default function IconHub() {
                   : t("hub.logLine", { done, total: entries.length })}
               </span>
             </span>
-            <span
-              aria-hidden="true"
-              style={{ fontSize: ts(22), color: C.textMuted, fontWeight: 700, flexShrink: 0 }}
-            >
-              {meta.dir === "rtl" ? "‹" : "›"}
-            </span>
+            <Icon
+              name={meta.dir === "rtl" ? "chevronBack" : "chevron"}
+              size={20}
+              style={{ color: C.textMuted }}
+            />
           </Link>
 
           {/* Reminders stay. §4 lists what Home holds and what was

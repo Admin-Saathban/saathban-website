@@ -60,7 +60,7 @@ function Chip({ selected, onClick, children, label, role = "checkbox" }) {
         border: `2px solid ${selected ? C.green : C.warmGray}`,
         background: selected ? C.green : C.white,
         color: selected ? C.cream : C.textMain,
-        fontSize: ts(18),
+        fontSize: ts(A11Y.minBodyPx),
         fontWeight: selected ? 700 : 500,
         fontFamily: "inherit",
         display: "inline-flex",
@@ -92,7 +92,7 @@ function ChipRow({ children, columns }) {
 function EditorLabel({ children }) {
   const { ts } = useI18n();
   return (
-    <p style={{ fontSize: ts(18), fontWeight: 600, color: C.textMuted, margin: "18px 0 8px" }}>{children}</p>
+    <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, color: C.textMuted, margin: "18px 0 8px" }}>{children}</p>
   );
 }
 
@@ -111,7 +111,7 @@ function NoteArea({ value, onChange, placeholder, ariaLabel }) {
         borderRadius: 14,
         border: `2px solid ${C.warmGray}`,
         background: C.white,
-        fontSize: ts(18),
+        fontSize: ts(A11Y.minBodyPx),
         lineHeight: 1.55,
         fontFamily: "inherit",
         color: C.textMain,
@@ -193,7 +193,7 @@ function MoodEditor({ value, onChange, iconId, dateIso }) {
               }}
             >
               <span style={{ fontSize: ts(30), lineHeight: 1 }} aria-hidden="true">{m.face}</span>
-              <span style={{ fontSize: ts(18), fontWeight: selected ? 700 : 500, color: selected ? C.green : C.textMain }}>
+              <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: selected ? 700 : 500, color: selected ? C.green : C.textMain }}>
                 {selected ? "✓ " : ""}
                 {t(m.labelKey)}
               </span>
@@ -217,7 +217,7 @@ function MoodEditor({ value, onChange, iconId, dateIso }) {
             value={value.voice || null}
             onChange={(voice) => onChange({ ...value, voice })}
           />
-          <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
+          <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
             {t("home.log.moodPrivate")}
           </p>
         </div>
@@ -251,20 +251,20 @@ function SleepEditor({ value, onChange }) {
         type="button"
         onClick={() => setShowTimes(!showTimes)}
         aria-expanded={showTimes}
-        style={{ minHeight: A11Y.minTapTargetPx, marginTop: 14, padding: "0 4px", background: "none", border: "none", color: C.green, fontSize: ts(18), fontWeight: 600, fontFamily: "inherit", textDecoration: "underline", cursor: "pointer" }}
+        style={{ minHeight: A11Y.minTapTargetPx, marginTop: 14, padding: "0 4px", background: "none", border: "none", color: C.green, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit", textDecoration: "underline", cursor: "pointer" }}
       >
         {showTimes ? t("home.log.hideTimes") : t("home.log.addTimes")}
       </button>
       {showTimes && (
         <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
           {[["bed", t("home.log.wentToBed")], ["wake", t("home.log.wokeUp")]].map(([key, label]) => (
-            <label key={key} style={{ fontSize: ts(18), color: C.textMain, display: "flex", flexDirection: "column", gap: 6 }}>
+            <label key={key} style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, display: "flex", flexDirection: "column", gap: 6 }}>
               {label}
               <input
                 type="time"
                 value={value[key] || ""}
                 onChange={(e) => onChange({ ...value, [key]: e.target.value })}
-                style={{ minHeight: A11Y.minTapTargetPx, padding: "0 12px", borderRadius: 12, border: `2px solid ${C.warmGray}`, fontSize: ts(18), fontFamily: "inherit", background: C.white, color: C.textMain }}
+                style={{ minHeight: A11Y.minTapTargetPx, padding: "0 12px", borderRadius: 12, border: `2px solid ${C.warmGray}`, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit", background: C.white, color: C.textMain }}
               />
             </label>
           ))}
@@ -278,7 +278,7 @@ function SleepEditor({ value, onChange }) {
 function SettingsDoor({ children }) {
   const { t, ts } = useI18n();
   return (
-    <p style={{ fontSize: ts(18), color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
+    <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
       {children}{" "}
       <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
         {t("home.log.openSettings")}
@@ -310,16 +310,16 @@ function MedicationEditor({ value, onChange, meds }) {
                 {done ? "✓" : ""}
               </span>
               <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontSize: ts(19), fontWeight: 600, color: C.textMain }}>{med.name}</span>
+                <span style={{ display: "block", fontSize: ts(17), fontWeight: 600, color: C.textMain }}>{med.name}</span>
                 {(med.dose || med.time) && (
-                  <span style={{ display: "block", fontSize: ts(18), color: C.textMuted }}>{[med.dose, med.time].filter(Boolean).join(" · ")}</span>
+                  <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>{[med.dose, med.time].filter(Boolean).join(" · ")}</span>
                 )}
               </span>
             </button>
           );
         })}
       </div>
-      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>{t("home.log.medsNote")}</p>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>{t("home.log.medsNote")}</p>
     </div>
   );
 }
@@ -452,14 +452,14 @@ function DietEditor({ value, onChange, items, iconId }) {
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitNew(); } }}
             placeholder={t("home.log.newItemPh")}
             aria-label={t("home.log.newItemPh")}
-            style={{ width: "100%", boxSizing: "border-box", minHeight: A11Y.minTapTargetPx, padding: "0 14px", borderRadius: 12, border: `2px solid ${C.warmGray}`, fontSize: ts(18), fontFamily: "inherit", background: C.white, color: C.textMain, marginBottom: 10 }}
+            style={{ width: "100%", boxSizing: "border-box", minHeight: A11Y.minTapTargetPx, padding: "0 14px", borderRadius: 12, border: `2px solid ${C.warmGray}`, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit", background: C.white, color: C.textMain, marginBottom: 10 }}
           />
           <TagChips value={tags} onChange={setTags} ts={ts} compact />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button type="button" onClick={submitNew} disabled={!label.trim()} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 20px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(18), fontWeight: 600, fontFamily: "inherit", opacity: label.trim() ? 1 : 0.5 }}>
+            <button type="button" onClick={submitNew} disabled={!label.trim()} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 20px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit", opacity: label.trim() ? 1 : 0.5 }}>
               ✓ {t("home.log.newItemAdd")}
             </button>
-            <button type="button" onClick={() => { setAdding(false); setLabel(""); setTags([]); }} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white, color: C.textMuted, fontSize: ts(18), fontFamily: "inherit" }}>
+            <button type="button" onClick={() => { setAdding(false); setLabel(""); setTags([]); }} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white, color: C.textMuted, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit" }}>
               {t("home.log.newItemCancel")}
             </button>
           </div>
@@ -468,12 +468,12 @@ function DietEditor({ value, onChange, items, iconId }) {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          style={{ minHeight: A11Y.minTapTargetPx, marginTop: 10, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.green}`, background: C.white, color: C.green, fontSize: ts(18), fontWeight: 600, fontFamily: "inherit" }}
+          style={{ minHeight: A11Y.minTapTargetPx, marginTop: 10, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.green}`, background: C.white, color: C.green, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit" }}
         >
           ＋ {t("home.log.newItemCta")}
         </button>
       )}
-      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>{t("home.log.dietNote")}</p>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>{t("home.log.dietNote")}</p>
     </div>
   );
 }
@@ -526,7 +526,7 @@ function WaterEditor({ value, onChange, unit }) {
         <span style={{ display: "block", fontSize: ts(34), fontWeight: 700, color: C.green }}>
           {shown} <span style={{ fontSize: ts(20) }}>{t(`home.log.units.${unit}`)}</span>
         </span>
-        <span style={{ display: "block", fontSize: ts(18), color: C.textMuted }}>
+        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
           {t("home.log.ofGoal", { n: goal, unit: t(`home.log.units.${unit}`) })}
         </span>
       </div>
@@ -645,7 +645,7 @@ function EntryDetail({ entry, value, prefs }) {
     if (!note && !v.voice?.path) return null;
     return (
       <div style={{ padding: "0 16px 14px" }}>
-        {note && <p style={{ fontSize: ts(18), color: C.textMain, margin: "4px 0 0", lineHeight: 1.55 }}>“{note}”</p>}
+        {note && <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "4px 0 0", lineHeight: 1.55 }}>“{note}”</p>}
         <VoicePlayer voice={v.voice} compact />
       </div>
     );
@@ -657,7 +657,7 @@ function EntryDetail({ entry, value, prefs }) {
     return (
       <div style={{ padding: "0 16px 14px" }}>
         {slots.map((s) => (
-          <p key={s} style={{ fontSize: ts(18), margin: "4px 0 0", lineHeight: 1.55 }}>
+          <p key={s} style={{ fontSize: ts(A11Y.minBodyPx), margin: "4px 0 0", lineHeight: 1.55 }}>
             <span aria-hidden="true">{SLOT_ICON[s]}</span> <strong>{t(`home.log.slots.${s}`)}</strong>:{" "}
             {v.entries[s].map((id) => byId[id]?.label || "…").join(", ")}
           </p>
@@ -691,17 +691,17 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
         <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(25), fontWeight: 700, color: C.brown, margin: 0 }}>
           {isToday ? t("home.log.titleToday") : t("home.log.titleFor", { day: dayLabel })}
         </h2>
-        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>{t("home.log.intro")}</p>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "6px 0 0", lineHeight: 1.5 }}>{t("home.log.intro")}</p>
       </div>
 
       {restDay && (
-        <p style={{ fontSize: ts(18), lineHeight: 1.55, color: C.green, background: "#eef3ea", border: `2px solid ${C.sage}`, borderRadius: 14, padding: "12px 16px", margin: "14px 0 4px" }}>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), lineHeight: 1.55, color: C.green, background: "#eef3ea", border: `2px solid ${C.sage}`, borderRadius: 14, padding: "12px 16px", margin: "14px 0 4px" }}>
           {t("home.log.restBanner")}
         </p>
       )}
 
       {!editable && (
-        <p style={{ fontSize: ts(18), color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>{t("home.log.settled")}</p>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>{t("home.log.settled")}</p>
       )}
 
       <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -721,12 +721,12 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                 <span aria-hidden="true" style={{ fontSize: ts(26) }}>{mod.icon}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>{entryName(mod)}</span>
-                  <span style={{ display: "block", fontSize: ts(18), color: done ? C.green : C.textMuted, overflowWrap: "anywhere" }}>
+                  <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: done ? C.green : C.textMuted, overflowWrap: "anywhere" }}>
                     {done ? `✓ ${summary || t("home.log.sumDone")}` : editable ? t("home.log.tapToAdd") : "—"}
                   </span>
                 </span>
                 {editable && (
-                  <span aria-hidden="true" style={{ fontSize: ts(18), color: C.textMuted, fontWeight: 700 }}>{open ? "▲" : "▼"}</span>
+                  <span aria-hidden="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, fontWeight: 700 }}>{open ? "▲" : "▼"}</span>
                 )}
               </button>
               {/* The day view reads as a record: whenever a row is
@@ -743,7 +743,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
         })}
       </div>
 
-      <p style={{ fontSize: ts(18), color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
         {t("home.log.chooseHere")}{" "}
         <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>{t("home.log.fromSettings")}</Link>.
       </p>

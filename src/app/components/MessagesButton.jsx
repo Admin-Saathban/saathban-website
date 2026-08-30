@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
+import Icon from "./Icon.jsx";
 import { useSession } from "../lib/session.jsx";
 import { fetchThreadSummaries } from "../routes/community/communityData.js";
 import { openFullScreen } from "./motion.jsx";
@@ -66,7 +67,7 @@ export default function MessagesButton() {
         cursor: "pointer",
       }}
     >
-      <span aria-hidden="true">💬</span>
+      <Icon name="messages" size={22} />
       {count > 0 && (
         <span
           aria-hidden="true"

@@ -173,7 +173,7 @@ function AddBtn({ onClick, disabled, children, ts }) {
 
 function SubHeading({ children, ts }) {
   return (
-    <h3 style={{ fontSize: ts(19), fontWeight: 700, color: C.brown, margin: "26px 0 6px" }}>{children}</h3>
+    <h3 style={{ fontSize: ts(17), fontWeight: 700, color: C.brown, margin: "26px 0 6px" }}>{children}</h3>
   );
 }
 

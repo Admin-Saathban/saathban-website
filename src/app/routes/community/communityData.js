@@ -184,6 +184,10 @@ export async function createPost(userId, body, file, opts = {}) {
      Colour still needs short text to sit on. */
   const keepsColour = colour != null && !image_path && !audio_path && text.length <= 180;
 
+  /* If the insert is refused, the recording that was already uploaded
+     must not be left behind. Audio goes up BEFORE the row exists (the
+     row needs its path), so every refusal used to leak a file into
+     post-audio — storage growing while nothing appeared on screen. */
   const { data, error } = await supabase
     .from("community_posts")
     .insert({
@@ -202,7 +206,12 @@ export async function createPost(userId, body, file, opts = {}) {
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (audio_path) {
+      await supabase.storage.from("post-audio").remove([audio_path]).catch(() => {});
+    }
+    throw error;
+  }
 
   /* §5 — the tagged person is asked, never assumed. accepted stays
      false until they say so, and an event only appears under both

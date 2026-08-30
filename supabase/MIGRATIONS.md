@@ -184,6 +184,16 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0103 — a voice post may have no words (saathban-website-38, 2026-08-30) — **APPLIED**
+
+POSTS_SPEC 7. community_posts_body_check required a text post to carry
+at least one character, so a WORDLESS voice post — the whole point of
+the feature — was refused by the database while fifteen browser checks
+passed, because every one of them happened to type a caption. Widened by
+exactly one case: no words is allowed only when audio_path is present.
+Also: the audio uploads before the row exists, so each refusal leaked an
+orphan file into post-audio; the client now removes it on failure.
+
 ## 0101 + 0102 — a notification knows who caused it (saathban-website-38, 2026-08-30) — **APPLIED**
 
 The outdoor lane built the per-notification mute in OUT_AND_ABOUT_SPEC

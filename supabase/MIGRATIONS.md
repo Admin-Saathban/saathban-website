@@ -175,6 +175,14 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0077 — what a post can be (saathban-website-38, 2026-08-30) — **APPLIED**
+
+POSTS_SPEC §2-§6, §10. visibility / style_tag / colour / replies_off /
+pinned_at / help_* on community_posts, plus post_help_offers, post_tags,
+post_saves, post_follows and profiles.allow_tagging. The missing verb
+was UPDATE: the table had only is_admin(), so an author could delete a
+post but never change one. Visibility is enforced in the READ policy.
+
 ## 0076 — the Messages world (saathban-website-38, 2026-08-30) — **APPLIED**
 
 MESSAGES_SPEC §3/§5/§6. dm_message_likes (message,person) so one heart

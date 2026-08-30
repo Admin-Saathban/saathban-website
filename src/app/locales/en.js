@@ -2031,6 +2031,78 @@ const en = {
       unblock: "Unblock",
     },
   },
+  /* ── Posts (POSTS_SPEC.md). The visibility LINES are sentences, not
+     mode names: §2 says a person who does not know what "public"
+     means should read what it does. "Just for me" is the owner's
+     rename from "Only me" — it is the setting people use for
+     journaling, and the name should invite that. ── */
+  posts: {
+    rowPlaceholder: "Say something to your neighbours",
+    addPhoto: "Add a photo",
+    close: "Close",
+    newPost: "New post",
+    share: "Share",
+    photo: "Photo",
+    photoChosen: "Photo chosen",
+    plain: "Plain",
+    swatch: "Colour {n}",
+    colourDropped: "This one is long, so it will show plainly — easier to read.",
+    tagLabel: "What kind of thing is this?",
+    withSomeone: "With someone",
+    withCount: "With {n} people",
+    withNobody: "Nobody to mention yet.",
+    vis: {
+      title: "Who can see this?",
+      public: "Anyone on Saathban",
+      friends: "Friends",
+      private: "Just for me",
+      publicLine: "Anyone on Saathban can see this",
+      friendsLine: "Only the people you are connected to",
+      privateLine: "Nobody else — this one is yours",
+    },
+    tag: {
+      milestone: "A milestone",
+      good: "Something good",
+      memory: "A memory",
+      help: "Asking for help",
+    },
+    help: {
+      wanted: "How many people would you like?",
+      canHelp: "I can help",
+      coming: "{name} is coming",
+      offerAnyway: "{name} is already coming — offer anyway?",
+      youAreComing: "You said you would come — change your mind?",
+      markDone: "This is sorted",
+      sortedBy: "{name} sorted this out",
+      sortedPlain: "{name} says this is sorted.",
+      /* §6.4 — factual, no adjective, and never the word "beware". */
+      newHere: "New here — hasn't finished their profile yet.",
+      closeTitle: "Close this without naming anyone?",
+      closePh: "Add a line if you like — \"my nephew did it\"",
+      closeCta: "Close it",
+    },
+    menu: {
+      title: "This post",
+      pin: "Pin to your profile",
+      unpin: "Unpin from your profile",
+      changeVisibility: "Change who can see it",
+      edit: "Edit",
+      repliesOff: "Turn off replies to this",
+      repliesOn: "Allow replies again",
+      copyLink: "Copy link",
+      delete: "Delete",
+      save: "Save this",
+      unsave: "Remove from saved",
+      follow: "Tell me about replies",
+      unfollow: "Stop telling me about replies",
+      hide: "Hide this post",
+      /* The sub-line answers the fear that stops people using this
+         control at all. It is true, and it is reversible. */
+      showLess: "Show less from {name}",
+      showLessSub: "They won't know.",
+      report: "Report this",
+    },
+  },
   people: {
     perms: {
       mood: "Mood & daily logs",

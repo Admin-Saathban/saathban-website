@@ -42,6 +42,25 @@ import {
   fetchConnections,
 } from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import Composer, { ComposerRow } from "./Composer.jsx";
+import PostMenu from "./PostMenu.jsx";
+import HelpStrip from "./HelpStrip.jsx";
+import {
+  colourOf,
+  fetchHelpExtras,
+  offerHelp,
+  withdrawOffer,
+  markHelpDone,
+  closeHelp,
+  helpStatusOf,
+  toggleSave,
+  toggleFollow,
+  showLessFrom,
+  copyLink,
+  setVisibility as setPostVisibility,
+  setRepliesOff,
+  setPinned,
+} from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 
 /* §7 shows where a post came from as a small label — the area if the
@@ -369,9 +388,12 @@ function PostCard({
   joinInfo,
   onToggleReaction,
   onAction,
+  helpStatus,
+  helpNames,
+  iOffered,
+  onMenu,
 }) {
   const { t, ts } = useI18n();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState(null); // null = not loaded
@@ -442,39 +464,62 @@ function PostCard({
         <div style={{ position: "relative" }}>
           <GhostBtn
             aria-label={t("community.feed.menuAria")}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => onMenu(post)}
             style={{ padding: "0 14px" }}
           >
             ⋯
           </GhostBtn>
-          {menuOpen && (
-            <div
-              style={{
-                position: "absolute",
-                insetInlineEnd: 0,
-                top: "110%",
-                zIndex: 30,
-                background: C.white,
-                border: `1.5px solid ${C.warmGray}`,
-                borderRadius: 14,
-                boxShadow: "0 6px 20px rgba(45,36,24,0.18)",
-                minWidth: 240,
-                padding: "6px 0",
-              }}
-            >
-              {menuItem(t("community.feed.menuReport"), () => setReporting(true))}
-              {!own && menuItem(t("community.feed.menuMessage"), () => onAction("dm", post))}
-              {!own && menuItem(t("community.feed.menuMute"), () => onAction("mute", post))}
-              {!own && menuItem(t("community.feed.menuBlock"), () => onAction("block", post))}
-              {own && menuItem(t("community.feed.menuDeleteOwn"), () => onAction("delete", post))}
-            </div>
-          )}
+
         </div>
       </div>
 
-      {post.body && (
+      {/* §4 — the tag the person chose, in their words. Separate from
+          the colour: colour is how it looks, the tag is what kind of
+          thing it is, and that separation is what lets a milestone
+          earn a badge without the app inventing meaning. */}
+      {post.style_tag && (
+        <span style={{ display: "inline-block", marginTop: 8, padding: "3px 12px", borderRadius: 50, background: C.cream, border: `1.5px solid ${C.warmGray}`, fontSize: ts(15), fontWeight: 700, color: C.textMain }}>
+          {t(`posts.tag.${post.style_tag}`)}
+        </span>
+      )}
+
+      {post.body && (colourOf(post) ? (
+        /* §3 — short text only. colourOf() returns null once a post
+           runs long or carries a photo, so a long post never becomes
+           unreadable on yellow. */
+        <div
+          style={{
+            margin: "10px 0 12px",
+            padding: "28px 20px",
+            borderRadius: 16,
+            background: colourOf(post),
+            textAlign: "center",
+            fontSize: ts(23),
+            fontWeight: 700,
+            lineHeight: 1.45,
+            color: C.textMain,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {post.body}
+        </div>
+      ) : (
         <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
+      ))}
+
+      {/* §6 — Asked → Someone's coming → Done. */}
+      {post.style_tag === "help" && helpStatus && (
+        <HelpStrip
+          status={helpStatus}
+          authorName={author?.full_name}
+          authorComplete={author?.profile_complete !== false}
+          helperNames={helpNames}
+          mine={post.author_id === myId}
+          iOffered={iOffered}
+          onOffer={() => onAction("offerHelp", post)}
+          onWithdraw={() => onAction("withdrawHelp", post)}
+          onDone={() => onAction("helpDone", post)}
+        />
       )}
       {post.post_type && post.post_type !== "text" && (
         <div style={{ marginTop: post.body ? 0 : 10 }}>
@@ -632,6 +677,18 @@ export default function Feed() {
   const fresh = useFresh();
   // Posts on their way to the server: rendered at once, quietly marked.
   const [pendingPosts, setPendingPosts] = useState([]);
+  /* §1 — the composer is a screen now, opened from the row. */
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerStart, setComposerStart] = useState(null);
+  /* §10 — one sheet for the whole feed, not one per card. */
+  const [menuPost, setMenuPost] = useState(null);
+  /* §6/§10 — offers, saves and follows for what is on screen. */
+  const [extras, setExtras] = useState({ offers: [], saves: [], follows: [], tags: [] });
+
+  const openComposer = (start) => {
+    setComposerStart(start);
+    setComposerOpen(true);
+  };
 
   const [body, setBody] = useState("");
   const [file, setFile] = useState(null);
@@ -744,40 +801,71 @@ export default function Feed() {
   const postsRef = useRef(posts);
   postsRef.current = posts;
 
+  /* Offers, saves and follows for the posts currently in the feed.
+     Failures are silent: a help post still reads without knowing who
+     has offered, and a feed that will not render because a nicety did
+     not load is the worse trade. */
+  useEffect(() => {
+    let dead = false;
+    const ids = (posts || []).map((p) => p.id);
+    if (!ids.length) return undefined;
+    fetchHelpExtras(ids)
+      .then((x) => { if (!dead) setExtras(x); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, [posts]);
+
   /* Optimistic share: the words appear the instant they are sent,
      marked "sending", and are replaced by the real row on confirm. A
      refusal puts the draft back in the box with a kind line + Retry —
      nothing a person wrote is ever silently lost. */
-  const share = async (e) => {
-    e.preventDefault();
-    if (!body.trim() || posting) return;
-    const draftBody = body;
-    const draftFile = file;
+  /* §11 — SHARING LANDS ON THE POST. The feed reloads, scrolls to the
+     new post and marks it fresh, which draws the coloured bar down its
+     left edge for about three seconds and then lets it go.
+
+     THERE IS NO LONGER A TOAST. AUDIT_11 found that most of the app
+     already lands on its result and fires one anyway, and that the fix
+     is usually deleting the toast rather than adding navigation — this
+     is that finding applied to the composer. The post being there is
+     the confirmation; "Shared ✓" three inches below it said nothing
+     the screen was not already showing.
+
+     THE FAILURE TOAST STAYS. §11 does not touch errors: a refusal has
+     no result and no home to land on, so it keeps its line, its Retry,
+     and the words coming back to the composer (FEEDBACK.md §11.2).
+
+     The highlight is tied to the action and never stored — coming back
+     to the app later must not show a still-highlighted post. */
+  const share = async (opts) => {
+    const draftBody = (opts?.body || "").trim();
+    if (!draftBody || posting) return false;
+    const draftFile = opts.file || null;
     const key = `pending-${Date.now()}`;
     setPendingPosts((cur) => [...cur, { key, body: draftBody, hasPhoto: !!draftFile }]);
-    setBody("");
-    setFile(null);
     setPosting(true);
     setError("");
     try {
-      const before = new Set(posts.map((p) => p.id));
-      await createPost(myId, draftBody, draftFile);
+      const row = await createPost(myId, draftBody, draftFile, {
+        visibility: opts.visibility,
+        colour: opts.colour,
+        styleTag: opts.styleTag,
+        helpWanted: opts.helpWanted,
+        tagged: opts.tagged || [],
+      });
       await load();
       setPendingPosts((cur) => cur.filter((p) => p.key !== key));
-      raiseToast(t("feedback.postShared"));
       setTimeout(() => {
-        const added = (postsRef.current || []).find((p) => !before.has(p.id));
-        if (added) fresh.mark(added.id);
+        if (row?.id) fresh.mark(row.id);
       }, 0);
+      return true;
     } catch {
       setPendingPosts((cur) => cur.filter((p) => p.key !== key));
-      setBody(draftBody);
-      setFile(draftFile);
       raiseToast(t("feedback.postFailed"), {
         tone: "error",
         actionLabel: t("feedback.retry"),
-        onAction: () => share({ preventDefault() {} }),
+        onAction: () => share(opts),
       });
+      return false;
     } finally {
       setPosting(false);
     }
@@ -803,7 +891,20 @@ export default function Feed() {
 
   const onAction = async (kind, target, reason) => {
     try {
-      if (kind === "report") {
+      /* §6.2 — the offer is a BUTTON, separate from the talk, and it
+         lands as a row rather than a comment. Nothing here announces
+         itself with a toast: the strip above the button changes to
+         name whoever is coming, which is the result. */
+      if (kind === "offerHelp") {
+        await offerHelp(target.id, myId);
+        setExtras(await fetchHelpExtras((posts || []).map((p) => p.id)));
+      } else if (kind === "withdrawHelp") {
+        await withdrawOffer(target.id, myId);
+        setExtras(await fetchHelpExtras((posts || []).map((p) => p.id)));
+      } else if (kind === "helpDone") {
+        await markHelpDone(target.id);
+        await load();
+      } else if (kind === "report") {
         await fileReport(myId, "post", target.id, target.author_id, target.body, reason);
         showToast(t("community.feed.reportedToast"));
       } else if (kind === "reportComment") {
@@ -882,8 +983,65 @@ export default function Feed() {
     if (r.profile_id === myId) mineByPost[r.post_id] = r.emoji;
   }
 
+  const menuAuthor = menuPost ? authors[menuPost.author_id] : null;
+
   return (
     <CommunityScreen>
+      {/* §1 — full screen, opened from the row in the feed. */}
+      <Composer
+        open={composerOpen}
+        startWith={composerStart}
+        busy={posting}
+        onClose={() => setComposerOpen(false)}
+        onShare={share}
+      />
+
+      {/* §10 — one sheet, growing from whichever three dots was tapped. */}
+      {menuPost && (
+        <PostMenu
+          post={menuPost}
+          mine={menuPost.author_id === myId}
+          authorName={(menuAuthor?.full_name || "").split(" ")[0]}
+          saved={extras.saves.some((x) => x.post_id === menuPost.id && x.profile_id === myId)}
+          following={extras.follows.some((x) => x.post_id === menuPost.id && x.profile_id === myId)}
+          onClose={() => setMenuPost(null)}
+          actions={{
+            pin: async (on) => { await setPinned(menuPost.id, on); setMenuPost(null); await load(); },
+            changeVisibility: async () => {
+              /* Cycles through the three in §2's order — the sheet
+                 shows the current value on the row, so the change is
+                 visible where it was made. */
+              const order = ["public", "friends", "private"];
+              const next = order[(order.indexOf(menuPost.visibility || "public") + 1) % 3];
+              await setPostVisibility(menuPost.id, next);
+              setMenuPost({ ...menuPost, visibility: next });
+              await load();
+            },
+            edit: () => { setMenuPost(null); openComposer(null); },
+            setReplies: async (off) => { await setRepliesOff(menuPost.id, off); setMenuPost(null); await load(); },
+            copyLink: async () => { await copyLink(menuPost.id); setMenuPost(null); },
+            closeHelp: async (note) => { await closeHelp(menuPost.id, note); setMenuPost(null); await load(); },
+            remove: async () => { const p = menuPost; setMenuPost(null); await onAction("delete", p); },
+            save: async (on) => {
+              await toggleSave(menuPost.id, myId, !on);
+              setExtras(await fetchHelpExtras((posts || []).map((x) => x.id)));
+              setMenuPost(null);
+            },
+            follow: async (on) => {
+              await toggleFollow(menuPost.id, myId, !on);
+              setExtras(await fetchHelpExtras((posts || []).map((x) => x.id)));
+              setMenuPost(null);
+            },
+            hide: async () => { const p = menuPost; setMenuPost(null); await onAction("hide", p); },
+            showLess: async () => {
+              await showLessFrom(myId, menuPost.author_id);
+              setMenuPost(null);
+              await load();
+            },
+            report: async () => { const p = menuPost; setMenuPost(null); await onAction("report", p, ""); },
+          }}
+        />
+      )}
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <h1
           style={{
@@ -1006,35 +1164,16 @@ export default function Feed() {
         <>
           {canWrite && (
             <Card>
-              <form onSubmit={share}>
-                <textarea
-                  rows={3}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder={t("community.feed.composerPlaceholder")}
-                  maxLength={4000}
-                />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-                <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                  <GhostBtn onClick={() => fileRef.current?.click()}>
-                    📷 {file ? t("community.feed.composerImageChosen") : t("community.feed.composerImage")}
-                  </GhostBtn>
-                  {isIcon && (
-                    <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
-                      🙌 {t("community.shares.activityCta")}
-                    </GhostBtn>
-                  )}
-                  <PrimaryBtn type="submit" onClick={share} disabled={posting || !body.trim()}>
-                    {posting ? t("community.feed.posting") : t("community.feed.composerCta")}
-                  </PrimaryBtn>
-                </div>
-              </form>
+              {/* §1 — one row, not a form permanently sitting in the
+                  place a post should be. No avatar: the header already
+                  carries that face, and two of the same face on one
+                  screen is noise. */}
+              <ComposerRow onOpen={openComposer} />
+              {isIcon && (
+                <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
+                  🙌 {t("community.shares.activityCta")}
+                </GhostBtn>
+              )}
 
               {walkOpen && (
                 <form
@@ -1252,6 +1391,19 @@ export default function Feed() {
                 joinInfo={joins[p.id]}
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
+                helpStatus={
+                  p.style_tag === "help"
+                    ? {
+                        ...helpStatusOf(p, extras.offers),
+                        note: p.help_note,
+                      }
+                    : null
+                }
+                helpNames={extras.offers
+                  .filter((o) => o.post_id === p.id)
+                  .map((o) => authors[o.helper_id]?.full_name || "")}
+                iOffered={extras.offers.some((o) => o.post_id === p.id && o.helper_id === myId)}
+                onMenu={setMenuPost}
               />
               </div>
             ));

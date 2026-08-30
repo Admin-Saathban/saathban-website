@@ -43,7 +43,17 @@ export async function fetchAuthors(ids) {
 export async function fetchFeed(limit = 50) {
   const { data, error } = await supabase
     .from("community_posts")
-    .select("id, author_id, body, image_path, post_type, ref_id, payload, created_at")
+    /* POSTS_SPEC §2-§6 — the columns 0077 added have to be ASKED FOR.
+       They were written correctly and simply never selected, so the
+       colour, the tag and the whole help strip were invisible while
+       the rows underneath them were perfect. A feature can be right in
+       the database and absent on the screen, and only the screen
+       counts. */
+    .select(
+      "id, author_id, body, image_path, post_type, ref_id, payload, created_at, " +
+        "visibility, style_tag, colour, replies_off, pinned_at, edited_at, " +
+        "help_state, help_wanted, help_note"
+    )
     .is("hidden_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -120,7 +130,22 @@ export function imageUrl(path) {
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
-export async function createPost(userId, body, file) {
+/* ONE way to make a post, extended rather than forked (POSTS_SPEC
+   §1-§6). A second create function would be a second set of defaults
+   for visibility, and visibility is the thing that must never differ
+   between two doors into the same act.
+
+   Returns the new row, because §11 lands you ON the post and the
+   caller needs its id to highlight it. */
+export async function createPost(userId, body, file, opts = {}) {
+  const {
+    visibility = "public",
+    colour = null,
+    styleTag = null,
+    helpWanted = 1,
+    tagged = [],
+  } = opts;
+
   let image_path = null;
   if (file) {
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
@@ -130,10 +155,43 @@ export async function createPost(userId, body, file) {
       .upload(image_path, file, { contentType: file.type });
     if (upErr) throw upErr;
   }
-  const { error } = await supabase
+
+  /* §3 — colour applies to SHORT TEXT ONLY. Once a post runs long or
+     carries a photo it renders plain, so a long post never becomes
+     unreadable on yellow. Enforced HERE as well as in the renderer:
+     a colour that survives into the row would come back coloured on
+     every future read, whatever the renderer then believed. */
+  const text = (body || "").trim();
+  const keepsColour = colour != null && !image_path && text.length <= 180;
+
+  const { data, error } = await supabase
     .from("community_posts")
-    .insert({ author_id: userId, body: body.trim(), image_path });
+    .insert({
+      author_id: userId,
+      body: text,
+      image_path,
+      visibility,
+      colour: keepsColour ? colour : null,
+      style_tag: styleTag,
+      /* A help post starts in "asked"; anything else has no state at
+         all rather than a state that means nothing. */
+      help_state: styleTag === "help" ? "asked" : null,
+      help_wanted: styleTag === "help" ? Math.max(1, Math.min(20, helpWanted)) : 1,
+    })
+    .select("id")
+    .single();
   if (error) throw error;
+
+  /* §5 — the tagged person is asked, never assumed. accepted stays
+     false until they say so, and an event only appears under both
+     names after they accept. */
+  if (tagged.length) {
+    await supabase
+      .from("post_tags")
+      .insert(tagged.map((pid) => ({ post_id: data.id, person_id: pid })))
+      .then(() => {}, () => {});   // a refused tag must not lose the post
+  }
+  return data;
 }
 
 export async function deleteOwnPost(postId) {

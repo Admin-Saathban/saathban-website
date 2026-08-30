@@ -177,7 +177,8 @@ export function MotionStyles() {
 }
 
 /* The class a full-screen route should wear, from the direction it was
-   opened with. Defaults to the right, which is the common case. */
+   opened with. With no direction it falls back to the INLINE-END edge,
+   mirrored per script — never a fixed side. */
 export function arrivalClass(locationState) {
   if (wantsLessMotion()) return "";
   const from = locationState?.sbFrom;

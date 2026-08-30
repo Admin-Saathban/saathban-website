@@ -74,6 +74,28 @@ async function anonRest(path) {
   return { status: r.status, ok: r.ok, body };
 }
 
+/* A WRITE PROBE WITH NO SIDE EFFECT.
+   DELETE filtered to a uuid that cannot exist: if anon lacks the
+   privilege the request is refused before anything is considered, and
+   if anon HAS it the delete matches zero rows and harms nothing. That
+   is the only way to ask "may a stranger write here" without either
+   writing something or trusting a code path that never ran.
+
+   And the status is checked STRICTLY. 401 and 403 are refusals; 400 is
+   not — it is a validation error, which is what a wrong column name or
+   a malformed body returns, and reading one as a refusal proves
+   nothing about permissions. The registrar nearly recorded a 400 from
+   their own typo as a closed door; this is that lesson written down. */
+const NOWHERE = "00000000-0000-4000-8000-0000000000ff";
+async function anonCannotWrite(table, filter = `id=eq.${NOWHERE}`) {
+  const r = await fetch(`${SUPA}/rest/v1/${table}?${filter}`, {
+    method: "DELETE",
+    headers: anonHeaders,
+  });
+  const body = await r.text().catch(() => "");
+  return { status: r.status, refused: r.status === 401 || r.status === 403, body: body.slice(0, 90) };
+}
+
 /* Signed in only to FIND a finished game to ask about. Nothing in the
    assertions uses this session. */
 async function signIn(email) {
@@ -199,6 +221,41 @@ console.log("\n── the door is exactly that wide ──\n");
     const refused = !r.ok || rows === 0;
     check(`anon still cannot read ${name}`, refused,
       !r.ok ? `refused, HTTP ${r.status}` : `empty (RLS), HTTP ${r.status}`);
+  }
+}
+
+{
+  /* ── WRITES, not only reads (0051) ──
+     The read checks above would have passed on the day `reminder_dones`
+     granted `anon` INSERT, UPDATE, DELETE and TRUNCATE — full write
+     access to rows recording whether a person took their medication —
+     because RLS still refused the SELECT. Reading is not the only thing
+     a stranger can do to a table, and it was not the dangerous one.
+
+     The cause was never either table: Supabase ships ALTER DEFAULT
+     PRIVILEGES granting `anon` ALL on every new table in `public`, so
+     every table arrives wide open and is closed only if its author
+     remembers. 0051 revoked the default, so new tables now arrive
+     closed. These assertions are what notices if that is ever undone —
+     including by a migration that means to do something else. */
+  /* The filter has to TYPE-CHECK or PostgREST answers 400 before it
+     ever considers permissions, and the probe learns nothing. audit_log
+     keys on a bigint where everything else keys on a uuid — which the
+     first run of this caught, by refusing to read that 400 as a closed
+     door. A negative id matches nothing in either shape. */
+  const targets = [
+    ["reminder_dones", `id=eq.${NOWHERE}`],
+    ["audit_log", "id=eq.-1"],
+    ["daily_logs", `id=eq.${NOWHERE}`],
+    ["dm_messages", `id=eq.${NOWHERE}`],
+    ["profiles", `id=eq.${NOWHERE}`],
+    ["circle_members", `id=eq.${NOWHERE}`],
+    ["game_sessions", `id=eq.${NOWHERE}`],
+  ];
+  for (const [t, filter] of targets) {
+    const r = await anonCannotWrite(t, filter);
+    check(`anon cannot WRITE to ${t}`, r.refused,
+      `HTTP ${r.status}${r.status === 400 ? " — 400 is a validation error, not a refusal: fix the probe" : ""}`);
   }
 }
 

@@ -8,6 +8,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState, useCallback } from "react";
+import ShareTableButton from "../games/ShareTableButton.jsx";
 import { Link } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -142,6 +143,15 @@ export default function NotificationsPage() {
                       <h2 style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: 0 }}>{n.title}</h2>
                     )}
                   </div>
+                  {/* A game invite is the other place a person wants to
+                      pass the table on — "come and play" is usually said
+                      to more than one person. The row knows the session,
+                      the button fetches the code. */}
+                  {n.kind === "game" && /\/app\/games\/s\/[0-9a-f-]{36}$/.test(n.link || "") && (
+                    <div style={{ marginTop: 10 }}>
+                      <ShareTableButton compact sessionId={(n.link || "").split("/").pop()} />
+                    </div>
+                  )}
                   {n.body && (
                     <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "8px 0 0", lineHeight: 1.6 }}>{n.body}</p>
                   )}

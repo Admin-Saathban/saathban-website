@@ -35,6 +35,7 @@ import {
   GAME_STICKERS,
 } from "../../lib/games.js";
 import PeoplePicker from "./PeoplePicker.jsx";
+import ShareTableButton from "./ShareTableButton.jsx";
 /* Carrom has its own board on the rails; ludo has its own route.
    Everything else is the reference Race to 100 board below. */
 import CarromRailsController from "./carrom/CarromRailsController.jsx";
@@ -584,6 +585,18 @@ function WaitingRoom({
           >
             {session.join_code}
           </p>
+          {/* The code, and the same code as a link one tap from
+              WhatsApp. Anyone at the table may share it, not just the
+              host — a guest inviting the fourth player is the point. */}
+          <ShareTableButton
+            code={session.join_code}
+            game={game}
+            hostName={
+              session.seats.find((x) => x.profile_id === session.created_by)?.name || ""
+            }
+            style={{ marginBottom: 12, textAlign: "center" }}
+          />
+
           {isHost && openAllocations > 0 && (
             <PeoplePicker
               searchable

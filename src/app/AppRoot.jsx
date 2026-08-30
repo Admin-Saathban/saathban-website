@@ -17,8 +17,8 @@
    See SPEC.md for the full specification and build order.
    ════════════════════════════════════════════════ */
 
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { COLORS as C, FONTS, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
 import { supabaseConfigError } from "./lib/supabase.js";
 import AppHome from "./routes/AppHome.jsx";
@@ -32,7 +32,7 @@ import HomeRoutes from "./routes/home/HomeRoutes.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
 import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
 import AppSettings from "./routes/AppSettings.jsx";
-import { AuthProvider, RequireAuth } from "./lib/session.jsx";
+import { AuthProvider, RequireAuth, useSession } from "./lib/session.jsx";
 import FeedbackProvider from "./lib/feedback.jsx";
 import VettingForm from "./routes/vetting/VettingForm.jsx";
 import FamRoutes from "./routes/fam/FamRoutes.jsx";
@@ -40,6 +40,8 @@ import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
+import JoinByLink from "./routes/games/JoinByLink.jsx";
+import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
 import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
 import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
 import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
@@ -136,6 +138,30 @@ function AppConfigError() {
    the same screen leave the reader where they are, and a screen that
    places itself (the DM thread jumping to the latest message) still
    wins, because it scrolls after mount and keeps correcting. */
+/* A link tapped in WhatsApp by someone with no account has to survive
+   sign-up — and the sign-in email often opens a NEW TAB, where router
+   state and sessionStorage are both gone. So the code is stashed in
+   localStorage, and this picks it up the moment a profile exists,
+   wherever the person happened to land. It fires once, only when a
+   table is genuinely waiting, and never while already on the join
+   screen (which would loop). */
+function PendingJoinRedirect() {
+  const { pathname } = useLocation();
+  const { profile } = useSession();
+  const navigate = useNavigate();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current || !profile) return;
+    if (pathname.startsWith("/app/join")) return;
+    const code = readPendingJoin();
+    if (!code) return;
+    done.current = true;
+    clearPendingJoin();
+    navigate(`/app/join/${code}`, { replace: true });
+  }, [profile, pathname, navigate]);
+  return null;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -154,12 +180,19 @@ export default function AppRoot() {
             Inert until a surface pushes — an empty store renders null. */}
         <FeedbackProvider>
           <ScrollToTop />
+          <PendingJoinRedirect />
         {/* The marketing site loads its own fonts inside its own components,
             so /app has to ask for them itself. */}
         <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
 
         <Routes>
           <Route index element={<AppHome />} />
+          {/* Join by link — deliberately OUTSIDE RequireAuth: a person
+              tapping a shared link may have no account yet. The screen
+              stashes the code, sends them to sign in, and seats them on
+              the way back. It is the same join_by_code RPC as the typed
+              code, so the gates and rate limits are unchanged. */}
+          <Route path="join/:code" element={<JoinByLink />} />
           {/* Saath-Icon home area: hub at /app/home, daily log at
               /app/home/log. Icons only; RLS stays the real security
               boundary, this guard is navigation. */}

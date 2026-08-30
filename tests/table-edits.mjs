@@ -65,6 +65,8 @@ const rpc = (u, fn, args) => rest(u, "POST", `rpc/${fn}`, args);
 
 const host = await login("smoke-icon@saathban.dev");
 const other = await login("smoke-fam@saathban.dev");
+/* Someone who was never at the table, for the closed door. */
+const third = await login("test-buddy@saathban.dev");
 
 const seatsOf = (u, id) =>
   rest(u, "GET", `game_seats?session_id=eq.${id}&select=seat_no,profile_id,is_bot&order=seat_no`).then(
@@ -246,6 +248,38 @@ async function freshTable(seats = 4) {
   const s3 = await sessionOf(host, id);
   check('once they move back, two is allowed', s3.seats_total === 2, 'seats_total ' + s3.seats_total);
 
+  await rpc(host, 'leave_game_session', { p_session: id });
+}
+
+/* ── A code still opens a table (0096) ────────────────
+   join_by_code looked for status = 'lobby'. Section 8 means a table
+   is 'active' from the instant it is tapped into existence, so
+   after that change NO code matched for ANY table and "Have a
+   code?" on the games home was a door to nothing. Every table
+   still printed a six-digit code; not one of them worked.
+
+   Both halves are asserted, because the second is what keeps this
+   from becoming a different feature: a table nobody has played
+   accepts a code, and a table somebody has played does not. */
+{
+  const id = await freshTable(4);
+  const row = (await rest(host, 'GET', 'game_sessions?id=eq.' + id + '&select=join_code,status')).data[0];
+  check('a fresh table is active and still carries a code', row.status === 'active' && /^[0-9]{6}$/.test(row.join_code || ''), row.status + ' ' + row.join_code);
+
+  const joined = await rpc(other, 'join_by_code', { p_code: row.join_code });
+  check('a code opens a table nobody has played', joined.data && joined.data.result === 'joined', JSON.stringify(joined.data));
+  const seats = await seatsOf(host, id);
+  const theirs = seats.find((x) => x.profile_id === other.id);
+  check('and it seats them in a bot chair', !!theirs && theirs.is_bot === false, JSON.stringify(theirs));
+  check('the table is the size it was', seats.length === 4, seats.length + ' rows');
+
+  /* Play one turn, and the door closes. Walking into a game in
+     progress is spectating, which is a different feature. */
+  await rpc(host, 'ludo_roll', { p_session: id });
+  const late = await rpc(third, 'join_by_code', { p_code: row.join_code });
+  check('once it is played, the code no longer opens it', late.data && late.data.result === 'no_table', JSON.stringify(late.data));
+
+  await rpc(other, 'leave_game_session', { p_session: id });
   await rpc(host, 'leave_game_session', { p_session: id });
 }
 

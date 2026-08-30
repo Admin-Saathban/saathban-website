@@ -519,6 +519,43 @@ export default function SessionPage() {
         </Card>
       )}
 
+      {/* THE CODE, AT A TABLE THAT IS ALREADY PLAYING.
+
+          Every table carries a six-digit code from the moment it
+          exists, and until 0096 not one of them worked: join_by_code
+          looked for a lobby, and §8 means no table is ever in one.
+          "Have a code?" on the games home was a door to nothing.
+
+          The code was also only ever DRAWN in the waiting room, so
+          even once it worked there was nowhere to read it from. Both
+          halves had to move for either to matter.
+
+          Read aloud is the point — this is the number one person
+          says down a telephone to another. It is pinned LTR so the
+          digits do not reverse under Urdu. */}
+      {soft && session.status !== "lobby" && session.join_code && (
+        <Card style={{ textAlign: "center" }}>
+          <SectionLabel>{t("ludo.lobby.codeHint")}</SectionLabel>
+          <p
+            dir="ltr"
+            aria-label={session.join_code.split("").join(" ")}
+            style={{
+              fontSize: ts(40),
+              fontWeight: 800,
+              letterSpacing: "0.3em",
+              color: C.green,
+              margin: "4px 0 10px",
+            }}
+          >
+            {session.join_code}
+          </p>
+          <ShareTableButton
+            code={session.join_code}
+            game={game}
+            hostName={session.seats.find((x) => x.profile_id === session.created_by)?.name || ""}
+          />
+        </Card>
+      )}
       {/* ASKING SOMEONE TO A TABLE THAT IS ALREADY PLAYING (§8).
 
           The lobby below is where invites used to live, and a §8

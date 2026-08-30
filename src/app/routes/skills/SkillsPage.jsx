@@ -9,6 +9,8 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import supabase from "../../lib/supabase.js";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -73,10 +75,59 @@ function SkillCard({ skill, s, interested, busy, onToggle }) {
   );
 }
 
+/* The things that are actually OPEN. §16 puts the course and the
+   survey inside Grow, and until tonight they were routed but nothing
+   linked to them — so a person could not reach either. They now sit
+   ABOVE the three not-yet-open sections, because a page whose every
+   card says "coming soon" teaches people to stop opening it. */
+function OpenCard({ title, desc, cta, to, note }) {
+  const { ts } = useI18n();
+  return (
+    <section
+      data-open-card={to}
+      style={{
+        background: C.white,
+        border: `2px solid ${C.green}`,
+        borderRadius: 18,
+        padding: "18px 20px",
+        marginBottom: 14,
+      }}
+    >
+      <h2 style={{ fontSize: ts(22), fontWeight: 700, color: C.green, margin: "0 0 6px" }}>{title}</h2>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, lineHeight: 1.6, margin: "0 0 14px" }}>
+        {desc}
+      </p>
+      {note && (
+        <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green, margin: "0 0 12px" }}>
+          🏅 {note}
+        </p>
+      )}
+      <Link
+        to={to}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          minHeight: A11Y.minTapTargetPx,
+          padding: "0 22px",
+          borderRadius: 50,
+          background: C.green,
+          color: C.white,
+          fontSize: ts(A11Y.minBodyPx),
+          fontWeight: 700,
+          textDecoration: "none",
+        }}
+      >
+        {cta}
+      </Link>
+    </section>
+  );
+}
+
 export default function SkillsPage() {
   const { lang, ts, meta, t } = useI18n();
   const s = STRINGS[lang] || STRINGS.en;
   const { profile } = useSession();
+  const [courseBadge, setCourseBadge] = useState(false);
 
   const [interested, setInterestedSet] = useState(null); // null = loading; else Set
   const [busy, setBusy] = useState(null); // skill id currently saving
@@ -96,6 +147,20 @@ export default function SkillsPage() {
       alive = false;
     };
   }, []);
+
+  /* Whether they already hold the course badge, so the card can say so
+     rather than inviting them to earn it twice. */
+  useEffect(() => {
+    if (!profile?.id) return undefined;
+    let alive = true;
+    supabase
+      .from("course_progress")
+      .select("badge_at")
+      .eq("profile_id", profile.id)
+      .maybeSingle()
+      .then(({ data }) => alive && setCourseBadge(!!data?.badge_at));
+    return () => { alive = false; };
+  }, [profile?.id]);
 
   const toggle = async (skill) => {
     if (!profile?.id) return;
@@ -140,6 +205,47 @@ export default function SkillsPage() {
             {error}
           </p>
         )}
+
+        {/* ── Open now ── */}
+        <p
+          style={{
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 700,
+            color: C.textMuted,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            margin: "0 0 10px",
+          }}
+        >
+          {s.openNow}
+        </p>
+
+        <OpenCard
+          title={s.courseName}
+          desc={s.courseDesc}
+          cta={s.courseCta}
+          to="/app/skills/course"
+          note={courseBadge ? s.courseDone : null}
+        />
+
+        {/* §16: the survey is Icons only — no Fam version. The card is
+            absent for everyone else rather than shown and refused. */}
+        {profile?.role === "saath_icon" && (
+          <OpenCard title={s.surveyName} desc={s.surveyDesc} cta={s.surveyCta} to="/app/skills/survey" />
+        )}
+
+        <p
+          style={{
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 700,
+            color: C.textMuted,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            margin: "26px 0 10px",
+          }}
+        >
+          {s.comingSoon}
+        </p>
 
         {interested === null ? (
           <p aria-busy="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>···</p>

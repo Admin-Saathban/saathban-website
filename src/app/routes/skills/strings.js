@@ -15,24 +15,36 @@ export const SKILLS = ["languages", "courses", "earning"];
 
 export const STRINGS = {
   en: {
-    title: "Skills",
-    subtitle: "New ways to learn, connect, and grow — tell us which you'd like, and we'll build those first.",
+    title: "Grow with Saathban",
+    subtitle: "Learning, courses, and skills that can earn. Tell us which you'd like, and we'll build those first.",
+    /* The two things that are actually OPEN, above the three that are
+       not. A page whose every card says "coming soon" teaches people
+       to stop opening it. */
+    openNow: "Open now",
+    courseName: "The Saathban course",
+    courseDesc: "How Saathban works, how people are kept safe, and what makes good company. Ten minutes, and it waits for you if you stop.",
+    courseCta: "Start the course",
+    courseDone: "You've earned this badge",
+    surveyName: "Help Saathban's research",
+    surveyDesc: "A few questions about what you know and what you'd like. Your answers are seen only by the Saathban team.",
+    surveyCta: "Answer the questions",
+    comingSoon: "Not open yet",
     interestCta: "Tell me when this opens",
     interestedCta: "We'll let you know",
     interestedNote: "You're on the list — we'll be in touch when it opens.",
     cards: {
       languages: {
-        name: "Languages",
+        name: "Learn a new language",
         emoji: "💬",
         desc: "Practise English, Urdu, or another language with others — reading, conversation, and confidence, at a gentle pace.",
       },
       courses: {
-        name: "Courses",
+        name: "Courses and trainings",
         emoji: "📚",
         desc: "Short courses on things worth knowing — from using a smartphone with ease to history, poetry, and staying well.",
       },
       earning: {
-        name: "Earning skills",
+        name: "Other skills and vocational programmes",
         emoji: "🌱",
         desc: "Skills that can bring in an income from home — tailoring, tutoring, handicrafts, and small online work.",
       },
@@ -48,24 +60,33 @@ export const STRINGS = {
   },
   ur: {
     // ⚠ Urdu draft — pending native review.
-    title: "ہنر",
-    subtitle: "سیکھنے، جُڑنے اور بڑھنے کے نئے راستے — بتائیں کون سا پسند ہے، ہم وہی پہلے بنائیں گے۔",
+    title: "ساتھ‌بن کے ساتھ آگے بڑھیں",
+    subtitle: "سیکھنا، کورس، اور وہ ہنر جو کمائی دے سکیں۔ بتائیں کون سا پسند ہے، ہم وہی پہلے بنائیں گے۔",
+    openNow: "ابھی کھلا ہے",
+    courseName: "ساتھ‌بن کا کورس",
+    courseDesc: "ساتھ‌بن کیسے کام کرتا ہے، لوگوں کی حفاظت کیسے ہوتی ہے، اور اچھا ساتھ کیا ہے۔ دس منٹ، اور رُک جائیں تو یہ انتظار کرتا ہے۔",
+    courseCta: "کورس شروع کریں",
+    courseDone: "آپ یہ تمغہ حاصل کر چکے ہیں",
+    surveyName: "ساتھ‌بن کی تحقیق میں مدد کریں",
+    surveyDesc: "چند سوال کہ آپ کیا جانتے ہیں اور کیا چاہتے ہیں۔ آپ کے جواب صرف ساتھ‌بن کی ٹیم دیکھتی ہے۔",
+    surveyCta: "سوالوں کے جواب دیں",
+    comingSoon: "ابھی نہیں کھلا",
     interestCta: "جب یہ کھلے تو مجھے بتائیں",
     interestedCta: "ہم آپ کو بتا دیں گے",
     interestedNote: "آپ فہرست میں شامل ہیں — کھلنے پر ہم رابطہ کریں گے۔",
     cards: {
       languages: {
-        name: "زبانیں",
+        name: "نئی زبان سیکھیں",
         emoji: "💬",
         desc: "دوسروں کے ساتھ انگریزی، اردو یا کوئی اور زبان سیکھیں — پڑھنا، گفتگو اور اعتماد، نرم رفتار سے۔",
       },
       courses: {
-        name: "کورسز",
+        name: "کورس اور تربیت",
         emoji: "📚",
         desc: "جاننے کے قابل چیزوں پر مختصر کورس — اسمارٹ فون کے آسان استعمال سے لے کر تاریخ، شاعری اور تندرستی تک۔",
       },
       earning: {
-        name: "کمائی کے ہنر",
+        name: "دیگر ہنر اور پیشہ ورانہ پروگرام",
         emoji: "🌱",
         desc: "گھر بیٹھے آمدنی لانے والے ہنر — سلائی، ٹیوشن، دستکاری اور چھوٹا آن لائن کام۔",
       },

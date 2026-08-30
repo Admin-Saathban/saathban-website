@@ -9,15 +9,29 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
+import { useSession } from "../../lib/session.jsx";
 import SkillsPage from "./SkillsPage.jsx";
+import CoursePage from "./CoursePage.jsx";
+import SurveyPage from "./SurveyPage.jsx";
 import SkillsAdmin from "./SkillsAdmin.jsx";
 
 export default function SkillsRoutes() {
+  /* §16 — the survey is Icons only (no Fam version). The route says
+     so, and the database says so too: survey_responses is written by
+     its owner and read by nobody but them and a super admin. */
+  const { profile } = useSession();
   return (
     <>
       <AppHeader />
       <Routes>
         <Route index element={<SkillsPage />} />
+        {/* §16 — the course is open to Icons, Fam and Buddies. */}
+        <Route path="course" element={<CoursePage />} />
+        {/* The survey is Icons only (§16: no Fam version). */}
+        <Route
+          path="survey"
+          element={profile?.role === "saath_icon" ? <SurveyPage /> : <Navigate to="/app/skills" replace />}
+        />
         <Route path="admin" element={<SkillsAdmin />} />
         <Route path="*" element={<Navigate to="/app/skills" replace />} />
       </Routes>

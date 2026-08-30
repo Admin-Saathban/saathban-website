@@ -346,3 +346,29 @@ export async function fetchAskable() {
     name: p.full_name ?? p.name ?? null,
   }));
 }
+
+/* ── The marks a person wears on their own four gotis (0095) ─────
+   LANE B, and the owner's oldest complaint: "you cannot tell which
+   goti is which". Pawn has taken a `mark` since the crown landed and
+   had nobody to pass it one; this is where the choice comes from.
+
+   Never a colour. The colour is the seat — blue, red, yellow, green,
+   as originally assigned — and two people choosing the same one is a
+   board nobody can read. */
+export async function fetchPieceMarks(profileIds) {
+  const ids = [...new Set((profileIds || []).filter(Boolean))];
+  if (!ids.length) return new Map();
+  const { data, error } = await supabase
+    .from("game_piece_marks")
+    .select("profile_id, marks")
+    .in("profile_id", ids);
+  if (error) return new Map();
+  return new Map((data || []).map((r) => [r.profile_id, r.marks || []]));
+}
+
+export async function setPieceMarks(marks) {
+  const four = [0, 1, 2, 3].map((i) => String(marks?.[i] ?? "").slice(0, 4));
+  const { error } = await supabase.rpc("set_piece_marks", { p_marks: four });
+  if (error) throw new Error(error.message);
+  return four;
+}

@@ -710,9 +710,13 @@ function moodsOf(pieces) {
 /* "Blue 3" — the name of one goti, for the screen reader and for the
    tooltip. Colour AND number, because either alone is ambiguous: four
    gotis share a colour, and four numbers are shared across the seats. */
-function pieceLabel(seat, i) {
+function pieceLabel(seat, i, mark) {
   const name = SEAT_COLOR_NAMES[seat % SEAT_COLOR_NAMES.length] || "";
-  return `${name ? name[0].toUpperCase() + name.slice(1) : "Seat " + (seat + 1)} ${i + 1}`;
+  const who = name ? name[0].toUpperCase() + name.slice(1) : "Seat " + (seat + 1);
+  /* A chosen mark is said out loud too. The point of a mark is to
+     tell one of your four from the others, and that job does not
+     stop mattering for somebody using a screen reader. */
+  return mark ? `${who} ${i + 1} ${mark}` : `${who} ${i + 1}`;
 }
 
 export default function LudoBoard({
@@ -733,6 +737,11 @@ export default function LudoBoard({
      underneath it would answer it by accident. */
   dragDisabled = false,
   mySeat = null,
+  /* WHAT EACH PLAYER WEARS ON THEIR OWN FOUR (0095), keyed by
+     seat: { 0: ["\u2618", "", "\u2600", ""] }. Absent or empty
+     and a goti falls back to the mark it has always drawn, so a
+     table where nobody has chosen looks exactly as it did. */
+  marksBySeat = null,
 }) {
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
@@ -1679,9 +1688,10 @@ export default function LudoBoard({
                      live board. */
                   r={p >= 57 ? HOME_R : isJota ? JOTA_R : GOTI_R}
                   piece={i}
+                  mark={marksBySeat?.[seat]?.[i] || null}
                   spin={spin}
                   mood={moods.get(`${seat}:${i}`) || null}
-                  label={pieceLabel(seat, i)}
+                  label={pieceLabel(seat, i, marksBySeat?.[seat]?.[i])}
                   tilt={p >= 52 && p < 57}
                 />
                 </g>
@@ -1742,8 +1752,9 @@ export default function LudoBoard({
                   cy={rr * CELL}
                   r={GOTI_R}
                   piece={Number(k.split(":")[1])}
+                  mark={marksBySeat?.[seat]?.[Number(k.split(":")[1])] || null}
                   spin={spin}
-                  label={pieceLabel(seat, Number(k.split(":")[1]))}
+                  label={pieceLabel(seat, Number(k.split(":")[1]), marksBySeat?.[seat]?.[Number(k.split(":")[1])])}
                 />
               </g>
             </g>
@@ -1770,7 +1781,7 @@ export default function LudoBoard({
               r={GOTI_R * 1.08}
               piece={drag.piece}
               spin={spin}
-              label={pieceLabel(drag.seat, drag.piece)}
+              label={pieceLabel(drag.seat, drag.piece, marksBySeat?.[drag.seat]?.[drag.piece])}
             />
           </g>
         )}

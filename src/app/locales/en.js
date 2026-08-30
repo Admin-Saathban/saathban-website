@@ -2571,6 +2571,9 @@ const en = {
       twoDice: "Play with two dice",
       back: "Back",
       done: "Done",
+      myGotis: "My gotis",
+      gotiSlot: "Goti {n} — choose what it wears",
+      gotiPlain: "Just the number",
       failed: "That did not go through.",
     },
     seat: {

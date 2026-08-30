@@ -712,6 +712,15 @@ export default function LudoBoard({
   options = [],
   currentSeat = -1,
   onPieceTap,
+  /* DRAG, the second path to the same move. Given (piece, option) —
+     the exact destination the goti was dropped on — rather than just
+     the piece, because a drop names its target and must not re-ask
+     which one was meant. Absent, the board is tap-only and behaves
+     exactly as it always has. */
+  onPieceDrop,
+  /* The jota question is open: a real choice is on screen and dragging
+     underneath it would answer it by accident. */
+  dragDisabled = false,
   mySeat = null,
 }) {
   const rules = state?.rules || {};
@@ -755,6 +764,101 @@ export default function LudoBoard({
 
   const movable = new Set(options.map((o) => o.piece));
 
+  /* ── PICK A GOTI UP AND PUT IT DOWN ──────────────────────────────
+     Tap is the primary path and is untouched: a drag only begins once
+     the pointer has travelled past DRAG_SLOP, so a tap is still a tap
+     even from a hand that moves a little. When a drag does begin, the
+     click that would follow it is swallowed, or releasing on a
+     destination would both move the piece and re-open the tap path.
+
+     Everything is in board units, not pixels: getScreenCTM() maps the
+     pointer through the viewBox AND through the point-of-view
+     rotation, which is the only reason a drag lands on the right
+     square for a player whose board is turned 90 or 180 degrees. */
+  const svgRef = useRef(null);
+  const [drag, setDrag] = useState(null);
+  const dragRef = useRef(null);
+  dragRef.current = drag;
+  /* Set the moment a drag passes the slop, read and cleared by the
+     click that the browser fires afterwards. A ref, not state,
+     because it must be true DURING that click rather than after the
+     next render. */
+  const draggedRef = useRef(false);
+  const DRAG_SLOP = 8; // board units, about a fifth of a cell
+  const SNAP = 1.15;   // cells: how near a destination counts as "on" it
+
+  const toBoard = (clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg || !svg.getScreenCTM) return null;
+    const m = svg.getScreenCTM();
+    if (!m) return null;
+    const p = new DOMPoint(clientX, clientY).matrixTransform(m.inverse());
+    return [p.x, p.y];
+  };
+
+  /* Which destination is the goti nearest, if any. */
+  const nearestFor = (opts, x, y) => {
+    let best = null;
+    let bestD = Infinity;
+    opts.forEach((o) => {
+      const [cc, rr] = cellFor(currentSeat, o.to, 0);
+      const d = Math.hypot(cc * CELL - x, rr * CELL - y);
+      if (d < bestD) { bestD = d; best = o; }
+    });
+    return bestD <= SNAP * CELL ? best : null;
+  };
+
+  const beginDrag = (e, seat, i, at) => {
+    if (dragDisabled || !onPieceDrop) return;
+    if (seat !== currentSeat || !movable.has(i)) return;
+    const start = toBoard(e.clientX, e.clientY);
+    if (!start) return;
+    const opts = options.filter((o) => o.piece === i);
+    if (!opts.length) return;
+    setDrag({
+      piece: i,
+      seat,
+      opts,
+      origin: [at[0] * CELL, at[1] * CELL],
+      at: [at[0] * CELL, at[1] * CELL],
+      start,
+      live: false,      // past the slop yet?
+      target: null,
+      releasing: false,
+    });
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* not fatal */ }
+  };
+
+  const moveDrag = (e) => {
+    const d = dragRef.current;
+    if (!d || d.releasing) return;
+    const at = toBoard(e.clientX, e.clientY);
+    if (!at) return;
+    const travelled = Math.hypot(at[0] - d.start[0], at[1] - d.start[1]);
+    const live = d.live || travelled > DRAG_SLOP;
+    if (!live) return;
+    draggedRef.current = true;
+    e.preventDefault();
+    setDrag({ ...d, live: true, at, target: nearestFor(d.opts, at[0], at[1]) });
+  };
+
+  const endDrag = () => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.live) { setDrag(null); return; }   // it was a tap after all
+    if (d.target) {
+      setDrag(null);
+      onPieceDrop(d.piece, d.target);
+      return;
+    }
+    /* Dropped nowhere legal. It goes back, and nothing is spent —
+       no move, no die, no penalty. Under reduced motion it is simply
+       back, with no journey. */
+    if (wantsLessMotion()) { setDrag(null); return; }
+    setDrag({ ...d, at: d.origin, target: null, releasing: true });
+    window.setTimeout(() => setDrag(null), 280);
+  };
+
   /* Everything standing on one square, whoever it belongs to.
 
      Two of your own gotis share a square as a jota; an enemy single
@@ -777,6 +881,10 @@ export default function LudoBoard({
     <div style={{ position: "relative", maxWidth: 560, margin: "0 auto" }}>
       <style>{BOARD_MOTION_CSS}</style>
       <svg
+        ref={svgRef}
+        onPointerMove={drag ? moveDrag : undefined}
+        onPointerUp={drag ? endDrag : undefined}
+        onPointerCancel={drag ? endDrag : undefined}
         className={shake ? "sb-shake" : undefined}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
@@ -1246,19 +1354,27 @@ export default function LudoBoard({
         {/* ── Where the die you are holding could take you ── */}
         {options.map((o, i) => {
           const [cc, rr] = cellFor(currentSeat, o.to, 0);
+          /* While a goti is in the air the board narrows down: the
+             squares THIS piece could reach stay lit, everything else
+             steps back, and the one it would land on right now is
+             filled in. Picking a piece up should answer "where can
+             this go?" — not repeat "where can anything go?". */
+          const mine = !drag || !drag.live || drag.opts.includes(o);
+          const snapped = drag && drag.live && drag.target === o;
           return (
-            <g key={`dest-${i}`}>
+            <g key={`dest-${i}`} opacity={mine ? 1 : 0.18}>
               <circle
                 cx={cc * CELL}
                 cy={rr * CELL}
-                r={13}
-                fill="none"
+                r={snapped ? 17 : 13}
+                fill={snapped ? C.green : "none"}
+                fillOpacity={snapped ? 0.18 : 0}
                 stroke={C.green}
-                strokeWidth={3.5}
-                strokeDasharray="5 4"
+                strokeWidth={snapped ? 4.5 : 3.5}
+                strokeDasharray={snapped ? undefined : "5 4"}
                 opacity={0.9}
               />
-              <circle cx={cc * CELL} cy={rr * CELL} r={4} fill={C.green} opacity={0.9} />
+              <circle cx={cc * CELL} cy={rr * CELL} r={snapped ? 6 : 4} fill={C.green} opacity={0.9} />
             </g>
           );
         })}
@@ -1354,8 +1470,21 @@ export default function LudoBoard({
                 className={`${canTap ? "sb-press-svg" : ""}${
                   captured.has(`${seat}:${i}`) ? " sb-nudge" : ""
                 }${arrivedHome.has(`${seat}:${i}`) ? " sb-home-pop" : ""}`}
-                onClick={canTap ? () => onPieceTap(i) : undefined}
-                style={{ cursor: canTap ? "pointer" : "default" }}
+                onPointerDown={canTap ? (e) => beginDrag(e, seat, i, [cx / CELL, cy / CELL]) : undefined}
+                onClick={
+                  canTap
+                    ? () => {
+                        /* A drag that actually travelled has already
+                           done the move, or already sprung back. Its
+                           trailing click must not also open the tap
+                           path — that is how a drop onto a square
+                           would ALSO pop the jota chooser. */
+                        if (draggedRef.current) { draggedRef.current = false; return; }
+                        onPieceTap(i);
+                      }
+                    : undefined
+                }
+                style={{ cursor: canTap ? (drag && drag.live ? "grabbing" : "grab") : "default", touchAction: "none" }}
               >
                 {/* One ring per stack, drawn by its first goti: dashed
                     while the pair may still split, solid once it has
@@ -1499,6 +1628,31 @@ export default function LudoBoard({
             </g>
           );
         })}
+
+        {/* ── The goti in your hand ──────────────────────────────
+             Drawn above everything, because for as long as it is in
+             the air it IS the board. The piece it came from stays
+             where it was, faded, so the square it would return to is
+             never in doubt. ── */}
+        {drag && drag.live && (
+          <g
+            style={{
+              transform: `translate(${drag.at[0] - drag.origin[0]}px, ${drag.at[1] - drag.origin[1]}px)`,
+              transition: drag.releasing ? "transform 260ms cubic-bezier(0.34, 1.3, 0.64, 1)" : "none",
+            }}
+            pointerEvents="none"
+          >
+            <Pawn
+              seat={drag.seat}
+              cx={drag.origin[0]}
+              cy={drag.origin[1]}
+              r={GOTI_R * 1.08}
+              piece={drag.piece}
+              spin={spin}
+              label={pieceLabel(drag.seat, drag.piece)}
+            />
+          </g>
+        )}
 
         {/* THE FRAME, drawn last so it laps over every cell edge and
             the board ends somewhere definite. Two strokes: the timber

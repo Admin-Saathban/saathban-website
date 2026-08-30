@@ -320,6 +320,16 @@ export default function LudoSession() {
   /* Tap a goti. If the die could do two different things with it —
      move the pair together, or send this one on alone — ask, rather
      than guessing which the person meant. */
+  /* A DROP NAMES ITS OWN DESTINATION, so unlike a tap there is
+     nothing left to ask: the option carried back by the board is the
+     exact move, pair or single, that the goti was let go on. That is
+     also why dropping is disabled while the jota question is open —
+     the question would be answered twice, once by each hand. */
+  const dropPiece = (i, option) => {
+    if (!option || busy) return;
+    act(() => move(game.id, { piece: i, die: pickedDie, split: option.split }));
+  };
+
   const tapPiece = (i) => {
     const mine = options.filter((o) => o.piece === i);
     if (!mine.length) return;
@@ -976,6 +986,8 @@ export default function LudoSession() {
             options={isMyTurn && hasDice ? options : []}
             currentSeat={game.current_seat}
             onPieceTap={tapPiece}
+            onPieceDrop={dropPiece}
+            dragDisabled={!!chooser || busy}
           />
           </div>
           <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>

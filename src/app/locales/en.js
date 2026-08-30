@@ -744,13 +744,6 @@ const en = {
       badImageType: "Please use a JPG, PNG, or WebP photo.",
     },
     profile: {
-    somethingToAdd: "Something to add",
-    photoAdd: "Add a photo",
-    photoChange: "Change photo",
-    photoBusy: "Adding…",
-    photoHint: "A face is the thing that makes people say hello. Only members can see it.",
-    photoTooBig: "That picture is a bit large — could you try a smaller one?",
-    photoFailed: "That didn't upload. Please try again.",
       intro:
         "Matching starts from two things: where you are, and — above everything else — the languages you're comfortable talking in.",
       langLabel: "Languages you speak comfortably",
@@ -1941,6 +1934,13 @@ const en = {
 
   // ─── The first three screens (routes/onboarding/) ───
   profile: {
+    somethingToAdd: "Something to add",
+    photoAdd: "Add a photo",
+    photoChange: "Change photo",
+    photoBusy: "Adding…",
+    photoHint: "A face is the thing that makes people say hello. Only members can see it.",
+    photoTooBig: "That picture is a bit large — could you try a smaller one?",
+    photoFailed: "That didn't upload. Please try again.",
     languagesLabel: "Languages you speak",
     languagesHint: "Tap every one. It's how we find someone who can really talk with you.",
     languages: {

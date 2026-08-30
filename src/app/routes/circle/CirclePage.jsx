@@ -229,8 +229,11 @@ function InvitePanel({ createInvite }) {
     const result = await createInvite({});
     setBusy(false);
     if (result) {
+      /* §11: the code IS the result and setCode has just put it on
+         the screen, large enough to read down a phone line. A toast
+         over the top of it announced something the person was
+         already looking at. */
       setCode(result);
-      pushToast(t("feedback.inviteCreated"));
     } else {
       pushToast(t("feedback.somethingWrong"), { tone: "error" });
     }

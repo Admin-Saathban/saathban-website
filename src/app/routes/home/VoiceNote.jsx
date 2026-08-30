@@ -21,7 +21,6 @@ import { useEffect, useRef, useState } from "react";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
-import { pushToast } from "../../lib/feedback.jsx";
 
 export const VOICE_BUCKET = "voice-notes";
 export const VOICE_MAX_SECONDS = 120;
@@ -211,8 +210,9 @@ export default function VoiceNote({ iconId, value, onChange, dateIso, moduleKey,
     if (value?.path) {
       supabase.storage.from(VOICE_BUCKET).remove([value.path]).catch(() => {});
     }
+    /* §11: onChange hands the note up and the parent renders it,
+       with its own player, immediately below. Nothing to announce. */
     onChange({ path, mime: base, seconds });
-    pushToast(t("feedback.voiceSaved"));
     discard();
   };
 

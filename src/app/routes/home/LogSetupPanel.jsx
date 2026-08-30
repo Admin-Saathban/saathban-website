@@ -270,7 +270,14 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
   /* Prefs write straight through to the server row; the line
      confirms it landed (and, on a helper's screen, that the Icon was
      told). */
-  const saved = () => pushToast(isOwn ? t("feedback.settingsSaved") : t("feedback.logSetupSaved"), { key: "prefs" });
+  /* §11: a settings panel's result is the settings, which are on
+     the screen and have just moved. The exception is saving on
+     SOMEONE ELSE'S behalf — a Fam member setting up their Icon's
+     modules — where the result lands on a screen the person cannot
+     see, so that one still says what happened and for whom. */
+  const saved = () => {
+    if (!isOwn) pushToast(t("feedback.logSetupSaved"), { key: "prefs" });
+  };
 
   const submitMeal = () => {
     if (!mealLabel.trim()) return;

@@ -86,7 +86,10 @@ export default function GroupPage() {
       await addPost(id, kept);
       const rows = await fetchPosts(id);
       setPosts(rows);
-      pushToast(t("feedback.groupPosted"));
+      /* §11 in one line: this code already finds the new post and
+         marks it fresh, so the person is looking at their own words
+         highlighted in the group. "Posted ✓" over the top of that
+         told them less than the screen already had. */
       const added = rows.find((p) => !before.has(p.id));
       if (added) fresh.mark(added.id);
     } catch {

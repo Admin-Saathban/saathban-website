@@ -1252,6 +1252,31 @@ const en = {
      locale block at all — a §0.1 gap wider than tonight and worth
      someone taking. This block is the start of one. */
   admin: {
+    notCalled: "Not yet called",
+    recordCall: "Record the call",
+    firstApplication: "First application from this applicant.",
+    noEntries: "No entries for this applicant yet.",
+    suspend: "Suspend",
+    reinstate: "Reinstate as Active",
+    markReceived: "Mark received",
+    requestDocument: "Request document",
+    noNotes: "No notes yet.",
+    editNotes: "Edit notes",
+    motivation: "Motivation",
+    identity: "Identity",
+    profileAvailability: "Profile & availability",
+    declarations: "Declarations",
+    references: "References",
+    whatReferenceSaid: "What did the reference say?",
+    priorAttempts: "Prior attempts",
+    auditTrail: "Audit trail",
+    decision: "Decision",
+    rejectReason: "Reason (required to reject — it becomes the audit entry)",
+    redFlags: "Reviewer red flags",
+    documents: "Documents",
+    whichDocument: "What document is needed?",
+    noteToApplicant: "Note to the applicant (optional)",
+    reviewNotes: "Review notes",
     /* §0.1/§0.2 — the admin screens were hardcoded English with no
        locale block. These are the strings they actually render. */
     brand: "Saathban",

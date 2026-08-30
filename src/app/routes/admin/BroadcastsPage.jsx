@@ -125,7 +125,7 @@ export default function BroadcastsPage() {
         </p>
       )}
 
-      <Card title="Compose">
+      <Card title={t("admin.compose")}>
         <div style={{ display: "grid", gap: 14 }}>
           <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>{t("admin.audience")}<select
               value={role}

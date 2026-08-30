@@ -236,7 +236,7 @@ export default function AdminLayout() {
           (label) => (
             <div
               key={label}
-              title="Arrives in a later build step"
+              title={t("admin.laterBuild")}
               style={{
                 display: "flex",
                 alignItems: "center",

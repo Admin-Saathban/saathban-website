@@ -21,6 +21,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
+import { useI18n } from "../../lib/i18n.jsx";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import {
@@ -57,6 +58,7 @@ const inputStyle = {
 };
 
 export default function BuddyApplication() {
+  const { t } = useI18n();
   const { id } = useParams();
   const { applications, loading, admin, actions } = useOutletContext();
 
@@ -210,7 +212,7 @@ export default function BuddyApplication() {
       >
         {/* ══ Left: the application, in reading order ══ */}
         <div style={{ display: "grid", gap: 22 }}>
-          <Card title="Motivation">
+          <Card title={t("admin.motivation")}>
             <p
               style={{
                 fontFamily: FONTS.serif,
@@ -224,7 +226,7 @@ export default function BuddyApplication() {
             </p>
           </Card>
 
-          <Card title="Identity">
+          <Card title={t("admin.identity")}>
             <div
               style={{
                 display: "grid",
@@ -251,7 +253,7 @@ export default function BuddyApplication() {
             </div>
           </Card>
 
-          <Card title="Profile & availability">
+          <Card title={t("admin.profileAvailability")}>
             <div
               style={{
                 display: "grid",
@@ -275,7 +277,7 @@ export default function BuddyApplication() {
             </div>
           </Card>
 
-          <Card title="Declarations">
+          <Card title={t("admin.declarations")}>
             <ul style={{ margin: 0, paddingLeft: 22, lineHeight: 2 }}>
               <li>
                 Criminal record disclosed:{" "}
@@ -298,7 +300,7 @@ export default function BuddyApplication() {
           </Card>
 
           <Card
-            title="References"
+            title={t("admin.references")}
             aside={
               <span
                 style={{
@@ -344,9 +346,7 @@ export default function BuddyApplication() {
                         ✓ Called {fmtDateTime(r.called_at)}
                       </span>
                     ) : (
-                      <span style={{ color: C.brown, fontWeight: 700 }}>
-                        Not yet called
-                      </span>
+                      <span style={{ color: C.brown, fontWeight: 700 }}>{t("admin.notCalled")}</span>
                     )}
                   </div>
                   {r.call_notes && (
@@ -358,7 +358,7 @@ export default function BuddyApplication() {
                     <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                       <textarea
                         rows={2}
-                        placeholder="What did the reference say?"
+                        placeholder={t("admin.whatReferenceSaid")}
                         value={callDraft[r.id] || ""}
                         onChange={(e) =>
                           setCallDraft((d) => ({ ...d, [r.id]: e.target.value }))
@@ -377,9 +377,7 @@ export default function BuddyApplication() {
                               )
                             )
                           }
-                        >
-                          Record the call
-                        </AdminBtn>
+                        >{t("admin.recordCall")}</AdminBtn>
                       </div>
                     </div>
                   )}
@@ -389,11 +387,9 @@ export default function BuddyApplication() {
           </Card>
 
           {/* ─── Prior attempts (versioned applications) ─── */}
-          <Card title="Prior attempts">
+          <Card title={t("admin.priorAttempts")}>
             {priorAttempts.length === 0 ? (
-              <p style={{ margin: 0, color: C.textMuted }}>
-                First application from this applicant.
-              </p>
+              <p style={{ margin: 0, color: C.textMuted }}>{t("admin.firstApplication")}</p>
             ) : (
               <div style={{ display: "grid", gap: 14 }}>
                 {priorAttempts.map((p) => (
@@ -439,7 +435,7 @@ export default function BuddyApplication() {
           </Card>
 
           {/* ─── Audit trail: super-admin scope (0003) ─── */}
-          <Card title="Audit trail">
+          <Card title={t("admin.auditTrail")}>
             {!isSuper ? (
               <p style={{ margin: 0, color: C.textMuted }}>
                 The audit trail is super-admin scope. Status changes are still
@@ -449,9 +445,7 @@ export default function BuddyApplication() {
             ) : audit === null ? (
               <p style={{ margin: 0, color: C.textMuted }}>Loading…</p>
             ) : audit.length === 0 ? (
-              <p style={{ margin: 0, color: C.textMuted }}>
-                No entries for this applicant yet.
-              </p>
+              <p style={{ margin: 0, color: C.textMuted }}>{t("admin.noEntries")}</p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {audit.map((e) => (
@@ -490,7 +484,7 @@ export default function BuddyApplication() {
 
         {/* ══ Right: review actions ══ */}
         <div style={{ display: "grid", gap: 22 }}>
-          <Card title="Decision">
+          <Card title={t("admin.decision")}>
             <div style={{ display: "grid", gap: 12 }}>
               {next && (
                 <AdminBtn
@@ -525,9 +519,7 @@ export default function BuddyApplication() {
                       )
                     )
                   }
-                >
-                  Suspend
-                </AdminBtn>
+                >{t("admin.suspend")}</AdminBtn>
               )}
               {app.status === "suspended" && (
                 <AdminBtn
@@ -542,15 +534,13 @@ export default function BuddyApplication() {
                       )
                     )
                   }
-                >
-                  Reinstate as Active
-                </AdminBtn>
+                >{t("admin.reinstate")}</AdminBtn>
               )}
               {app.status !== "rejected" && app.status !== "active" && (
                 <>
                   <textarea
                     rows={3}
-                    placeholder="Reason (required to reject — it becomes the audit entry)"
+                    placeholder={t("admin.rejectReason")}
                     value={rejectNote}
                     onChange={(e) => setRejectNote(e.target.value)}
                     style={inputStyle}
@@ -577,7 +567,7 @@ export default function BuddyApplication() {
           </Card>
 
           {/* ─── Red-flag checklist (SPEC.md, verbatim list) ─── */}
-          <Card title="Reviewer red flags">
+          <Card title={t("admin.redFlags")}>
             <div style={{ display: "grid", gap: 4 }}>
               {RED_FLAGS.map((f) => {
                 const on = app.reviewer_flags.includes(f.key);
@@ -615,7 +605,7 @@ export default function BuddyApplication() {
           </Card>
 
           {/* ─── Document requests (buddy_document_requests, 0010) ─── */}
-          <Card title="Documents">
+          <Card title={t("admin.documents")}>
             <p style={{ margin: "0 0 12px", fontSize: 15, color: C.textMuted }}>
               A request reaches the applicant as an in-app notification and is
               audit-logged automatically.
@@ -658,9 +648,7 @@ export default function BuddyApplication() {
                         kind="ghost"
                         disabled={busy}
                         onClick={() => run(() => actions.markDocumentReceived(d.id))}
-                      >
-                        Mark received
-                      </AdminBtn>
+                      >{t("admin.markReceived")}</AdminBtn>
                     )}
                   </div>
                   <div style={{ color: C.textMuted, fontSize: 15 }}>
@@ -679,7 +667,7 @@ export default function BuddyApplication() {
               <input
                 type="text"
                 list="doc-type-suggestions"
-                placeholder="What document is needed?"
+                placeholder={t("admin.whichDocument")}
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
                 style={inputStyle}
@@ -691,7 +679,7 @@ export default function BuddyApplication() {
               </datalist>
               <input
                 type="text"
-                placeholder="Note to the applicant (optional)"
+                placeholder={t("admin.noteToApplicant")}
                 value={docNote}
                 onChange={(e) => setDocNote(e.target.value)}
                 style={inputStyle}
@@ -708,28 +696,24 @@ export default function BuddyApplication() {
                     setDocNote("");
                   }
                 }}
-              >
-                Request document
-              </AdminBtn>
+              >{t("admin.requestDocument")}</AdminBtn>
             </div>
           </Card>
 
           {/* ─── Review notes ─── */}
-          <Card title="Review notes">
+          <Card title={t("admin.reviewNotes")}>
             {notesDraft === null ? (
               <>
                 <p style={{ margin: "0 0 12px", whiteSpace: "pre-wrap" }}>
                   {app.review_notes || (
-                    <span style={{ color: C.textMuted }}>No notes yet.</span>
+                    <span style={{ color: C.textMuted }}>{t("admin.noNotes")}</span>
                   )}
                 </p>
                 <AdminBtn
                   kind="ghost"
                   disabled={busy}
                   onClick={() => setNotesDraft(app.review_notes || "")}
-                >
-                  Edit notes
-                </AdminBtn>
+                >{t("admin.editNotes")}</AdminBtn>
               </>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>

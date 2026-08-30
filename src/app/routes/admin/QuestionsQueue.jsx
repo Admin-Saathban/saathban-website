@@ -108,7 +108,7 @@ export default function QuestionsQueue() {
 
       <div style={{ display: "grid", gap: 22 }}>
         <Card
-          title="Waiting for a reply"
+          title={t("admin.waitingReply")}
           aside={
             <span style={{ fontWeight: 700, color: open.length ? C.brown : C.green }}>
               {questions === null ? "…" : `${open.length} open`}
@@ -173,7 +173,7 @@ export default function QuestionsQueue() {
           )}
         </Card>
 
-        <Card title="Answered">
+        <Card title={t("admin.answered")}>
           {answered.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.nothingYet")}</p>
           ) : (

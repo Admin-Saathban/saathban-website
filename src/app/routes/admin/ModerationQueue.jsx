@@ -152,7 +152,7 @@ export default function ModerationQueue() {
 
       <div style={{ display: "grid", gap: 22 }}>
         <Card
-          title="Open reports"
+          title={t("admin.openReports")}
           aside={
             <span style={{ fontWeight: 700, color: open.length ? C.brown : C.green }}>
               {reports === null ? "…" : `${open.length} waiting`}
@@ -274,7 +274,7 @@ export default function ModerationQueue() {
           )}
         </Card>
 
-        <Card title="Recently decided">
+        <Card title={t("admin.recentlyDecided")}>
           {decided.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.nothingYet")}</p>
           ) : (

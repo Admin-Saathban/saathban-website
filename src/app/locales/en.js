@@ -87,6 +87,11 @@ const en = {
   },
 
   settings: {
+    circle: {
+      title: "My Circle",
+      hint: "Choose who's kept in the loop, and exactly what each person may see.",
+      cta: "Open My Circle",
+    },
     accountTitle: "Your account",
     accountHint: "How you sign in, who can see you, and what reaches you.",
     account: {

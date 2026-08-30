@@ -209,12 +209,11 @@ export default function AppSettings() {
 
         {/* ── My Circle (Icons only) — the circle's permanent home is
             Settings; it enters main navigation only once it has a
-            member (SPEC.md §My Circle). Strings are local English for
-            now — i18n lane: lift under settings.circle.*. */}
+            member (SPEC.md §My Circle). */}
         {profile?.role === "saath_icon" && (
           <Section
-            title="My Circle"
-            hint="Choose who's kept in the loop, and exactly what each person may see."
+            title={t("settings.circle.title")}
+            hint={t("settings.circle.hint")}
             ts={ts}
           >
             <Link
@@ -234,7 +233,7 @@ export default function AppSettings() {
                 textDecoration: "none",
               }}
             >
-              🏡 Open My Circle
+              🏡 {t("settings.circle.cta")}
             </Link>
           </Section>
         )}

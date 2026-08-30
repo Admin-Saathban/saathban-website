@@ -17,9 +17,11 @@ import {
   joinByCode,
   liveSessionOf,
   liveSessionsOf,
+  fetchTablePeople,
   puzzleToday,
 } from "../../lib/games.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import BoardThumb from "./BoardThumb.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 
@@ -30,6 +32,52 @@ function gameTagline(g, lang) {
   return lang === "ur" ? g.tagline_ur : g.tagline_en;
 }
 
+
+/* ── WHO IS AT THIS TABLE (§9) ─────────────────────────────────
+   "Live tables first, with who is in them." A row of seat-coloured
+   faces, in seat order, so the card is a table with people at it
+   rather than a row about a game.
+
+   Bots are drawn, not hidden. A four-seat table showing one face
+   would read as a table nobody came to; three of those seats are
+   somebody to play against, and saying so plainly is kinder than
+   an empty row. They are dimmer and they carry a dot rather than
+   an initial, so a bot is never mistaken for a person — the
+   difference is shape and opacity, not colour alone. */
+function Faces({ players, size = 30 }) {
+  const { t } = useI18n();
+  if (!players?.length) return null;
+  const label = players
+    .map((p) => (p.is_bot ? t("ludo.seat.bot") : p.is_me ? t("ludo.seat.you") : p.name || t("ludo.seat.someone")))
+    .join(", ");
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center" }} aria-label={label}>
+      {players.map((p, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            marginInlineStart: i ? -8 : 0,
+            background: SEAT_COLORS[p.seat % SEAT_COLORS.length],
+            color: SEAT_INK[p.seat % SEAT_INK.length],
+            border: `2px solid ${C.cream}`,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: Math.round(size * 0.46),
+            opacity: p.is_bot ? 0.45 : 1,
+          }}
+        >
+          {p.is_bot ? "\u00B7" : (p.name || "").trim().charAt(0).toUpperCase() || "\u00B7"}
+        </span>
+      ))}
+    </span>
+  );
+}
 export default function GamesHome() {
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
@@ -83,6 +131,8 @@ export default function GamesHome() {
   const [blockedBy, setBlockedBy] = useState(null);
   const [pastOpen, setPastOpen] = useState(false);
   const [streak, setStreak] = useState(0);
+  /* §9: who is at each live table, keyed by session. */
+  const [peopleAt, setPeopleAt] = useState(new Map());
 
   useEffect(() => {
     let alive = true;
@@ -96,6 +146,14 @@ export default function GamesHome() {
         if (!alive) return;
         setGames(g);
         setSessions(s);
+        /* The faces, for the live tables only — a history page's
+           worth of seats is not worth fetching to draw two rows. */
+        fetchTablePeople(
+          s.filter((x) => ["active", "lobby"].includes(x.status)).map((x) => x.id),
+          profile.id
+        )
+          .then((m) => alive && setPeopleAt(m))
+          .catch(() => {});
         // A table made a moment ago glows once when they come back to
         // this list (FLOW.md: every created thing presents itself).
         try {
@@ -220,6 +278,11 @@ export default function GamesHome() {
             <BodyText muted style={{ margin: 0 }}>
               {nextStep(s)}
             </BodyText>
+            {/* §9: who is at it, on every live table and not only
+                the first one. */}
+            <span style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
+              <Faces players={peopleAt.get(s.id)} size={28} />
+            </span>
           </div>
           {myTurn && (
             <span
@@ -307,6 +370,10 @@ export default function GamesHome() {
                 <BodyText muted style={{ margin: "0 0 10px" }}>
                   {nextStep(activeGame)}
                 </BodyText>
+                {/* §9: the table, with who is at it. */}
+                <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <Faces players={peopleAt.get(activeGame.id)} size={32} />
+                </span>
                 <span
                   style={{
                     display: "inline-block",
@@ -329,6 +396,75 @@ export default function GamesHome() {
         </>
       )}
 
+      {/* ── ONE way to start. A stack of per-game cards asked the
+             person to compare three things before they'd decided they
+             wanted a game at all; now it's one button, and the choice
+             of game comes after. ── */}
+      {/* §9: the games, always on the screen and never behind a
+          button. This was a `pickerOpen` ternary that started
+          false, so the screen a person met had no games on it —
+          only controls for reaching them. It is also why §8's
+          tap-to-open-a-table had nothing to tap. */}
+          <SectionLabel>{t("games.home.pickTitle")}</SectionLabel>
+          {turnGames.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              disabled={!g.enabled}
+              onClick={() => openTable(g.key)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                width: "100%",
+                minHeight: 104,
+                padding: "16px 18px",
+                marginBottom: 10,
+                background: C.white,
+                border: `2px solid ${C.warmGray}`,
+                borderRadius: 18,
+                fontFamily: "inherit",
+                textAlign: "start",
+                cursor: g.enabled ? "pointer" : "default",
+                opacity: g.enabled ? 1 : 0.5,
+              }}
+            >
+              {/* §9: A GAME IS AN OBJECT, NOT A LIST ROW. The board
+                  is big enough to recognise across a room, the name
+                  is the only text, and the whole tile is the tap.
+
+                  The tagline goes. "Flick, pocket, and cover the
+                  Queen. A calm table for two" is a good sentence and
+                  it was three lines of prose in front of a game the
+                  board already announces — §9 allows one line of
+                  text on this screen and spends it on the heading.
+                  A game that is not open yet still says so, because
+                  that is not description, it is the state of the
+                  thing being tapped. */}
+              <BoardThumb gameKey={g.key} size={72} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: ts(24), fontWeight: 800, color: C.textMain }}>
+                  {gameName(g, lang)}
+                </span>
+                {!g.enabled && (
+                  <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
+                    {t("games.home.comingSoon")}
+                  </span>
+                )}
+              </span>
+              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
+                ›
+              </span>
+            </button>
+          ))}
+
+      {/* ── Past games: folded away. Finished tables must never
+             stack up the screen; three at a time, behind a link. ── */}
+      {/* §9: the riddle and the join-by-code box, AFTER the games.
+          They were between the tables and the games, which is two
+          pieces of furniture in front of the thing the screen is
+          for. Both are answers to "something else", and something
+          else comes after. */}
       {/* ── Daily Riddle. Bright and inviting while it waits; once
              today's is solved the card goes QUIET — done is done, and
              a solved thing should stop competing for attention. It
@@ -435,56 +571,6 @@ export default function GamesHome() {
         )}
       </Card>
 
-      {/* ── ONE way to start. A stack of per-game cards asked the
-             person to compare three things before they'd decided they
-             wanted a game at all; now it's one button, and the choice
-             of game comes after. ── */}
-      {/* §9: the games, always on the screen and never behind a
-          button. This was a `pickerOpen` ternary that started
-          false, so the screen a person met had no games on it —
-          only controls for reaching them. It is also why §8's
-          tap-to-open-a-table had nothing to tap. */}
-          <SectionLabel>{t("games.home.pickTitle")}</SectionLabel>
-          {turnGames.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              disabled={!g.enabled}
-              onClick={() => openTable(g.key)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                width: "100%",
-                minHeight: 76,
-                padding: "14px 18px",
-                marginBottom: 10,
-                background: C.white,
-                border: `2px solid ${C.warmGray}`,
-                borderRadius: 18,
-                fontFamily: "inherit",
-                textAlign: "start",
-                cursor: g.enabled ? "pointer" : "default",
-                opacity: g.enabled ? 1 : 0.5,
-              }}
-            >
-              <BoardThumb gameKey={g.key} size={48} />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
-                  {gameName(g, lang)}
-                </span>
-                <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
-                  {g.enabled ? gameTagline(g, lang) : t("games.home.comingSoon")}
-                </span>
-              </span>
-              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
-                ›
-              </span>
-            </button>
-          ))}
-
-      {/* ── Past games: folded away. Finished tables must never
-             stack up the screen; three at a time, behind a link. ── */}
       {past.length > 0 && (
         <>
           <SectionLabel>{t("games.home.pastTitle")}</SectionLabel>

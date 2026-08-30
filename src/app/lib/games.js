@@ -540,3 +540,51 @@ export async function guessPuzzle(date, guess) {
   if (error) throw error;
   return data; // {correct, guesses, solved}
 }
+
+/* ── Who is at these tables ──────────────────────────────────────
+   GAMES_IMMERSION_SPEC §9: games home "should be tables and faces —
+   live tables first, WITH WHO IS IN THEM".
+
+   The same shape fetchTableHistory returns for finished tables, for
+   live ones, and in one round trip for all of them rather than one
+   per card. Names come through safe_profiles because RLS refuses one
+   person reading another's profiles row — an embed returns null,
+   quietly, with a 200.
+
+   Bots come back as a seat with no name rather than being filtered
+   out: a four-seat table showing one face would read as a table with
+   one player at it, and three of those seats are somebody to play
+   against. */
+export async function fetchTablePeople(sessionIds, profileId) {
+  const ids = [...new Set((sessionIds || []).filter(Boolean))];
+  if (!ids.length) return new Map();
+
+  const { data: seats, error } = await supabase
+    .from("game_seats")
+    .select("session_id, seat_no, profile_id, is_bot")
+    .in("session_id", ids)
+    .order("seat_no");
+  if (error) return new Map();
+
+  const people = [...new Set((seats ?? []).map((s) => s.profile_id).filter(Boolean))];
+  let names = new Map();
+  if (people.length) {
+    const { data: profiles } = await supabase
+      .from("safe_profiles")
+      .select("id, full_name")
+      .in("id", people);
+    names = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  }
+
+  const bySession = new Map();
+  for (const s of seats ?? []) {
+    if (!bySession.has(s.session_id)) bySession.set(s.session_id, []);
+    bySession.get(s.session_id).push({
+      seat: s.seat_no - 1,
+      is_bot: s.is_bot,
+      is_me: !!profileId && s.profile_id === profileId,
+      name: s.is_bot ? null : names.get(s.profile_id) || null,
+    });
+  }
+  return bySession;
+}

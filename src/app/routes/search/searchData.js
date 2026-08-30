@@ -140,3 +140,30 @@ export function forgetRecents() {
   }
   return [];
 }
+
+/* A few groups to look at before anybody has typed anything.
+
+   §5: "Before typing: recent searches and a few suggested groups.
+   Never a blank page." A search box with nothing under it is the screen
+   that teaches people the feature is broken — they type, get nothing
+   they recognise, and do not come back. It matters more here than on a
+   younger audience's app, where an empty search box is a familiar
+   shape.
+
+   Public groups only, and only ones the caller is not already in:
+   suggesting the group somebody is standing inside is worse than
+   suggesting nothing. 0063 makes privacy='anyone' groups visible to
+   any community-enabled account, so RLS returns exactly the right set
+   without this query knowing the rule. */
+export async function suggestedGroups(limit = 5) {
+  const mine = await myGroupIds();
+  const { data, error } = await supabase
+    .from("groups")
+    .select("id, name, description, privacy")
+    .eq("privacy", "anyone")
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit + mine.size);
+  if (error) throw error;
+  return (data || []).filter((g) => !mine.has(g.id)).slice(0, limit);
+}

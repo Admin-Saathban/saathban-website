@@ -43,6 +43,7 @@ import {
   loadRecents,
   rememberSearch,
   forgetRecents,
+  suggestedGroups,
 } from "./searchData.js";
 
 const DEBOUNCE_MS = 260;
@@ -113,6 +114,7 @@ export default function SearchPage() {
   const [res, setRes] = useState(null); // null = nothing searched yet
   const [mine, setMine] = useState(new Set());
   const [recents, setRecents] = useState(loadRecents);
+  const [suggested, setSuggested] = useState([]);
   const boxRef = useRef(null);
 
   /* The keyboard should already be up. Somebody who tapped a magnifier
@@ -120,6 +122,10 @@ export default function SearchPage() {
   useEffect(() => {
     boxRef.current?.focus();
     myGroupIds().then(setMine).catch(() => {});
+    /* §5 — never a blank page. Fetched on arrival rather than on
+       first keystroke, because the whole point is that something is
+       already there when the screen opens. */
+    suggestedGroups().then(setSuggested).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -259,9 +265,30 @@ export default function SearchPage() {
                   </li>
                 </Group>
               )}
-              <p style={{ fontSize: ts(16), color: C.textMuted, lineHeight: 1.6, margin: "8px 0 0" }}>
-                {t("search.nothingHint")}
-              </p>
+              {suggested.length > 0 && (
+                <Group title={t("search.suggested")}>
+                  {suggested.map((g) => (
+                    <Row key={g.id} onClick={() => go(`/app/groups/${g.id}`)} label={g.name}>
+                      <span aria-hidden="true" style={{ fontSize: 22 }}>🧑‍🤝‍🧑</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={name}>{g.name}</span>
+                        {g.description && <span style={sub}>{g.description}</span>}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        style={{ color: C.green, fontSize: ts(16), fontWeight: 700, flexShrink: 0 }}
+                      >
+                        {t("search.openIt")}
+                      </span>
+                    </Row>
+                  ))}
+                </Group>
+              )}
+              {recents.length === 0 && suggested.length === 0 && (
+                <p style={{ fontSize: ts(16), color: C.textMuted, lineHeight: 1.6, margin: "8px 0 0" }}>
+                  {t("search.nothingHint")}
+                </p>
+              )}
             </>
           )}
 

@@ -94,10 +94,12 @@ export default function EventsRoutes() {
               are different jobs, not different lists. */}
           <Route index element={<Navigate to="/app/outdoor" replace />} />
           <Route path="all" element={<EventsList />} />
-          <Route
-            path="calendar"
-            element={role === "saath_icon" ? <MyCalendar /> : <Navigate to=".." replace />}
-          />
+          {/* ONE calendar. §13's is at /app/calendar, holds every
+              role, and carries the per-type actions; this path stays
+              only so old links keep working. Leaving the previous
+              screen mounted here meant the menu could open a calendar
+              that knew nothing about any of that. */}
+          <Route path="calendar" element={<Navigate to="/app/calendar" replace />} />
           <Route
             path="manage"
             element={role === "admin" ? <AdminEvents /> : <Navigate to=".." replace />}

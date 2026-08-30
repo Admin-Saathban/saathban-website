@@ -78,7 +78,7 @@ export function moreGroups(role, { buddyActive = true } = {}) {
     { to: "/app/history", key: "hub.journey", emoji: "🧭" },
     /* Kept even while its shelves are empty — §16. */
     { to: "/app/skills", key: "hub.grow", emoji: "🌱" },
-    { to: "/app/events/calendar", key: "hub.calendar", emoji: "📅" },
+    { to: "/app/calendar", key: "hub.calendar", emoji: "📅" },
   ].filter(Boolean);
 
   const rare = [

@@ -52,7 +52,7 @@ export async function fetchFeed(limit = 50) {
     .select(
       "id, author_id, body, image_path, post_type, ref_id, payload, created_at, " +
         "visibility, style_tag, colour, replies_off, pinned_at, edited_at, " +
-        "help_state, help_wanted, help_note"
+        "help_state, help_wanted, help_note, audio_path, audio_seconds"
     )
     .is("hidden_at", null)
     .order("created_at", { ascending: false })
@@ -144,6 +144,7 @@ export async function createPost(userId, body, file, opts = {}) {
     styleTag = null,
     helpWanted = 1,
     tagged = [],
+    audio = null,          // { blob, seconds, mime } — POSTS_SPEC §7
   } = opts;
 
   let image_path = null;
@@ -156,13 +157,32 @@ export async function createPost(userId, body, file, opts = {}) {
     if (upErr) throw upErr;
   }
 
+  /* §7 — a voice post. One minute, capped in the recorder and again
+     by the bucket's size limit (0078). It goes under the author's own
+     folder because the post row does not exist yet at upload time,
+     and the read policy lets an author read their own recording for
+     exactly that gap. */
+  let audio_path = null;
+  let audio_seconds = null;
+  if (audio?.blob) {
+    const aext = audio.mime && audio.mime.includes("mp4") ? "m4a" : audio.mime && audio.mime.includes("ogg") ? "ogg" : "webm";
+    audio_path = `${userId}/${crypto.randomUUID()}.${aext}`;
+    const { error: aErr } = await supabase.storage
+      .from("post-audio")
+      .upload(audio_path, audio.blob, { contentType: audio.mime || "audio/webm" });
+    if (aErr) throw aErr;
+    audio_seconds = Math.max(1, Math.min(60, Math.round(audio.seconds || 0)));
+  }
+
   /* §3 — colour applies to SHORT TEXT ONLY. Once a post runs long or
      carries a photo it renders plain, so a long post never becomes
      unreadable on yellow. Enforced HERE as well as in the renderer:
      a colour that survives into the row would come back coloured on
      every future read, whatever the renderer then believed. */
   const text = (body || "").trim();
-  const keepsColour = colour != null && !image_path && text.length <= 180;
+  /* A voice post may carry no words at all, which is the point of it.
+     Colour still needs short text to sit on. */
+  const keepsColour = colour != null && !image_path && !audio_path && text.length <= 180;
 
   const { data, error } = await supabase
     .from("community_posts")
@@ -170,6 +190,8 @@ export async function createPost(userId, body, file, opts = {}) {
       author_id: userId,
       body: text,
       image_path,
+      audio_path,
+      audio_seconds,
       visibility,
       colour: keepsColour ? colour : null,
       style_tag: styleTag,
@@ -252,16 +274,48 @@ export async function addComment(postId, userId, body) {
 
 /* ─── Report / block / mute ─── */
 
-export async function fileReport(userId, kind, targetId, targetAuthorId, excerpt, reason) {
+/* A report, with whatever the moderator will need in order to judge it.
+
+    is {bucket, path, kind}. For a voice POST that is post-audio,
+   which admins may read. For a DM it must be report-evidence — a COPY,
+   because admins have no read path into DM threads and this is not the
+   thing that is going to quietly create one (QUESTIONS.md C5). Use
+   copyToEvidence() to make that copy before calling. */
+export async function fileReport(userId, kind, targetId, targetAuthorId, excerpt, reason, media = null) {
   const { error } = await supabase.from("community_reports").insert({
     reporter_id: userId,
     target_kind: kind,
     target_id: targetId,
     target_author_id: targetAuthorId,
-    target_excerpt: (excerpt || "").slice(0, 500),
+    target_excerpt: (excerpt || "").slice(0, 500) || null,
     reason: (reason || "").slice(0, 500) || null,
+    target_media_bucket: media?.bucket || null,
+    target_media_path: media?.path || null,
+    target_media_kind: media?.kind || null,
   });
   if (error) throw error;
+}
+
+/* Hand a copy of the reported file to the moderators, and only to them.
+   The reporter can read the original (it is in their own thread); the
+   moderator cannot, so the reporter is the one who has to pass it over.
+   A failure here must NOT lose the report — the caller reports anyway,
+   with the text it has, rather than refusing to accept a complaint
+   because an upload failed. */
+export async function copyToEvidence(fromBucket, path) {
+  try {
+    const { data: blob, error } = await supabase.storage.from(fromBucket).download(path);
+    if (error || !blob) return null;
+    const ext = (path.split(".").pop() || "webm").toLowerCase();
+    const to = `${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("report-evidence")
+      .upload(to, blob, { contentType: blob.type || "audio/webm", upsert: false });
+    if (upErr) return null;
+    return to;
+  } catch {
+    return null;
+  }
 }
 
 export async function blockOrMute(userId, targetId, kind) {

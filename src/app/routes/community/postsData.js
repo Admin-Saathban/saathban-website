@@ -25,11 +25,26 @@ export const VISIBILITIES = ["public", "friends", "private"];
 export function colourOf(post) {
   if (post.colour == null) return null;
   if (post.image_path) return null;
+  if (post.audio_path) return null;   // §7 — a voice post is a card, not a swatch
   if ((post.body || "").length > 180) return null;
   return SWATCHES[post.colour] ?? null;
 }
 
 /* ─── §10 the menus' verbs ─── */
+
+/* §7 — post-audio is private, so a voice post needs a short-lived
+   signed URL. Cached per path for under its lifetime: a feed that
+   re-signs on every render would spend a request per scroll. */
+const audioUrls = new Map();
+export async function postAudioUrl(path) {
+  if (!path) return null;
+  const hit = audioUrls.get(path);
+  if (hit && hit.exp > Date.now()) return hit.url;
+  const { data, error } = await supabase.storage.from("post-audio").createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return null;
+  audioUrls.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60 * 1000 });
+  return data.signedUrl;
+}
 
 export async function updatePost(postId, patch) {
   const { error } = await supabase.from("community_posts").update(patch).eq("id", postId);

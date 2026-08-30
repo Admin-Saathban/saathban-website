@@ -18,6 +18,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
+import ReportedMedia from "./ReportedMedia.jsx";
 
 const KIND_LABEL = {
   post: "Community post",
@@ -40,7 +41,8 @@ async function fetchReports() {
   const { data, error } = await supabase
     .from("community_reports")
     .select(
-      "id, reporter_id, target_kind, target_id, target_author_id, target_excerpt, reason, status, resolution_note, resolved_at, created_at"
+      "id, reporter_id, target_kind, target_id, target_author_id, target_excerpt, reason, status, resolution_note, resolved_at, created_at, " +
+        "target_media_bucket, target_media_path, target_media_kind"
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -212,9 +214,26 @@ export default function ModerationQueue() {
                       </span>
                     </div>
 
-                    <p style={{ margin: "0 0 6px", fontStyle: "italic" }}>
-                      “{r.target_excerpt || "(no excerpt captured)"}”
-                    </p>
+                    {/* A voice note has no words to quote, so the quote
+                        line is only drawn when there is something in it.
+                        "(no excerpt captured)" was what a moderator used
+                        to be given for audio — a row that says nothing
+                        about the thing it is asking you to judge. */}
+                    {r.target_excerpt && (
+                      <p style={{ margin: "0 0 6px", fontStyle: "italic" }}>
+                        “{r.target_excerpt}”
+                      </p>
+                    )}
+                    <ReportedMedia
+                      bucket={r.target_media_bucket}
+                      path={r.target_media_path}
+                      kind={r.target_media_kind}
+                    />
+                    {!r.target_excerpt && !r.target_media_path && (
+                      <p style={{ margin: "0 0 6px", fontStyle: "italic", color: C.textMuted }}>
+                        (nothing was captured with this report)
+                      </p>
+                    )}
                     <p style={{ margin: "0 0 14px", fontSize: 16, color: C.textMuted }}>
                       By <strong style={{ color: C.textMain }}>{nameOf(r.target_author_id)}</strong>
                       {" · "}reported by {nameOf(r.reporter_id)}

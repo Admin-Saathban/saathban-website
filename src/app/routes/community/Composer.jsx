@@ -37,6 +37,7 @@ import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { SWATCHES, STYLE_TAGS, VISIBILITIES } from "./postsData.js";
 import { fetchMyPeople } from "../people/myPeopleStore.js";
+import { VoiceRecorder, VoicePlayer } from "../people/VoiceNote.jsx";
 
 /* ── The row that lives in the feed ── */
 export function ComposerRow({ onOpen }) {
@@ -107,6 +108,10 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
   const [pickPeople, setPickPeople] = useState(false);
   const [tagged, setTagged] = useState([]);
   const [people, setPeople] = useState(null);
+  /* §7 — one minute, and only the poster ever records. Replies to a
+     voice post are text and stickers; there is deliberately no
+     recorder on the comment box. */
+  const [voice, setVoice] = useState(null);   // { blob, seconds, mime, url }
 
   /* Only fetched when the picker is actually opened — a list of names
      loaded for a post that mentions nobody is a query nobody asked
@@ -128,11 +133,19 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
     setBody(""); setFile(null); setVisibility("public");
     setColour(null); setStyleTag(null); setHelpWanted(1); setPickVis(false);
     setTagged([]); setPickPeople(false);
+    if (voice?.url) URL.revokeObjectURL(voice.url);
+    setVoice(null);
   };
 
   const share = async () => {
-    if (!body.trim() || busy) return;
-    const ok = await onShare({ body, file, visibility, colour, styleTag, helpWanted, tagged });
+    /* A voice post may carry no words at all — that is the point of
+       it — so Share is live when there is EITHER something written or
+       something recorded. */
+    if ((!body.trim() && !voice) || busy) return;
+    const ok = await onShare({
+      body, file, visibility, colour, styleTag, helpWanted, tagged,
+      audio: voice ? { blob: voice.blob, seconds: voice.seconds, mime: voice.mime } : null,
+    });
     if (ok) { reset(); onClose(); }
   };
 
@@ -188,7 +201,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
         <button
           type="button"
           onClick={share}
-          disabled={busy || !body.trim()}
+          disabled={busy || (!body.trim() && !voice)}
           style={{
             minHeight: A11Y.minTapTargetPx,
             padding: "0 22px",
@@ -199,8 +212,8 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             fontFamily: "inherit",
             fontSize: ts(A11Y.minBodyPx),
             fontWeight: 800,
-            opacity: busy || !body.trim() ? 0.5 : 1,
-            cursor: busy || !body.trim() ? "default" : "pointer",
+            opacity: busy || (!body.trim() && !voice) ? 0.5 : 1,
+            cursor: busy || (!body.trim() && !voice) ? "default" : "pointer",
           }}
         >
           {busy ? "…" : t("posts.share")}
@@ -345,7 +358,37 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             <button type="button" onClick={() => setPickPeople((v) => !v)} style={chip(tagged.length > 0)}>
               🫶 {tagged.length ? t("posts.withCount", { n: tagged.length }) : t("posts.withSomeone")}
             </button>
+            {/* §7 — one minute maximum, enforced in the recorder. */}
+            {!voice && (
+              <VoiceRecorder
+                maxSeconds={60}
+                label={t("posts.voice")}
+                onRecorded={(blob, seconds, mime) =>
+                  setVoice({ blob, seconds, mime, url: URL.createObjectURL(blob) })
+                }
+              />
+            )}
           </div>
+
+          {/* Heard back before it is sent. A voice post is the one thing
+              in the composer a person cannot check by looking at it. */}
+          {voice && (
+            <div style={{ marginTop: 12 }}>
+              <VoicePlayer url={voice.url} seconds={voice.seconds} />
+              <button
+                type="button"
+                onClick={() => { URL.revokeObjectURL(voice.url); setVoice(null); }}
+                style={{
+                  marginTop: 8, minHeight: A11Y.minTapTargetPx, padding: "0 18px",
+                  borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white,
+                  color: C.textMain, fontFamily: "inherit", fontSize: ts(16),
+                  fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                {t("posts.voiceAgain")}
+              </button>
+            </div>
+          )}
 
           {/* §5 — "With someone". The tagged person is ASKED, never
               assumed: the row lands unaccepted, they are told, they can

@@ -215,6 +215,7 @@ export default function AdminLayout() {
           { to: "/app/community", label: t("admin.spaceCommunity") },
           { to: "/app/outdoor", label: t("admin.spaceOutdoor") },
           { to: "/app/events/manage", label: t("admin.spaceGatherings") },
+          { to: "/app/admin/places", label: t("admin.spacePlaces") },
           { to: "/app/groups", label: t("admin.spaceGroups") },
         ].map((item) => (
           <NavLink

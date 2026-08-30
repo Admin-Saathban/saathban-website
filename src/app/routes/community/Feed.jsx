@@ -45,8 +45,10 @@ import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx"
 import Composer, { ComposerRow } from "./Composer.jsx";
 import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
+import { VoicePlayer } from "../people/VoiceNote.jsx";
 import {
   colourOf,
+  postAudioUrl,
   fetchHelpExtras,
   offerHelp,
   withdrawOffer,
@@ -395,6 +397,16 @@ function PostCard({
 }) {
   const { t, ts } = useI18n();
   const [reporting, setReporting] = useState(false);
+  /* §7 — post-audio is private, so the card signs its own URL. Done
+     here rather than for the whole feed so that a list of forty posts
+     signs only the handful that actually carry a recording. */
+  const [audioUrl, setAudioUrl] = useState(null);
+  useEffect(() => {
+    if (!post.audio_path) return undefined;
+    let dead = false;
+    postAudioUrl(post.audio_path).then((u) => { if (!dead) setAudioUrl(u); });
+    return () => { dead = true; };
+  }, [post.audio_path]);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState(null); // null = not loaded
   const [commentAuthors, setCommentAuthors] = useState({});
@@ -506,6 +518,14 @@ function PostCard({
       ) : (
         <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
       ))}
+
+      {/* §7 — a voice post: a card with a play button and its length,
+          so nothing is downloaded until somebody decides to listen. */}
+      {post.audio_path && (
+        <div style={{ margin: "10px 0 12px" }}>
+          <VoicePlayer url={audioUrl} seconds={post.audio_seconds} />
+        </div>
+      )}
 
       {/* §6 — Asked → Someone's coming → Done. */}
       {post.style_tag === "help" && helpStatus && (
@@ -841,7 +861,10 @@ export default function Feed() {
      to the app later must not show a still-highlighted post. */
   const share = async (opts) => {
     const draftBody = (opts?.body || "").trim();
-    if (!draftBody || posting) return false;
+    /* §7 — a voice post may carry no words at all. Refusing on an empty
+       body would have made the recorder a decoration on a button that
+       could never be pressed. */
+    if ((!draftBody && !opts?.audio) || posting) return false;
     const draftFile = opts.file || null;
     const key = `pending-${Date.now()}`;
     setPendingPosts((cur) => [...cur, { key, body: draftBody, hasPhoto: !!draftFile }]);
@@ -854,6 +877,7 @@ export default function Feed() {
         styleTag: opts.styleTag,
         helpWanted: opts.helpWanted,
         tagged: opts.tagged || [],
+        audio: opts.audio || null,
       });
       await load();
       setPendingPosts((cur) => cur.filter((p) => p.key !== key));
@@ -908,7 +932,22 @@ export default function Feed() {
         await markHelpDone(target.id);
         await load();
       } else if (kind === "report") {
-        await fileReport(myId, "post", target.id, target.author_id, target.body, reason);
+        /* A reported voice post carries its recording. No copy is
+           needed: post-audio is readable by admins, because a post is
+           not a private thread. A DM is, which is why that path takes
+           a copy instead (communityData.copyToEvidence). */
+        await fileReport(
+          /* A voice post IS a post — community_reports.target_kind is
+             constrained to a fixed set and "voice_post" is not in it, so
+             inventing a kind made every report of a recording fail the
+             CHECK and vanish into a caught error. What makes it audio is
+             target_media_kind, which is what the queue reads anyway. */
+          myId, "post",
+          target.id, target.author_id, target.body, reason,
+          target.audio_path
+            ? { bucket: "post-audio", path: target.audio_path, kind: "audio" }
+            : null
+        );
         showToast(t("community.feed.reportedToast"));
       } else if (kind === "reportComment") {
         await fileReport(myId, "comment", target.id, target.author_id, target.body, reason);

@@ -1363,6 +1363,22 @@ const en = {
      locale block at all — a §0.1 gap wider than tonight and worth
      someone taking. This block is the start of one. */
   admin: {
+    spacePlaces: "Access notes",
+    access: {
+      title: "Access notes",
+      blurb: "What a person needs to know before they set out: shade, benches, a toilet, a flat walk — and the steps at the gate. A note that has not been checked is NOT shown to anyone, because a wrong note is worse than none: if it says flat walk and there are steps, somebody made a trip they could not finish.",
+      stateTitle: "Where this stands",
+      stateBody: "{confirmed} notes confirmed, {unchecked} still unchecked. {places} places show no notes at all yet.",
+      showUnchecked: "Show only what needs checking",
+      showAll: "Show every place",
+      uncheckedHere: "{n} unchecked here — seeded as a guess, not shown to anyone yet.",
+      guess: "unchecked",
+      confirmAll: "Confirm all {n}",
+      confirmAllHint: "Only if you have actually been, or asked someone who has.",
+      hintAdd: "Add this note (counts as checked — you are the one looking)",
+      hintConfirm: "Confirm this guess so people can see it",
+      hintRemove: "Remove this note",
+    },
     buddyIntro: "Volunteers are matched with isolated seniors, so the bar is high. A Buddy has no access to any Icon data before they are active.",
     questionsIntro: "Anyone signed in can ask. A reply is stored on the thread and delivered to the asker as a notification.",
     broadcastsIntro: "An in-app notification to every active account, or one role. Every send is audit-logged with its recipient count.",
@@ -1448,6 +1464,41 @@ const en = {
     },
   },
   groups: {
+    interior: {
+      memberCount: "{n} people",
+      oneMember: "Just you so far — that is a fine place to start.",
+      pinned: "Pinned",
+      pin: "Pin this to the top",
+      unpin: "Unpin",
+    },
+    manage: {
+      title: "Managing this group",
+      gone: "This group is no longer here.",
+      notYours: "This part is for the people who run the group. You are a member here, which means the group itself is yours to use — just not these settings.",
+      requests: "Member requests",
+      noRequests: "Nobody is waiting to join.",
+      someone: "Someone",
+      approve: "Let them in",
+      decline: "Not this time",
+      people: "People",
+      owner: "Started it",
+      coAdmin: "Helps run it",
+      promote: "Let them help run it",
+      demote: "Stop them helping run it",
+      remove: "Remove",
+      settings: "Group settings",
+      description: "What is this group about?",
+      save: "Save changes",
+      saved: "Saved.",
+      reported: "Reported content",
+      noReports: "Nothing has been reported here.",
+      help: "Help centre",
+      helpWho: "This goes to the Saathban team — a real person reads it, usually within two working days. If it is urgent or somebody is at risk, say so here and it moves to the top.",
+      helpPlaceholder: "What is happening?",
+      helpSend: "Send this to Saathban",
+      helpSent: "Sent. The Saathban team has it, and will come back to you within two working days.",
+      cta: "Manage this group",
+    },
     type: {
       walking:   { name: "Walking",        emoji: "🚶", desc: "We walk together, at an easy pace." },
       chai:      { name: "Chai and talk",  emoji: "☕", desc: "We meet for chai and good conversation." },
@@ -1571,6 +1622,7 @@ const en = {
   },
 
   whatson: {
+    whosGoing: "Who's going",
     title: "What's on",
     back: "Back",
     askCta: "Ask who's up for something",
@@ -1603,6 +1655,9 @@ const en = {
     where: { thePark: "The park", myHome: "My home", onThePhone: "On the phone" },
     when: { now: "Now", later: "Later today", another: "Another day" },
     start: {
+      needToKnow: "Do you need to know who's coming?",
+      needToKnowNo: "No — they can just turn up.",
+      needToKnowYes: "Yes — ask them to say they're coming.",
       title: "Who's up for something?",
       what: "What are you up for?",
       whatPlaceholder: "Chai, a walk, anything",
@@ -1629,6 +1684,34 @@ const en = {
   },
 
   outdoor: {
+      who: {
+        quiet: "Quiet right now",
+        hereOne: "{name} is here",
+        hereTwo: "{a} and {b} are here",
+        hereMany: "{n} people here now",
+      },
+      weather: {
+        now: "{deg}° in {city} now",
+        nowCooler: "{deg}° in {city} now, cooler after {time}",
+      },
+      moments: {
+        title: "I'm out",
+        cta: "Say where you are",
+        placeholder: "At the chai place on the corner",
+        start: "Tell people",
+        starting: "Telling people…",
+        live: "Out right now",
+        past: "Earlier",
+        pastNote: "The people who were there can still see this. It clears after two days.",
+        imHereToo: "I'm here too",
+        youAreHere: "You said you're here",
+        end: "I've left",
+        ended: "Ended",
+        untilAbout: "Until about {time}",
+        empty: "Nobody has said where they are just now.",
+        failed: "That didn't send. Please try again.",
+        whoSees: "Who can see this?",
+      },
     access: {
       listLabel: "Getting there",
       f: {
@@ -1648,6 +1731,8 @@ const en = {
       wrongFailed: "That didn't send. Please try again.",
     },
     home: {
+        cityChange: "change",
+        cityTapLabel: "Show places in {city} instead",
       title: "Outdoor",
       intro:
         "Good places to be out and about — parks, markets, courtyards. Check in when you arrive so company can find you. Nothing is tracked, ever: you say where you are, or nobody knows.",
@@ -2064,6 +2149,8 @@ const en = {
     share: "Share",
     photo: "Photo",
     photoChosen: "Photo chosen",
+    voice: "Say it out loud",
+    voiceAgain: "Record it again",
     plain: "Plain",
     swatch: "Colour {n}",
     colourDropped: "This one is long, so it will show plainly — easier to read.",

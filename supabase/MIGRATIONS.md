@@ -175,6 +175,16 @@ choice, the reverse direction from 0037) and an Icon read policy gated on
 it. Verified: fam writes own log, icon sees NOTHING until shared, stranger
 never.
 
+## 0078 — a voice in the feed (saathban-website-38, 2026-08-30) — **APPLIED**
+
+POSTS_SPEC §7. community_posts.audio_path/audio_seconds, plus the two
+buckets: post-audio (as visible as the post it belongs to, plus admins)
+and report-evidence (a copy the reporter hands over, readable by admins
+ONLY — granting admins read on dm-audio would have broken the promise
+that they have no read path into DM threads, QUESTIONS.md C5).
+community_reports gains target_media_bucket/path/kind so the queue has
+something to play.
+
 ## 0077 — what a post can be (saathban-website-38, 2026-08-30) — **APPLIED**
 
 POSTS_SPEC §2-§6, §10. visibility / style_tag / colour / replies_off /

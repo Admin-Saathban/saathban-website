@@ -52,7 +52,11 @@ function pickMime() {
   return null;
 }
 
-export function VoiceRecorder({ disabled, onRecorded }) {
+/* maxSeconds is a PROP because the two surfaces disagree on purpose:
+   a DM voice note may run to two minutes (SPEC.md), a voice POST is
+   capped at one (POSTS_SPEC §7). One recorder with two limits, rather
+   than a second recorder that drifts away from this one. */
+export function VoiceRecorder({ disabled, onRecorded, maxSeconds = MAX_SECONDS, label }) {
   const { t, ts } = useI18n();
   const [state, setState] = useState("idle"); // idle | recording | error
   const [elapsed, setElapsed] = useState(0);
@@ -96,7 +100,16 @@ export function VoiceRecorder({ disabled, onRecorded }) {
     keepRef.current = true;
     chunksRef.current = [];
 
-    const rec = new MediaRecorder(stream, { mimeType: mime });
+    /* 32 kbps mono. MediaRecorder's default came out at roughly 115
+       kbps when measured — about 860KB for a minute — which is a music
+       bitrate being spent on one person talking. Opus at 32k is
+       comfortably clear for speech and is roughly a quarter of the
+       size, which on a free Supabase tier is the difference between a
+       few hundred voice posts and a few thousand, and on a Pakistani
+       mobile connection is the difference between a listener tapping
+       play and giving up. Measured, not assumed: see the storage note
+       in tonight's report. */
+    const rec = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 32000 });
     recRef.current = rec;
     rec.ondataavailable = (e) => {
       if (e.data && e.data.size) chunksRef.current.push(e.data);
@@ -108,7 +121,7 @@ export function VoiceRecorder({ disabled, onRecorded }) {
       setState("idle");
       setElapsed(0);
       if (keepRef.current && blob.size > 0 && seconds >= 1) {
-        onRecorded(blob, Math.min(seconds, MAX_SECONDS), mime.split(";")[0]);
+        onRecorded(blob, Math.min(seconds, maxSeconds), mime.split(";")[0]);
       }
     };
 
@@ -120,7 +133,7 @@ export function VoiceRecorder({ disabled, onRecorded }) {
       const n = Math.round((Date.now() - startedAt) / 1000);
       setElapsed(n);
       // Two minutes, stopped by the app rather than left to run.
-      if (n >= MAX_SECONDS) {
+      if (n >= maxSeconds) {
         try { rec.stop(); } catch { /* already stopping */ }
       }
     }, 250);
@@ -148,7 +161,7 @@ export function VoiceRecorder({ disabled, onRecorded }) {
       >
         <span aria-hidden="true" style={{ fontSize: ts(20) }}>🔴</span>
         <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
-          {mmss(elapsed)} / {mmss(MAX_SECONDS)}
+          {mmss(elapsed)} / {mmss(maxSeconds)}
         </span>
         <button
           type="button"
@@ -182,7 +195,13 @@ export function VoiceRecorder({ disabled, onRecorded }) {
         type="button"
         onClick={start}
         disabled={disabled}
-        aria-label={t("people.thread.voiceCta")}
+        /* The accessible name must be the name a person can SEE. This
+           was a fixed "Voice" while the visible label became "Say it
+           out loud" on the composer, so a screen reader announced one
+           thing and the screen said another — found because a test
+           looked the button up by its accessible name and could not
+           find the words printed on it. */
+        aria-label={label || t("people.thread.voiceCta")}
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           minHeight: 56, padding: "0 16px", borderRadius: 50,
@@ -192,7 +211,7 @@ export function VoiceRecorder({ disabled, onRecorded }) {
         }}
       >
         <span aria-hidden="true" style={{ fontSize: ts(22) }}>🎤</span>
-        {t("people.thread.voiceCta")}
+        {label || t("people.thread.voiceCta")}
       </button>
       {error && (
         <p role="alert" style={{ width: "100%", color: C.brown, fontWeight: 700, fontSize: ts(16), margin: "6px 0 0" }}>

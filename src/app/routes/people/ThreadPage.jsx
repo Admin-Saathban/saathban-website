@@ -25,6 +25,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import FirstMessageBox from "./FirstMessageBox.jsx";
 import { fetchLikes, toggleLike } from "../messages/messagesData.js";
+import { copyToEvidence } from "../community/communityData.js";
 import { VoiceRecorder, VoicePlayer } from "./VoiceNote.jsx";
 import { useSession } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
@@ -319,7 +320,18 @@ export default function ThreadPage() {
 
   const reportMessage = async (m) => {
     try {
-      await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null);
+      /* A reported VOICE note has no words to quote. The moderation
+         queue used to receive "(no excerpt captured)" and nothing else,
+         so a complaint about audio could not be judged at all. The
+         reporter hands over a copy — they can read their own thread,
+         the moderator cannot, and that asymmetry is the whole reason
+         the copy exists rather than an admin read path (C5). */
+      let media = null;
+      if (m.audio_path) {
+        const copied = await copyToEvidence("dm-audio", m.audio_path);
+        if (copied) media = { bucket: "report-evidence", path: copied, kind: "audio" };
+      }
+      await fileReport(myId, "dm_message", m.id, m.sender_id, m.body, null, media);
       pushToast(t("feedback.reported"));
     } catch {
       setError(t("people.thread.sendError"));

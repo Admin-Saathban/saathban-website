@@ -211,6 +211,10 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
+  /* 3, 2, 1, then 0 — which means "over, show the greeting". */
+  const [countdown, setCountdown] = useState(null);
+  /* Did this screen watch the game leave the lobby? */
+  const wasLobby = useRef(false);
   const [bubbles, setBubbles] = useState([]);
   const seenChat = useRef(new Set());
   const startedOnce = useRef(false);
@@ -219,14 +223,46 @@ export default function LudoSession() {
      "Khelte hain!" the moment play begins — once, not on every poll. */
   useEffect(() => {
     if (game?.status === "lobby") {
+      wasLobby.current = true;
       setCeremony((c) => (c === null ? "setting" : c));
       return undefined;
     }
     if (game?.status === "playing" && !startedOnce.current) {
       startedOnce.current = true;
+      /* COUNT THE TABLE IN ONLY WHEN THE TABLE IS ACTUALLY STARTING.
+
+         "3… 2… 1…" over a dimmed board is right when the last seat
+         fills. It is wrong when someone reopens a game they have been
+         playing for ten minutes, and this effect cannot tell the
+         difference on its own: startedOnce is per-mount, so every
+         return to the screen looked like a beginning.
+
+         Two ways to be sure it is a beginning — we watched it leave
+         the lobby, or the table says it started seconds ago. The
+         second covers the person who arrives by link at the moment
+         play begins and never saw the lobby at all. */
+      const sawLobby = wasLobby.current;
+      const startedMs = game.started_at ? Date.now() - new Date(game.started_at).getTime() : Infinity;
+      if (!sawLobby && !(startedMs >= 0 && startedMs < 8000)) {
+        /* Mid-game arrival. No ceremony, no dimmed board — they are
+           here to play, not to be welcomed to something already in
+           progress. */
+        return undefined;
+      }
+      /* §9: THE COUNTDOWN. Three, two, one over a dimmed board, then
+         the table's own greeting. It is not decoration — a game that
+         begins the instant the last seat fills begins without the
+         people at it, and three seconds is how long it takes to look
+         up from a phone and notice that something has started. */
       setCeremony("start");
-      const h = setTimeout(() => setCeremony(null), 1800);
-      return () => clearTimeout(h);
+      setCountdown(3);
+      const ticks = [
+        setTimeout(() => setCountdown(2), 800),
+        setTimeout(() => setCountdown(1), 1600),
+        setTimeout(() => setCountdown(0), 2400),
+        setTimeout(() => setCeremony(null), 3400),
+      ];
+      return () => ticks.forEach(clearTimeout);
     }
     if (game?.status !== "lobby") setCeremony((c) => (c === "setting" ? null : c));
     return undefined;
@@ -301,18 +337,43 @@ export default function LudoSession() {
 
   /* Roll with a tumble: the faces churn while the request is in
      flight and settle on whatever the server actually threw. The
-     animation is decoration over a real wait, never a fake one. */
+     animation is decoration over a real wait, never a fake one.
+
+     LUDO_MOTION_SPEC §4: SEVEN FACES OVER 700ms, DECELERATING. It was
+     a flat 80ms interval, which reads as a slot machine rather than
+     as a thrown die — a real die arrives at its answer, it does not
+     stop dead. The gaps below sum to 700 and grow as they go, so the
+     faces visibly slow into the result.
+
+     Two honesties are kept. The animation never finishes before the
+     server has answered: if the request is still in flight after the
+     seven faces, the churn continues at the slowest gap rather than
+     settling on a number nobody has rolled yet. And it never CUTS
+     short either — a reply that arrives in 90ms still gets the full
+     tumble, because a die that stops the instant you let go of it
+     looks like it was never thrown. */
+  const TUMBLE_GAPS = [55, 65, 80, 95, 115, 140, 150]; // 700ms
   const doRoll = async () => {
     if (rolling || busy) return;
     setRolling(true);
-    const churn = setInterval(
-      () => setTumble([1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]),
-      80
-    );
+
+    let stopped = false;
+    const face = () => 1 + Math.floor(Math.random() * 6);
+    const churn = (i) => {
+      if (stopped) return;
+      setTumble([face(), face()]);
+      const gap = TUMBLE_GAPS[Math.min(i, TUMBLE_GAPS.length - 1)];
+      window.setTimeout(() => churn(i + 1), gap);
+    };
+    churn(0);
+    const floor = new Promise((r) => window.setTimeout(r, 700));
+
     try {
-      await act(() => roll(game.id));
+      /* Both, not either: the throw takes as long as the slower of
+         the animation and the answer. */
+      await Promise.all([act(() => roll(game.id)), floor]);
     } finally {
-      clearInterval(churn);
+      stopped = true;
       setRolling(false);
     }
   };
@@ -948,19 +1009,56 @@ export default function LudoSession() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
-                background: "#fffdf5cc",
+                background: countdown > 0 ? "#2f2a24bb" : "#fffdf5cc",
                 borderRadius: 20,
                 pointerEvents: "none",
                 textAlign: "center",
                 padding: 16,
               }}
             >
-              <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(30), fontWeight: 700, color: C.green }}>
-                {t("ludo.ceremony.start")}
-              </p>
-              <p style={{ margin: 0, fontSize: ts(17), color: C.textMuted }}>
-                {t("ludo.ceremony.startNote")}
-              </p>
+              {countdown > 0 ? (
+                <>
+                  {/* THE RIBBON. A band across the dimmed board with
+                      the count sitting on it — the shape a banner has
+                      at a gathering, which is what this moment is. */}
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      background: C.green,
+                      color: C.cream,
+                      padding: "8px 0",
+                      textAlign: "center",
+                      fontSize: ts(A11Y.minBodyPx),
+                      fontWeight: 700,
+                      boxShadow: "0 2px 10px rgba(74,58,34,0.25)",
+                    }}
+                  >
+                    {t("ludo.ceremony.countdownBanner")}
+                  </div>
+                  <p
+                    aria-live="polite"
+                    style={{
+                      margin: "10px 0 0",
+                      fontFamily: meta.fonts.heading,
+                      fontSize: ts(64),
+                      lineHeight: 1,
+                      fontWeight: 800,
+                      color: C.green,
+                    }}
+                  >
+                    {countdown}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(30), fontWeight: 700, color: C.green }}>
+                    {t("ludo.ceremony.start")}
+                  </p>
+                  <p style={{ margin: 0, fontSize: ts(17), color: C.textMuted }}>
+                    {t("ludo.ceremony.startNote")}
+                  </p>
+                </>
+              )}
             </div>
           )}
 

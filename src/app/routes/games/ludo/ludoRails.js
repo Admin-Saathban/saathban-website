@@ -175,6 +175,14 @@ export async function fetchSession(sessionId) {
     join_code: session.join_code,
     house_rules: session.house_rules,
     created_by: session.created_by,
+    /* Named here deliberately, per the note above: §9 asks whether
+       the table started SECONDS ago, to tell a real beginning from
+       someone reopening a game in progress. Unmapped it would be
+       undefined, the comparison would quietly be false forever, and
+       the countdown would simply never appear for anyone arriving by
+       link — a silent no-op, which is exactly the failure this
+       adapter comment warns about. */
+    started_at: session.started_at || null,
     rematch_id: session.rematch_id,
     target_seats: session.seats_total,
     current_seat: session.current_seat != null ? session.current_seat - 1 : null,

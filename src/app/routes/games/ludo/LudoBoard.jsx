@@ -113,11 +113,13 @@ export const BOARD_MOTION_CSS = `
      by cx/cy, so a scale pivots on the SVG origin and throws them off
      the board. Stroke width and opacity both animate safely and pivot
      on nothing. */
+  /* §2: 1.2s ease-in-out, and it glows rather than blinks — a
+     white ring breathing between a suggestion and a statement. */
   @keyframes sb-pulse {
-    0%, 100% { stroke-opacity: 0.55; stroke-width: 3;   }
-    50%      { stroke-opacity: 1;    stroke-width: 4.6; }
+    0%, 100% { stroke-opacity: 0.35; stroke-width: 3.5; }
+    50%      { stroke-opacity: 0.95; stroke-width: 6.5; }
   }
-  .sb-pulse { animation: sb-pulse 1150ms ease-in-out infinite; }
+  .sb-pulse { animation: sb-pulse 1200ms ease-in-out infinite; }
 
   /* The trail fades itself out. No JS timer decides when a cell stops
      glowing — the animation ends and the element is removed a beat
@@ -923,10 +925,18 @@ export default function LudoBoard({
               on a div around the board (LudoSession, 38b07df) and
               inherit, so nothing is plumbed through props. Table
               themes own the surface; seats own their own colours. */}
+          {/* §1: TRACK CELLS ARE WHITE WITH THIN DARK GRIDLINES —
+              "high contrast, easy for old eyes. Not tinted, not
+              textured." They were a cream gradient, which is warmer
+              and is the wrong trade here: a goti has to be findable
+              on this surface at arm's length by someone whose sight
+              is the reason the whole app exists. White loses a little
+              warmth and wins the contrast, and the warmth has plenty
+              of other places to live on this board — the frame, the
+              zones, the paper behind it all. */}
           <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
-            <stop offset="55%" stopColor="var(--sb-table-cell, #FDFAF3)" />
-            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #F2E9D8)" />
+            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FCFCFB)" />
           </linearGradient>
           {/* the gentle press: a soft dark line inside the top edge */}
           <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
@@ -1010,9 +1020,11 @@ export default function LudoBoard({
               bottom, so a track square is pressed into the board
               rather than painted on it. */}
           <linearGradient id="sb-bevel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
             <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0" />
-            <stop offset="100%" stopColor="#7A6238" stopOpacity="0.28" />
+            {/* lighter than it was: on a white cell the old 0.28 brown
+                shadow put the tint back that §1 just took out */}
+            <stop offset="100%" stopColor="#7A6238" stopOpacity="0.13" />
           </linearGradient>
         </defs>
 
@@ -1118,8 +1130,9 @@ export default function LudoBoard({
                    follows gives it its dimension instead, and the
                    colour stays the arm's own, unmixed. */
                 fill={safeSeat >= 0 ? SEAT_COLORS[safeSeat] : "url(#sb-cell)"}
-                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #E2D6BE)"}
-                strokeWidth={safeSeat >= 0 ? 1.8 : 1}
+                stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #3A342A)"}
+                strokeWidth={safeSeat >= 0 ? 1.8 : 0.9}
+                strokeOpacity={safeSeat >= 0 ? 1 : 0.55}
               />
               {/* The bevel, over every cell: a highlight along the top
                   edge and a shadow along the bottom. Drawn as an
@@ -1288,6 +1301,42 @@ export default function LudoBoard({
             stroke={C.brown}
             strokeWidth={2.5}
           />
+          {/* THE SAATHBAN MARK AT THE EXACT CENTRE (§1).
+
+              Sized so it never competes with a goti resting there:
+              the home square is 3 cells across and this is under one
+              of them, at half opacity, drawn UNDER nothing — it is
+              the last thing in the centre group, so a goti that
+              finishes on the middle sits on top of it rather than
+              behind it.
+
+              Cropped to the mark's own ink, like everything else that
+              draws this asset: /logo-sb.png is a 2000-square of cream
+              with the monogram in a 1011x775 box at 494,632. Drawn
+              raw it would be a cream square with a speck in it. */}
+          {(() => {
+            const H = CELL * 0.62;                 // the mark's height
+            const k = H / 775;                      // file units -> board units
+            const W = 1011 * k;
+            const cx0 = 7.5 * CELL - W / 2;
+            const cy0 = 7.5 * CELL - H / 2;
+            return (
+              <g opacity={0.5} aria-hidden="true">
+                <clipPath id="sb-mark-clip">
+                  <rect x={cx0} y={cy0} width={W} height={H} rx={2} />
+                </clipPath>
+                <image
+                  href="/logo-sb.png"
+                  x={cx0 - 494 * k}
+                  y={cy0 - 632 * k}
+                  width={2000 * k}
+                  height={2000 * k}
+                  clipPath="url(#sb-mark-clip)"
+                  style={{ mixBlendMode: "multiply" }}
+                />
+              </g>
+            );
+          })()}
           {/* an inner bright rim, so the pedestal has a lip */}
           <rect
             x={6 * CELL + 5}
@@ -1519,14 +1568,20 @@ export default function LudoBoard({
                 )}
                 {canTap && (
                   <circle
+                    /* §2: a WHITE GLOW RING on the pieces you may
+                       move, 1.2s. It was a dashed brown ring, which
+                       on a board that is now mostly saturated colour
+                       read as one more piece of board furniture. A
+                       white halo reads as light rather than as ink,
+                       and light is the thing a board does not
+                       otherwise have. */
                     className="sb-pulse"
                     cx={cx}
                     cy={cy}
                     r={24}
                     fill="none"
-                    stroke={C.brown}
-                    strokeWidth={3}
-                    strokeDasharray="6 5"
+                    stroke="#FFFFFF"
+                    strokeWidth={5}
                   />
                 )}
                 {/* THE HOP. A key that changes every cell is what

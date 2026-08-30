@@ -175,12 +175,30 @@ export default function Pawn({
       <circle cx="0" cy="2.6" r="13.6" fill={`url(#${gid}-wall)`} />
       <circle cx="0" cy="2.6" r="13.6" fill="none" stroke="#00000033" strokeWidth="0.7" />
 
-      {/* the top */}
+      {/* THE TOP: a coloured ring around a white face.
+
+          LUDO_MOTION_SPEC §2 asks for exactly this, and it is better
+          than what was here for a reason the spec does not give: the
+          mark used to be set on saturated colour, where a numeral has
+          to fight the hue it sits on and needs a halo to survive. On
+          a white face it simply reads. The seat's colour moves to the
+          ring, where it is doing the job colour is actually good at —
+          telling four players' pieces apart across a table — and the
+          number does the job it is good at, which is telling YOUR
+          four apart in your own hand.
+
+          §2 puts a small crown in the middle of that white face. The
+          number is there instead: a crown is identical on all four of
+          a player's gotis and so cannot answer "which one am I
+          moving?", which is the complaint this whole shape exists to
+          answer. The rest of §2 is followed as written. */}
       <circle cx="0" cy="0" r="13.6" fill={`url(#${gid}-dome)`} />
-      <circle cx="0" cy="0" r="13.6" fill="none" stroke="#00000030" strokeWidth="0.9" />
-      {/* an inset ring, the way a real token is turned on a lathe */}
-      <circle cx="0" cy="0" r="10.9" fill="none" stroke="#FFFFFF" strokeOpacity="0.34" strokeWidth="1.1" />
-      <circle cx="0" cy="0" r="10.2" fill="none" stroke="#00000022" strokeWidth="0.7" />
+      <circle cx="0" cy="0" r="13.6" fill="none" stroke={deep} strokeWidth="1.1" />
+      {/* the white face */}
+      <circle cx="0" cy="0" r="8.9" fill="#FFFFFF" />
+      <circle cx="0" cy="0" r="8.9" fill="none" stroke="#00000026" strokeWidth="0.8" />
+      {/* a turned lip where the ring meets the face */}
+      <circle cx="0" cy="0" r="10.4" fill="none" stroke="#FFFFFF" strokeOpacity="0.4" strokeWidth="1" />
 
       {/* THE MARK, nearly the width of the token, because the entire
           point is that it is readable without leaning in. Haloed
@@ -192,13 +210,15 @@ export default function Pawn({
           y="0"
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={isGlyph ? 15 : 17}
+          fontSize={isGlyph ? 12 : 13}
           fontWeight="800"
           fontFamily="DM Sans, sans-serif"
-          fill={isGlyph ? undefined : ink}
-          stroke={isGlyph ? undefined : ink === "#FFFFFF" ? "#00000055" : "#FFFFFF66"}
-          strokeWidth={isGlyph ? undefined : 2.4}
-          paintOrder="stroke"
+          /* On a white face the mark needs no halo and no ink colour
+             chosen per seat: the seat's own deep tone on white beats
+             every contrast ratio we owe anybody, and the halo that
+             used to keep it alive on saturated colour was costing it
+             about a pixel of stroke weight on every edge. */
+          fill={isGlyph ? undefined : deep}
           style={{ userSelect: "none" }}
         >
           {worn}

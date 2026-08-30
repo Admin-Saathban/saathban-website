@@ -122,6 +122,11 @@ const en = {
     posts: "Posts",
     nothing: "Nothing matched that.",
     nothingHint: "Try a shorter word, or just a first name.",
+    /* The line BEFORE anybody has typed, which is a different job from
+       the line after a search found nothing. The empty screen was
+       reusing "Try a shorter word" — advice about a search that had
+       not happened yet. */
+    beforeTyping: "Look for a neighbour by name, a group to join, or a park nearby.",
     /* The action lives on the row: finding a thing and acting on it
        is one screen, not two. */
     join: "Join",

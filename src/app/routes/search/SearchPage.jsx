@@ -285,8 +285,13 @@ export default function SearchPage() {
                 </Group>
               )}
               {recents.length === 0 && suggested.length === 0 && (
+                /* Nothing to suggest yet — no recents on this device
+                   and no public groups in this community. Then the
+                   screen says what search is FOR, which is a different
+                   job from "try a shorter word": that is advice about
+                   a search that has not happened yet. */
                 <p style={{ fontSize: ts(16), color: C.textMuted, lineHeight: 1.6, margin: "8px 0 0" }}>
-                  {t("search.nothingHint")}
+                  {t("search.beforeTyping")}
                 </p>
               )}
             </>

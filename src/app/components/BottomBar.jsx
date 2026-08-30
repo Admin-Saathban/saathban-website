@@ -90,13 +90,19 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
              the person who chose the largest text than a slightly
              smaller label they can actually read.
 
-             Capped rather than frozen: it still grows from 15 to 18px
-             across the four settings, which is the range that fits.
+             I capped it at 1.2x first and that was still wrong: 18px
+             ellipsed "Out & about" and took the other four with it.
+             Five labels in a 390px strip fit at 15px and at no size
+             above it, so the bar label does not scale at all. Measured
+             with scrollWidth against clientWidth rather than eyeballed,
+             because overflow:hidden means a clipped label never
+             reports as overflowing the viewport and every edge
+             assertion stayed green through all of it.
              Everything the bar leads TO obeys the setting in full,
              and the icon plus the accessible name carry the meaning
              either way — this is the one place §3 already allowed to
              sit under the body floor for exactly this reason. */
-          fontSize: "calc(15px * min(var(--sb-text-scale, 1), 1.2))",
+          fontSize: 15,
           lineHeight: 2.45,
           maxWidth: "100%",
           overflow: "hidden",

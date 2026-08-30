@@ -26,11 +26,12 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
+import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
 import { touchPresence } from "./messagesData.js";
 import ChatsList from "./ChatsList.jsx";
 import RequestsList from "./RequestsList.jsx";
@@ -112,6 +113,26 @@ export default function MessagesWorld() {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
+  const { state } = useLocation();
+
+  /* MOTION_SPEC §1: this world arrives from the side that was touched.
+     The side is decided at DISPATCH — MessagesButton passes the logical
+     "end", openFullScreen resolves it against the reading direction — so
+     switching language mid-session still reverses the animation actually
+     watched, which is why this reads location state rather than the DOM.
+
+     The fallback is the part arrivalClass gets wrong. It defaults to
+     sb-full-right, commented "the common case" — true in English only. In
+     Urdu the header mirrors and the messages icon sits on the LEFT, so a
+     stateless arrival (a refresh, a pasted URL, any navigate that skips
+     openFullScreen) would animate in from the wrong edge. That is the
+     same hard-coded physical side the navigation lane just removed from
+     four call sites, surviving one layer in as the helper's default.
+     Reported to them; until it moves, this screen supplies the missing
+     half rather than inheriting the bug. */
+  const arrival = state?.sbFrom
+    ? arrivalClass(state)
+    : arrivalClass({ sbFrom: meta.dir === "rtl" ? "left" : "right" });
 
   /* §5.4 presence: touched while the world is open, and again on a
      slow interval. No socket, no heartbeat storm — see 0076. */
@@ -152,8 +173,12 @@ export default function MessagesWorld() {
         flexDirection: "column",
         fontFamily: meta.fonts.body,
       }}
-      className="sb-push"
+      className={arrival}
     >
+      {/* Both style blocks on purpose: the full-screen arrival lives in
+          components/motion.jsx, the sheets this world opens live in
+          lib/motion.jsx. Two files, one vocabulary. */}
+      <FullScreenStyles />
       <MotionStyles />
 
       {/* The world's own header: out, its name, and the pencil (§3). */}

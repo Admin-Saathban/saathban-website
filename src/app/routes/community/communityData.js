@@ -207,6 +207,22 @@ export async function createPost(userId, body, file, opts = {}) {
     .select("id")
     .single();
   if (error) {
+    /* AWAIT, THEN THROW — and the order is load-bearing, not incidental.
+
+       A refused insert has already uploaded its recording, so without this
+       every refusal leaves an orphan file nobody can reach and nobody is
+       billed to notice. It is deleted first, and only then does the throw
+       leave: the throw is what PostComposer catches to dispatch
+       saath:post-failed, which is what withdraws the optimistic row from
+       the feed. So the file is gone BEFORE the row the person can see
+       disappears.
+
+       If this remove is ever moved into a finally, or stops being awaited,
+       that ordering inverts — the row vanishes while the upload is still
+       being deleted, and a failure in between strands the file with no
+       error path left to catch it. The navigation lane raised exactly this
+       hazard about their event; it is written here because the cleanup is
+       this file's, not theirs. */
     if (audio_path) {
       await supabase.storage.from("post-audio").remove([audio_path]).catch(() => {});
     }

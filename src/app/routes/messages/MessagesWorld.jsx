@@ -36,7 +36,7 @@
    ever written.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y, CHIP } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -57,6 +57,7 @@ import MessagesMenu from "./MessagesMenu.jsx";
 import ArchivedChats from "./ArchivedChats.jsx";
 import BlockedPeople from "./BlockedPeople.jsx";
 import Thread from "../community/Thread.jsx";
+import useShutter from "../../components/useShutter.js";
 
 export const WORLD_BAR_HEIGHT = 66;
 
@@ -171,6 +172,22 @@ export default function MessagesWorld() {
      where a count would be a debt. Lifted here so the badge and the
      screen cannot disagree. */
   const [pending, setPending] = useState(0);
+
+  /* The world scrolls inside its own <main>, not the window, so the
+     shutter is given that element to watch. */
+  const worldScroller = useRef(null);
+  const worldNavRef = useRef(null);
+  const [worldNavH, setWorldNavH] = useState(0);
+  const worldShut = useShutter(worldScroller);
+  useEffect(() => {
+    const n = worldNavRef.current;
+    if (!n) return undefined;
+    const read = () => setWorldNavH(n.offsetHeight);
+    read();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(read) : null;
+    ro?.observe(n);
+    return () => ro?.disconnect();
+  }, []);
 
   return (
     <div
@@ -330,12 +347,25 @@ export default function MessagesWorld() {
           surface revalues it — the failure this week keeps producing. */}
       <nav
         aria-label={t("msg.title")}
+        ref={worldNavRef}
         style={{
           display: "flex",
           borderBottom: `1px solid ${C.navEdge}`,
           background: C.bg,
           flexShrink: 0,
+          /* SHUTTERS WITH THE HEADER, the same rule as every other bar
+             (MOTION §5). It travels its own height on a negative margin
+             rather than a transform, because these two are in the flex
+             column above a scrolling <main>: a transform would slide the
+             row up and leave the hole it came out of, while a margin
+             genuinely gives the space back and the list grows into it.
 
+             The height is measured rather than typed. Text size is a
+             setting in this app and Nastaliq needs a taller line box
+             than Latin at the same nominal size, so a constant here
+             would be wrong in one language, at one size, silently. */
+          marginTop: worldShut ? -worldNavH : 0,
+          transition: "margin-top 180ms ease-out",
         }}
       >
         <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
@@ -344,7 +374,7 @@ export default function MessagesWorld() {
         <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
       </nav>
 
-      <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+      <main ref={worldScroller} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}>
           <Routes>
             <Route index element={<ChatsList />} />

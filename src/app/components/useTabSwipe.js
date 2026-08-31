@@ -1,53 +1,62 @@
 /* ════════════════════════════════════════════════
-   Horizontal swipe moves between the five tabs, in bar order.
+   Horizontal swipe moves between the five tabs — AS A DRAG.
 
-   Instagram's gesture, and it is worth having for the same reason it is
-   worth having there: the bar is at the bottom of a 390px screen and a
-   thumb already lives at the bottom of the screen. Moving between two
-   neighbouring tabs should not require aiming.
+   The pane follows the finger and settles. The first version of this
+   jumped: it watched touchstart and touchend, decided at the end, and
+   navigated. That is a gesture the app only reacts to once it is over,
+   so there is no moment where the person can see what will happen and
+   change their mind by dragging back — which is the entire reason the
+   gesture is worth having. A jump is a swipe-shaped button.
+
+   WHAT MOVES IS `main`, not the screen. Each route renders its own
+   header and the shell owns the bars, so translating the route subtree
+   would drag the header sideways with the content. `main` is the
+   content of every screen in this app, so the drag is expressed as a
+   custom property the shell sets and a rule in the motion vocabulary
+   reads. Header stays put, bars stay put, content moves — which is what
+   the gesture means.
 
    THE ORDER IS THE BAR'S ORDER, taken from the same barItems() the bar
    renders, never a second list. A swipe that disagrees with the tabs
    about what comes next is worse than no swipe, and two lists that must
    agree are two lists that eventually will not.
 
-   RTL MIRRORS. In Urdu the bar reads right to left, so the gesture does
-   too: dragging towards the start edge advances. Direction is read off
-   the document rather than assumed, for the same reason the drawer
-   origin is — an empty `dir` reads as `ltr`, which is a silent wrong
-   answer rather than a loud one.
+   RTL MIRRORS, read off the document rather than assumed: an empty
+   `dir` reads as "ltr", which is a silent wrong answer.
+
+   REDUCED MOTION GETS NO DRAG AT ALL. Not a faster drag — none. The
+   gesture still works and still changes tab, instantly, on release.
+   Somebody who has asked the system for less movement has asked for
+   less movement, and a pane tracking their finger is the movement.
 
    ─── WHAT IT REFUSES TO DO ───
 
-   TAB-SWIPE YIELDS. Anything that scrolls or swipes horizontally INSIDE
-   a screen wins the gesture outright: a carousel, a horizontal chip
-   row, a swipeable chat row, a slider. Two of these were already in the
-   app before this hook existed, and a person dragging a carousel does
-   not expect to leave the screen.
+   TAB-SWIPE YIELDS. Anything that scrolls or drags horizontally INSIDE
+   a screen wins the gesture outright: a carousel, a chip row, a
+   swipeable chat row, a slider. The yield is automatic rather than
+   opt-in — it walks up from the touch target for an ancestor that
+   actually scrolls sideways — so a lane does not have to know this hook
+   exists in order to be safe from it. That matters because nearly every
+   surface it must yield to belongs to another lane. `data-sb-swipe` is
+   the explicit marker for a surface that drags without being a
+   scroller, which measurement cannot detect.
 
-   The yield is automatic rather than opt-in. It walks up from the touch
-   target looking for an ancestor that actually scrolls sideways —
-   scrollWidth wider than clientWidth, with overflow-x set to something
-   that moves. That way a lane does not have to know this hook exists in
-   order to be safe from it, which matters because most of the surfaces
-   it has to yield to belong to other lanes. `data-sb-swipe` is there as
-   an explicit marker for a surface that handles its own drag without
-   being a scroller (a swipeable row, say), since that kind cannot be
-   detected by measurement.
-
-   Text selection and form fields are excluded too: dragging across a
+   Text selection and form fields are excluded: dragging across a
    message to select it is a horizontal drag, and it must not turn the
    page.
    ════════════════════════════════════════════════ */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { wantsLessMotion } from "./motion.jsx";
 
-/* A swipe has to be decisively sideways. 64px stops a sloppy tap from
-   turning the page; the 1.6 ratio stops a diagonal scroll from doing
-   it, which is the one that actually happens on a feed. */
-const DISTANCE = 64;
-const SIDEWAYS = 1.6;
+/* Below ENGAGE the gesture is still undecided and the page scrolls
+   normally; past it the drag owns the finger. 12px is small enough to
+   feel immediate and large enough that a tap never starts a drag. */
+const ENGAGE = 12;
+/* How far it has to travel to commit, as a share of the screen. */
+const COMMIT = 0.28;
+const SETTLE_MS = 200;
 
 function scrollsSideways(el) {
   for (let n = el; n && n !== document.body; n = n.parentElement) {
@@ -61,62 +70,132 @@ function scrollsSideways(el) {
 export default function useTabSwipe(items, enabled = true) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  /* The live values the listeners read. Refs rather than state: a drag
+     updates every frame, and re-rendering the whole shell sixty times a
+     second to move one element is how a smooth gesture becomes a janky
+     one. */
+  const st = useRef({ x: 0, y: 0, dx: 0, on: false, dead: true, idx: -1 });
 
   useEffect(() => {
     if (!enabled || !items || items.length < 2) return undefined;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
 
-    let x0 = null, y0 = null, dead = false;
-
-    const start = (e) => {
-      /* One finger only: two is a pinch or a browser gesture, and
-         neither of those is asking to change tab. */
-      if (e.touches.length !== 1) { dead = true; return; }
-      const t = e.touches[0];
-      const el = e.target instanceof Element ? e.target : null;
-      dead =
-        !el ||
-        scrollsSideways(el) ||
-        !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
-      x0 = t.clientX;
-      y0 = t.clientY;
+    const root = document.documentElement;
+    const setDrag = (px) => root.style.setProperty("--sb-drag", px + "px");
+    const clear = () => {
+      root.classList.remove("sb-dragging", "sb-settling");
+      root.style.removeProperty("--sb-drag");
     };
 
-    const end = (e) => {
-      const sx = x0, sy = y0;
-      x0 = null; y0 = null;
-      if (dead || sx == null) { dead = false; return; }
-      dead = false;
-      const t = e.changedTouches?.[0];
-      if (!t) return;
-      const dx = t.clientX - sx;
-      const dy = t.clientY - sy;
-      if (Math.abs(dx) < DISTANCE || Math.abs(dx) < Math.abs(dy) * SIDEWAYS) return;
-
-      /* Longest match wins: /app/games/ludo must resolve to the Games
-         tab, and a plain indexOf on the first prefix would not. */
+    /* Longest match wins: /app/games/ludo must resolve to the Games tab,
+       and a plain "starts with" on the first entry would not. */
+    const indexOfPath = () => {
       let here = -1, best = -1;
       items.forEach((it, i) => {
         if (pathname === it.to || pathname.startsWith(it.to + "/")) {
           if (it.to.length > best) { best = it.to.length; here = i; }
         }
       });
-      if (here < 0) return;
+      return here;
+    };
 
-      const rtl = (document.querySelector("[dir]")?.getAttribute("dir") || "ltr") === "rtl";
-      /* Dragging the content leftwards brings the NEXT tab in from the
-         right, which is the direction every phone already teaches. */
-      const forward = rtl ? dx > 0 : dx < 0;
-      const to = here + (forward ? 1 : -1);
-      if (to < 0 || to >= items.length) return;   // the ends do not wrap
-      navigate(items[to].to);
+    const rtl = () => (document.querySelector("[dir]")?.getAttribute("dir") || "ltr") === "rtl";
+    /* Dragging the content leftwards brings the NEXT tab in from the
+       right, which is what every phone already teaches. */
+    const neighbour = (dx) => {
+      const forward = rtl() ? dx > 0 : dx < 0;
+      return st.current.idx + (forward ? 1 : -1);
+    };
+
+    const start = (e) => {
+      const s = st.current;
+      s.on = false; s.dx = 0;
+      if (e.touches.length !== 1) { s.dead = true; return; }
+      const el = e.target instanceof Element ? e.target : null;
+      s.dead =
+        !el ||
+        scrollsSideways(el) ||
+        !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
+      s.idx = indexOfPath();
+      if (s.idx < 0) s.dead = true;
+      s.x = e.touches[0].clientX;
+      s.y = e.touches[0].clientY;
+    };
+
+    const move = (e) => {
+      const s = st.current;
+      if (s.dead || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - s.x;
+      const dy = e.touches[0].clientY - s.y;
+
+      if (!s.on) {
+        /* Undecided: a mostly-vertical drag is a scroll and this hook
+           must let go of it for good, not keep testing every frame. */
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; return; }
+        if (Math.abs(dx) < ENGAGE) return;
+        s.on = true;
+        if (!wantsLessMotion()) {
+          root.classList.add("sb-dragging");
+          root.classList.remove("sb-settling");
+        }
+      }
+
+      /* RUBBER BAND AT THE ENDS. The first and last tabs do not wrap, so
+         the pane resists rather than refusing: a dead gesture reads as a
+         broken screen, a heavy one reads as an edge. */
+      const n = neighbour(dx);
+      const resist = n < 0 || n >= items.length ? 0.28 : 1;
+      s.dx = dx * resist;
+
+      if (!wantsLessMotion()) {
+        setDrag(s.dx);
+        /* Owns the finger now, so the page must stop scrolling under it.
+           Only once ENGAGED — before that the listener is passive in
+           spirit and vertical scrolling is untouched. */
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+
+    const end = () => {
+      const s = st.current;
+      const { on, dx, idx, dead } = s;
+      s.on = false; s.dead = true;
+      if (dead || !on) { clear(); return; }
+
+      const n = neighbour(dx);
+      const far = Math.abs(dx) >= Math.min(window.innerWidth * COMMIT, 140);
+      const going = far && n >= 0 && n < items.length && idx >= 0;
+
+      if (wantsLessMotion()) {
+        clear();
+        if (going) navigate(items[n].to);
+        return;
+      }
+
+      /* SETTLE, both ways. Committing finishes the movement the finger
+         started; abandoning returns it. Either way the pane arrives
+         somewhere under its own power rather than snapping. */
+      root.classList.remove("sb-dragging");
+      root.classList.add("sb-settling");
+      setDrag(going ? (dx < 0 ? -window.innerWidth : window.innerWidth) : 0);
+
+      window.setTimeout(() => {
+        clear();
+        if (going) navigate(items[n].to);
+      }, going ? SETTLE_MS : SETTLE_MS + 40);
     };
 
     document.addEventListener("touchstart", start, { passive: true });
+    /* Not passive: once the drag is engaged it has to stop the page
+       scrolling, and a passive listener may not preventDefault. */
+    document.addEventListener("touchmove", move, { passive: false });
     document.addEventListener("touchend", end, { passive: true });
+    document.addEventListener("touchcancel", end, { passive: true });
     return () => {
       document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", end);
+      document.removeEventListener("touchcancel", end);
+      clear();
     };
   }, [items, enabled, pathname, navigate]);
 }

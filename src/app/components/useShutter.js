@@ -34,7 +34,15 @@ const SHOW_AFTER = 4;
 /* Below this multiple of the viewport, the bars never leave. */
 const ENOUGH_TO_SCROLL = 1.5;
 
-export default function useShutter() {
+/* `scrollerRef` is optional and the default is the window, which is what
+   every screen in the app scrolls. The Messages world does not: it is a
+   fixed box whose content scrolls inside its own <main>, so window
+   scrollY never moves there and the shutter would simply never fire.
+
+   Passing the element rather than sniffing for one: a hook cannot see
+   which of its callers is inside a fixed container, and guessing would
+   be another absent-thing-reads-as-a-value. The caller knows. */
+export default function useShutter(scrollerRef) {
   const [hidden, setHidden] = useState(false);
   const lastY = useRef(0);
   const anchor = useRef(0);
@@ -47,12 +55,16 @@ export default function useShutter() {
        this ran can be five by the time anybody scrolls it. Measuring
        once is how "never hides on a short page" turns into "never
        hides". */
-    const tallEnough = () =>
-      document.documentElement.scrollHeight > window.innerHeight * ENOUGH_TO_SCROLL;
+    const el = () => scrollerRef?.current || null;
+    const posY = () => (el() ? el().scrollTop : window.scrollY);
+    const viewH = () => (el() ? el().clientHeight : window.innerHeight);
+    const fullH = () => (el() ? el().scrollHeight : document.documentElement.scrollHeight);
+
+    const tallEnough = () => fullH() > viewH() * ENOUGH_TO_SCROLL;
 
     const read = () => {
       frame = 0;
-      const y = Math.max(0, window.scrollY);
+      const y = Math.max(0, posY());
       const dy = y - lastY.current;
 
       if (!tallEnough()) {
@@ -89,12 +101,19 @@ export default function useShutter() {
 
     lastY.current = Math.max(0, window.scrollY);
     anchor.current = lastY.current;
-    window.addEventListener("scroll", onScroll, { passive: true });
+    /* LISTEN WHERE IT SCROLLS, not only where it is read. My first pass
+       taught this hook to READ an element and left it listening to the
+       window — and a scroll event does not bubble up from an element, so
+       the world scrolled, the numbers were all available, and nothing
+       ever fired. Reading and listening are two jobs; changing one of
+       them is changing half a hook. */
+    const target = scrollerRef?.current || window;
+    target.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      target.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [hidden]);
+  }, [hidden, scrollerRef]);
 
   return hidden;
 }

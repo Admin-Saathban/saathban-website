@@ -17,6 +17,7 @@
    the control that definitely works directly above the sentence.
    ════════════════════════════════════════════════ */
 
+import { GAME } from "./gameSurface.js";
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -290,9 +291,15 @@ export function SoundButton({ onClick, compact = false }) {
         minWidth: compact ? A11Y.minTapTargetPx : undefined,
         justifyContent: "center",
         borderRadius: 50,
-        border: `2px solid ${C.warmGray}`,
-        background: C.white,
-        color: C.textMain,
+        /* Inside a game this is a plum pill like every other piece
+           of chrome; outside one it stays the app's white button.
+           `compact` is only ever true on the play screen, which is
+           exactly the distinction being drawn, so it carries the
+           switch rather than a second prop every caller would have
+           to remember to pass. */
+        border: `1px solid ${compact ? GAME.pillEdge : C.warmGray}`,
+        background: compact ? GAME.pill : C.white,
+        color: compact ? GAME.ink : C.textMain,
         fontSize: ts(16),
         fontWeight: 600,
         fontFamily: "inherit",

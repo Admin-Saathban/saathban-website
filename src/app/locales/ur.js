@@ -2298,6 +2298,8 @@ const ur = {
       /* §6 — کھیل کا انتخاب */
       playCta: "کھیلیں",
       playWhich: "کیا کھیلیں؟",
+      quotePhoto: "تصویر",
+      quoteGame: "ایک کھیل",
       playAgainNamed: "{game} کھیلیں",
       playOther: "دوسرا کھیل",
       game_ludo: "لوڈو",

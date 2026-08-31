@@ -2449,6 +2449,8 @@ const en = {
       /* §6 — the Play chooser and its three games. */
       playCta: "Play",
       playWhich: "What shall we play?",
+      quotePhoto: "Photo",
+      quoteGame: "A game",
       playAgainNamed: "Play {game}",
       playOther: "Another game",
       game_ludo: "Ludo",

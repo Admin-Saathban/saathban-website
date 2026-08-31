@@ -51,6 +51,7 @@ import { startCarromInThread } from "../games/carrom/rails.js";
 import { createSession, inviteToGame } from "../../lib/games.js";
 import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
 import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
+import Icon from "../../components/Icon.jsx";
 
 const POLL_MS = 4000;
 
@@ -426,8 +427,13 @@ export default function ThreadPage() {
   const quoteText = (m) =>
     !m ? t("people.thread.removed")
     : m.deleted_at ? t("people.thread.removed")
-    : m.image_path ? "📷"
-    : m.game_session_id ? "🎯"
+    /* WORDS, NOT GLYPHS. quoteText returns a STRING for the quoted-reply
+       strip, so an icon cannot go here without changing what the
+       consumer renders — and words are the better answer anyway: a
+       preview that reads "Photo" is clearer than a camera emoji, and it
+       is the only version a screen reader can say. */
+    : m.image_path ? t("people.thread.quotePhoto")
+    : m.game_session_id ? t("people.thread.quoteGame")
     : (m.body || "").slice(0, 80);
 
   /* Three names, from the locale rather than the registry: the chooser
@@ -450,7 +456,8 @@ export default function ThreadPage() {
             flex: 1,
           }}
         >
-          💬 {person?.full_name || "…"}
+          <Icon name="messages" size={22} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 8 }} />
+          {person?.full_name || "…"}
         </h1>
         {open && (
           <GhostBtn
@@ -465,7 +472,8 @@ export default function ThreadPage() {
             {/* Second time is ONE TAP: if this thread has a game in it
                 already, the button plays that game again rather than
                 asking the same question twice. */}
-            🎲 {lastGame ? t(`people.thread.playAgainNamed`, { game: gameName(lastGame) }) : t("people.thread.playCta")}
+            <Icon name="dice" size={18} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+            {lastGame ? t(`people.thread.playAgainNamed`, { game: gameName(lastGame) }) : t("people.thread.playCta")}
           </GhostBtn>
         )}
         {open && lastGame && (
@@ -526,7 +534,7 @@ export default function ThreadPage() {
                 }}
               >
                 <span aria-hidden="true" style={{ fontSize: ts(26) }}>
-                  {k === "ludo" ? "🎲" : k === "carrom" ? "🎯" : "🪜"}
+                  <Icon name={k === "ludo" ? "dice" : k === "carrom" ? "carrom" : "snakes"} size={26} />
                 </span>
                 {gameName(k)}
               </button>
@@ -629,13 +637,28 @@ export default function ThreadPage() {
                       opacity: heartsMine.has(m.id) || heartsTheirs.has(m.id) ? 1 : 0.45,
                     }}
                   >
-                    <span aria-hidden="true">{heartsMine.has(m.id) ? "❤️" : "🤍"}</span>
+                    {/* Filled AND red when it is mine, outline when it is
+                        not — the shape carries it as well as the colour,
+                        so the two states are still distinct to somebody
+                        who cannot tell red from grey. */}
+                    <Icon
+                      name="heart"
+                      size={20}
+                      fill={heartsMine.has(m.id) ? "currentColor" : "none"}
+                      style={{ color: heartsMine.has(m.id) ? C.error : C.textMuted }}
+                    />
                   </button>
                 )}
                 {/* Their heart, when it is not also mine — said as a
                     mark, never as a number. */}
                 {heartsTheirs.has(m.id) && !heartsMine.has(m.id) && (
-                  <span aria-label={t("people.thread.theyHearted")} style={{ fontSize: ts(16) }}>❤️</span>
+                  <Icon
+                    name="heart"
+                    size={16}
+                    fill="currentColor"
+                    label={t("people.thread.theyHearted")}
+                    style={{ color: C.error }}
+                  />
                 )}
                 <button
                   type="button"
@@ -696,7 +719,7 @@ export default function ThreadPage() {
                       <img src={url} alt={t("people.thread.photoAlt", { name: mine ? t("people.thread.you") : first })} style={{ display: "block", maxWidth: "100%", maxHeight: 320, objectFit: "cover" }} />
                     </button>
                   ) : (
-                    <BodyText muted style={{ margin: 0 }}>📷 …</BodyText>
+                    <BodyText muted style={{ margin: 0 }}><Icon name="photo" size={18} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />…</BodyText>
                   )}
                   {m.body && <BodyText style={{ margin: "6px 0 0", maxWidth: "82%" }}>{m.body}</BodyText>}
                   {menu}
@@ -916,7 +939,7 @@ export default function ThreadPage() {
           disabled={!open || uploading}
           style={{ padding: "0 16px", gap: 8 }}
         >
-          <span aria-hidden="true" style={{ fontSize: ts(22) }}>📷</span>
+          <Icon name="photo" size={22} />
           {t("people.thread.photoCta")}
         </GhostBtn>
         <input

@@ -64,7 +64,7 @@ export default function MorePage() {
           minHeight: "100vh",
           background: C.bg,
           color: C.textMain,
-          padding: `16px 14px calc(${BAR_HEIGHT}px + 24px)`,
+          padding: `16px 14px calc(var(--sb-bar-h, ${BAR_HEIGHT}px) + 24px)`,
         }}
       >
         <div style={{ maxWidth: 620, margin: "0 auto" }}>

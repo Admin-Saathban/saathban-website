@@ -133,7 +133,11 @@ export default function AppShellBar() {
   useEffect(() => {
     if (hidden || shuttered) return undefined;
     const prev = document.body.style.paddingBottom;
-    document.body.style.paddingBottom = `calc(${BAR_HEIGHT}px + var(--sb-safe-bottom, 0px))`;
+    /* var(--sb-bar-h) is the bar's MEASURED height and already contains
+       the safe-area inset, so nothing is added to it here. The constant
+       stays as the fallback for the first paint, before the bar has
+       measured itself. */
+    document.body.style.paddingBottom = `var(--sb-bar-h, calc(${BAR_HEIGHT}px + var(--sb-safe-bottom, 0px)))`;
     return () => {
       document.body.style.paddingBottom = prev;
     };

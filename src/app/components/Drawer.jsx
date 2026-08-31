@@ -145,7 +145,9 @@ export default function Drawer({ id, open, onClose, from = "bottom", labelledBy,
              corner a drawer grows from, it is a card in front of the
              screen, and the bar is part of the screen. */
           top: from === "top" ? 64 : 28,
-          bottom: BAR_HEIGHT + 14,
+          /* Clears the bar by what it MEASURES, not by the constant —
+             the drawer was ending 13px inside it. */
+          bottom: `calc(var(--sb-bar-h, ${BAR_HEIGHT}px) + 14px)`,
           width: "80%",
           maxWidth: 380,
           display: "flex",

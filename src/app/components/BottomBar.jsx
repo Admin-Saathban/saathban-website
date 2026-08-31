@@ -73,11 +73,31 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
        offsetHeight rather than a rect because a rect is affected by
        transforms, and this element is mid-transform exactly when the
        number matters. */
-    const read = () => setBarH(n.offsetHeight || BAR_HEIGHT);
+    const read = () => {
+      const h = n.offsetHeight || BAR_HEIGHT;
+      setBarH(h);
+      /* PUBLISHED, because measuring it privately was only half the job.
+         The bar knew it was 105 and the shell went on reserving the
+         constant 92, so the last 13px of EVERY route sat behind the bar —
+         Lane 3 found that under their world and refused to pad around it
+         locally, which was the right call: a local correction becomes a
+         13px gap the moment the real bug is fixed, and hides the bug in
+         the meantime.
+
+         This value already INCLUDES the safe-area inset, because the
+         inset is padding on this element. So a consumer reserves
+         var(--sb-bar-h) alone and must not add the inset again. */
+      document.documentElement.style.setProperty("--sb-bar-h", h + "px");
+    };
     read();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(read) : null;
     ro?.observe(n, { box: "border-box" });
-    return () => ro?.disconnect();
+    return () => {
+      ro?.disconnect();
+      /* No bar, no reservation: leaving the property behind would keep
+         every screen padded for chrome that is not on the page. */
+      document.documentElement.style.removeProperty("--sb-bar-h");
+    };
   }, []);
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });

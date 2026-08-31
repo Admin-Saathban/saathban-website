@@ -124,7 +124,19 @@ export default function GamesHome() {
     }
     setOpening(key);
     try {
-      navigate(await openQuickTable(game));
+      /* ITEM 1: THE SETUP ROOM RETURNS, before the board.
+
+         Tapping a game opened a table of bots directly, which was
+         §8's instruction and which took the real choices with it
+         — who is in each chair, one die or two, the house rules,
+         the name. Those are back, in a room in the game's own
+         palette rather than the cream form they were on.
+
+         openQuickTable is still exported and still used: lane 38's
+         "Play something" wants exactly its old behaviour, a table
+         made and a seat held in one tap from a feed. That is a
+         different act from choosing a game to play. */
+      navigate(`/app/games/new/${key}`);
     } catch {
       setOpening(null);
     }

@@ -39,6 +39,7 @@ import { pushToast } from "../../lib/feedback.jsx";
 import {
   fetchGames,
   fetchGamesFinished,
+  seatBots,
   createSession,
   fetchMySessions,
   liveSessionOf,
@@ -55,6 +56,7 @@ import { Switch as RuleSwitchBase } from "./setup/SeatSetup.jsx";
 import ThemePicker from "./ThemePicker.jsx";
 import { DEFAULT_THEME } from "./themes.js";
 import { GamesScreen, BodyText, GhostBtn } from "./ui.jsx";
+import { GameMotion } from "./GameUI.jsx";
 
 /* The faces sheet. One tap seats someone and closes — this is a
    choice for ONE chair, so there is nothing to confirm and no
@@ -281,18 +283,32 @@ export default function NewGame() {
         }
       }
 
-      /* A table of nothing but bots is playing before you get there.
-         A table with anyone else in it CANNOT seat its bots yet:
-         start_with_bots fills every empty chair AND starts the game,
-         which would slam the door on the person you just invited. So
-         those chairs stay empty and the board's own control fills
-         them when a guest doesn't show — which is the honest moment
-         to decide, because by then you know they haven't. */
-      if (bots.length && !invited.length && !open.length && botsAllowed) {
-        await startWithBots(id);
+      /* THE BOTS SIT DOWN NOW, in the chairs the host gave them.
+
+         This used to seat no bots at all whenever anybody was
+         invited, because start_with_bots fills EVERY empty chair
+         and starts the game — which would have slammed the door
+         on the guest. The workaround was right and its cost was
+         that a host who asked one daughter and chose two bots
+         waited on a board with three empty seats.
+
+         0100 seats named chairs without starting anything, so the
+         board the host lands on already has its bots at it and
+         the empty chairs are exactly the ones somebody is coming
+         to. The table starts by itself when the last one fills. */
+      if (botsAllowed && bots.length) {
+        const botSeats = bots.map((o) => o.seat + 1);
+        try {
+          await seatBots(id, botSeats);
+        } catch {
+          /* the chairs stay empty and the board can fill them */
+        }
       }
 
-      navigate(`/app/games/s/${id}`, { replace: true });
+      /* ITEM 2: the BOARD, not a lobby page. Ludo has its own. */
+      navigate(game.key === "ludo" ? `/app/games/ludo/${id}` : `/app/games/s/${id}`, {
+        replace: true,
+      });
     } catch {
       pushToast(t("games.actionError"), { tone: "error", key: "games" });
       setBusy(false);
@@ -301,7 +317,8 @@ export default function NewGame() {
 
   if (game === null) {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+      <GameMotion />
         <BodyText muted role="status">…</BodyText>
       </GamesScreen>
     );
@@ -311,7 +328,7 @@ export default function NewGame() {
   const takenIds = Object.values(seated).map((p) => p.id);
 
   return (
-    <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+    <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
       <h1
         style={{
           fontSize: ts(28),

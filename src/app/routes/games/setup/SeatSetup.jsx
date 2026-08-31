@@ -33,6 +33,7 @@
    seat in the colour its player chose.
    ════════════════════════════════════════════════ */
 
+import { GAME } from "../gameSurface.js";
 import { useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
@@ -85,7 +86,7 @@ function ColourGoti({ colour, chosen, taken, onPick, label }) {
         minWidth: 44,
         minHeight: 44,
         borderRadius: "50%",
-        border: chosen ? `3px solid ${C.green}` : "3px solid transparent",
+        border: chosen ? `3px solid ${GAME.accentFlat}` : "3px solid transparent",
         background: chosen ? "#F1F7EE" : "transparent",
         padding: 0,
         cursor: taken ? "default" : "pointer",
@@ -161,8 +162,8 @@ function FillChoice({ value, onChange, t, ts, botsAllowed = true, canPostOpen = 
               width: 48,
               height: 48,
               borderRadius: 14,
-              border: on ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
-              background: on ? "#EEF3E8" : C.white,
+              border: on ? `3px solid ${GAME.accentFlat}` : `1.5px solid ${GAME.pillEdge}`,
+              background: on ? "rgba(240,196,98,0.20)" : GAME.pill,
               fontSize: ts(22),
               cursor: "pointer",
               display: "grid",
@@ -191,8 +192,8 @@ function DiceToy({ count, chosen, onPick, t }) {
         flex: 1,
         minHeight: 84,
         borderRadius: 20,
-        border: chosen ? `3px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
-        background: chosen ? "#F1F7EE" : C.white,
+        border: chosen ? `3px solid ${GAME.accentFlat}` : `1.5px solid ${GAME.pillEdge}`,
+        background: chosen ? "rgba(240,196,98,0.20)" : GAME.pill,
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
@@ -235,8 +236,8 @@ export function Switch({ on, onToggle, label, ts }) {
         padding: "12px 14px",
         marginBottom: 12,
         borderRadius: 16,
-        border: `2px solid ${on ? C.green : "#E3D9C6"}`,
-        background: on ? "#F2FAF4" : C.white,
+        border: `2px solid ${on ? GAME.accentFlat : GAME.pillEdge}`,
+        background: on ? "rgba(240,196,98,0.20)" : GAME.pill,
         cursor: "pointer",
         textAlign: "start",
       }}
@@ -248,7 +249,7 @@ export function Switch({ on, onToggle, label, ts }) {
           width: 52,
           height: 30,
           borderRadius: 15,
-          background: on ? C.green : "#D8CDB8",
+          background: on ? GAME.accentFlat : "rgba(255,255,255,0.22)",
           position: "relative",
           transition: "background 160ms",
         }}
@@ -261,7 +262,7 @@ export function Switch({ on, onToggle, label, ts }) {
             width: 24,
             height: 24,
             borderRadius: "50%",
-            background: C.white,
+            background: GAME.pill,
             boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
             transition: "inset-inline-start 160ms",
           }}
@@ -371,7 +372,7 @@ export default function SeatSetup({
                 gap: 10,
                 padding: "8px 10px",
                 borderRadius: 18,
-                background: C.white,
+                background: GAME.pill,
                 border: `1.5px solid ${C.warmGray}`,
                 flexWrap: "wrap",
               }}
@@ -418,12 +419,12 @@ export default function SeatSetup({
                     minHeight: A11Y.minTapTargetPx,
                     padding: "0 12px 0 6px",
                     borderRadius: 50,
-                    border: `2px solid ${C.green}`,
+                    border: `2px solid ${GAME.accentFlat}`,
                     background: "#EEF3E8",
                     fontFamily: "inherit",
                     fontSize: ts(17),
                     fontWeight: 700,
-                    color: C.textMain,
+                    color: GAME.ink,
                     cursor: "pointer",
                     maxWidth: "100%",
                   }}
@@ -480,7 +481,7 @@ export default function SeatSetup({
                     height: 44,
                     borderRadius: "50%",
                     border: `1.5px solid ${C.warmGray}`,
-                    background: C.white,
+                    background: GAME.pill,
                     fontSize: ts(24),
                     lineHeight: 1,
                     cursor: "pointer",
@@ -526,7 +527,7 @@ export default function SeatSetup({
         <DiceToy count={2} chosen={diceCount === 2} onPick={() => setDiceCount(2)} t={t} />
       </div>
       {/* The one caption on the screen. */}
-      <p style={{ margin: "0 0 20px", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, textAlign: "center" }}>
+      <p style={{ margin: "0 0 20px", fontSize: ts(A11Y.minBodyPx), color: GAME.inkMuted, textAlign: "center" }}>
         {diceCount === 2 ? t("games.setup.diceCaption") : t("games.setup.diceCaptionOne")}
       </p>
 
@@ -565,9 +566,12 @@ export default function SeatSetup({
           width: 132,
           height: 132,
           borderRadius: "50%",
-          border: "none",
-          background: C.green,
-          color: C.cream,
+          /* Brass. Green is Saathban and nothing inside a game
+             wears it — this is the one thing you press in the room,
+             so it is the same brass as the die on the board. */
+          border: `1px solid ${GAME.accentEdge}`,
+          background: GAME.accent,
+          color: GAME.accentInk,
           fontFamily: "inherit",
           fontSize: ts(24),
           fontWeight: 800,

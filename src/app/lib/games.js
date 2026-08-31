@@ -617,3 +617,20 @@ export async function inviteToSeat(sessionId, profileId, seat) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+
+/* Seat bots in the chairs the setup room gave them, without
+   filling the rest and without starting the game (0100).
+
+   start_with_bots does both of those, which is right when the
+   host wants a table of bots this second and wrong when they
+   have invited somebody — it would start the game before the
+   guest arrived. Seats are 1-based here, as the server has
+   them. */
+export async function seatBots(sessionId, seatNos) {
+  const { error } = await supabase.rpc("game_seat_bots", {
+    p_session: sessionId,
+    p_seats: seatNos,
+  });
+  if (error) throw new Error(error.message);
+}

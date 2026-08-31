@@ -149,8 +149,26 @@ for (const lang of ["en", "ur"]) {
   p.on("pageerror", (e) => errs.push(e.message.slice(0, 140)));
 
   const go = async (path, settle = 2600) => {
-    await p.goto(BASE + path, { waitUntil: "networkidle" }).catch(() => {});
+    const landed = await p.goto(BASE + path, { waitUntil: "networkidle" }).catch((e) => {
+      console.error(`NAVIGATION FAILED to ${path}: ${e.message.split("\n")[0]}`);
+      console.error("Everything after this would describe the previous page, so the run stops here.");
+      process.exit(4);
+    });
+    if (landed && !landed.ok() && landed.status() >= 400) {
+      console.error(`NAVIGATION to ${path} returned HTTP ${landed.status()}`);
+      process.exit(4);
+    }
     await p.waitForTimeout(settle);
+    /* Prove we are where we asked to be. A redirect is not
+       automatically wrong, but it is never what these checks intend,
+       and reading the wrong screen is exactly how a negative
+       assertion passes for the wrong reason. */
+    const at = new URL(p.url()).pathname.replace(/\/$/, "");
+    const want = path.split("?")[0].replace(/\/$/, "");
+    if (at !== want) {
+      console.error(`LANDED ON THE WRONG SCREEN: asked for ${want}, got ${at}`);
+      process.exit(4);
+    }
     return (await p.evaluate(() => document.body.innerText)).trim();
   };
 

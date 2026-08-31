@@ -102,8 +102,26 @@ const open = async (email, lang) => {
   const errs = [];
   page.on("pageerror", (e) => errs.push(e.message.slice(0, 130)));
   const go = async (path, settle = 2500) => {
-    await page.goto(BASE + path, { waitUntil: "networkidle" }).catch(() => {});
+    const landed = await page.goto(BASE + path, { waitUntil: "networkidle" }).catch((e) => {
+      console.error(`NAVIGATION FAILED to ${path}: ${e.message.split("\n")[0]}`);
+      console.error("Everything after this would describe the previous page, so the run stops here.");
+      process.exit(4);
+    });
+    if (landed && !landed.ok() && landed.status() >= 400) {
+      console.error(`NAVIGATION to ${path} returned HTTP ${landed.status()}`);
+      process.exit(4);
+    }
     await page.waitForTimeout(settle);
+    /* Prove we are where we asked to be. A redirect is not
+       automatically wrong, but it is never what these checks intend,
+       and reading the wrong screen is exactly how a negative
+       assertion passes for the wrong reason. */
+    const at = new URL(page.url()).pathname.replace(/\/$/, "");
+    const want = path.split("?")[0].replace(/\/$/, "");
+    if (at !== want) {
+      console.error(`LANDED ON THE WRONG SCREEN: asked for ${want}, got ${at}`);
+      process.exit(4);
+    }
     return (await page.evaluate(() => document.body.innerText)).trim();
   };
   return { page, ctx, errs, go };
@@ -172,8 +190,8 @@ for (const lang of ["en", "ur"]) {
   check(`[${lang}] §2 events offer "Who's going"`, whatson.includes(w.whosGoing), "");
 
   /* ── §7: one question per screen ── */
-  await icon.page.goto(BASE + "/app/outdoor", { waitUntil: "networkidle" }).catch(() => {});
-  await icon.page.waitForTimeout(1800);
+  /* Same rule as go(): arriving is part of the assertion. */
+  await icon.go("/app/outdoor", 1800);
   const askBtn = await icon.page.$(`button:has-text("${lang === "en" ? "Ask who" : "پوچھیں"}")`);
   if (askBtn) {
     await askBtn.click();

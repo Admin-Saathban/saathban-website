@@ -22,7 +22,7 @@ import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
-import { tableIsSoft, reformTable, fetchSeatInvites, fetchPieceMarks } from "./ludoRails.js";
+import { tableIsSoft, reformTable, fetchSeatInvites, fetchPieceMarks, seen } from "./ludoRails.js";
 import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
 import { GAME, NO_SELECT } from "../gameSurface.js";
@@ -212,9 +212,21 @@ export default function LudoSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seatKey, marksNonce]);
 
+  /* Touched on the poll, at most every ten seconds. The board
+     polls every 2.5s and the grace window is ninety, so this is
+     as sparse as it can be and still keep a reader present. */
+  const lastSeenPing = useRef(0);
+  const ping = () => {
+    const now = Date.now();
+    if (now - lastSeenPing.current < 10000) return;
+    lastSeenPing.current = now;
+    seen(sessionId);
+  };
+
   const load = async () => {
     const g = await fetchSession(sessionId);
     setGame(g);
+    if (g?.status === "playing") ping();
     /* Ask until it is settled. The window only ever closes, so
        one 'no' is final and the polling stops paying for it. */
     if (!softClosed.current) refreshTable();
@@ -1365,7 +1377,7 @@ export default function LudoSession() {
                 chain card, three messages deep. It is the least
                 urgent of the three, so it stands down whenever
                 either of the others is speaking. */}
-            {last && !(isMyTurn && hasDice) && chain === 0 && (
+            {last && !(isMyTurn && hasDice) && chain === 0 && awaySeats.length === 0 && (
               <BodyText
                 muted
                 style={{
@@ -1430,15 +1442,22 @@ export default function LudoSession() {
               is a game that has lied to the people still at it. Named
               rather than counted, because "1 player away" is a
               statistic and "Ammi's seat" is a person. */}
+          {/* ONE LINE AT A TIME. This sat UNDER the running
+              commentary, so a table with somebody genuinely away
+              showed two sentences stacked below the board —
+              "Bot rolled 3 and moved." over "Test Icon stepped
+              away…" — which is the stack item 8 is about.
+
+              It is also the rarer and more important of the two,
+              so it wins and the commentary stands down, rather
+              than both being shown and the board losing the
+              height twice. */}
           {playing && awaySeats.length > 0 && (
-            <BodyText
-              role="status"
-              style={{ margin: "4px 0 0", textAlign: "center", fontSize: ts(A11Y.minBodyPx), color: GAME.inkMuted, flex: "0 0 auto" }}
-            >
+            <FlashLine keyed={awaySeats.map((r) => r.seat).join(",")} ms={5200}>
               {t("ludo.table.botTookOver", {
                 names: awaySeats.map((r) => r.name || t("ludo.seat.someone")).join(", "),
               })}
-            </BodyText>
+            </FlashLine>
           )}
 
           {/* THE PERMANENT INSTRUCTION IS DELETED.
@@ -1635,25 +1654,21 @@ export default function LudoSession() {
               target is r=42 in board units, about 50 CSS px at phone
               width and larger than the token it surrounds, so §10's
               48px floor is met by the thing you actually tap. */}
-          {/* NOT A FULL-WIDTH BAR. It was 100% wide and 56 tall — a slab
-              across the bottom of the screen that read as the most
-              important object on it, competing with the board for the eye
-              and taking height the board wanted. It is the only brass
-              thing on the screen now, which is enough to make it the
-              thing you press.
+          {/* THE ROLL BAR IS DELETED (item 6).
 
-              Braced, and OUTSIDE the parentheses. It was written braced
-              INSIDE them, where a brace is an object literal rather than a
-              child slot, and that one character of position broke the
-              whole build. Among children the braced form is the correct
-              one; in an expression position it is fatal. */}
-          {isMyTurn && !hasDice && !chooser && (
-            <div style={{ display: "flex", justifyContent: "center", marginTop: 6, flex: "0 0 auto" }}>
-              <GameBtn onClick={doRoll} disabled={busy || rolling} style={{ minWidth: 168 }}>
-                🎲 {t("ludo.turn.rollCta")}
-              </GameBtn>
-            </div>
-          )}
+              The recording has no roll button: the die beside your
+              face IS the control, and tapping it is the whole
+              gesture. Ours had both — a tappable die on the plate
+              and a brass button under the board repeating it —
+              which is two controls for one action, the second one
+              taking height from the board.
+
+              Nothing is lost by removing it. SeatDie has been the
+              roll button since it was written; onRoll and canRoll
+              were already wired to the same doRoll this called. The
+              button existed because of a fair worry about tap
+              targets on a phone, and the die answers it: 44px in a
+              tray that lights gold when it is waiting for you. */}
         </>
       )}
 

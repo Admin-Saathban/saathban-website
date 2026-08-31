@@ -416,9 +416,13 @@ export default function PlaceView() {
                   <BodyText style={{ fontWeight: 600 }}>
                     ✓{" "}
                     {t("outdoor.place.checkedInUntil", {
+                      /* hour12: "checked in until about 1:12" is
+                         unreadable in 24-hour form — at midday it
+                         could mean twenty minutes or thirteen hours. */
                       time: new Date(mine.expires_at).toLocaleTimeString(dateLocale, {
                         hour: "numeric",
                         minute: "2-digit",
+                        hour12: true,
                       }),
                     })}
                   </BodyText>

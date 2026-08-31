@@ -38,7 +38,12 @@ import { fetchLiveMoments, fetchPastMoments, startMoment, endMoment, joinMoment,
 import { fetchAuthors } from "./outdoorData.js";
 
 const timeOf = (iso, lang) =>
-  new Date(iso).toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "numeric", minute: "2-digit" });
+  new Date(iso).toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", {
+    hour: "numeric",
+    minute: "2-digit",
+    // en-GB is 24-hour, so 1:12am and 1:12pm both render "1:12".
+    hour12: true,
+  });
 
 export default function Moments() {
   const { t, ts, lang, meta } = useI18n();

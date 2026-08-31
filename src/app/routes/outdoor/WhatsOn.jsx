@@ -253,7 +253,11 @@ export default function WhatsOn() {
 
   const timeOf = (d) =>
     d
-      ? d.toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "numeric", minute: "2-digit" })
+      ? d.toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
       : t("whatson.anytime");
 
   return (

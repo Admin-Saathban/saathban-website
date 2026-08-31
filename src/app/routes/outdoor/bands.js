@@ -103,6 +103,7 @@ export function sinceLabel(iso, locale) {
     return new Date(iso).toLocaleTimeString(locale === "ur" ? "ur-PK" : "en-GB", {
       hour: "numeric",
       minute: "2-digit",
+      hour12: true,
     });
   } catch {
     return "";

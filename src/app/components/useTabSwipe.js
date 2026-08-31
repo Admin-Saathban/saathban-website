@@ -12,7 +12,7 @@
    header and the shell owns the bars, so translating the route subtree
    would drag the header sideways with the content. `main` is the
    content of every screen in this app, so the drag is expressed as a
-   custom property the shell sets and a rule in the motion vocabulary
+   custom property this hook sets and a stylesheet this module owns
    reads. Header stays put, bars stay put, content moves — which is what
    the gesture means.
 
@@ -54,6 +54,44 @@ import { wantsLessMotion } from "./motion.jsx";
    normally; past it the drag owns the finger. 12px is small enough to
    feel immediate and large enough that a tap never starts a drag. */
 const ENGAGE = 12;
+
+/* ── THE DRAG STYLESHEET LIVES HERE, WITH THE HOOK THAT USES IT ──
+
+   It was in lib/motion.jsx, the shared motion vocabulary. That file is
+   the right HOME for a motion idiom and the wrong file for me to be
+   writing in: Lane 3 is actively editing it, they found my rules there
+   during the window between my applying them and committing them, and
+   they left them alone rather than risk clobbering work in flight. They
+   were right to flag it. Two lanes writing one file is how 357 lines
+   were lost twice.
+
+   So the drag owns its own stylesheet, injected once, next to the only
+   code that sets the property it reads. Nothing else in the app can
+   adopt half of it, which is the concern the vocabulary file exists to
+   answer — it cannot be half-adopted if there is only one consumer.
+
+   Injected imperatively rather than as a component so the whole gesture
+   stays in one module and AppShellBar does not grow another child. */
+const STYLE_ID = "sb-tab-drag-styles";
+const DRAG_CSS = `
+html.sb-dragging main {
+  transform: translate3d(var(--sb-drag, 0px), 0, 0);
+  will-change: transform;
+}
+html.sb-settling main {
+  transform: translate3d(var(--sb-drag, 0px), 0, 0);
+  transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
+`;
+
+function ensureStyles() {
+  if (typeof document === "undefined" || document.getElementById(STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = STYLE_ID;
+  el.textContent = DRAG_CSS;
+  document.head.appendChild(el);
+}
 /* How far it has to travel to commit, as a share of the screen. */
 const COMMIT = 0.28;
 const SETTLE_MS = 200;
@@ -78,6 +116,7 @@ export default function useTabSwipe(items, enabled = true) {
 
   useEffect(() => {
     if (!enabled || !items || items.length < 2) return undefined;
+    ensureStyles();
 
     const root = document.documentElement;
     const setDrag = (px) => root.style.setProperty("--sb-drag", px + "px");

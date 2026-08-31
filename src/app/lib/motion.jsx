@@ -52,31 +52,6 @@ export const MOTION = {
 };
 
 export const MOTION_CSS = `
-/* ── Tab drag: the pane follows the finger (components/useTabSwipe.js) ──
-
-   WHAT MOVES IS main, NOT THE SCREEN. Every route renders its own
-   header and the shell owns the bars, so translating a route subtree
-   would drag the header sideways with the content. main is the content
-   of every screen in this app, so the hook writes one custom property
-   and these two rules spend it. Header stays, bars stay, content moves.
-
-   translate3d rather than translateX to keep it on the compositor: a
-   drag that repaints is a drag that stutters, and this one runs on
-   every frame of a finger.
-
-   No rule at all under prefers-reduced-motion — the hook never adds the
-   class, so there is nothing to override and nothing to leak. */
-html.sb-dragging main {
-  transform: translate3d(var(--sb-drag, 0px), 0, 0);
-  will-change: transform;
-}
-html.sb-settling main {
-  transform: translate3d(var(--sb-drag, 0px), 0, 0);
-  transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-/* The finger owns the gesture while it is engaged. */
-html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
-
 /* ── Full screen: arrives from the side that was touched (§2) ── */
 @keyframes sb-push-in-right {
   from { transform: translateX(100%); }

@@ -17,6 +17,37 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill } from "../circle/ui.jsx";
 import { fetchMyPeople, fetchRequests } from "./myPeopleStore.js";
+import Icon from "../../components/Icon.jsx";
+
+/* A LABEL, NOT A CONTROL — so it carries no outline.
+
+   These were circle/ui.jsx Pills, which draw a 2px border. An outline
+   is the app's promise that a thing can be tapped, and "In your circle"
+   cannot: spending that signal on a caption teaches people to try
+   tapping captions, and then to stop trusting outlines.
+
+   Pill itself is unchanged. Their screens rely on its box, so this one
+   stops asking for a Pill rather than altering a primitive underneath
+   another lane. Tint carries the same three tones with no border. */
+const CHIP_TONE = {
+  green: { bg: "#EEF3E8", fg: C.green },
+  brown: { bg: "#F5EEE6", fg: C.brown },
+  plain: { bg: "#00000008", fg: C.textMuted },
+};
+
+function Chip({ tone = "plain", icon, children }) {
+  const c = CHIP_TONE[tone] || CHIP_TONE.plain;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: c.bg, color: c.fg, borderRadius: 999,
+      padding: "4px 12px", fontSize: 15, fontWeight: 600,
+    }}>
+      {icon ? <Icon name={icon} size={15} /> : null}
+      {children}
+    </span>
+  );
+}
 
 export default function PeopleList() {
   const { t, ts, meta } = useI18n();
@@ -72,27 +103,19 @@ export default function PeopleList() {
             fontSize: ts(A11Y.minBodyPx), fontWeight: 600, textDecoration: "none",
           }}
         >
-          ✉️ {t("people.list.requestsCta")}
+          <Icon name="letter" size={19} />
+          {t("people.list.requestsCta")}
           {pendingIn > 0 && (
             <span style={{ background: C.green, color: C.cream, borderRadius: 50, padding: "2px 10px", fontSize: ts(15), fontWeight: 800 }}>
               {pendingIn}
             </span>
           )}
         </Link>
-        {/* §7 — inviting people from outside starts here, on the
-            list of the people you already have. */}
-        <Link
-          to="invite"
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            minHeight: A11Y.minTapTargetPx, padding: "0 18px", borderRadius: 50,
-            border: `2px solid ${C.warmGray}`,
-            background: C.white, color: C.textMain,
-            fontSize: ts(A11Y.minBodyPx), fontWeight: 600, textDecoration: "none",
-          }}
-        >
-          🌸 {t("people.list.inviteCta")}
-        </Link>
+        {/* ONE INVITE, NOT TWO. It was offered here AND again beside the
+            empty state, the same words and the same flower twice on one
+            screen — which reads as two different actions until you try
+            them. The one that stays is the one next to the empty list,
+            where a person who has nobody is actually looking. */}
       </div>
       <BodyText muted style={{ marginBottom: 14 }}>{t("people.list.intro")}</BodyText>
 
@@ -107,7 +130,7 @@ export default function PeopleList() {
         style={{
           width: "100%", boxSizing: "border-box", minHeight: A11Y.minTapTargetPx,
           fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit", color: C.textMain,
-          background: C.white, border: `2px solid ${C.warmGray}`, borderRadius: 12,
+          background: C.white, border: `1px solid ${C.warmGray}`, borderRadius: 12,
           padding: "10px 14px", marginBottom: 16,
         }}
       />
@@ -115,7 +138,7 @@ export default function PeopleList() {
       {people === null ? (
         <BodyText muted role="status">···</BodyText>
       ) : shown.length === 0 ? (
-        <Card>
+        <div>
           <BodyText muted style={{ margin: 0 }}>
             {q ? t("people.list.noMatches") : t("people.list.empty")}
           </BodyText>
@@ -131,16 +154,21 @@ export default function PeopleList() {
                 fontSize: ts(A11Y.minBodyPx), fontWeight: 700, textDecoration: "none",
               }}
             >
-              🌸 {t("people.list.inviteCta")}
+              <Icon name="add" size={19} style={{ marginInlineEnd: 8 }} />{t("people.list.inviteCta")}
             </Link>
           )}
-        </Card>
+        </div>
       ) : (
         shown.map((p) => {
           const initial = (p.full_name || "?").trim().charAt(0);
           return (
             <Link key={p.id} to={p.id} style={{ textDecoration: "none", color: "inherit" }}>
-              <Card style={{ opacity: p.away ? 0.55 : 1, padding: 16 }}>
+              {/* A ROW, NOT A CARD. Card is the circle lane's primitive and
+                  their screens rely on its box, so this screen stops asking
+                  for one instead of changing it underneath them. A list of
+                  people is separated by space; ten outlined boxes down a
+                  phone is ten rectangles competing with ten faces. */}
+              <div style={{ opacity: p.away ? 0.55 : 1, padding: "12px 4px", borderBottom: `1px solid ${C.warmGray}22` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   <span aria-hidden="true" style={{
                     width: 52, height: 52, borderRadius: "50%", background: p.away ? C.warmGray : C.sage,
@@ -155,16 +183,16 @@ export default function PeopleList() {
                       {p.city && <span style={{ fontFamily: meta.fonts.body, fontWeight: 400, color: C.textMuted, fontSize: ts(16) }}> · {p.city}</span>}
                     </p>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                      {p.away && <Pill>🌙 {t("people.list.away")}</Pill>}
-                      {p.in_circle && <Pill tone="green">🤝 {t("people.chips.circle")}</Pill>}
-                      {p.is_friend && <Pill tone="brown">🌸 {t("people.chips.friend")}</Pill>}
+                      {p.away && <Chip icon="sleep">{t("people.list.away")}</Chip>}
+                      {p.in_circle && <Chip tone="green" icon="helpOffer">{t("people.chips.circle")}</Chip>}
+                      {p.is_friend && <Chip tone="brown" icon="good">{t("people.chips.friend")}</Chip>}
                       {(p.group_names || []).map((g) => (
-                        <Pill key={g}>🧑‍🤝‍🧑 {t("people.chips.group", { name: g })}</Pill>
+                        <Chip key={g} icon="groups">{t("people.chips.group", { name: g })}</Chip>
                       ))}
                     </div>
                   </div>
                 </div>
-              </Card>
+              </div>
             </Link>
           );
         })

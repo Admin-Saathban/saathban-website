@@ -88,7 +88,14 @@ await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), [
 ]);
 const page = await ctx.newPage();
 const errors = [];
-page.on("pageerror", (e) => errors.push(e.message.slice(0, 120)));
+/* RECORD WHERE, NOT JUST WHAT. This printed bare messages, so
+   "Access is denied for this document" arrived with no way to tell
+   which of 55 screens produced it — and since the reader is now asked
+   to judge whether an error is the app or the harness, a message with
+   no location cannot be judged at all. It was worth finding: the same
+   localStorage call is READABLE in every other suite here, so an error
+   from it means this walk reaches a context the others never touch. */
+page.on("pageerror", (e) => errors.push(page.url().replace(BASE, "") + "  —  " + e.message.slice(0, 120)));
 
 const go = async (path, settle = 1300) => {
   await page.goto(BASE + path, { waitUntil: "networkidle" }).catch(() => {});

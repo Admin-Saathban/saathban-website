@@ -27,7 +27,7 @@
 
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, CHIP } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
@@ -63,7 +63,12 @@ function WorldTab({ to, end, icon, label, badge }) {
         gap: 2,
         minHeight: WORLD_BAR_HEIGHT,
         textDecoration: "none",
-        color: isActive ? C.green : C.textMuted,
+        /* Ink on dark chrome: white when this is where you are, the
+           same white held back when it is not. Green measured 2.61:1
+           and muted ink 2.95:1 against the dark bar — both under the
+           4.5 floor, on the only labels that say where you are. */
+        color: CHIP.activeInk,
+        opacity: isActive ? 1 : 0.68,
         fontWeight: isActive ? 800 : 600,
         fontSize: ts(14),
         position: "relative",
@@ -222,7 +227,12 @@ export default function MessagesWorld() {
             borderRadius: 50,
             border: "none",
             background: "transparent",
-            color: C.textMain,
+            /* CHIP.activeInk. This was C.textMain, which against the new
+               dark nav measures 1.00:1 — not low contrast, the SAME
+               COLOUR. The only way out of the world was invisible, and
+               nothing here changed: the bar went dark underneath a mark
+               that had always been ink. */
+            color: CHIP.activeInk,
             fontSize: ts(24),
             cursor: "pointer",
           }}
@@ -236,7 +246,7 @@ export default function MessagesWorld() {
             fontFamily: meta.fonts.heading,
             fontSize: ts(24),
             fontWeight: 800,
-            color: C.green,
+            color: CHIP.activeInk,
           }}
         >
           {t("msg.title")}
@@ -262,7 +272,7 @@ export default function MessagesWorld() {
             padding: "0 12px",
             borderRadius: 50,
             textDecoration: "none",
-            color: isActive ? C.white : C.green,
+            color: isActive ? C.white : CHIP.activeInk,
             background: isActive ? C.green : "transparent",
             fontSize: ts(16),
             fontWeight: 700,

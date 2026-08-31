@@ -43,6 +43,12 @@ export const MONEY_PATTERN = new RegExp(
 
 export const REACTIONS = ["👍", "❤️", "🌸", "🤲"];
 
+/* The double-tap gesture needs to name the heart. By its own
+   constant rather than REACTIONS[1], because an index is a promise
+   about the ORDER of that array that nothing enforces — reorder the
+   row one day and double-tap starts sending flowers. */
+export const HEART = "❤️";
+
 /* WHAT IS STORED AND WHAT IS DRAWN ARE NOT THE SAME THING.
 
    The emoji above is the KEY: post_reactions rows carry it, and every

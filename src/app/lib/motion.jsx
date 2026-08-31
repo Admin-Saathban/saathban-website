@@ -34,6 +34,9 @@ export const MOTION = {
   sheetUp: 240,
   sheetDown: 180,
   tab: 180,
+  /* The double-tap heart. Long enough to be seen leaving, short
+     enough that it never delays the next tap. */
+  heartPop: 420,
 };
 
 export const MOTION_CSS = `
@@ -73,6 +76,26 @@ export const MOTION_CSS = `
   to   { transform: translateX(0); }
 }
 
+/* ── The double-tap heart (§3) ── */
+
+/* It grows from the point the finger landed and fades going up, which
+   is the ONE RULE applied to a thing with no container: a mark arrives
+   where you touched. It is decorative and transient, so it is
+   pointer-events:none — a heart under the thumb must never eat the
+   next tap. */
+@keyframes sb-heart-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  35%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  70%  { transform: translate(-50%, -62%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -95%) scale(0.9); opacity: 0; }
+}
+.sb-heart-pop {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  animation: sb-heart-pop ${MOTION.heartPop}ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Sheet: rises from the bottom edge (§2) ── */
 @keyframes sb-sheet-up {
   from { transform: translateY(100%); }
@@ -105,6 +128,13 @@ export const MOTION_CSS = `
 
 @media (prefers-reduced-motion: reduce) {
   /* §3: instant cross-fades. Nothing slides, nothing bounces. */
+  /* §3 — the pop does not travel or scale. It appears and goes, so
+     the confirmation is still there for somebody who cannot take
+     movement. Not removed: it is the only feedback the gesture has. */
+  .sb-heart-pop {
+    animation-name: sb-dim-in !important;
+    animation-duration: 1ms !important;
+  }
   .sb-push, .sb-sheet, .sb-dim {
     animation-duration: 1ms !important;
     animation-name: sb-dim-in !important;

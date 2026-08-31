@@ -14,10 +14,10 @@ import { claimOpenSeat } from "../../lib/games.js";
 import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
-import { MotionStyles } from "../../lib/motion.jsx";
+import { MotionStyles, MOTION } from "../../lib/motion.jsx";
 import DiscardDialog from "./DiscardDialog.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE } from "./communityCopy.js";
+import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE, HEART } from "./communityCopy.js";
 import {
   canUseCommunity,
   canPostCommunity,
@@ -450,6 +450,46 @@ function PostCard({
   const [stickersOpen, setStickersOpen] = useState(false);
   const [commentReporting, setCommentReporting] = useState(null); // comment id
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  /* §3 — DOUBLE-TAP TO HEART.
+
+     Two taps inside 300ms on the post itself. The pop is drawn at the
+     point the finger landed, because a mark that appears somewhere else
+     is not feedback for the thing you just did.
+
+     IT ONLY EVER ADDS. Double-tap is a gesture people make without
+     looking, and the standard everywhere else is that it hearts —
+     making the second one take it back would mean a slightly slow
+     double-tap silently undoes itself, and the person cannot tell
+     whether they hearted or not. Already hearted stays hearted; the
+     pop still plays, so the gesture is never silent.
+
+     Single tap is untouched: the handler bails on anything inside a
+     control, so buttons, links and the menu behave exactly as before. */
+  const lastTapRef = useRef({ t: 0, x: 0, y: 0 });
+  const [pop, setPop] = useState(null);
+
+  const onCardPointerUp = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.target.closest("button, a, input, textarea, [role='dialog']")) return;
+    const now = Date.now();
+    const prev = lastTapRef.current;
+    const near = Math.abs(e.clientX - prev.x) < 40 && Math.abs(e.clientY - prev.y) < 40;
+    if (now - prev.t < 300 && near) {
+      lastTapRef.current = { t: 0, x: 0, y: 0 };
+      const box = e.currentTarget.getBoundingClientRect();
+      setPop({ id: now, x: e.clientX - box.left, y: e.clientY - box.top });
+      if (myReaction !== HEART) onToggleReaction(post.id, HEART, false);
+      return;
+    }
+    lastTapRef.current = { t: now, x: e.clientX, y: e.clientY };
+  };
+
+  useEffect(() => {
+    if (!pop) return undefined;
+    const h = setTimeout(() => setPop(null), MOTION.heartPop + 60);
+    return () => clearTimeout(h);
+  }, [pop]);
   const askCloseComments = () => {
     if (commentBody.trim()) setConfirmDiscard(true);
     else setCommentsOpen(false);
@@ -557,7 +597,18 @@ function PostCard({
   );
 
   return (
-    <Card>
+    <Card onPointerUp={onCardPointerUp} style={{ position: "relative" }}>
+      {pop && (
+        <span
+          key={pop.id}
+          aria-hidden="true"
+          className="sb-heart-pop"
+          style={{ left: pop.x, top: pop.y, color: MEANING.liked }}
+        >
+          <Icon name="heart" size={64} fill="currentColor" />
+        </span>
+      )}
+      <MotionStyles />
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <div style={{ flex: 1 }}>
           <AuthorLine author={author} when={post.created_at} dateLocale={dateLocale} />

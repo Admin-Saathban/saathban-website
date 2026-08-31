@@ -13,6 +13,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { claimOpenSeat } from "../../lib/games.js";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { REACTIONS } from "./communityCopy.js";
 import {
@@ -126,7 +127,7 @@ function ReportForm({ onSend, onCancel }) {
       <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
         <PrimaryBtn onClick={() => onSend(reason)}>{t("community.feed.menuReport")}</PrimaryBtn>
-        <GhostBtn onClick={onCancel}>✕</GhostBtn>
+        <GhostBtn onClick={onCancel}><Icon name="close" size={18} /></GhostBtn>
       </div>
     </div>
   );
@@ -152,7 +153,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
       <div style={box}>
         <p style={line}>
           <span aria-hidden="true" style={{ fontSize: ts(26), marginInlineEnd: 8 }}>
-            {p.emoji || "🏅"}
+            {p.emoji || <Icon name="badge" size={18} style={{ display: "inline" }} />}
           </span>
           <strong>{t("community.shares.badgeLine", { badge: name })}</strong>
         </p>
@@ -164,7 +165,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
-          🌱 {t("community.shares.scoreTitle")}
+          <Icon name="grow" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.scoreTitle")}
         </p>
         <p style={line}>
           {t("community.shares.scoreLine", { points: p.points, n: p.done, total: p.total })}
@@ -179,7 +180,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
-          🚶 {t("community.shares.walkTitle")}
+          <Icon name="walk" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.walkTitle")}
         </p>
         <p style={line}>
           {p.place_name}
@@ -219,7 +220,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={line}>
-          🗓️ {t("community.shares.eventLine")} <strong>{p.title}</strong>
+          <Icon name="event" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.eventLine")} <strong>{p.title}</strong>
           {p.event_date && ` · ${p.event_date}`}
         </p>
         <div style={{ marginTop: 10 }}>
@@ -269,7 +270,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
-          🙌 {t("community.shares.activityTitle")}
+          <Icon name="activity" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.activityTitle")}
         </p>
         <p style={{ ...line, fontSize: ts(21), fontWeight: 700 }}>{p.activity}</p>
         {(p.place_name || when) && (
@@ -296,7 +297,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
           </p>
         ) : mine ? (
           <p style={{ ...line, fontWeight: 700, color: C.green, marginTop: 8 }}>
-            ✓ {t("community.shares.activityJoined")}
+            <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.activityJoined")}
           </p>
         ) : full ? (
           <p style={{ ...line, fontWeight: 600, color: C.textMuted, marginTop: 8 }}>
@@ -307,7 +308,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
             <div style={{ marginTop: 10 }}>
               <PrimaryBtn onClick={() => onAction("joinActivity", post)}>
                 {rsvp
-                  ? `✋ ${t("community.shares.activityRsvpJoin")}`
+                  ? t("community.shares.activityRsvpJoin")
                   : t("community.shares.activityJoin")}
               </PrimaryBtn>
             </div>
@@ -324,7 +325,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
-          🎲 {t("community.shares.gameOpenLine", { game: name })}
+          <Icon name="gameOpen" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.gameOpenLine", { game: name })}
         </p>
         <p style={line}>
           {t("community.shares.gameOpenSeats", {
@@ -361,7 +362,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
     return (
       <div style={box}>
         <p style={line}>
-          🧩{" "}
+          <Icon name="riddle" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{" "}
           <strong>
             {p.guesses === 1
               ? t("community.shares.puzzleResultOne")
@@ -563,7 +564,7 @@ function PostCard({
           remove it had nothing to attach to. */}
       {taggedNames && taggedNames.length > 0 && (
         <p style={{ margin: "6px 0 0", fontSize: ts(16), color: C.textMuted }}>
-          🫶 {t("posts.withNames", { names: taggedNames.join(", ") })}
+          <Icon name="people" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("posts.withNames", { names: taggedNames.join(", ") })}
           {iAmTagged && (
             <button
               type="button"
@@ -648,19 +649,30 @@ function PostCard({
               type="button"
               aria-pressed={mine}
               onClick={() => onToggleReaction(post.id, emoji, mine)}
+              /* ONE LINE OF PLAIN ACTIONS — no pills, no boxes.
+
+                 Four outlined pills under every post was four more
+                 outlines than §4.1 allows, and on a feed of ten posts
+                 that is forty boxes drawn around things whose meaning
+                 is the glyph itself. The emoji STAYS: a reaction is one
+                 a person picked, which §0.5 keeps as the exception.
+
+                 Mine is marked by weight and ink, not by a filled
+                 capsule — and the count beside it says so in figures,
+                 so it is never colour alone. */
               style={{
                 minHeight: A11Y.minTapTargetPx,
-                minWidth: A11Y.minTapTargetPx + 12,
-                padding: "0 12px",
-                borderRadius: 50,
-                border: `2px solid ${mine ? C.green : C.warmGray}`,
-                background: mine ? "#eef3ea" : C.white,
-                fontSize: ts(18),
+                padding: "0 10px 0 0",
+                border: "none",
+                background: "none",
+                fontSize: ts(17),
                 fontFamily: "inherit",
+                color: mine ? C.green : C.textMuted,
+                fontWeight: mine ? 700 : 500,
                 cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 5,
               }}
             >
               <span aria-hidden="true">{emoji}</span>
@@ -669,7 +681,7 @@ function PostCard({
           );
         })}
         <GhostBtn aria-expanded={commentsOpen} onClick={openComments} style={{ border: "none" }}>
-          💬 {t("community.feed.comments")}
+          <Icon name="messages" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.feed.comments")}
         </GhostBtn>
       </div>
 
@@ -1275,7 +1287,7 @@ export default function Feed({ composer = true }) {
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          ⚠ {error}
+          <Icon name="warn" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
         </BodyText>
       )}
 
@@ -1296,7 +1308,7 @@ export default function Feed({ composer = true }) {
               {composer && <ComposerRow onOpen={openComposer} />}
               {isIcon && (
                 <GhostBtn onClick={openWalkComposer} aria-expanded={walkOpen}>
-                  🙌 {t("community.shares.activityCta")}
+                  <Icon name="activity" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.activityCta")}
                 </GhostBtn>
               )}
 
@@ -1382,7 +1394,7 @@ export default function Feed({ composer = true }) {
                               : { minHeight: A11Y.minTapTargetPx, padding: "0 14px" }
                           }
                         >
-                          🌳 {p.name} · {p.city}
+                          <Icon name="park" size={16} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 5 }} />{p.name} · {p.city}
                         </GhostBtn>
                       ))}
                   </div>

@@ -33,6 +33,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { SWATCHES, STYLE_TAGS, VISIBILITIES } from "./postsData.js";
@@ -89,7 +90,7 @@ export function ComposerRow({ onOpen }) {
           cursor: "pointer",
         }}
       >
-        <span aria-hidden="true">📷</span>
+        <Icon name="camera" size={20} style={{ color: C.textMuted }} />
       </button>
     </div>
   );
@@ -239,7 +240,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
               fontFamily: "inherit", fontSize: ts(16), cursor: "pointer",
             }}
           >
-            <span aria-hidden="true">🌐</span>
+            <Icon name="globe" size={18} style={{ color: C.textMuted }} />
             {t(`posts.vis.${visibility}Line`)}
             <span aria-hidden="true">›</span>
           </button>
@@ -306,7 +307,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
               >
                 {/* Never colour alone: the chosen swatch carries a tick. */}
                 <span aria-hidden="true" style={{ color: C.green, fontWeight: 900 }}>
-                  {colour === i ? "✓" : ""}
+                  {colour === i ? <Icon name="check" size={16} /> : null}
                 </span>
               </button>
             ))}
@@ -356,10 +357,12 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
           />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
             <button type="button" onClick={() => fileRef.current?.click()} style={chip(!!file)}>
-              📷 {file ? t("posts.photoChosen") : t("posts.photo")}
+              <Icon name="camera" size={18} />{" "}
+              {file ? t("posts.photoChosen") : t("posts.photo")}
             </button>
             <button type="button" onClick={() => setPickPeople((v) => !v)} style={chip(tagged.length > 0)}>
-              🫶 {tagged.length ? t("posts.withCount", { n: tagged.length }) : t("posts.withSomeone")}
+              <Icon name="people" size={18} />{" "}
+              {tagged.length ? t("posts.withCount", { n: tagged.length }) : t("posts.withSomeone")}
             </button>
             {/* §7 — one minute maximum, enforced in the recorder. */}
             {!voice && (
@@ -423,7 +426,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
                       }}
                     >
                       <span aria-hidden="true" style={{ color: on ? C.green : C.textMuted, fontWeight: 800 }}>
-                        {on ? "✓" : "○"}
+                        <Icon name={on ? "check" : "close"} size={16} />
                       </span>
                       {person.full_name}
                     </button>
@@ -468,7 +471,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
                 }}
               >
                 <span aria-hidden="true" style={{ fontSize: ts(20), fontWeight: 800, color: visibility === v ? C.green : C.textMuted }}>
-                  {visibility === v ? "✓" : "○"}
+                  <Icon name={visibility === v ? "check" : "close"} size={16} />
                 </span>
                 <span>
                   <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>

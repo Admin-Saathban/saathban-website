@@ -40,7 +40,8 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
-import { startActivityHere } from "./outdoorData.js";
+import { startActivityHere, fetchMyPeople, notifyChosenFriends } from "./outdoorData.js";
+import { useEffect } from "react";
 
 const TOTAL = 6;
 const WHAT_CHIPS = ["chai", "walk", "ludo", "carrom", "talk", "sit"];
@@ -117,7 +118,15 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
   const [laterTime, setLaterTime] = useState("16:00");
   const [anotherDay, setAnotherDay] = useState("");
   const [limit, setLimit] = useState(""); // "" = anyone
-  const [audience, setAudience] = useState("people"); // people | area
+  /* §6's vocabulary, not "people | area". The values match the rest
+     of the app's visibility words (connections / board) so a person
+     meets one set of ideas across check-ins, moments and happenings
+     rather than one per screen. */
+  const [audience, setAudience] = useState("connections"); // connections | board
+  /* §6: "Private — plus an option to notify chosen friends, so the
+     people who matter still hear about it." */
+  const [tellThem, setTellThem] = useState([]);
+  const [people, setPeople] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -134,6 +143,12 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
     }
     return [...mine, ...rest].slice(0, 8);
   }, [places, me]);
+
+  useEffect(() => {
+    if (people === null && audience === "connections") {
+      fetchMyPeople().then(setPeople).catch(() => setPeople([]));
+    }
+  }, [audience, people]);
 
   const startsAtIso = () => {
     if (when === "now") return null; // an open invitation, current for 24h
@@ -171,6 +186,20 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
         rsvp: confirm,
         audience,
       });
+      /* After the happening exists, never before: telling somebody
+         about a thing that then failed to save is worse than not
+         telling them. Best effort — a notification that does not send
+         must not lose the person their plan. */
+      if (audience === "connections" && tellThem.length > 0) {
+        try {
+          await notifyChosenFriends(tellThem, {
+            title: t("whatson.start.notifyTitle", { what: activity }),
+            body: where.trim() || null,
+            link: "/app/outdoor",
+            kind: "outing",
+          });
+        } catch { /* the plan stands */ }
+      }
       onStarted?.({ what: activity });
     } catch (e) {
       setError(t("whatson.start.failed"));
@@ -308,16 +337,76 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
       </Row></>)}
 
       {step === 5 && (<>
-      {/* WHO CAN SEE IT */}
+      {/* §6 — WHO CAN SEE IT, in plain words about what each choice
+          DOES. "My people / My area" named two modes and left a
+          person to work out the difference; these say the
+          consequence, which is the same rule §1 screen 3 follows for
+          a group's privacy. */}
       <Row label={t("whatson.start.whoSees")}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Chip active={audience === "people"} onClick={() => setAudience("people")}>
-            {t("whatson.start.myPeople")}
-          </Chip>
-          <Chip active={audience === "area"} onClick={() => setAudience("area")}>
-            {t("whatson.start.myArea")}
-          </Chip>
-        </div>
+        {[
+          ["connections", "outdoor.vis.circleName", "outdoor.vis.circleWhat"],
+          ["board", "outdoor.vis.boardName", "outdoor.vis.boardWhat"],
+        ].map(([key, nameKey, whatKey]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setAudience(key)}
+            aria-pressed={audience === key}
+            style={{
+              display: "block", width: "100%", textAlign: "start", marginBottom: 10,
+              padding: "14px 16px", borderRadius: 16, minHeight: A11Y.minTapTargetPx,
+              border: audience === key ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
+              background: audience === key ? "#EEF3E8" : C.white,
+              fontFamily: "inherit", cursor: "pointer",
+            }}
+          >
+            <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+              {t(nameKey)}
+            </span>
+            <span style={{ display: "block", fontSize: ts(16), color: C.textMuted, marginTop: 2 }}>
+              {t(whatKey)}
+            </span>
+          </button>
+        ))}
+
+        {/* §6: private does not have to mean nobody hears. Without
+            this, choosing the private option costs a person the two
+            friends they actually wanted to ask — which is why they
+            would stop choosing it. */}
+        {audience === "connections" && (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, marginBottom: 2 }}>
+              {t("outdoor.vis.notifyFriends")}
+            </div>
+            <div style={{ fontSize: ts(16), color: C.textMuted, marginBottom: 8 }}>
+              {t("outdoor.vis.notifyFriendsWhat")}
+            </div>
+            {people === null ? (
+              <div style={{ fontSize: ts(16), color: C.textMuted }}>···</div>
+            ) : people.length === 0 ? (
+              /* A door, not a scoreboard: somebody with nobody in
+                 their circle yet is not shown an empty list. */
+              <div style={{ fontSize: ts(16), color: C.textMuted }}>{t("outdoor.vis.notifyNobody")}</div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {people.map((per) => {
+                  const on = tellThem.includes(per.id);
+                  return (
+                    <Chip
+                      key={per.id}
+                      active={on}
+                      onClick={() =>
+                        setTellThem((cur) => (on ? cur.filter((x) => x !== per.id) : [...cur, per.id]))
+                      }
+                    >
+                      {on ? "✓ " : ""}{per.name}
+                    </Chip>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </Row></>)}
 
       {/* §7: the old wording is deleted. "Ask them to confirm? /

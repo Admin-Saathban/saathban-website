@@ -84,7 +84,14 @@ export default function WeatherLine({ city }) {
           /* Only an hour somebody could actually go out in. Before
              this, at 10pm it would happily suggest 5am — true, and no
              use to anyone deciding when to ask a friend for a walk. */
+          /* Later TODAY, and at an hour somebody could go out in.
+             Restricting the hours alone was not enough: at 10pm the
+             first match became 6am, which is inside the window and
+             still tomorrow. If the day has no cooler hour left, the
+             line simply gives the temperature — there is no advice to
+             offer about when to go out today. */
           const h = at.getHours();
+          if (at.getDate() !== new Date(nowMs).getDate()) break;
           if (h < 6 || h > 20) continue;
           if (Number.isFinite(temps[i]) && now - temps[i] >= 3) {
             cooler = at;

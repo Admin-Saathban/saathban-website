@@ -383,3 +383,53 @@ export async function reportPlaceAccess(userId, place, note) {
   });
   if (error) throw error;
 }
+
+/* ── §6: "Private — plus an option to NOTIFY CHOSEN FRIENDS, so the
+      people who matter still hear about it." ──
+
+   Private means the happening does not widen. It does not mean
+   nobody is told. Without this, choosing the private option costs a
+   person the two friends they actually wanted to invite, which is
+   why they would stop choosing it.
+
+   Sent through social_notify_kind rather than a plain insert so the
+   recipient's §19 notification settings still decide (0058), so
+   created_by is stamped (0101) and §6.1's "mute this person" works
+   on it, and so the kind is carried for "mute this kind of thing". */
+export async function notifyChosenFriends(ids, { title, body, link, kind = "outing" }) {
+  if (!ids || ids.length === 0) return 0;
+  let sent = 0;
+  for (const id of ids) {
+    const { error } = await supabase.rpc("social_notify_kind", {
+      p_profile: id,
+      p_title: title,
+      p_body: body || null,
+      p_link: link || null,
+      p_kind: kind,
+    });
+    if (!error) sent++;
+  }
+  return sent;
+}
+
+/* The people a person could choose to tell: their circle and anyone
+   they already have an accepted conversation with. Deliberately not
+   "everyone nearby" — this list is for the handful who matter. */
+export async function fetchMyPeople() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const me = user.id;
+  const [{ data: circ }, { data: dms }] = await Promise.all([
+    supabase.from("circle_members").select("icon_id, member_id").or(`icon_id.eq.${me},member_id.eq.${me}`),
+    supabase.from("dm_requests").select("requester_id, recipient_id").eq("status", "accepted")
+      .or(`requester_id.eq.${me},recipient_id.eq.${me}`),
+  ]);
+  const ids = new Set();
+  (circ || []).forEach((c) => ids.add(c.icon_id === me ? c.member_id : c.icon_id));
+  (dms || []).forEach((d) => ids.add(d.requester_id === me ? d.recipient_id : d.requester_id));
+  ids.delete(me);
+  const arr = [...ids];
+  if (!arr.length) return [];
+  const { data } = await supabase.from("safe_profiles").select("id, full_name").in("id", arr);
+  return (data || []).map((p) => ({ id: p.id, name: p.full_name || "" }));
+}

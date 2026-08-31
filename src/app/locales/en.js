@@ -1702,6 +1702,7 @@ const en = {
     where: { thePark: "The park", myHome: "My home", onThePhone: "On the phone" },
     when: { now: "Now", later: "Later today", another: "Another day" },
     start: {
+      notifyTitle: "{what} — someone you know is up for it",
       needToKnow: "Do you need to know who's coming?",
       needToKnowNo: "No — they can just turn up.",
       needToKnowYes: "Yes — ask them to say they're coming.",
@@ -1760,6 +1761,7 @@ const en = {
         whoSees: "Who can see this?",
       },
     vis: {
+        notifyNobody: "Nobody in your circle yet — you can still go, and ask someone when you are there.",
       circleName: "The people I have let in",
       circleWhat: "Only your circle sees this. Not the neighbourhood.",
       boardName: "Anyone nearby",

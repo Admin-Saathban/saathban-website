@@ -47,6 +47,7 @@ import Composer, { ComposerRow } from "./Composer.jsx";
 import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
 import ReconnectRow from "./ReconnectRow.jsx";
+import PlaySomethingSheet from "./PlaySomethingSheet.jsx";
 import { fetchFeedGroupPosts } from "../groups/groupsStore.js";
 import { pickReconnect, rowAllowed, markRowSeen, hushPerson } from "./reconnect.js";
 import { fetchChats } from "../messages/messagesData.js";
@@ -804,6 +805,7 @@ export default function Feed({ composer = true }) {
   const [groupPosts, setGroupPosts] = useState([]);
   const [reconnect, setReconnect] = useState(null);
   const [helloWith, setHelloWith] = useState(null);
+  const [playWith, setPlayWith] = useState(null);
   /* Which ring the feed had to reach for. Shown as a quiet line, never
      as a setting: §7 is explicit that the person never changes one. */
   const [radius, setRadius] = useState("area");
@@ -1275,6 +1277,11 @@ export default function Feed({ composer = true }) {
         <SayHelloSheet person={helloWith} onClose={() => setHelloWith(null)} />
       )}
 
+      {/* §9.2 — one tap holds her seat, sends the invite and opens the board. */}
+      {playWith && (
+        <PlaySomethingSheet person={playWith} onClose={() => setPlayWith(null)} />
+      )}
+
       {/* §10 — one sheet, growing from whichever three dots was tapped. */}
       {menuPost && (
         <PostMenu
@@ -1728,6 +1735,7 @@ export default function Feed({ composer = true }) {
                     key="reconnect-row"
                     person={reconnect.person}
                     onHello={() => setHelloWith(reconnect.person)}
+                    onPlay={() => setPlayWith(reconnect.person)}
                     onDismiss={() => { hushPerson(reconnect.otherId); setReconnect(null); }}
                   />,
                 ];

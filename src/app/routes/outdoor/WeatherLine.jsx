@@ -81,6 +81,11 @@ export default function WeatherLine({ city }) {
           const at = new Date(times[i]);
           if (at.getTime() <= nowMs) continue;
           if (at.getTime() - nowMs > 9 * 3600 * 1000) break;
+          /* Only an hour somebody could actually go out in. Before
+             this, at 10pm it would happily suggest 5am — true, and no
+             use to anyone deciding when to ask a friend for a walk. */
+          const h = at.getHours();
+          if (h < 6 || h > 20) continue;
           if (Number.isFinite(temps[i]) && now - temps[i] >= 3) {
             cooler = at;
             break;
@@ -88,8 +93,14 @@ export default function WeatherLine({ city }) {
         }
 
         if (!alive) return;
+        /* hour12, because en-GB's `hour: numeric` renders 17:00 as
+           "17" and 05:00 as "05" — neither of which reads as a time
+           of day to the person this line is written for. */
         const hour = cooler
-          ? cooler.toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "numeric" })
+          ? cooler
+              .toLocaleTimeString(lang === "ur" ? "ur-PK" : "en-GB", { hour: "numeric", hour12: true })
+              .replace(/\s+/g, "")
+              .toLowerCase()
           : null;
         setLine(
           hour

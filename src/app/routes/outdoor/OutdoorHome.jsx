@@ -264,8 +264,8 @@ export default function OutdoorHome() {
                     cursor: "pointer",
                   }}
                 >
-                  {city}
-                  <span style={{ textDecoration: "underline", marginInlineStart: 8, color: C.greenMuted }}>
+                  {city}{" "}
+                  <span style={{ textDecoration: "underline", marginInlineStart: 4, color: C.greenMuted }}>
                     {t("outdoor.home.citySee", { city: next })}
                   </span>
                   {whose && (

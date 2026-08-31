@@ -7,6 +7,10 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
+/* One number, so the card's cancel and the column's inset cannot
+   drift apart. */
+export const GUTTER = 16;
+
 export function OutdoorScreen({ children, backTo, backLabel, width = 640 }) {
   const { ts, meta } = useI18n();
   return (
@@ -43,7 +47,7 @@ export function OutdoorScreen({ children, backTo, backLabel, width = 640 }) {
         }
         .sb-outdoor ::placeholder { color: ${C.textMuted}; opacity: 0.8; }
       `}</style>
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      <div style={{ maxWidth: width, margin: "0 auto", paddingInline: GUTTER }}>
         {backTo && (
           <Link
             to={backTo}
@@ -82,6 +86,10 @@ export function Card({ children, style, ...rest }) {
         borderRadius: 20,
         padding: 20,
         marginBottom: 16,
+        /* Cancels the column's gutter so the card reaches both edges
+           (the shell's edge-to-edge rule) while its CONTENT stays
+           inset by its own 20px. */
+        marginInline: -GUTTER,
         ...style,
       }}
     >

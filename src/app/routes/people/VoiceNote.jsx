@@ -248,8 +248,11 @@ export function VoicePlayer({ url, seconds, mine }) {
       style={{
         display: "flex", alignItems: "center", gap: 12,
         minWidth: 210, padding: "10px 14px", borderRadius: 18,
-        background: mine ? C.sage : C.white,
-        border: `2px solid ${mine ? C.sage : C.warmGray}`,
+        /* C.sage had been collapsed onto the accent, so "sage" was
+           solid dark green and a voice note read as a different
+           concept from the text message beside it. */
+        background: mine ? C.mine : C.white,
+        border: `2px solid ${mine ? C.mine : C.warmGray}`,
       }}
     >
       <button

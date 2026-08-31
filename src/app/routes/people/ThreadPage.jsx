@@ -808,13 +808,19 @@ export default function ThreadPage() {
                       maxWidth: "82%",
                       padding: emojiSticker ? "6px 10px" : "10px 16px",
                       borderRadius: mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                      background: emojiSticker ? "transparent" : mine ? C.green : C.white,
+                      /* C.mine, not C.green. A chat is a column of your own
+                         messages, so a solid accent bubble makes half the
+                         screen the accent colour and the accent stops
+                         meaning anything — exactly where Send needs it
+                         most (tokens.js: green marks the thing you are
+                         meant to do next and nothing else). */
+                      background: emojiSticker ? "transparent" : mine ? C.mine : C.white,
                       border: emojiSticker
                         ? "none"
                         : mine
                           ? "none"
                           : `1.5px solid ${C.warmGray}`,
-                      color: mine ? C.cream : C.textMain,
+                      color: C.textMain,
                       fontSize: emojiSticker ? ts(56) : ts(A11Y.minBodyPx),
                       lineHeight: emojiSticker ? 1.1 : 1.5,
                       overflowWrap: "anywhere",

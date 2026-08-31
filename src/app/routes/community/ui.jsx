@@ -16,7 +16,10 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
         minHeight: "100vh",
         background: C.bg,
         color: C.textMain,
-        padding: "20px 16px 64px",
+        /* NO SIDE PADDING. Cards bleed to both edges now, so the page
+           cannot hold a 16px gutter or they would stop at it. Anything
+           that is NOT a full-bleed row puts its own inset back. */
+        padding: "0 0 64px",
       }}
     >
       <style>{`
@@ -72,15 +75,28 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
 /* Extra props (className, ref, data-*) pass through so the feedback
    layer can mark a freshly created card; a component that swallows
    them makes the highlight silently do nothing. */
+/* A post, and the composer, and anything else that used to be a card.
+
+   NO BORDER, NO CORNER, NO SIDE MARGIN — the owner's ruling of 30
+   August and NAVIGATION_SPEC §4.1's one rule: an outline means "you
+   can tap this" and nothing else. A post is not tappable, so a post
+   has no outline.
+
+   It bleeds to both screen edges. A 20px radius inset 16px from each
+   side spent 32px of a 390px phone on gutter and drew a box around
+   something nobody can press. Posts are separated from each other by
+   the grey ground showing through, which is what the near-white
+   background in §0.5 is FOR — on cream, white-on-cream was too close
+   to read as a gap, which is why the border existed in the first
+   place. Change the ground and the border becomes unnecessary rather
+   than merely unfashionable. */
 export function Card({ children, style, ...rest }) {
   return (
     <section {...rest}
       style={{
         background: C.white,
-        border: `1px solid ${C.warmGray}`,
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
+        padding: "14px 16px",
+        marginBottom: 8,
         ...style,
       }}
     >

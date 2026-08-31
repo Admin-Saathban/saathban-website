@@ -16,10 +16,10 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
         minHeight: "100vh",
         background: C.bg,
         color: C.textMain,
-        /* NO SIDE PADDING. Cards bleed to both edges now, so the page
-           cannot hold a 16px gutter or they would stop at it. Anything
-           that is NOT a full-bleed row puts its own inset back. */
-        padding: "0 0 64px",
+        /* The gutter is back, and the cards escape it instead — see
+           .sb-bleed in lib/i18n.jsx. Text and controls on this screen
+           now sit where every other screen puts them. */
+        padding: "0 16px 64px",
       }}
     >
       <style>{`
@@ -90,9 +90,13 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
    to read as a gap, which is why the border existed in the first
    place. Change the ground and the border becomes unnecessary rather
    than merely unfashionable. */
-export function Card({ children, style, ...rest }) {
+export function Card({ children, style, className, ...rest }) {
   return (
-    <section {...rest}
+    <section
+      {...rest}
+      /* sb-bleed: this is a surface, so it reaches both edges. The
+         page around it keeps its inset for text and controls. */
+      className={["sb-bleed", className].filter(Boolean).join(" ")}
       style={{
         background: C.white,
         padding: "14px 16px",

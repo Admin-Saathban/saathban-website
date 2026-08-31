@@ -123,41 +123,61 @@ export function LanguageProvider({ children }) {
           back to. Nobody would have seen it in a screenshot; it shows
           up as a flash on a slow phone and as serif behind a short
           page. */}
-      {/* ── EDGE TO EDGE BELOW A TABLET, INSET ABOVE ONE ──
+      {/* ── FULL BLEED IS AN OPT-OUT, NOT AN OVERRIDE ──
 
-          Measured on the deployed build at 390px: body 390, main 390,
-          CONTENT 358. The missing 32px was not one shell wrapper — it
-          was `padding: "20px 16px"` written onto <main> in forty
-          separate screens, each of which looked reasonable alone.
+          The first version of this zeroed `main`'s padding app-wide
+          with !important, and restored 16px only to a hand-picked
+          list of element types at exactly two depths. Everything the
+          list missed — buttons, inputs, lists, a span of bare text
+          one level deeper — ended up flush against the glass on every
+          screen in the app. Lane 4 found it. It was a rule written to
+          beat forty screens rather than to agree with them, and a
+          rule that has to fight the code it governs is the wrong
+          rule.
 
-          The maxWidth wrappers those screens also carry are KEPT: at
-          620-640px they do nothing on a phone and stop a feed
-          becoming a 1400px line of text on a laptop, which is what
-          they were for. So the rule is a breakpoint rather than a
-          deletion — below 768px the page gutter goes and surfaces
-          reach the glass; above it, nothing changes.
+          Inverted. The screens keep their own 16px, which is correct
+          for text and controls and already written in forty places.
+          What bleeds is a CARD BACKGROUND, and it says so: .sb-bleed
+          pulls a surface back out to the screen edges by exactly the
+          page inset it sits in.
 
-          THE GUTTER COMES BACK ON TEXT, and that is the whole
-          subtlety. Zeroing the page padding alone would press every
-          heading and paragraph against the edge of the screen, which
-          is worse than the inset it replaced. A CARD should bleed; a
-          SENTENCE should not. So headings and loose paragraphs get
-          their 16px back individually, and anything with its own
-          background — a card, a row — spans the full width.
+          Below the tablet breakpoint only. Above it the maxWidth
+          wrappers centre the column, and a card reaching for the
+          window edge from inside a centred column would simply be
+          wrong. */}
+      {/* ── CHROME IS NOT TEXT ──
 
-          !important is needed because all forty screens set padding
-          through the style attribute, which no stylesheet can
-          otherwise reach. It is scoped to <main> inside the app, so
-          it cannot touch the marketing site. */}
+          Long-pressing a button on a phone opens the selection
+          ribbon and puts blue over the label, which on a control
+          looks like something went wrong. Older thumbs rest on a
+          target longer before committing, so this audience triggers
+          it far more often than the people who wrote the defaults.
+
+          Chrome only. A post body, a message, a code, a name and
+          anything inside an input STAY selectable, because copying
+          them is a real thing to want — a person reading out an
+          invite code needs to be able to hold it. */}
+      <style>{`
+        .sb-appshell nav, .sb-appshell header,
+        .sb-appshell button, .sb-appshell label,
+        .sb-appshell [role="tab"], .sb-appshell [role="button"] {
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
+        .sb-appshell input, .sb-appshell textarea,
+        .sb-appshell [contenteditable="true"],
+        .sb-appshell .sb-selectable, .sb-appshell .sb-selectable * {
+          -webkit-user-select: text;
+          user-select: text;
+          -webkit-touch-callout: default;
+        }
+      `}</style>
       <style>{`
         @media (max-width: 767px) {
-          .sb-appshell main { padding-left: 0 !important; padding-right: 0 !important; }
-          .sb-appshell main > h1, .sb-appshell main > h2, .sb-appshell main > h3,
-          .sb-appshell main > p, .sb-appshell main > form,
-          .sb-appshell main > div > h1, .sb-appshell main > div > h2,
-          .sb-appshell main > div > h3, .sb-appshell main > div > p,
-          .sb-appshell main > div > form, .sb-appshell main > div > label {
-            padding-left: 16px; padding-right: 16px;
+          .sb-appshell .sb-bleed {
+            margin-left: -16px;
+            margin-right: -16px;
           }
         }
       `}</style>

@@ -99,14 +99,32 @@ check("the help fixture exists", !!helpId, helpId);
   let t = await p.evaluate(()=>document.body.innerText);
   check("a neighbour sees 'I can help'", /I can help/.test(t), "§6.1 Asked");
   await p.screenshot({ path: "tests/_shots/help-asked.png", fullPage: true });
-  const btn = p.getByRole("button", { name: "I can help", exact: true }).first();
+    /* SCOPED TO THIS RUN'S OWN POST.
+
+       A scoped assertion around an unscoped action is the worst of both:
+       it reports on my row while acting on somebody else's. This click
+       used to take .first() across the whole feed, which on an account
+       four lanes write to is whichever post sorted highest — so a real offer of help could land on a stranger's ask.
+       Every post carries this control, so .first() was never asking for
+       mine; it was asking for the newest. data-fresh carries the post id,
+       so scope to it. */
+  const helpCard = p.locator(`[data-fresh="${helpId}"]`).first();
+  await helpCard.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+  /* SAY WHICH PATH WAS TAKEN. The fallback below exists so a selector
+     change cannot dead-end the suite — but a silent fallback to the
+     unscoped click is exactly the failure this scoping was added to
+     prevent, and it would look identical to success. Report it. */
+  check("the offer is scoped to this run's own ask", (await helpCard.count()) > 0);
+  const btn = (await helpCard.count())
+    ? helpCard.getByRole("button", { name: "I can help", exact: true }).first()
+    : p.getByRole("button", { name: "I can help", exact: true }).first();
   if (await btn.count()) {
     await btn.click(); await p.waitForTimeout(2600);
     t = await p.evaluate(()=>document.body.innerText);
     check("offering says who is coming", /is coming|You said you would come/.test(t), "§6.1 Someone's coming");
     await p.screenshot({ path: "tests/_shots/help-coming.png", fullPage: true });
     // put it back
-    const undo = p.getByRole("button", { name: /change your mind/i }).first();
+    const undo = ((await helpCard.count()) ? helpCard : p).getByRole("button", { name: /change your mind/i }).first();
     if (await undo.count()) { await undo.click(); await p.waitForTimeout(2000); }
   } else { check("offer button clickable", false, "not found"); }
   await ctx.close();

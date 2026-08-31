@@ -267,7 +267,23 @@ let taggedPostId = null;
   const { ctx, p } = await pageAs("test-fam@saathban.dev");
   await p.goto(BASE + "/app/community", { waitUntil: "networkidle" });
   await p.waitForTimeout(2800);
-  const off = p.getByRole("button", { name: /Take my name off/ }).first();
+    /* SCOPED TO THIS RUN'S OWN POST.
+
+       A scoped assertion around an unscoped action is the worst of both:
+       it reports on my row while acting on somebody else's. This click
+       used to take .first() across the whole feed, which on an account
+       four lanes write to is whichever post sorted highest — so this could untag somebody from a post that was never mine.
+       Every post carries this control, so .first() was never asking for
+       mine; it was asking for the newest. data-fresh carries the post id,
+       so scope to it. */
+  const tagCard = p.locator(`[data-fresh="${taggedPostId || "none"}"]`).first();
+  await tagCard.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+  /* SAY WHICH PATH WAS TAKEN. The fallback below exists so a selector
+     change cannot dead-end the suite — but a silent fallback to the
+     unscoped click is exactly the failure this scoping was added to
+     prevent, and it would look identical to success. Report it. */
+  check("§5 the untag is scoped to this run's own post", (await tagCard.count()) > 0);
+  const off = ((await tagCard.count()) ? tagCard : p).getByRole("button", { name: /Take my name off/ }).first();
   check("§5 the person named is offered a way off", (await off.count()) > 0);
   if (await off.count()) {
     await off.click();

@@ -167,7 +167,23 @@ check(`${LANG} no "Shared" toast after posting`, !/Shared|شائع ہو گیا/.
 await p.screenshot({ path: `${SHOTS}/feed-types-${LANG}.png`, fullPage: true });
 
 /* The §10 menu, from the three dots. */
-await p.locator('button[aria-label*="More"], button:has-text("⋯")').first().click().catch(() => {});
+/* Opening a menu is read-only, so this could not damage anyone — but
+   .first() still opened whichever post sorted highest, which on a
+   shared account is often another lane's. The §10 assertions would
+   then describe a stranger's menu while claiming to describe one of
+   the five posts just made. Green, pointing at the wrong object. */
+/* By this run’s own text, since post() tracks bodies rather than ids.
+   `made` holds exactly the five posts just created. */
+const ownCard = p.locator("[data-fresh]").filter({ hasText: made[made.length - 1] }).first();
+/* SAY WHICH PATH WAS TAKEN. The fallback below exists so a selector
+   change cannot dead-end the suite — but a silent fallback to the
+   unscoped click is exactly the failure this scoping was added to
+   prevent, and it would look identical to success. Report it. */
+check(`${LANG} the menu opened is this run's own post`, (await ownCard.count()) > 0, "§10");
+const ownDots = (await ownCard.count())
+  ? ownCard.locator('button[aria-label*="More"], button:has-text("⋯")').first()
+  : p.locator('button[aria-label*="More"], button:has-text("⋯")').first();
+await ownDots.click().catch(() => {});
 await p.waitForTimeout(800);
 const menu = await p.evaluate(() => document.body.innerText);
 check(`${LANG} the post menu opens`, /Pin to your profile|اپنی پروفائل پر لگائیں|Save this|محفوظ کریں/.test(menu), "§10");

@@ -69,7 +69,7 @@ export default function HeaderAvatar() {
           width: 34,
           height: 34,
           borderRadius: "50%",
-          background: src ? `center/cover url(${src})` : C.sage,
+          background: src ? `center/cover url(${src})` : C.green,
           color: C.cream,
           display: "flex",
           alignItems: "center",
@@ -94,7 +94,7 @@ export default function HeaderAvatar() {
             width: 10,
             height: 10,
             borderRadius: "50%",
-            background: C.sage,
+            background: C.green,
             border: `2px solid ${C.bg}`,
           }}
         />

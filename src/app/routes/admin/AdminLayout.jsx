@@ -183,7 +183,7 @@ export default function AdminLayout() {
               fontSize: 14,
               letterSpacing: 2,
               textTransform: "uppercase",
-              color: C.sage,
+              color: C.green,
               marginTop: 4,
             }}
           >
@@ -236,7 +236,7 @@ export default function AdminLayout() {
             fontSize: 13,
             letterSpacing: 1.5,
             textTransform: "uppercase",
-            color: C.sage,
+            color: C.green,
             padding: "16px 14px 4px",
           }}
         >{t("admin.viewSpaces")}</div>
@@ -291,7 +291,7 @@ export default function AdminLayout() {
               }}
             >
               {label}
-              <span style={{ marginLeft: "auto", fontSize: 13, color: C.sage }}>{t("admin.soonBadge")}</span>
+              <span style={{ marginLeft: "auto", fontSize: 13, color: C.green }}>{t("admin.soonBadge")}</span>
             </div>
           )
         )}

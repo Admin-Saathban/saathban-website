@@ -30,7 +30,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 import Icon from "../../components/Icon.jsx";
@@ -121,7 +121,7 @@ function Group({ title, children }) {
    would ask again and again, never learning that anything had
    happened. The row is the place they asked, so the row is where the
    answer belongs. */
-function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy }) {
+function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy, refused }) {
   const { t, ts } = useI18n();
   const isMember = mine.has(g.id);
   const state = asked[g.id];
@@ -147,7 +147,7 @@ function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy }) {
     : { label: t("search.ask"), act: onAsk };
 
   return (
-    <li>
+    <li style={{ background: C.white, marginBottom: 1 }}>
       <div
         style={{
           display: "flex",
@@ -155,8 +155,6 @@ function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy }) {
           gap: 12,
           minHeight: 56,
           padding: "10px 16px",
-          background: C.white,
-          marginBottom: 1,
         }}
       >
         <button
@@ -219,6 +217,24 @@ function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy }) {
           </span>
         ))}
       </div>
+      {/* THE ANSWER, WHERE THE QUESTION WAS ASKED. Amber and worded —
+          a refusal is not an error to retry, so it does not get the
+          red of something broken or a button offering another go. */}
+      {refused && (
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            padding: "0 16px 12px",
+            fontSize: ts(16),
+            lineHeight: 1.45,
+            color: MEANING.warning,
+          }}
+        >
+          <Icon name="warn" size={16} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+          {refused}
+        </p>
+      )}
     </li>
   );
 }
@@ -283,6 +299,23 @@ export default function SearchPage() {
   }, [q]);
 
   const [asking, setAsking] = useState(null);
+  /* WHAT THE SERVER SAID, PER ROW.
+
+     Both handlers below used to swallow the refusal entirely — a
+     comment saying "nothing is claimed", which is true and is not the
+     point. Tap Join on a group that is invite-only, or one whose admin
+     has blocked you, and the row did not change and nothing appeared:
+     a tap that vanishes. A person does not conclude "I was refused",
+     they conclude the button is broken, and they press it again.
+
+     Lane 4 hit the mirror image of this on RSVP — a refusal dressed as
+     "That didn't send. Try once more?", which invites somebody round
+     the same wall forever. Silence and a retry prompt are the same
+     mistake: both hide that an answer was given.
+
+     So the row says what came back, and says it once, next to the
+     control that was pressed. */
+  const [refused, setRefused] = useState({});
   /* Joining is not asking: it succeeds outright, so the row goes
      straight to "You are in" and the group appears in `mine`. */
   const join = async (id) => {
@@ -290,8 +323,12 @@ export default function SearchPage() {
     try {
       await joinPublicGroup(id);
       setMine(await myGroupIds());
-    } catch {
-      /* A refusal leaves the row as it was; nothing is claimed. */
+      setRefused((r) => ({ ...r, [id]: null }));
+    } catch (err) {
+      /* The server's own sentence, not a sentence of mine guessing at
+         it: the RPC knows whether this was invite-only, a block, or a
+         group that stopped being public between the search and the tap. */
+      setRefused((r) => ({ ...r, [id]: err?.message || t("search.refused") }));
     } finally {
       setAsking(null);
     }
@@ -305,9 +342,9 @@ export default function SearchPage() {
          confirmation; a banner saying the same thing is the app
          congratulating itself. */
       setAsked(await myJoinRequests());
-    } catch {
-      /* A refusal from the RPC (invite only, already a member, blocked)
-         leaves the row exactly as it was. Nothing is claimed. */
+      setRefused((r) => ({ ...r, [id]: null }));
+    } catch (err) {
+      setRefused((r) => ({ ...r, [id]: err?.message || t("search.refused") }));
     } finally {
       setAsking(null);
     }
@@ -433,6 +470,7 @@ export default function SearchPage() {
                       busy={asking === g.id}
                       onAsk={() => ask(g.id)}
                       onJoin={() => join(g.id)}
+                      refused={refused[g.id]}
                       onOpen={() => go(`/app/groups/${g.id}`)}
                     />
                   ))}
@@ -485,7 +523,7 @@ export default function SearchPage() {
                           height: 40,
                           flexShrink: 0,
                           borderRadius: "50%",
-                          background: C.sage,
+                          background: C.green,
                           color: C.cream,
                           display: "flex",
                           alignItems: "center",
@@ -515,6 +553,7 @@ export default function SearchPage() {
                       busy={asking === g.id}
                       onAsk={() => ask(g.id)}
                       onJoin={() => join(g.id)}
+                      refused={refused[g.id]}
                       onOpen={() => go(`/app/groups/${g.id}`)}
                     />
                   ))}

@@ -102,7 +102,7 @@ export default function BroadcastsPage() {
         <p
           role="status"
           style={{
-            border: `2px solid ${C.sage}`,
+            border: `2px solid ${C.green}`,
             borderRadius: 10,
             padding: "12px 16px",
             color: C.green,

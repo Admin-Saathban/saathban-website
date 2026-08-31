@@ -142,7 +142,7 @@ export default function NotificationsPage() {
                   key={n.id}
                   style={{
                     background: C.white,
-                    border: `1px solid ${isUnread ? C.sage : C.warmGray}`,
+                    border: `1px solid ${isUnread ? C.green : C.warmGray}`,
                     borderInlineStart: `4px solid ${isUnread ? C.green : "transparent"}`,
                     borderRadius: 16,
                     padding: "16px 18px",

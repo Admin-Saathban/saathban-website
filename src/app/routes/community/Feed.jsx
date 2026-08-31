@@ -150,7 +150,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   const p = post.payload || {};
   const box = {
     background: C.selected,
-    border: `2px solid ${C.sage}`,
+    border: `2px solid ${C.green}`,
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 12,

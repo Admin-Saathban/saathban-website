@@ -17,7 +17,19 @@ import { STATUS_LABELS } from "./data.js";
 const STATUS_STYLES = {
   pending: { bg: C.warmGray, fg: C.textMain },
   interviewing: { bg: C.olive, fg: C.white },
-  probation: { bg: C.sage, fg: C.dark },
+  /* 2.08:1 BEFORE THIS. C.dark on C.sage — and C.sage is #0B5D2A,
+     byte-identical to C.green since the palette collapse, so this was
+     near-black ink on the dark accent: less than half the 4.5:1 AA
+     floor, on the chip that tells a reviewer whether a volunteer is
+     cleared to be alone with an isolated person.
+
+     It read as legible in review because the NAME said "sage" and sage
+     used to be a pale green. The name went on describing a colour the
+     token had stopped holding.
+
+     Pale ground, accent ink: 7.13:1, and still distinct from `active`
+     below, which is the same green the other way round. */
+  probation: { bg: C.selected, fg: C.green },
   active: { bg: C.green, fg: C.cream },
   suspended: { bg: C.brown, fg: C.cream },
   rejected: { bg: C.dark, fg: C.warmGray },

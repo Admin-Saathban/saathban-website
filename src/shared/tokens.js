@@ -126,10 +126,23 @@ export const SURFACE = {
      solid green makes half the screen the accent colour and the accent
      stops meaning anything precisely where a Send button needs it.
 
-     INK ON LIGHT, for the language this app ships in. Cream on dark
-     green at the 16px floor is thin, and Urdu Nastaliq is thinner than
-     Latin at the same nominal size — it is the script that suffers
-     first, on the surface people read longest. */
+     INK ON LIGHT — AND THIS IS TYPOGRAPHY, NOT A CONTRAST FLOOR.
+
+     I first wrote this as an accessibility argument: that cream on
+     dark green at the 16px floor breached a floor that only held in
+     English. Lane 3 measured it and it does not. #FFFFFF on #0B5D2A is
+     8.04:1 — AAA, not merely AA — against 14.35:1 for ink on this
+     wash. The new pairing is better; the old one was never failing.
+
+     The real reason is sound and is not a ratio: light-on-dark makes
+     strokes bloom and read thinner, and Nastaliq has less stroke to
+     lose than Latin. Argued as a floor it was checkable and false,
+     which would have handed the next person a reason to dismiss a
+     ruling that is correct on the accent rule alone.
+
+     A wrong reason for a right answer is worse than no reason: it
+     survives exactly until somebody checks it, and takes the answer
+     with it. */
   mine: "#E8F0E6",
 };
 

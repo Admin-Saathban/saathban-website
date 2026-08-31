@@ -77,7 +77,7 @@ export function Pill({ children, tone = "neutral", style }) {
        not see. Chips are labels, so they take the ground. */
     neutral: { bg: C.ground, fg: C.textMuted, border: C.warmGray },
     brown: { bg: C.tint, fg: C.brown, border: C.navEdge },
-    green: { bg: C.selected, fg: C.green, border: C.sage },
+    green: { bg: C.selected, fg: C.green, border: C.green },
   };
   const t = tones[tone] ?? tones.neutral;
   return (

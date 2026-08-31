@@ -49,7 +49,7 @@ import {
 } from "./outdoorData.js";
 import { fetchAppEvents, isUpcoming, fetchMyRsvps, rsvpToEvent, cancelRsvp } from "../events/eventsStore.js";
 import { bandFor, dayBucket, sinceLabel, BAND_ORDER, TODAY, TOMORROW, LATER } from "./bands.js";
-import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn } from "./ui.jsx";
+import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, ComingButton, comingPill } from "./ui.jsx";
 import StartSomething from "./StartSomething.jsx";
 import AddPlace from "./AddPlace.jsx";
 import WeatherLine from "./WeatherLine.jsx";
@@ -343,21 +343,10 @@ export default function WhatsOn() {
                     {t("whatson.since", { time: sinceLabel(c.created_at, lang) })}
                   </span>
                 </span>
-                <Link
-                  to={`/app/outdoor/${c.place.id}`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minHeight: A11Y.minTapTargetPx,
-                    padding: "0 18px",
-                    borderRadius: 50,
-                    background: C.green,
-                    color: C.white,
-                    fontSize: ts(A11Y.minBodyPx),
-                    fontWeight: 700,
-                    textDecoration: "none",
-                  }}
-                >
+                {/* A Link, not a button: this opens the place, where
+                    coming is actually done. It wears the same pill so
+                    the word does not arrive in a third costume. */}
+                <Link to={`/app/outdoor/${c.place.id}`} style={comingPill(ts)}>
                   {t("whatson.illCome")}
                 </Link>
               </div>
@@ -388,31 +377,15 @@ export default function WhatsOn() {
                     {[h.where, timeOf(h.when), h.who].filter(Boolean).join(" · ")}
                   </span>
                 </span>
-                {h.joinable && !h.joined && (
-                  <button
-                    type="button"
-                    onClick={() => join(h)}
+                {h.joinable && (
+                  <ComingButton
+                    coming={h.joined}
+                    /* Joining an activity has no cancel path, so once
+                       you are coming the pill stops being a button —
+                       same pill, honest about what a press would do. */
+                    onClick={h.joined ? undefined : () => join(h)}
                     disabled={busyId === h.id}
-                    style={{
-                      minHeight: A11Y.minTapTargetPx,
-                      padding: "0 18px",
-                      borderRadius: 50,
-                      border: `2px solid ${C.green}`,
-                      background: C.white,
-                      color: C.green,
-                      fontFamily: "inherit",
-                      fontSize: ts(A11Y.minBodyPx),
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {t("whatson.illCome")}
-                  </button>
-                )}
-                {h.joinable && h.joined && (
-                  <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green }}>
-                    ✓ {t("whatson.coming")}
-                  </span>
+                  />
                 )}
                 {/* §2.4: "events, with 'I'll come' and 'Who's going'.
                     NEVER 'Open'." Open what? The card already shows
@@ -420,25 +393,11 @@ export default function WhatsOn() {
                     they are coming and to see who else is. */}
                 {h.to && (
                   <>
-                    <button
-                      type="button"
+                    <ComingButton
+                      coming={h.rsvped}
                       onClick={() => rsvp(h)}
                       disabled={busyId === h.id}
-                      style={{
-                        minHeight: A11Y.minTapTargetPx,
-                        padding: "0 18px",
-                        borderRadius: 50,
-                        border: `2px solid ${C.green}`,
-                        background: h.rsvped ? C.green : C.white,
-                        color: h.rsvped ? C.white : C.green,
-                        fontFamily: "inherit",
-                        fontSize: ts(A11Y.minBodyPx),
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {h.rsvped ? `✓ ${t("whatson.coming")}` : t("whatson.illCome")}
-                    </button>
+                    />
                     <Link
                       to={h.to}
                       style={{

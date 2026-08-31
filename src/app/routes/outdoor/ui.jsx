@@ -200,3 +200,84 @@ export function GhostBtn({ children, style, ...props }) {
    used to live here is gone. Every outcome in this area now goes
    through the shared feedback store, and a second toast
    implementation is how two toasts end up on screen at once. */
+
+/* ════════════════════════════════════════════════
+   Saying you will come — ONE word, ONE confirmed style.
+
+   The same act had five words across the app: "I'll come", "I'm in",
+   "Count me in", "I'm coming", and a confirmed state that rendered as
+   plain text on an activity card and a filled button on an event card
+   two rows below it. A person cannot learn a verb that changes every
+   time they meet it, and two visual states for one meaning reads as
+   two different things having happened.
+
+   The word is "I'll come". The confirmed state is an outlined pill
+   with a tick that says "You're coming".
+
+   WHY THE CONFIRMED STATE IS STILL AN OUTLINE. The current rule is
+   that an outline means tappable, and coming is usually undoable —
+   tapping again cancels. Where there is no way to change your mind,
+   the same pill renders as a non-interactive span: identical to read,
+   honest about what it will do.
+   ════════════════════════════════════════════════ */
+/* The pill, on its own, for the one place that is a LINK rather than
+   a button — the "someone is here right now" card, whose tap opens
+   the place. Same shape as every other way of saying you will come,
+   because a third look for one word is what item 1 is about. */
+export function comingPill(ts) {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    minHeight: A11Y.minTapTargetPx,
+    padding: "0 18px",
+    borderRadius: 50,
+    border: `2px solid ${C.green}`,
+    background: C.white,
+    color: C.green,
+    fontFamily: "inherit",
+    fontSize: ts(A11Y.minBodyPx),
+    fontWeight: 700,
+    textDecoration: "none",
+  };
+}
+
+export function ComingButton({ coming, onClick, disabled, busyLabel }) {
+  const { t, ts } = useI18n();
+
+  const base = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    minHeight: A11Y.minTapTargetPx,
+    padding: "0 18px",
+    borderRadius: 50,
+    border: `2px solid ${C.green}`,
+    background: coming ? "#EAF2E3" : C.white,
+    color: C.green,
+    fontFamily: "inherit",
+    fontSize: ts(A11Y.minBodyPx),
+    fontWeight: 700,
+  };
+
+  const label = busyLabel || (coming ? t("whatson.coming") : t("whatson.illCome"));
+
+  /* No handler means the state cannot be changed — so it must not
+     look like a button that does nothing when pressed. */
+  if (!onClick) {
+    return (
+      <span style={base}>
+        {coming && <span aria-hidden="true">✓</span>}
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      style={{ ...base, cursor: "pointer", opacity: disabled ? 0.6 : 1 }}>
+      {coming && <span aria-hidden="true">✓</span>}
+      {label}
+    </button>
+  );
+}

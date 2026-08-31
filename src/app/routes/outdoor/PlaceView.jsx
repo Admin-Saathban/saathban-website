@@ -40,7 +40,7 @@ import {
   startActivityHere,
   joinPlacedActivity,
 } from "./outdoorData.js";
-import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, ComingButton } from "./ui.jsx";
 import AccessChips, { AccessWrongLink } from "./AccessChips.jsx";
 import { useToast, useAction, useFresh } from "../../lib/feedback.jsx";
 
@@ -533,24 +533,17 @@ export default function PlaceView() {
                       {t("outdoor.place.actYours")}
                     </span>
                   ) : joined ? (
-                    <span
-                      style={{
-                        fontSize: ts(A11Y.minBodyPx),
-                        fontWeight: 700,
-                        color: C.green,
-                        padding: "8px 14px",
-                      }}
-                    >
-                      ✓ {t("outdoor.place.actJoined")}
-                    </span>
+                    <ComingButton coming />
                   ) : full ? (
                     <GhostBtn disabled aria-disabled="true">
                       {t("outdoor.place.actFull")}
                     </GhostBtn>
                   ) : (
-                    <PrimaryBtn onClick={() => doJoin(a)} disabled={joining === a.id}>
-                      {joining === a.id ? t("feedback.sending") : t("outdoor.place.actJoin")}
-                    </PrimaryBtn>
+                    <ComingButton
+                      onClick={() => doJoin(a)}
+                      disabled={joining === a.id}
+                      busyLabel={joining === a.id ? t("feedback.sending") : undefined}
+                    />
                   )}
                 </div>
               </Card>

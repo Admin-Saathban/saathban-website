@@ -96,6 +96,20 @@ function ensureStyles() {
 const COMMIT = 0.28;
 const SETTLE_MS = 200;
 
+/* SIDEWAYS ENOUGH TO BE A SWIPE. Requiring only that dx exceeds dy was
+   not enough: a first touchmove of dx=14, dy=13 passed it, and a thumb
+   arcing down the screen produces exactly that. A real diagonal now
+   loses to the scroll, because 1.4 is a slope of about 35 degrees and
+   nobody swiping sideways travels closer to the diagonal than that. */
+const DOMINANCE = 1.4;
+
+/* A FLICK IS A SWIPE EVEN WHEN IT IS SHORT. A thumb flick is 40-80px in
+   about 80ms; the distance threshold alone is 109px on a 390px screen,
+   so every genuine flick sprang back and read as the gesture not
+   working. Velocity in px/ms, sampled over the last few moves. */
+const FLICK_V = 0.45;
+const FLICK_MIN = 24;
+
 function scrollsSideways(el) {
   for (let n = el; n && n !== document.body; n = n.parentElement) {
     if (n.dataset?.sbSwipe !== undefined) return true;
@@ -112,7 +126,8 @@ export default function useTabSwipe(items, enabled = true) {
      updates every frame, and re-rendering the whole shell sixty times a
      second to move one element is how a smooth gesture becomes a janky
      one. */
-  const st = useRef({ x: 0, y: 0, dx: 0, on: false, dead: true, idx: -1 });
+  const st = useRef({ x: 0, y: 0, dx: 0, on: false, dead: true, idx: -1,
+                      t: 0, lastX: 0, lastT: 0, v: 0, timer: 0 });
 
   useEffect(() => {
     if (!enabled || !items || items.length < 2) return undefined;
@@ -147,7 +162,19 @@ export default function useTabSwipe(items, enabled = true) {
 
     const start = (e) => {
       const s = st.current;
-      s.on = false; s.dx = 0;
+      /* A SETTLE IS INTERRUPTIBLE. The old version kept the timeout id
+         nowhere, so a second flick during the 200ms settle left the
+         first navigation pending: it fired mid-way through the new
+         gesture and landed on a tab the person had already left. Two
+         quick flicks were the reproducible version of that.
+
+         Touching the screen cancels whatever was in flight. The
+         interrupted navigation is dropped rather than queued, because a
+         finger back on the glass is somebody changing their mind. */
+      if (s.timer) { window.clearTimeout(s.timer); s.timer = 0; }
+      root.classList.remove("sb-settling");
+      root.style.removeProperty("--sb-drag");
+      s.on = false; s.dx = 0; s.v = 0;
       if (e.touches.length !== 1) { s.dead = true; return; }
       const el = e.target instanceof Element ? e.target : null;
       s.dead =
@@ -158,6 +185,8 @@ export default function useTabSwipe(items, enabled = true) {
       if (s.idx < 0) s.dead = true;
       s.x = e.touches[0].clientX;
       s.y = e.touches[0].clientY;
+      s.lastX = s.x;
+      s.lastT = e.timeStamp || Date.now();
     };
 
     const move = (e) => {
@@ -167,10 +196,19 @@ export default function useTabSwipe(items, enabled = true) {
       const dy = e.touches[0].clientY - s.y;
 
       if (!s.on) {
-        /* Undecided: a mostly-vertical drag is a scroll and this hook
-           must let go of it for good, not keep testing every frame. */
-        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; return; }
+        /* VERTICAL INTENT WINS INSTANTLY, and it wins for good — once
+           this gesture is a scroll it is never reconsidered, because a
+           hook that keeps re-testing every frame will grab the page
+           halfway down a flick.
+
+           The test is >= rather than >: a perfectly diagonal drag is
+           not a swipe, and on a real thumb it is common. */
+        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; return; }
         if (Math.abs(dx) < ENGAGE) return;
+        /* Sideways ENOUGH. Passing ENGAGE is not the same as meaning
+           it — a thumb arcing down the screen crosses 12px of x while
+           crossing 11px of y, and that is a scroll. */
+        if (Math.abs(dx) < Math.abs(dy) * DOMINANCE) return;
         s.on = true;
         if (!wantsLessMotion()) {
           root.classList.add("sb-dragging");
@@ -181,6 +219,15 @@ export default function useTabSwipe(items, enabled = true) {
       /* RUBBER BAND AT THE ENDS. The first and last tabs do not wrap, so
          the pane resists rather than refusing: a dead gesture reads as a
          broken screen, a heavy one reads as an edge. */
+      /* Velocity over the gap since the last move, not over the whole
+       gesture: a slow drag that ends in a flick should commit on the
+       flick, which is what a thumb actually does. */
+      const now = e.timeStamp || Date.now();
+      const gap = now - (s.lastT || now);
+      if (gap > 0) s.v = (e.touches[0].clientX - s.lastX) / gap;
+      s.lastX = e.touches[0].clientX;
+      s.lastT = now;
+
       const n = neighbour(dx);
       const resist = n < 0 || n >= items.length ? 0.28 : 1;
       s.dx = dx * resist;
@@ -202,7 +249,12 @@ export default function useTabSwipe(items, enabled = true) {
 
       const n = neighbour(dx);
       const far = Math.abs(dx) >= Math.min(window.innerWidth * COMMIT, 140);
-      const going = far && n >= 0 && n < items.length && idx >= 0;
+      /* A flick commits on speed even when it is short — but only if it
+         is still travelling the way the pane is, so a drag that reverses
+         at the last instant lands back where it started. */
+      const flick = Math.abs(s.v) > FLICK_V && Math.abs(dx) > FLICK_MIN &&
+                    (s.v < 0) === (dx < 0);
+      const going = (far || flick) && n >= 0 && n < items.length && idx >= 0;
 
       if (wantsLessMotion()) {
         clear();
@@ -217,7 +269,8 @@ export default function useTabSwipe(items, enabled = true) {
       root.classList.add("sb-settling");
       setDrag(going ? (dx < 0 ? -window.innerWidth : window.innerWidth) : 0);
 
-      window.setTimeout(() => {
+      s.timer = window.setTimeout(() => {
+        s.timer = 0;
         clear();
         if (going) navigate(items[n].to);
       }, going ? SETTLE_MS : SETTLE_MS + 40);
@@ -234,6 +287,8 @@ export default function useTabSwipe(items, enabled = true) {
       document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", end);
       document.removeEventListener("touchcancel", end);
+      /* A pending settle must not navigate after this hook is gone. */
+      if (st.current.timer) { window.clearTimeout(st.current.timer); st.current.timer = 0; }
       clear();
     };
   }, [items, enabled, pathname, navigate]);

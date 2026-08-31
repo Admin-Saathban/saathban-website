@@ -207,7 +207,19 @@ export default function MessagesWorld() {
         top: 0,
         insetInlineStart: 0,
         insetInlineEnd: 0,
-        bottom: `calc(${BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
+        /* var(--sb-safe-bottom), NOT env() directly.
+
+           The shell feeds that variable from env() and reserves the bar
+           as calc(BAR_HEIGHT + var(--sb-safe-bottom)); the bar itself
+           pads with the same variable. Reading env() here looked
+           equivalent and was not — simulating a notch by setting the
+           variable moved the bar and left this edge where it was, so the
+           world overlapped the bar by the whole inset. One source for one
+           measurement, and it is the shell's.
+
+           (env() only started resolving at all when viewport-fit=cover
+           was added, so this had never been exercised.) */
+        bottom: `calc(${BAR_HEIGHT}px + var(--sb-safe-bottom, 0px))`,
         /* ABOVE THE APP'S BOTTOM BAR, which is also fixed and also sat
            at 60 — same layer, and it mounts after the routes, so it won
            and drew its five tabs across the bottom of the world. §2 is

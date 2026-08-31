@@ -2,6 +2,7 @@
    star. Stickers reuse the people lane's warm set, rendered large
    when a message is emoji-only. Participants-only at the database. */
 
+import { GAME } from "../gameSurface.js";
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
@@ -110,9 +111,40 @@ export default function ChatPanel({ sessionId, myId, seats }) {
                           display: "inline-block",
                           padding: sticker ? "2px 6px" : "8px 14px",
                           borderRadius: 14,
-                          background: sticker ? "transparent" : mine ? C.green : C.white,
-                          border: sticker || mine ? "none" : `1px solid ${C.warmGray}`,
-                          color: mine ? C.cream : C.textMain,
+                          /* MY OWN MESSAGE, IN THE GAME'S PALETTE.
+
+                             Lane 38 is right that a solid accent
+                             bubble is wrong, and their reason is the
+                             one that holds: a chat is a column of
+                             your own messages, so an accent bubble
+                             makes half the screen the accent and it
+                             stops meaning anything where Send needs
+                             it. tokens.js says green marks the thing
+                             you are meant to do next and nothing
+                             else.
+
+                             Their token is not the answer HERE
+                             though. C.mine is a pale wash for the
+                             app's cream chats; this chat sits on a
+                             dark game table, where the owner's rule
+                             is that nothing may wear Saathban's
+                             colours at all. So mine is a lifted plum
+                             panel and theirs is a recessed one —
+                             same distinction, this room's materials.
+
+                             The distinction is also not carried by
+                             colour alone: mine sit right, theirs
+                             left, and that is what actually tells
+                             them apart. */
+                          background: sticker
+                            ? "transparent"
+                            : mine
+                            ? "rgba(255,255,255,0.16)"
+                            : "rgba(0,0,0,0.26)",
+                          border: sticker
+                            ? "none"
+                            : `1px solid ${mine ? GAME.pillEdge : "rgba(255,255,255,0.10)"}`,
+                          color: GAME.ink,
                           fontSize: sticker ? ts(44) : ts(A11Y.minBodyPx),
                           lineHeight: sticker ? 1.1 : 1.5,
                           overflowWrap: "anywhere",

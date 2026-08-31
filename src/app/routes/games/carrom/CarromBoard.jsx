@@ -14,6 +14,7 @@
    wooden palette.
    ════════════════════════════════════════════════ */
 
+import { GAME } from "../gameSurface.js";
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
@@ -558,7 +559,21 @@ export default function CarromBoard({
             style={{
               height: "100%",
               width: `${Math.round(powerView * 100)}%`,
-              background: `linear-gradient(90deg, ${C.sage}, ${C.green})`,
+              /* A DEAD GRADIENT, found by taking lane 38's C.sage
+                 warning literally and grepping games/ for it.
+
+                 This ramped pale-to-strong so the meter got
+                 visibly stronger as you pulled. C.sage was
+                 collapsed onto the accent — APP_COLORS.sage and
+                 .green are both #0B5D2A now — so the ramp became
+                 one flat colour and the meter stopped saying
+                 anything except by its width.
+
+                 No contrast failure, because nothing is written on
+                 it; it is the same class of bug wearing different
+                 clothes. Brass, because this is inside a game and
+                 the accent here is not Saathban's. */
+              background: `linear-gradient(90deg, ${GAME.accentFlat}, #F7D07A)`,
               transition: "width 60ms linear",
             }}
           />

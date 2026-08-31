@@ -25,8 +25,9 @@
 
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 
-export default function HelpStrip({ status, authorName, authorComplete, helperNames, mine, busy, onOffer, onWithdraw, onDone, iOffered }) {
+export default function HelpStrip({ status, authorName, authorComplete, helperNames, mine, busy, onOffer, onWithdraw, onDone, onReopen, iOffered }) {
   const { t, ts } = useI18n();
   const first = (authorName || "").split(" ")[0];
   const firstHelper = (helperNames?.[0] || "").split(" ")[0];
@@ -43,12 +44,49 @@ export default function HelpStrip({ status, authorName, authorComplete, helperNa
     return (
       <div style={{ ...box, background: "#EEF3E8", borderColor: C.green }}>
         <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green }}>
-          ✓{" "}
+          <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
           {status.state === "closed"
             ? /* §6.3 — either the plain line, or their own words. */
               (status.note || t("posts.help.sortedPlain", { name: first }))
             : t("posts.help.sortedBy", { name: firstHelper || first })}
         </p>
+
+        {/* A WAY BACK. §6.3 gave the asker a Close and no way to undo
+            it, so settling a request was a one-way door.
+
+            The case is the ordinary one, not the odd one: somebody
+            offers, Fatima marks it sorted, and then they do not turn
+            up. She is holding a closed post about a thing that still
+            needs doing, and her only ways out were to delete it —
+            which §6.3 itself calls the rude option — or to write the
+            whole request again. A helper who does not arrive should
+            not cost her the post.
+
+            Only hers, and quiet: no confirmation, because reopening
+            is not a destructive act and asking twice would make it
+            feel like one. */}
+        {mine && onReopen && (
+          <button
+            type="button"
+            onClick={onReopen}
+            disabled={busy}
+            style={{
+              minHeight: A11Y.minTapTargetPx,
+              marginTop: 6,
+              padding: 0,
+              border: "none",
+              background: "none",
+              color: C.green,
+              fontFamily: "inherit",
+              fontSize: ts(15),
+              fontWeight: 700,
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            {t("posts.help.reopen")}
+          </button>
+        )}
       </div>
     );
   }

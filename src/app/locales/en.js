@@ -2207,6 +2207,7 @@ const en = {
       youAreComing: "You said you would come — change your mind?",
       markDone: "This is sorted",
       sortedBy: "{name} sorted this out",
+      reopen: "Ask again — it is not sorted after all",
       sortedPlain: "{name} says this is sorted.",
       /* §6.4 — factual, no adjective, and never the word "beware". */
       newHere: "New here — hasn't finished their profile yet.",

@@ -54,6 +54,7 @@ import {
   postAudioUrl,
   fetchHelpExtras,
   offerHelp,
+  reopenHelp,
   withdrawOffer,
   markHelpDone,
   closeHelp,
@@ -602,6 +603,7 @@ function PostCard({
           onOffer={() => onAction("offerHelp", post)}
           onWithdraw={() => onAction("withdrawHelp", post)}
           onDone={() => onAction("helpDone", post)}
+          onReopen={() => onAction("reopenHelp", post)}
         />
       )}
       {post.post_type && post.post_type !== "text" && (
@@ -1074,9 +1076,31 @@ export default function Feed({ composer = true }) {
       if (kind === "offerHelp") {
         await offerHelp(target.id, myId);
         setExtras(await fetchHelpExtras((posts || []).map((p) => p.id)));
+        /* §6.2 — AN OFFER OPENS A CHAT. The offer was landing as a row
+           and stopping there, so the two people had agreed to meet and
+           had nowhere to speak. Everything that follows — when, which
+           door, is tomorrow alright — has to happen somewhere, and the
+           spec is explicit that it is a chat and that no phone number
+           moves unless a person hands it over themselves.
+
+           MOTION §7: this lands you IN the conversation rather than
+           telling you it exists. The offer is already recorded above,
+           so a chat that fails to open costs the offer nothing — the
+           row stands either way, which is why this is not awaited into
+           the same try. */
+        try {
+          const requestId = await openDmWith(target.author_id);
+          if (requestId) navigate(`/app/people/${target.author_id}/chat`);
+        } catch {
+          /* No chat is a smaller failure than a lost offer. The offer
+             is saved; they can open the conversation from the person. */
+        }
       } else if (kind === "withdrawHelp") {
         await withdrawOffer(target.id, myId);
         setExtras(await fetchHelpExtras((posts || []).map((p) => p.id)));
+      } else if (kind === "reopenHelp") {
+        await reopenHelp(target.id);
+        await load();
       } else if (kind === "helpDone") {
         await markHelpDone(target.id);
         await load();

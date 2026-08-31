@@ -157,6 +157,22 @@ export const closeHelp = (postId, note) =>
 
 export const markHelpDone = (postId) => updatePost(postId, { help_state: "done" });
 
+/* REOPENING. §6.3 gave the asker a Close and no way back, which made
+   settling it a one-way door.
+
+   The spec is wrong here rather than the build, and the case that
+   shows it is the ordinary one: somebody offers, Fatima marks it
+   sorted, and then they do not turn up. She is now holding a closed
+   post about a thing that still needs doing, and her only options
+   are to delete it — which §6.3 itself calls the rude one — or to
+   write the whole request again.
+
+   Reopening clears the note as well as the state. Leaving "my nephew
+   did it" attached to a live request would have the post contradict
+   itself on the screen. */
+export const reopenHelp = (postId) =>
+  updatePost(postId, { help_state: "asked", help_note: null });
+
 /* §6.1 — "Someone's coming" is DERIVED from the offers, never stored,
    so it can never disagree with who has actually offered. */
 export function helpStatusOf(post, offers) {

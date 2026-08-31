@@ -36,6 +36,7 @@ import { touchPresence } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
 import NewChat from "./NewChat.jsx";
 import ThreadPage from "../people/ThreadPage.jsx";
+import InvitePage from "../people/InvitePage.jsx";
 import ChatsList from "./ChatsList.jsx";
 import RequestsList from "./RequestsList.jsx";
 import MessagesMenu from "./MessagesMenu.jsx";
@@ -265,6 +266,12 @@ export default function MessagesWorld() {
                 bubbles, guards and the money warning are §6's and were
                 not touched. The room moved; the furniture did not. */}
             <Route path="with/:profileId" element={<ThreadPage />} />
+            {/* §4: My People is retired as a destination, so Invite comes
+                here — beside Requests, where the two things you do with
+                people who are not yet in a conversation now live
+                together. The page itself is unchanged; only where it is
+                reached from. */}
+            <Route path="invite" element={<InvitePage />} />
             <Route path="new" element={<NewChat />} />
             <Route path="requests" element={<RequestsList onCount={setPending} />} />
             <Route path="menu" element={<MessagesMenu />} />
@@ -293,6 +300,7 @@ export default function MessagesWorld() {
       >
         <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
         <WorldTab to="requests" icon="letter" label={t("msg.tab.requests")} badge={pending} />
+        <WorldTab to="invite" icon="add" label={t("people.list.inviteCta")} />
         <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
       </nav>
     </div>

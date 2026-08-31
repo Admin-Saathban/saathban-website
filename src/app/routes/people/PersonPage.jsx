@@ -491,7 +491,10 @@ export default function PersonPage() {
           onClick={async () => {
             try {
               await blockPerson(myId, profileId);
-              navigate("/app/people", { replace: true });
+              /* My People is retired as a destination (§4), so blocking
+                 someone returns to the conversations rather than to a
+                 list nothing else points at any more. */
+              navigate("/app/community/messages", { replace: true });
             } catch { setError("people.profile.actionError"); }
           }}
           style={{

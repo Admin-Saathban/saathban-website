@@ -24,7 +24,7 @@ export const EVENTS = [
     date: "Mar 22, 2025",
     loc: "Alhamra Arts Council, Lahore",
     desc: "An afternoon of storytelling and warm chai with senior residents of local aged care homes in Lahore.",
-    color: C.brown,
+    color: C.siteBrown,
     detail: {
       fullDate: "Saturday, 22nd March 2025",
       time: "3:00 PM – 5:00 PM",
@@ -56,7 +56,7 @@ export const EVENTS = [
     date: "May 3, 2026",
     loc: "Virtual Event",
     desc: "Interactive workshop pairing Saath-Buddies with Saath-Icons for meaningful intergenerational dialogue.",
-    color: C.green,
+    color: C.siteGreen,
     detail: null, // upcoming — no detail page yet
   },
   {
@@ -65,7 +65,7 @@ export const EVENTS = [
     date: "Jun 15, 2026",
     loc: "Lahore Canal Bank",
     desc: "A gentle group walk promoting physical and mental health among senior citizens.",
-    color: C.olive,
+    color: C.siteOlive,
     detail: null,
   },
 ];

@@ -7,18 +7,46 @@
    Do not hardcode a hex or a font stack anywhere else.
    ════════════════════════════════════════════════ */
 
-// ─── Colour ───
-// Exported as COLORS; the marketing site imports it as `C`, which is what
-// every style object in src/App.jsx already references.
+/* ─── Colour: THE MARKETING PALETTE ───
+
+   EVERY KEY HERE IS PREFIXED `site`, AND THE TWO COLOUR OBJECTS IN
+   THIS FILE MAY NEVER AGAIN SHARE A KEY NAME. That is a rule, not a
+   style, and it exists because sharing them cost real defects:
+
+     - the probation chip sat at 2.08:1, less than half the AA floor,
+       on the control that says whether a volunteer may be alone with
+       an isolated person. It read as safe because the key was named
+       `sage` and sage HAD been a pale green;
+     - screens came out brown after the app palette turned neutral,
+       because `brown` went on being called brown while holding ink;
+     - own-message bubbles diverged into four different colours across
+       four files, nobody able to see it from inside any one of them.
+
+   Each of those is the same fault: A NAME THAT OUTLIVED ITS VALUE.
+   Two objects with identical keys made every call site ambiguous to
+   the reader — `C.cream` said nothing about WHICH cream, so a value
+   could change under a name and no one reviewing a diff would see it.
+
+   The prefix makes the object visible at the point of use. `C.siteBrown`
+   in src/App.jsx cannot be confused with the app's `C.brown`, and a
+   marketing colour that drifts into src/app/ is now a name that does
+   not resolve rather than a colour that quietly looks wrong.
+
+   APP_COLORS keeps its unprefixed keys: the app is much the larger
+   consumer, and renaming there would be 171 files of churn for the
+   same guarantee this side already provides.
+
+   Imported as `C` by src/App.jsx and src/shared/eventsData.js, which
+   are its only two consumers. */
 export const COLORS = {
-  cream: "#FAF3E9", brown: "#573425", green: "#063214",
-  greenLight: "#0a4a1e", greenMuted: "#2a5e3a", brownLight: "#7a5443",
-  olive: "#637354", sage: "#8fa67e", warmGray: "#d4cdc4",
-  bg: "#FAF3E9", white: "#FFFFFF", dark: "#1a1a1a",
-  textMain: "#2d2418", textMuted: "#6b5e52", accent: "#573425",
+  siteCream: "#FAF3E9", siteBrown: "#573425", siteGreen: "#063214",
+  siteGreenLight: "#0a4a1e", siteGreenMuted: "#2a5e3a", siteBrownLight: "#7a5443",
+  siteOlive: "#637354", siteSage: "#8fa67e", siteWarmGray: "#d4cdc4",
+  siteBg: "#FAF3E9", siteWhite: "#FFFFFF", siteDark: "#1a1a1a",
+  siteTextMain: "#2d2418", siteTextMuted: "#6b5e52", siteAccent: "#573425",
   // Form validation only. Never the only signal — always pair the colour
   // with words (SPEC.md: no dependence on colour alone).
-  error: "#8C2F22",
+  siteError: "#8C2F22",
 };
 
 /* ─── The APP's palette — PRODUCT_DECISIONS §0.5 ───

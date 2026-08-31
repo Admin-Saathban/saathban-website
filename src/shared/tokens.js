@@ -102,6 +102,35 @@ export const SURFACE = {
      names is exactly how five creams happened. What tells them apart is
      the border and the words, which differ already. */
   selected: "#EEF3E8",
+
+  /* WHOSE MESSAGE THIS IS — authorship, not affirmation.
+
+     Lane 4 asked whether their own-message bubble should take
+     `selected` because the hex sits a few points away, and answered
+     their own question correctly: no. Authorship is identity. It is not
+     the option you chose, the switch that is on, or a thing that is
+     done, and mapping it on hex proximity is how a token stops meaning
+     anything. It is a real job, so it gets a real name.
+
+     THE APP HAD FOUR ANSWERS FOR IT: solid C.green in DMs and in game
+     chat, C.sage in voice notes (which now IS green, having been
+     collapsed onto the accent), and this pale wash in group chat. Your
+     own message looked like a different concept depending on which
+     chat you were standing in.
+
+     THE PALE WASH WINS, AND NOT BY VOTE — it lost 3–1. Two reasons,
+     both already written down elsewhere in this file and in SPEC:
+
+     ONE ACCENT (line 41). Green marks the thing you are meant to do
+     next and nothing else. A chat is a column of your own messages, so
+     solid green makes half the screen the accent colour and the accent
+     stops meaning anything precisely where a Send button needs it.
+
+     INK ON LIGHT, for the language this app ships in. Cream on dark
+     green at the 16px floor is thin, and Urdu Nastaliq is thinner than
+     Latin at the same nominal size — it is the script that suffers
+     first, on the surface people read longest. */
+  mine: "#E8F0E6",
 };
 
 /* ─── WHAT A COLOUR MEANS ───
@@ -137,6 +166,7 @@ export const APP_COLORS = {
   navEdge: SURFACE.navEdge,
   pressed: SURFACE.pressed,
   selected: SURFACE.selected,
+  mine: SURFACE.mine,
 
   bg: SURFACE.ground,     // older name for the ground; same value
   white: SURFACE.content,  // older name for a content surface

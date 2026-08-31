@@ -32,6 +32,7 @@ import {
   Toggle,
   Segmented,
 } from "./ui.jsx";
+import Icon from "../../components/Icon.jsx";
 
 function personName(person, t) {
   return person?.full_name || t("circle.member.unknownFallback");
@@ -83,7 +84,7 @@ function MemberCard({ m, sosCount, busy, actions, freshProps }) {
         </h3>
         {m.person?.city && <BodyText muted style={{ margin: 0 }}>{m.person.city}</BodyText>}
         {m.is_sos_contact && (
-          <Pill tone="brown">🆘 {sosOrderLabel(t, m.sos_order)}</Pill>
+          <Pill tone="brown"><Icon name="warn" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />{sosOrderLabel(t, m.sos_order)}</Pill>
         )}
       </div>
 
@@ -312,8 +313,11 @@ function WelcomeSheet({ name, onClose }) {
           boxShadow: "0 10px 40px rgba(45, 36, 24, 0.35)",
         }}
       >
-        <p aria-hidden="true" style={{ fontSize: ts(46), margin: "0 0 6px", textAlign: "center" }}>
-          🤝
+        {/* Drawn, not typed. The system emoji for this is a different
+           weight and colour on every phone, and at 46px that reads as a
+           sticker dropped onto the screen rather than part of it. */}
+        <p aria-hidden="true" style={{ margin: "0 0 6px", textAlign: "center", color: C.green }}>
+          <Icon name="helpOffer" size={46} />
         </p>
         <h2
           style={{

@@ -49,6 +49,7 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { GhostBtn, BodyText } from "./ui.jsx";
 import { openQuickTable } from "../games/quickTable.js";
 import { inviteToSeat, fetchGames } from "../../lib/games.js";
+import Icon from "../../components/Icon.jsx";
 
 /* GLYPHS ONLY. The games themselves come from the registry.
 
@@ -69,7 +70,7 @@ import { inviteToSeat, fetchGames } from "../../lib/games.js";
    Names come from the registry too, which carries both languages —
    people.thread.game_* only exists for the three that were known when
    that chooser was written. */
-const GLYPH = { ludo: "🎲", carrom: "🎯", snakes: "🪜" };
+const GLYPH = { ludo: "dice", carrom: "carrom", snakes: "snakes" };
 
 export default function PlaySomethingSheet({ person, onClose }) {
   const { t, ts, lang } = useI18n();
@@ -187,7 +188,7 @@ export default function PlaySomethingSheet({ person, onClose }) {
               opacity: starting ? 0.6 : 1,
             }}
           >
-            <span aria-hidden="true" style={{ fontSize: ts(26) }}>{GLYPH[g.key] || "🎲"}</span>
+            <Icon name={GLYPH[g.key] || "dice"} size={26} />
             <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
               <span>{lang === "ur" ? g.name_ur : g.name_en}</span>
               {g.timeout_style === "pass_turn" ? (
@@ -201,7 +202,7 @@ export default function PlaySomethingSheet({ person, onClose }) {
 
         {error ? (
           <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-            ⚠ {error}
+            <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
           </BodyText>
         ) : null}
 

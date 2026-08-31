@@ -24,6 +24,7 @@
 import { useState } from "react";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
+import Icon from "../../components/Icon.jsx";
 
 const mmss = (n) => {
   const s = Math.max(0, Math.round(n || 0));
@@ -58,7 +59,9 @@ export default function ReportedMedia({ bucket, path, kind }) {
   return (
     <div style={box}>
       <p style={{ margin: "0 0 8px", fontSize: 15, color: C.textMuted, fontWeight: 700 }}>
-        {kind === "audio" ? "🎤 Reported voice recording" : "🖼️ Reported image"}
+        {kind === "audio"
+            ? <><Icon name="voice" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />Reported voice recording</>
+            : <><Icon name="photo" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />Reported image</>}
         {bucket === "report-evidence" && " · copy handed over by the reporter"}
       </p>
 

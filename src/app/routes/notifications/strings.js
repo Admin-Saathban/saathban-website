@@ -105,19 +105,19 @@ export const STRINGS = {
 /* One emoji per kind — a visual anchor beside the label, never the
    only signal (the label carries the words). Unknown kinds fall back
    to the bell. */
-export const KIND_EMOJI = {
-  general: "🕊️",
-  broadcast: "📣",
-  document_request: "📄",
-  document_response: "📄",
-  question_reply: "💬",
-  reminder: "⏰",
-  milestone: "🏅",
-  game: "🎲",
-  group: "🧑‍🤝‍🧑",
-  social: "🌸",
-  dm: "💬",
-  circle: "🤝",
+export const KIND_ICON = {
+  general: "bell",
+  broadcast: "announce",
+  document_request: "document",
+  document_response: "document",
+  question_reply: "messages",
+  reminder: "time",
+  milestone: "badge",
+  game: "dice",
+  group: "people",
+  social: "good",
+  dm: "messages",
+  circle: "helpOffer",
 };
 
 /* Relative time, language-neutral units resolved by the caller's copy.

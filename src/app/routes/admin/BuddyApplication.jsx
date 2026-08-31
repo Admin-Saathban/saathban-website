@@ -43,6 +43,7 @@ import {
   fmtDateTime,
   ageFromDob,
 } from "./ui.jsx";
+import Icon from "../../components/Icon.jsx";
 
 const inputStyle = {
   width: "100%",
@@ -657,7 +658,7 @@ export default function BuddyApplication() {
                     {d.responded_at && (
                       <>
                         {" · "}response {fmtDate(d.responded_at)} —{" "}
-                        <span style={{ wordBreak: "break-all" }}>🔒 {d.response_path}</span>
+                        <span style={{ wordBreak: "break-all" }}><Icon name="locked" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />{d.response_path}</span>
                       </>
                     )}
                   </div>
@@ -765,7 +766,7 @@ function DocPlaceholder({ path }) {
         lineHeight: 1.5,
       }}
     >
-      🔒 Private bucket
+      <Icon name="locked" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />Private bucket
       <div style={{ wordBreak: "break-all" }}>{path}</div>
     </div>
   );

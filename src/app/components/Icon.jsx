@@ -42,7 +42,7 @@ import {
   Pill, Pin, Plus, Puzzle, RefreshCw, Salad, Sandwich, Scale, Search, Send,
   Settings, ShoppingBag, Smile, Sprout, Stethoscope, Sun, Sunrise, ThumbsUp,
   Trees, TreePine, TriangleAlert, Trophy, User, Users, Utensils, Volume2,
-  Waves, Wrench, X, MapPin,
+  Waves, Wrench, X, MapPin, Target, FileText,
 } from "lucide-react";
 
 /* Our names on the left, always. Never Lucide's on a call site. */
@@ -91,7 +91,7 @@ const ICONS = {
   back: ArrowLeft, forward: ArrowRight, time: Clock, heart: Heart,
   like: ThumbsUp, person: CircleUser, people: Users, photo: Image,
   send: Send, locked: Lock, letter: Mail, warn: TriangleAlert,
-  tools: Wrench, rest: Bed,
+  tools: Wrench, rest: Bed, carrom: Target, document: FileText,
 };
 
 export default function Icon({

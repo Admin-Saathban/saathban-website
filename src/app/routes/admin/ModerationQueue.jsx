@@ -19,6 +19,7 @@ import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 import ReportedMedia from "./ReportedMedia.jsx";
+import Icon from "../../components/Icon.jsx";
 
 const KIND_LABEL = {
   post: "Community post",
@@ -145,7 +146,7 @@ export default function ModerationQueue() {
 
       {error && (
         <p role="alert" style={{ color: C.brown, fontWeight: 700 }}>
-          ⚠ {error}
+          <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
         </p>
       )}
 

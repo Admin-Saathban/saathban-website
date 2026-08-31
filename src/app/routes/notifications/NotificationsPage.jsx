@@ -12,8 +12,9 @@ import ShareTableButton from "../games/ShareTableButton.jsx";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { STRINGS, KIND_EMOJI, relativeTime } from "./strings.js";
+import { STRINGS, KIND_ICON, relativeTime } from "./strings.js";
 import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, muteNotificationKind } from "./data.js";
+import Icon from "../../components/Icon.jsx";
 
 /* Quiet by design: these are not actions most people want most of
    the time, and a loud "MUTE" button beside every notification would
@@ -151,7 +152,7 @@ export default function NotificationsPage() {
                       game invite never looks like a document request. */}
                   {s.kinds[n.kind] && (
                     <p style={{ fontSize: ts(14), fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: C.greenMuted, margin: "0 0 6px" }}>
-                      <span aria-hidden="true">{KIND_EMOJI[n.kind] || "🔔"}</span> {s.kinds[n.kind]}
+                      <Icon name={KIND_ICON[n.kind] || "bell"} size={17} style={{ verticalAlign: "-3px" }} /> {s.kinds[n.kind]}
                     </p>
                   )}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>

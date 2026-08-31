@@ -97,7 +97,7 @@ export default function HelpStrip({ status, authorName, authorComplete, helperNa
     <div style={box}>
       {someoneComing && (
         <p style={{ margin: "0 0 10px", fontSize: ts(A11Y.minBodyPx), color: C.textMain, fontWeight: 700 }}>
-          🤝 {t("posts.help.coming", { name: firstHelper })}
+          <Icon name="helpOffer" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} /> {t("posts.help.coming", { name: firstHelper })}
         </p>
       )}
 

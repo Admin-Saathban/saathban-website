@@ -39,7 +39,29 @@ const Spark = ({ x, y, s = 6, fill = C.olive }) => (
   />
 );
 
-const Leaf = ({ x, y, r = 0, s = 1, fill = C.sage }) => (
+/* THE PALE GREEN THESE DRAWINGS WERE MADE FOR.
+
+   Every leaf and the sprout's head were fill={LEAF_PALE} when sage was a
+   pale green. Sage has since been collapsed onto the accent — LEAF_PALE
+   and C.green are both #0B5D2A — so the sprout's head became the same
+   colour as the eyes and mouth drawn on it, and the character lost its
+   face. Two of the 26 stickers use both names and both merged.
+
+   A contrast sweep cannot find this: there is no text, so there is no
+   ratio to fail. The games lane hit the same class of thing with a
+   power meter built as a gradient from sage to green, which became one
+   flat colour and stopped meaning anything. A collapsed token is as
+   broken between two SHAPES as it is under ink, and only one of those
+   shows up in an accessibility pass.
+
+   Held here as artwork rather than restored to the palette: the
+   collapse was right for the app's surfaces, where two near-identical
+   greens were an accident. These drawings genuinely need a light green
+   and a dark one, and that is a fact about the pictures, not about the
+   theme. */
+const LEAF_PALE = "#8FA67E";
+
+const Leaf = ({ x, y, r = 0, s = 1, fill = LEAF_PALE }) => (
   <path
     d="M0 0 C -10 -4, -16 -14, -12 -24 C -2 -22, 4 -12, 0 0 Z"
     transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}
@@ -79,9 +101,9 @@ const TextSticker = ({ word, color = C.green, accent = C.olive, size = 34 }) => 
 const SproutBody = ({ mood = "smile" }) => (
   <>
     <path d="M48 34 C48 26, 48 22, 48 16" stroke={C.greenMuted} strokeWidth="4" strokeLinecap="round" fill="none" />
-    <path d="M48 24 C38 22, 32 15, 32 7 C42 7, 48 14, 48 24 Z" fill={C.sage} />
+    <path d="M48 24 C38 22, 32 15, 32 7 C42 7, 48 14, 48 24 Z" fill={LEAF_PALE} />
     <path d="M48 21 C56 19, 62 13, 63 6 C54 6, 49 12, 48 21 Z" fill={C.greenMuted} />
-    <circle cx="48" cy="60" r="26" fill={C.sage} stroke={C.greenMuted} strokeWidth="2" />
+    <circle cx="48" cy="60" r="26" fill={LEAF_PALE} stroke={C.greenMuted} strokeWidth="2" />
     {mood === "tease" ? (
       <>
         <path d="M38 55 q4 -4 8 0" stroke={C.green} strokeWidth="3" fill="none" strokeLinecap="round" />
@@ -165,7 +187,7 @@ add("lantern", "Lantern", "قندیل", false, (
 add("heart-leaf", "Leafy heart", "پیار", false, (
   <>
     <path d="M48 82 C20 62, 14 40, 26 28 C34 20, 44 24, 48 32 C52 24, 62 20, 70 28 C82 40, 76 62, 48 82 Z"
-      fill={C.sage} stroke={C.greenMuted} strokeWidth="3" />
+      fill={LEAF_PALE} stroke={C.greenMuted} strokeWidth="3" />
     <path d="M48 36 C48 50, 48 62, 48 74" stroke={C.greenMuted} strokeWidth="2.5" strokeLinecap="round" fill="none" />
     <path d="M48 52 C42 50, 38 46, 38 42 M48 62 C54 60, 58 56, 58 52" stroke={C.greenMuted} strokeWidth="2.5" strokeLinecap="round" fill="none" />
   </>
@@ -174,11 +196,11 @@ add("heart-leaf", "Leafy heart", "پیار", false, (
 // — Nastaliq words —
 add("mashaallah", "MashaAllah", "ماشاءاللہ", true, <TextSticker word="ماشاءاللہ" color={C.green} accent={C.olive} size={30} />);
 add("shabash", "Shabash", "شاباش", true, <TextSticker word="شاباش" color={C.brown} accent={C.brownLight} size={36} />);
-add("jeetay-raho", "Jeetay raho", "جیتے رہو", true, <TextSticker word="جیتے رہو" color={C.green} accent={C.sage} size={32} />);
+add("jeetay-raho", "Jeetay raho", "جیتے رہو", true, <TextSticker word="جیتے رہو" color={C.green} accent={LEAF_PALE} size={32} />);
 add("wah-wah", "Wah wah", "واہ واہ", true, <TextSticker word="واہ واہ" color={C.brown} accent={C.olive} size={34} />);
 add("salaam", "Salaam", "سلام", true, (
   <>
-    <TextSticker word="سلام" color={C.green} accent={C.sage} size={38} />
+    <TextSticker word="سلام" color={C.green} accent={LEAF_PALE} size={38} />
     <path d="M118 20 a9 9 0 1 0 0 16 a7 7 0 1 1 0 -16 Z" fill={C.olive} />
   </>
 ));
@@ -219,7 +241,7 @@ add("anaar", "Sparkler", "اَنار", false, (
   <>
     <path d="M42 88 L54 88 L50 58 L46 58 Z" fill={C.brown} />
     <Spark x={48} y={40} s={14} fill={C.olive} />
-    <Spark x={26} y={30} s={6} fill={C.sage} />
+    <Spark x={26} y={30} s={6} fill={LEAF_PALE} />
     <Spark x={70} y={28} s={7} fill={C.brownLight} />
     <Spark x={48} y={14} s={5} fill={C.greenMuted} />
     <circle cx="30" cy="52" r="2.5" fill={C.olive} />
@@ -259,7 +281,7 @@ add("jeet", "Victory", "!جیت", true, (
 add("pakar-liya", "Gotcha!", "!پکڑ لیا", true, (
   <>
     <text x="80" y="50" textAnchor="middle" direction="rtl" fontFamily={NASTALIQ} fontSize="30" fontWeight="600" fill={C.brown}>پکڑ لیا!</text>
-    <circle cx="22" cy="60" r="11" fill={C.sage} stroke={C.greenMuted} strokeWidth="2.5" transform="rotate(-20 22 60)" />
+    <circle cx="22" cy="60" r="11" fill={LEAF_PALE} stroke={C.greenMuted} strokeWidth="2.5" transform="rotate(-20 22 60)" />
     <path d="M10 44 q6 8 4 14 M34 44 q-6 8 -4 14" stroke={C.brownLight} strokeWidth="3" strokeLinecap="round" fill="none" />
     <path d="M 30 78 C 60 88, 100 88, 128 76" fill="none" stroke={C.brownLight} strokeWidth="3" strokeLinecap="round" strokeDasharray="1 8" />
   </>
@@ -267,14 +289,14 @@ add("pakar-liya", "Gotcha!", "!پکڑ لیا", true, (
 add("uff", "Oof — so close", "!اُف", true, (
   <>
     <text x="88" y="52" textAnchor="middle" direction="rtl" fontFamily={NASTALIQ} fontSize="38" fontWeight="600" fill={C.brown}>اُف!</text>
-    <circle cx="26" cy="56" r="10" fill={C.sage} stroke={C.greenMuted} strokeWidth="2.5" />
+    <circle cx="26" cy="56" r="10" fill={LEAF_PALE} stroke={C.greenMuted} strokeWidth="2.5" />
     <circle cx="52" cy="56" r="12" fill="none" stroke={C.olive} strokeWidth="3" strokeDasharray="5 5" />
     <path d="M36 56 h4" stroke={C.brown} strokeWidth="3" strokeLinecap="round" />
   </>
 ));
 add("agli-baar", "Next time", "اگلی بار", true, (
   <>
-    <TextSticker word="اگلی بار" color={C.greenMuted} accent={C.sage} size={30} />
+    <TextSticker word="اگلی بار" color={C.greenMuted} accent={LEAF_PALE} size={30} />
     <path d="M124 60 C 130 52, 130 40, 122 32 M122 32 l8 1 m-8 -1 l1 8" stroke={C.greenMuted} strokeWidth="3" strokeLinecap="round" fill="none" />
   </>
 ));

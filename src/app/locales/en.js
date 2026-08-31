@@ -18,6 +18,7 @@
 
 const en = {
   common: {
+    loading: "One moment…",
     back: "Back",
     appName: "Saathban",
     backToHome: "Back to home",

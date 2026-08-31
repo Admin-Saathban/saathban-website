@@ -30,6 +30,7 @@ const TODO = (english) => `[UR] ${english}`;
 
 const ur = {
   common: {
+    loading: "ایک لمحہ…",
     back: "واپس",
     appName: "ساتھ بن",
     backToHome: "مرکزی صفحے پر واپس",

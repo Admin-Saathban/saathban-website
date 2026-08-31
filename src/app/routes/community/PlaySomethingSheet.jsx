@@ -41,33 +41,57 @@
    No new locale keys.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { GhostBtn, BodyText } from "./ui.jsx";
 import { openQuickTable } from "../games/quickTable.js";
-import { inviteToSeat } from "../../lib/games.js";
+import { inviteToSeat, fetchGames } from "../../lib/games.js";
 
-/* `waits` is the one sub-line reason §9.2 asks for that can actually be
-   computed. Carrom has no computer player, so its table waits for her
-   instead of starting — and three tiles that look identical, one of
-   which opens a waiting room, is a surprise nobody asked for. The games
-   lane flagged the same gap on their Games home; this is the same defect
-   in my sheet, so it is fixed here rather than left as theirs. */
-const GAMES = [
-  { key: "ludo", glyph: "🎲" },
-  { key: "carrom", glyph: "🎯", waits: true },
-  { key: "snakes", glyph: "🪜" },
-];
+/* GLYPHS ONLY. The games themselves come from the registry.
+
+   This used to be a hardcoded list of three with `waits: true` written
+   against carrom by name. That is the trap games.js already warns about
+   one layer down — callers computing a game's behaviour from something
+   other than the games table, and being silently wrong. Hardcoding the
+   NAME is the same mistake with better odds: it happens to be right
+   today and is wrong the moment a fourth game is added, with no error
+   to say so.
+
+   `waits` is derived from timeout_style === "pass_turn", which is the
+   actual reason: a pass_turn game has no bot player, so start_with_bots
+   refuses it and the table waits for her instead of starting. A new
+   pass_turn game gets the sub-line without anybody remembering to add
+   it here; a new bot game correctly gets none.
+
+   Names come from the registry too, which carries both languages —
+   people.thread.game_* only exists for the three that were known when
+   that chooser was written. */
+const GLYPH = { ludo: "🎲", carrom: "🎯", snakes: "🪜" };
 
 export default function PlaySomethingSheet({ person, onClose }) {
-  const { t, ts } = useI18n();
+  const { t, ts, lang } = useI18n();
   const navigate = useNavigate();
   const first = (person?.full_name || "").trim().split(" ")[0] || "";
+  const [games, setGames] = useState(null);   /* null = still loading */
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    fetchGames()
+            /* Enabled AND seats at least two. Deriving the list from the
+         registry immediately put Daily Riddle in this sheet — seats 1-1,
+         a solo puzzle nobody can be invited to — which the hardcoded
+         list of three had hidden rather than answered. The criterion is
+         not a name and not a kind: it is whether a second person can sit
+         down, which is the only thing this sheet is for. */
+      .then((rows) => { if (alive) setGames((rows || []).filter((g) => g.enabled && (g.max_seats || 0) >= 2)); })
+      .catch(() => { if (alive) setGames([]); });
+    return () => { alive = false; };
+  }, []);
 
   const start = async (gameKey) => {
     if (starting || !person?.id) return;
@@ -128,7 +152,11 @@ export default function PlaySomethingSheet({ person, onClose }) {
           {t("people.thread.playWhich")}
         </h2>
 
-        {GAMES.map((g) => (
+        {games === null ? (
+          <BodyText muted role="status">{t("common.loading")}</BodyText>
+        ) : null}
+
+        {(games || []).map((g) => (
           <button
             key={g.key}
             type="button"
@@ -154,10 +182,10 @@ export default function PlaySomethingSheet({ person, onClose }) {
               opacity: starting ? 0.6 : 1,
             }}
           >
-            <span aria-hidden="true" style={{ fontSize: ts(26) }}>{g.glyph}</span>
+            <span aria-hidden="true" style={{ fontSize: ts(26) }}>{GLYPH[g.key] || "🎲"}</span>
             <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-              <span>{t(`people.thread.game_${g.key}`)}</span>
-              {g.waits ? (
+              <span>{lang === "ur" ? g.name_ur : g.name_en}</span>
+              {g.timeout_style === "pass_turn" ? (
                 <span style={{ fontSize: ts(15), fontWeight: 500, color: C.textMuted }}>
                   {t("community.feed.reconnect.playWaits", { name: first })}
                 </span>

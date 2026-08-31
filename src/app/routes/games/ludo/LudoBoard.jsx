@@ -326,9 +326,14 @@ const CELL = 40; // viewBox units per grid cell
    LUDO_MOTION_SPEC §2's 0.8-of-a-cell figure is explicitly raised by
    GAMES_IMMERSION_SPEC §5; it was measured from a reference whose
    board is less dense than ours. */
-const GOTI_R = 12.6;
-const JOTA_R = 13.8;
-const HOME_R = 9;
+/* A CELL IS 40 UNITS. A goti drawn at r = 15 spans 30 of them
+   before its brass ring, and about 34 with it — so it fills its
+   square the way the reference's do, with a hair of board
+   showing at the corners. It has been 11.5, then 12.6; the owner
+   has said "too small" at every one of those. */
+const GOTI_R = 15.2;
+const JOTA_R = 16.6;
+const HOME_R = 10.4;
 const SIZE = 15 * CELL;
 /* One square of travel. The user could not follow a move at all, so
    this is deliberately unhurried: a goti crossing eight squares takes
@@ -928,10 +933,15 @@ export default function LudoBoard({
              All gradients and filters, no assets. ── */}
         <defs>
           {/* the board's own paper, warmer at the edges than the middle */}
+          {/* The board's paper. WHITE, not cream: the reference's
+              track is white and the cream read as an old page —
+              which, inside the cream card that used to wrap this,
+              is what made the board look like a printed leaflet
+              rather than a moulded toy. */}
           <radialGradient id="sb-felt" cx="50%" cy="42%" r="72%">
-            <stop offset="0%" stopColor="#FFFDF7" />
-            <stop offset="70%" stopColor="#FAF3E6" />
-            <stop offset="100%" stopColor="#EFE2CB" />
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="72%" stopColor="#FDFCFA" />
+            <stop offset="100%" stopColor="#F2EDE4" />
           </radialGradient>
           {/* a track cell: light from above, pressed in at the top */}
           {/* A track cell: light from above, pressed in at the top.
@@ -958,9 +968,8 @@ export default function LudoBoard({
               only maximised the contrast between the cell and the
               gridline, which nobody is trying to read. */}
           <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--sb-table-cell, #EFE7DA)" />
-            <stop offset="42%" stopColor="var(--sb-table-cell, #F8F3EA)" />
-            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FBF8F2)" />
+            <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
+            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #F7F4EE)" />
           </linearGradient>
           {/* The recess itself: dark along the top and left inside
               edges, the way a pressed groove catches light. */}
@@ -1000,11 +1009,17 @@ export default function LudoBoard({
           ))}
           {/* The same again for a single STOP cell, steeper so one
               40-unit square still reads as domed. */}
+          {/* NEARLY FLAT. This ramped from light to deep across one
+              40-unit square, so a home column read as six separate
+              domes fading into each other rather than as one painted
+              lane. The reference paints its home columns in solid
+              colour and lets the frame and the tokens carry the
+              depth. A whisper of a ramp is left so the lane is not
+              perfectly dead, and the sheen above still crosses it. */}
           {SEAT_COLORS.map((hex, seat) => (
             <linearGradient key={`a${seat}`} id={`sb-arm-${seat}`} x1="0" y1="0" x2="0.35" y2="1">
-              <stop offset="0%" stopColor={SEAT_LIGHT[seat]} />
-              <stop offset="55%" stopColor={hex} />
-              <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
+              <stop offset="0%" stopColor={hex} />
+              <stop offset="100%" stopColor={SEAT_DEEP[seat]} stopOpacity="0.55" />
             </linearGradient>
           ))}
           {/* A SHEEN. One soft white pass over the top of a surface,
@@ -1042,10 +1057,14 @@ export default function LudoBoard({
             <feDropShadow dx="0" dy="2.4" stdDeviation="3.2" floodColor="#3A2C16" floodOpacity="0.30" />
           </filter>
           {/* The frame: timber, lit from above. */}
+          {/* The timber. Warmer and deeper than it was — in the
+              reference this is the ONLY edge the board has, so it
+              has to read as the thing holding the board together
+              rather than as a hairline. */}
           <linearGradient id="sb-frame" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#C8963F" />
-            <stop offset="35%" stopColor="#A2712A" />
-            <stop offset="100%" stopColor="#6E4715" />
+            <stop offset="0%" stopColor="#B87A33" />
+            <stop offset="40%" stopColor="#8C5620" />
+            <stop offset="100%" stopColor="#5A3410" />
           </linearGradient>
           {/* A cell bevel: light along the top edge, shadow along the
               bottom, so a track square is pressed into the board
@@ -1188,36 +1207,31 @@ export default function LudoBoard({
                    colour stays the arm's own, unmixed. */
                 fill={safeSeat >= 0 ? SEAT_COLORS[safeSeat] : "url(#sb-cell)"}
                 stroke={safeSeat >= 0 ? SEAT_DEEP[safeSeat] : "var(--sb-table-line, #5A4C39)"}
-                strokeWidth={safeSeat >= 0 ? 1.8 : 0.9}
-                strokeOpacity={safeSeat >= 0 ? 1 : 0.5}
+                strokeWidth={safeSeat >= 0 ? 1.8 : 0.8}
+                strokeOpacity={safeSeat >= 0 ? 1 : 0.34}
               />
-              {/* The bevel, over every cell: a highlight along the top
-                  edge and a shadow along the bottom. Drawn as an
-                  overlay rather than a filter so it costs one rect and
-                  survives whatever the cell underneath is painted. */}
-              <rect
-                x={c * CELL + 1}
-                y={r * CELL + 1}
-                width={CELL - 2}
-                height={CELL - 2}
-                rx={6}
-                fill="url(#sb-bevel)"
-                pointerEvents="none"
-              />
-              {/* §4: and the recess, on the plain cells. The coloured
-                  ones already carry their own sheen and would only be
-                  muddied by a second one. */}
-              {safeSeat < 0 && (
+              {/* The bevel, on the COLOURED cells only. On a plain
+                  white square it was the pillow: 52 of them, each
+                  lit along the top and shadowed along the bottom,
+                  turning the quiet part of the board into texture
+                  that competes with the pieces. The arm cells keep
+                  it — a saturated square wants a sheen, and there
+                  are only a dozen of those. */}
+              {safeSeat >= 0 && (
                 <rect
                   x={c * CELL + 1}
                   y={r * CELL + 1}
                   width={CELL - 2}
                   height={CELL - 2}
                   rx={6}
-                  fill="url(#sb-recess)"
+                  fill="url(#sb-bevel)"
                   pointerEvents="none"
                 />
               )}
+              {/* The pressed recess that used to sit on every plain
+                  cell is gone with the bevel, and for the same
+                  reason: it was depth spent on the one part of the
+                  board that should recede. */}
               {/* and a sheen on the coloured ones, which is what turns
                   a flat square into something with a surface */}
               {safeSeat >= 0 && (

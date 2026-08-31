@@ -1257,15 +1257,21 @@ export default function LudoSession() {
               resolves to classic rather than crashing. The board's own
               SVG background is transparent, so this ground shows through
               it — that transparency is the whole seam. */}
-          <div
-            style={{
-              ...themeVars(themeOf(rules)),
-              background: "var(--sb-table-ground)",
-              borderRadius: 20,
-              padding: 8,
-              boxShadow: "0 2px 12px var(--sb-table-glow)",
-            }}
-          >
+          {/* NO CARD. The board IS the surface.
+
+              This was a themed panel — a cream ground, eight
+              pixels of padding, a rounded corner and a glow —
+              wrapped around the board, and against the reference
+              it is the single loudest difference: ours floated in
+              a white tray in the middle of a dark field, theirs
+              is a board on a table. The timber frame drawn inside
+              the SVG is the board's edge; it does not need a
+              second one around it.
+
+              The div stays because it carries the theme variables
+              the board reads, but it no longer paints anything of
+              its own. */}
+          <div style={{ ...themeVars(themeOf(rules)) }}>
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
             marksBySeat={marksBySeat}

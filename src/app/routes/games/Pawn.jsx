@@ -168,6 +168,22 @@ export default function Pawn({
           <stop offset="0%" stopColor={fill} />
           <stop offset="100%" stopColor="#000000" stopOpacity="0.55" />
         </linearGradient>
+        {/* THE BRASS RING. In the reference every token wears one
+            and it is doing real work: it separates the piece from
+            the zone it stands on, which is the same colour. A red
+            goti on the red arm was ours vanishing. */}
+        <linearGradient id={`${gid}-brass`} x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#FFE9A8" />
+          <stop offset="32%" stopColor="#F0C462" />
+          <stop offset="64%" stopColor="#C9922F" />
+          <stop offset="100%" stopColor="#8A5F16" />
+        </linearGradient>
+        {/* the gloss across the top of the dome */}
+        <radialGradient id={`${gid}-gloss`} cx="36%" cy="22%" r="46%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.72" />
+          <stop offset="70%" stopColor="#FFFFFF" stopOpacity="0.10" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
       {/* CONTACT SHADOW, two parts. The wide soft one is the shade a
@@ -185,36 +201,27 @@ export default function Pawn({
       </g>
       <g className="sb-goti-body">
 
-      {/* the side wall — the same disc, dropped, so the token has a
-          thickness you can see instead of being a printed circle */}
-      <circle cx="0" cy="2.6" r="13.6" fill={`url(#${gid}-wall)`} />
-      <circle cx="0" cy="2.6" r="13.6" fill="none" stroke="#00000033" strokeWidth="0.7" />
+      {/* THE SIDE WALL — the same disc dropped, so the piece has a
+          thickness you can see rather than being a printed circle. */}
+      <circle cx="0" cy="3.0" r="15.0" fill={`url(#${gid}-wall)`} />
+      <circle cx="0" cy="3.0" r="15.0" fill="none" stroke="#00000038" strokeWidth="0.8" />
 
-      {/* THE TOP: a coloured ring around a white face.
+      {/* THE BRASS RING, then the coloured body inside it.
 
-          LUDO_MOTION_SPEC §2 asks for exactly this, and it is better
-          than what was here for a reason the spec does not give: the
-          mark used to be set on saturated colour, where a numeral has
-          to fight the hue it sits on and needs a halo to survive. On
-          a white face it simply reads. The seat's colour moves to the
-          ring, where it is doing the job colour is actually good at —
-          telling four players' pieces apart across a table — and the
-          number does the job it is good at, which is telling YOUR
-          four apart in your own hand.
-
-          §2 puts a small crown in the middle of that white face. The
-          number is there instead: a crown is identical on all four of
-          a player's gotis and so cannot answer "which one am I
-          moving?", which is the complaint this whole shape exists to
-          answer. The rest of §2 is followed as written. */}
-      <circle cx="0" cy="0" r="13.6" fill={`url(#${gid}-dome)`} />
-      <circle cx="0" cy="0" r="13.6" fill="none" stroke={deep} strokeWidth="1.1" />
-      {/* the white face */}
-      <circle cx="0" cy="0" r="8.9" fill="#FFFFFF" />
-      <circle cx="0" cy="0" r="8.9" fill="none" stroke="#00000026" strokeWidth="0.8" />
-      {/* a turned lip where the ring meets the face */}
-      <circle cx="0" cy="0" r="10.4" fill="none" stroke="#FFFFFF" strokeOpacity="0.4" strokeWidth="1" />
-
+          This is the reference's anatomy and it is the inverse of
+          what was here. We had the seat's colour as a thin rim
+          around a white face — so the piece read as a white dot
+          with a coloured edge, and on its own zone the edge was
+          the only thing distinguishing it from the ground. Theirs
+          is a solid coloured body in a gold ring: the colour is
+          the piece, and the gold is what lifts it off whatever it
+          is standing on. */}
+      <circle cx="0" cy="0" r="15.0" fill={`url(#${gid}-brass)`} />
+      <circle cx="0" cy="0" r="15.0" fill="none" stroke="#6E4A10" strokeOpacity="0.55" strokeWidth="0.7" />
+      <circle cx="0" cy="0" r="11.7" fill={`url(#${gid}-dome)`} />
+      <circle cx="0" cy="0" r="11.7" fill="none" stroke={deep} strokeWidth="0.9" />
+      {/* the light lying across the top of the dome */}
+      <ellipse cx="-0.6" cy="-2.4" rx="9.4" ry="7.6" fill={`url(#${gid}-gloss)`} pointerEvents="none" />
       {/* THE MARK, nearly the width of the token, because the entire
           point is that it is readable without leaning in. Haloed
           against its own gloss — dark halo on a light token, light on
@@ -222,14 +229,19 @@ export default function Pawn({
       {/* The crown, when nothing else is worn. Small, centred, in the
           seat's own deep tone on the white face — an ornament rather
           than a label. */}
+      {/* THE CROWN, white on the colour. It was the seat's deep
+          tone on a white face; with the face now coloured it has
+          to be the light thing. SEAT_INK is exactly this — white
+          on blue, red and green, dark on yellow — and it exists
+          because yellow needs the opposite of the other three. */}
       {showSeat && !worn && (
         <path
-          d="M -5.4 2.2 L -6.4 -4.6 L -2.9 -1.4 L 0 -5.6 L 2.9 -1.4 L 6.4 -4.6 L 5.4 2.2 Z"
-          fill={deep}
-          stroke={deep}
+          d="M -5.9 2.4 L -7.0 -5.0 L -3.2 -1.5 L 0 -6.1 L 3.2 -1.5 L 7.0 -5.0 L 5.9 2.4 Z"
+          fill={ink}
+          stroke={ink}
           strokeWidth="0.7"
           strokeLinejoin="round"
-          opacity="0.92"
+          opacity="0.95"
         />
       )}
       {showSeat && worn && (
@@ -246,7 +258,7 @@ export default function Pawn({
              every contrast ratio we owe anybody, and the halo that
              used to keep it alive on saturated colour was costing it
              about a pixel of stroke weight on every edge. */
-          fill={isGlyph ? undefined : deep}
+          fill={isGlyph ? undefined : ink}
           style={{ userSelect: "none" }}
         >
           {worn}

@@ -39,6 +39,18 @@ function personName(person, t) {
 }
 
 function sosOrderLabel(t, n) {
+  /* AN SOS CONTACT WITHOUT AN ORDER IS STILL AN SOS CONTACT.
+
+     sos_order is null until an ordering exists — commonly when there
+     is only one of them — and the nth branch interpolated that null
+     straight onto the screen. In Urdu the pill on My Circle read
+     رابطہ نمبر null, in English "Call #null". Seen on the deployed
+     build, on the card belonging to somebody's daughter.
+
+     A missing order is not a position, so it does not get a number.
+     It falls back to the plain label, which exists in both languages
+     already and needs no new key. */
+  if (!Number.isFinite(n) || n < 1) return t("circle.perms.sos.label");
   if (n === 1) return t("circle.member.sosFirst");
   if (n === 2) return t("circle.member.sosSecond");
   return t("circle.member.sosNth", { n });

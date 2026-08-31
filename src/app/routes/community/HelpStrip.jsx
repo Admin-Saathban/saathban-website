@@ -23,7 +23,7 @@
    in this component could produce one.
    ════════════════════════════════════════════════ */
 
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 
@@ -46,7 +46,7 @@ export default function HelpStrip({ status, authorName, authorComplete, helperNa
     return (
       <div style={{ ...box, background: "#EEF3E8", borderColor: C.green }}>
         <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green }}>
-          <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+          <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.confirmed }} />
           {status.state === "closed"
             ? /* §6.3 — either the plain line, or their own words. */
               (status.note || t("posts.help.sortedPlain", { name: first }))

@@ -11,11 +11,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { claimOpenSeat } from "../../lib/games.js";
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { REACTIONS, REACTION_ICON, REACTION_LABEL } from "./communityCopy.js";
+import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE } from "./communityCopy.js";
 import {
   canUseCommunity,
   canPostCommunity,
@@ -305,7 +305,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
           </p>
         ) : mine ? (
           <p style={{ ...line, fontWeight: 700, color: C.green, marginTop: 8 }}>
-            <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.activityJoined")}
+            <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.confirmed }} />{t("community.shares.activityJoined")}
           </p>
         ) : full ? (
           <p style={{ ...line, fontWeight: 600, color: C.textMuted, marginTop: 8 }}>
@@ -665,6 +665,10 @@ function PostCard({
         {REACTIONS.map((emoji) => {
           const mine = myReaction === emoji;
           const n = counts[emoji] || 0;
+          /* At rest every reaction is grey line-art. On, it takes the
+             colour of what it now means — the heart its own red, the
+             rest the accent. */
+          const tone = REACTION_TONE[emoji] || MEANING.confirmed;
           return (
             <button
               key={emoji}
@@ -692,7 +696,7 @@ function PostCard({
                 background: "none",
                 fontSize: ts(17),
                 fontFamily: "inherit",
-                color: mine ? C.green : C.textMuted,
+                color: mine ? tone : MEANING.rest,
                 fontWeight: mine ? 700 : 500,
                 cursor: "pointer",
                 display: "inline-flex",
@@ -700,7 +704,9 @@ function PostCard({
                 gap: 5,
               }}
             >
-              <Icon name={REACTION_ICON[emoji]} size={20} />
+              {/* Filled when it is yours, and the count says so in
+                  figures besides: three signals, never colour alone. */}
+              <Icon name={REACTION_ICON[emoji]} size={20} fill={mine ? tone : "none"} />
               {n > 0 && <span style={{ fontWeight: 700, color: C.textMain }}>{n}</span>}
             </button>
           );
@@ -1422,7 +1428,7 @@ export default function Feed({ composer = true, embedded = false }) {
 
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-          <Icon name="warn" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
+          <Icon name="warn" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.warning }} />{error}
         </BodyText>
       )}
 

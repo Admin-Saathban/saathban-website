@@ -1,3 +1,4 @@
+import { MEANING } from "../../../shared/tokens.js";
 /* ════════════════════════════════════════════════
    Community lane — non-copy constants only.
 
@@ -62,6 +63,26 @@ export const REACTION_ICON = {
   "❤️": "heart",
   "🌸": "good",
   "🤲": "helpOffer",
+};
+
+/* WHAT A REACTION MEANS WHEN IT IS ON.
+
+   Semantic colour came off these icons when the emoji did, and it
+   should not have — the emoji were the problem, the colour was not. All
+   four turned the same accent green when pressed, so the app answered
+   "you loved this" and "you agreed with this" in one colour.
+
+   A heart is red. That is not a decision anybody gets to make; it is
+   what a heart is, everywhere, and a grey one that stays grey after you
+   press it reads as a press that did not land.
+
+   The other three take the accent. THIS IS DELIBERATE RESTRAINT: like,
+   flower and open hands have no established colour between them, and
+   inventing three would be brand noise wearing the costume of meaning.
+   Colour here marks STATE — on versus off — and only the heart also
+   carries a colour of its own. */
+export const REACTION_TONE = {
+  "❤️": MEANING.liked,
 };
 
 /* Locale keys for the accessible name. The buttons had NONE — the glyph

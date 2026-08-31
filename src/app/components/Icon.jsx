@@ -100,6 +100,11 @@ export default function Icon({
   /* One weight everywhere. A set with mixed stroke widths is the same
      mismatch as mixed emoji, arrived at deliberately. */
   strokeWidth = 1.75,
+  /* A filled glyph is the SECOND signal beside colour. A heart that
+     only turns red says one thing to somebody who cannot see red; a
+     heart that fills in says it a second way, and never colour alone
+     is a hard requirement here, not a preference. */
+  fill = "none",
   label,
   style,
   ...rest
@@ -117,6 +122,7 @@ export default function Icon({
       size={size}
       strokeWidth={strokeWidth}
       color="currentColor"
+      fill={fill}
       aria-hidden={label ? undefined : "true"}
       role={label ? "img" : undefined}
       aria-label={label}

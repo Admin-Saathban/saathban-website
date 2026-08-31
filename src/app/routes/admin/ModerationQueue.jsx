@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
-import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y, MEANING } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 import ReportedMedia from "./ReportedMedia.jsx";
@@ -146,7 +146,7 @@ export default function ModerationQueue() {
 
       {error && (
         <p role="alert" style={{ color: C.brown, fontWeight: 700 }}>
-          <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
+          <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.warning }} />{error}
         </p>
       )}
 

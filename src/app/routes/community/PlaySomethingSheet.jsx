@@ -43,7 +43,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { GhostBtn, BodyText } from "./ui.jsx";
@@ -246,7 +246,7 @@ export default function PlaySomethingSheet({ person, onClose }) {
 
         {error ? (
           <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
-            <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{error}
+            <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.warning }} />{error}
           </BodyText>
         ) : null}
 

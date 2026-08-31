@@ -29,6 +29,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 
 export const MAX_SECONDS = 120;
 
@@ -210,7 +211,7 @@ export function VoiceRecorder({ disabled, onRecorded, maxSeconds = MAX_SECONDS, 
           opacity: disabled ? 0.5 : 1, cursor: disabled ? "default" : "pointer",
         }}
       >
-        <span aria-hidden="true" style={{ fontSize: ts(22) }}>🎤</span>
+        <Icon name="voice" size={22} />
         {label || t("people.thread.voiceCta")}
       </button>
       {error && (
@@ -276,7 +277,8 @@ export function VoicePlayer({ url, seconds, mine }) {
           <div style={{ width: `${pct}%`, height: "100%", background: C.green, transition: "width .2s linear" }} />
         </div>
         <span style={{ display: "block", marginTop: 4, fontSize: ts(15), color: C.textMuted, fontWeight: 600 }}>
-          🎤 {playing || at > 0 ? `${mmss(at)} / ${mmss(total)}` : mmss(total)}
+          <Icon name="voice" size={18} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+          {playing || at > 0 ? `${mmss(at)} / ${mmss(total)}` : mmss(total)}
         </span>
       </div>
 

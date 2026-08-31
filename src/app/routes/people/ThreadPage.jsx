@@ -481,21 +481,22 @@ export default function ThreadPage() {
             {t("people.thread.playOther")}
           </GhostBtn>
         )}
-        <Link
-          to=".."
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            padding: "0 16px",
-            color: C.brown,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          {t("people.thread.backToProfile", { name: first })}
-        </Link>
+        {/* THE BACK-TO-PROFILE LINK IS GONE, and it is the one piece of
+            furniture the move had to touch.
+
+            It was <Link to=".."> — relative, and correct when this screen
+            lived at /app/people/<id>/chat, where ".." was the profile.
+            Inside the Messages world the same link resolves to
+            /app/community/messages/with, which is not a route at all; and
+            pointed at the profile explicitly it would walk the person out
+            of the world onto an app screen, which is the exact thing this
+            move exists to stop.
+
+            The world's own back arrow is the way out, and it is one. A
+            reader who wants the profile can reach it from anywhere the
+            profile is linked; a reader who wanted OUT now has a single
+            answer instead of two that behave differently. Flagged in the
+            report as a control removed rather than moved. */}
       </div>
 
       {chooserOpen && (
@@ -924,7 +925,7 @@ export default function ThreadPage() {
           disabled={!open}
           style={{ padding: "0 16px", gap: 8 }}
         >
-          <span aria-hidden="true" style={{ fontSize: ts(22) }}>🌸</span>
+          <Icon name="good" size={22} />
           {t("people.thread.stickerCta")}
         </GhostBtn>
         {/* §6 — the third labelled button. It asks for the microphone

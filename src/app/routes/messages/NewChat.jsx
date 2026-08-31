@@ -50,7 +50,7 @@ export default function NewChat() {
     setError("");
     try {
       await openDmWith(person.id);
-      navigate(`/app/people/${person.id}/chat`);
+      navigate(`/app/community/messages/with/${person.id}`);
     } catch (e) {
       setError(e?.message || "");
       setBusy(null);

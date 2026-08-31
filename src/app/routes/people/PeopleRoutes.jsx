@@ -6,7 +6,7 @@
    thread), never by this navigation.
    ════════════════════════════════════════════════ */
 
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import PersonPage from "./PersonPage.jsx";
@@ -30,6 +30,11 @@ function Screen({ children }) {
   );
 }
 
+function ChatRedirect() {
+  const { profileId } = useParams();
+  return <Navigate to={`/app/community/messages/with/${profileId}`} replace />;
+}
+
 export default function PeopleRoutes() {
   return (
     <>
@@ -42,7 +47,12 @@ export default function PeopleRoutes() {
               ranks the static segment higher either way. */}
           <Route path="invite" element={<InvitePage />} />
           <Route path=":profileId" element={<PersonPage />} />
-          <Route path=":profileId/chat" element={<ThreadPage />} />
+          {/* THE OLD ADDRESS SURVIVES AS A DOOR, not as a screen. Bell
+              deep-links, notification links and anything already sent to
+              somebody still point here; they now open the Messages world
+              at that thread instead of rendering a bare chat with the app
+              bars around it. */}
+          <Route path=":profileId/chat" element={<ChatRedirect />} />
           <Route path="*" element={<Navigate to="/app/people" replace />} />
         </Routes>
       </Screen>

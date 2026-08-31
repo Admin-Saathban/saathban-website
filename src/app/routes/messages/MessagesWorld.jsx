@@ -35,6 +35,7 @@ import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components
 import { touchPresence } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
 import NewChat from "./NewChat.jsx";
+import ThreadPage from "../people/ThreadPage.jsx";
 import ChatsList from "./ChatsList.jsx";
 import RequestsList from "./RequestsList.jsx";
 import MessagesMenu from "./MessagesMenu.jsx";
@@ -257,6 +258,13 @@ export default function MessagesWorld() {
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}>
           <Routes>
             <Route index element={<ChatsList />} />
+            {/* THE THREAD LIVES HERE NOW. It used to be reached at
+                /app/people/<id>/chat, which put the app header and bottom
+                bar back and dropped the person out of the world without
+                telling them. ThreadPage itself is unchanged inside —
+                bubbles, guards and the money warning are §6's and were
+                not touched. The room moved; the furniture did not. */}
+            <Route path="with/:profileId" element={<ThreadPage />} />
             <Route path="new" element={<NewChat />} />
             <Route path="requests" element={<RequestsList onCount={setPending} />} />
             <Route path="menu" element={<MessagesMenu />} />

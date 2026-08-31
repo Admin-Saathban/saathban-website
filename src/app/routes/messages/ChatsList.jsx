@@ -172,7 +172,7 @@ export default function ChatsList() {
                 {t("msg.emptyBody")}
               </p>
               <Link
-                to="/app/people"
+                to="new"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -199,7 +199,7 @@ export default function ChatsList() {
             return (
               <li key={c.requestId}>
                 <Link
-                  to={`/app/people/${c.otherId}/chat`}
+                  to={`with/${c.otherId}`}
                   style={{
                     display: "flex",
                     alignItems: "center",

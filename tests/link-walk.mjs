@@ -199,6 +199,30 @@ await browser.close();
    so that is the failure. Page errors are printed loudly and left as a
    judgement for whoever is reading, because this tool cannot tell an
    app error from a sandbox one. */
+/* A WALK THAT FOUND NOTHING IS NOT A CLEAN WALK.
+
+   ROLE=admin collected ZERO links across all six screens and this
+   printed "LINK WALK OK — every link landed where it claimed", because
+   wrong.length was 0. It was 0 because nothing was walked. Zero out of
+   zero landed correctly, which is true and worthless.
+
+   That is the same failure as everything else tonight, sitting inside
+   the remedy I wrote for it an hour ago: an absent thing wearing the
+   shape of information. I had just made this file fail on wrong links
+   instead of exiting 0 unconditionally, and left it able to report
+   success for a walk that never happened.
+
+   The page error attributes it: chrome-error://chromewebdata/, which is
+   Chrome's FAILED-NAVIGATION page — not about:blank, not a sandboxed
+   frame. The app's init script then tried to read localStorage on that
+   opaque origin and was denied, which is where the "Access is denied"
+   message came from. Environmental in origin, but caused by a real
+   navigation failure worth someone looking at. */
+if (rows.length === 0) {
+  console.log("NO LINKS WALKED AS " + ROLE + " — the walk did not happen; this is a failure, not a clean sweep");
+  if (errors.length) for (const e of [...new Set(errors)]) console.log("  " + e);
+  process.exit(1);
+}
 const errs = [...new Set(errors)];
 if (errs.length) console.log(errs.length + " page error(s) above — check whether any are the app rather than the harness");
 console.log(wrong.length ? wrong.length + " LINK(S) LANDED SOMEWHERE ELSE" : "LINK WALK OK — every link landed where it claimed");

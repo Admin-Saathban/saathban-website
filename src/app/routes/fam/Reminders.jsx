@@ -64,6 +64,60 @@ export default function Reminders() {
   const { toast } = useToast();
   const fresh = useFresh();
 
+  /* MOVED ABOVE THE GUARDS — React #310.
+
+     This sat below `if (membership === undefined) return` and
+     `if (!membership || !can_manage_reminders) return <Navigate/>`.
+     useAction is not one hook, it is nine, so the render where
+     membership resolved went from eleven hooks to about twenty and
+     React threw "rendered more hooks than during the previous
+     render".
+
+     It could not fire on first render — render one is always the
+     loading branch, which is well formed — so anything checking
+     that the page loads passed. And it needed can_manage_reminders
+     to be TRUE: a Fam member without the grant hits the Navigate and
+     never reaches this line. The screen was broken only for the
+     people it exists for.
+
+     Not this screen's author's bug. df70f19 introduced useAction
+     across the app and landed it wherever the old call had been,
+     which here was below a guard where one stray hook had been
+     survivable and nine were not. Swept the other call sites: the
+     five in outdoor/PlaceView are all unconditional, so this was the
+     only one. */
+  const [save, saving] = useAction(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!form.label.trim() || form.times.length === 0) return null;
+      const times = [...new Set(form.times)].sort();
+      const patch = {
+        label: form.label.trim(),
+        remind_time: times[0],
+        remind_times: times,
+        days_label: form.days,
+      };
+      const wasNew = editing === "new";
+      const before = new Set(reminders.map((x) => x.id));
+      if (wasNew) await addReminder(iconId, patch);
+      else await updateReminder(editing, patch);
+      const rows = await fetchReminders(iconId);
+      setReminders(rows);
+      setEditing(null);
+      setSavedNote(true);
+      // The saved reminder pulses in the list, new or edited.
+      const target = wasNew ? rows.find((x) => !before.has(x.id)) : rows.find((x) => x.id === editing);
+      if (target) fresh.mark(target.id);
+      return wasNew;
+    },
+    {
+      success: (wasNew) =>
+        wasNew === null ? null : wasNew ? t("feedback.reminderSaved") : t("feedback.reminderUpdated"),
+      error: () => t("fam.reminders.saveError"),
+      retry: true,
+    }
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -119,37 +173,6 @@ export default function Reminders() {
   const removeTime = (i) =>
     setForm((f) => ({ ...f, times: f.times.filter((_, j) => j !== i) }));
 
-  const [save, saving] = useAction(
-    async (e) => {
-      e?.preventDefault?.();
-      if (!form.label.trim() || form.times.length === 0) return null;
-      const times = [...new Set(form.times)].sort();
-      const patch = {
-        label: form.label.trim(),
-        remind_time: times[0],
-        remind_times: times,
-        days_label: form.days,
-      };
-      const wasNew = editing === "new";
-      const before = new Set(reminders.map((x) => x.id));
-      if (wasNew) await addReminder(iconId, patch);
-      else await updateReminder(editing, patch);
-      const rows = await fetchReminders(iconId);
-      setReminders(rows);
-      setEditing(null);
-      setSavedNote(true);
-      // The saved reminder pulses in the list, new or edited.
-      const target = wasNew ? rows.find((x) => !before.has(x.id)) : rows.find((x) => x.id === editing);
-      if (target) fresh.mark(target.id);
-      return wasNew;
-    },
-    {
-      success: (wasNew) =>
-        wasNew === null ? null : wasNew ? t("feedback.reminderSaved") : t("feedback.reminderUpdated"),
-      error: () => t("fam.reminders.saveError"),
-      retry: true,
-    }
-  );
 
   /* One tap, no confirmation maze — mirrors the circle's removal rule.
      Optimistic: the row leaves at once and comes back if the server

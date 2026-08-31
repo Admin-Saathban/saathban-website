@@ -47,6 +47,7 @@ import Composer, { ComposerRow } from "./Composer.jsx";
 import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
 import ReconnectRow from "./ReconnectRow.jsx";
+import { fetchFeedGroupPosts } from "../groups/groupsStore.js";
 import { pickReconnect, rowAllowed, markRowSeen, hushPerson } from "./reconnect.js";
 import { fetchChats } from "../messages/messagesData.js";
 import SayHelloSheet from "../messages/SayHelloSheet.jsx";
@@ -795,6 +796,12 @@ export default function Feed({ composer = true }) {
 
   /* NAVIGATION_SPEC §4.3 — the reconnect row. Null unless there is a
      person to offer AND the weekly cadence allows it. */
+  /* §6 — posts from public groups you have joined. The RULE lives in
+     the groups lane's store, not here: read-time evaluation means a
+     group going private, a member leaving or a post being deleted all
+     take effect on the next read, with no stamp to unstick. If §6 ever
+     changes it changes there and this file does not move. */
+  const [groupPosts, setGroupPosts] = useState([]);
   const [reconnect, setReconnect] = useState(null);
   const [helloWith, setHelloWith] = useState(null);
   /* Which ring the feed had to reach for. Shown as a quiet line, never
@@ -808,6 +815,17 @@ export default function Feed({ composer = true }) {
   const fresh = useFresh();
   // Posts on their way to the server: rendered at once, quietly marked.
   const [pendingPosts, setPendingPosts] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const rows = await fetchFeedGroupPosts();
+        if (alive) setGroupPosts(rows || []);
+      } catch { /* the community feed still stands without them */ }
+    })();
+    return () => { alive = false; };
+  }, [myId]);
+
   /* §4.3. Deliberately its own effect and deliberately silent on
      failure: this is a courtesy, and a feed that refused to render
      because a reconnect suggestion could not be computed would be a
@@ -1607,6 +1625,23 @@ export default function Feed({ composer = true }) {
             const RANK = { always: 1, area: 1, city: 2, far: 3 };
             const rankOf = (p) => (connections?.has(p.author_id) ? 0 : RANK[p.band] ?? 3);
             const visible = [...posts].sort((x, y) => rankOf(x) - rankOf(y));
+            /* ONE ORDERING, NOT TWO. The first draft of this said group
+               posts "join by recency" while community posts stayed banded
+               by §4.2 — which cannot both be true of one list, and would
+               have shipped as whichever the sort happened to win.
+
+               So group posts are given a band rather than exempted from
+               banding: rank 1, the same as area. A group you chose to join
+               is an expressed affinity at least as strong as sharing a
+               neighbourhood, and ranking it below strangers who merely live
+               closer would be the wrong call. §4.2 does not settle this
+               because it did not contemplate a second source; flagged in
+               the report as mine rather than the spec's. */
+            const GROUP_RANK = 1;
+            const stream = [
+              ...visible.map((p) => ({ kind: "post", key: `p-${p.id}`, rank: rankOf(p), at: p.created_at, p })),
+              ...groupPosts.map((gp) => ({ kind: "group", key: `g-${gp.id}`, rank: GROUP_RANK, at: gp.created_at, gp })),
+            ].sort((a, b) => (a.rank - b.rank) || (new Date(b.at) - new Date(a.at)));
             if (visible.length === 0) {
               return (
                 <BodyText muted>
@@ -1621,7 +1656,31 @@ export default function Feed({ composer = true }) {
                than displacing the newest thing their neighbours said —
                and on a short feed it simply lands at the end. */
             const RECONNECT_AT = 3;
-            return visible.flatMap((p, i) => {
+            return stream.flatMap((item, i) => {
+              /* A group post is not a community post: no reactions here
+                 (they belong in the group), and it says WHICH group it came
+                 from. A post surfacing in the main feed with no sign it is
+                 from a group is the confusing half of §6. */
+              if (item.kind === "group") {
+                const gp = item.gp;
+                return (
+                  <Card
+                    key={item.key}
+                    onClick={() => navigate(`/app/groups/${gp.group_id}`)}
+                    style={{ marginBottom: 14, cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 600, color: C.green,
+                        background: C.cream, borderRadius: 999, padding: "3px 10px",
+                      }}>{gp.groupName}</span>
+                      <span style={{ fontSize: 14, color: C.textMuted }}>{gp.authorName}</span>
+                    </div>
+                    <BodyText style={{ margin: 0 }}>{gp.body}</BodyText>
+                  </Card>
+                );
+              }
+              const p = item.p;
               const card = (
               <div key={`w-${p.id}`} {...fresh.props(p.id)}>
               <PostCard
@@ -1662,7 +1721,7 @@ export default function Feed({ composer = true }) {
               />
               </div>
               );
-              if (reconnect && i === Math.min(RECONNECT_AT, visible.length - 1)) {
+              if (reconnect && i === Math.min(RECONNECT_AT, stream.length - 1)) {
                 return [
                   card,
                   <ReconnectRow

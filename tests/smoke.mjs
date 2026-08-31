@@ -641,27 +641,123 @@ for (const [email, label, home, foreign] of ROLES) {
 
   const famSess = await login("test-fam@saathban.dev");
   const { ctx: famCtx, page: famPage } = await pageFor(browser, famSess);
-  const outTxt = await goto(famPage, "/app/outdoor", 2200);
-  // The fam fixture defaults to Karachi; the standing activity lives
-  // in Lahore — switch chips when needed.
+
+  /* THIS CHECK USED TO HAVE A 24-HOUR SHELF LIFE.
+
+     It read a seeded "chai and carrom" activity, and a timeless
+     activity — one with no starts_at — counts as current for 24
+     hours from when it was posted (activityIsCurrent). So the check
+     was green on the day the fixture was seeded and red every day
+     after, and when it went red it looked like a broken feature
+     rather than an expired row. Nudging the timestamp fixes it
+     until tomorrow.
+
+     So it seeds its own, and takes it away again. An activity is a
+     community_posts row; it must be written by an ICON, because
+     Icons post and everyone else reads — the Fam account this check
+     views as is refused the insert by RLS, correctly.
+
+     ONE MORE THING IT HAD WRONG, and it predates tonight: it went
+     to /app/outdoor, which is What's on. Places live at
+     /app/outdoor/places — PRODUCT_DECISIONS §12 is explicit that
+     places have no list of their own on the happenings screen — so
+     the place tap matched nothing, the guarded click swallowed it,
+     and the assertions then read whatever screen it had stayed on.
+     (Diagnosed by lane 42, along with the city control, which was
+     theirs and is fixed.) */
+  /* `authed` is a const inside the GAMES block, not a file-level
+     helper — every section that wants one declares its own. Reaching
+     for it from here was a ReferenceError that ended the run, which
+     the guarded clicks no longer hide but an undefined name still
+     will. */
+  const authedHere = (sess) => ({
+    apikey: ANON,
+    Authorization: `Bearer ${sess.access_token}`,
+    "Content-Type": "application/json",
+  });
+  const activityMarker = `smoke chai ${Math.floor(Math.random() * 1e9)}`;
+  let seededPost = null;
+  {
+    const iconSeed = await login("test-icon@saathban.dev");
+    const place = (
+      await (
+        await fetch(SUPA + "/rest/v1/outdoor_places?select=id,name&name=ilike.*Model%20Town*", {
+          headers: authedHere(iconSeed),
+        })
+      ).json()
+    )[0];
+    if (place) {
+      const made = await (
+        await fetch(SUPA + "/rest/v1/community_posts", {
+          method: "POST",
+          headers: { ...authedHere(iconSeed), Prefer: "return=representation" },
+          body: JSON.stringify({
+            author_id: iconSeed.user.id,
+            body: "",
+            post_type: "activity",
+            ref_id: null,
+            payload: {
+              activity: activityMarker,
+              place_id: place.id,
+              place_name: place.name,
+              starts_at: null,
+              note: null,
+              limit: null,
+              rsvp: true,
+            },
+          }),
+        })
+      ).json();
+      seededPost = Array.isArray(made) && made[0] ? made[0].id : null;
+    }
+    check("activity: the suite can seed its own happening", !!seededPost, seededPost || "no place or no insert");
+  }
+
+  const outTxt = await goto(famPage, "/app/outdoor/places", 2200);
+  /* The fam fixture defaults to Karachi; the seeded place is in
+     Lahore. One quiet control now, reading "Karachi · see Lahore". */
   if (!outTxt.includes("Model Town")) {
     await famPage.locator('button:has-text("Lahore")').first().click().catch(() => {});
     await famPage.waitForTimeout(1800);
   }
-  await famPage.locator('a:has-text("Model Town"), button:has-text("Model Town")').first().click().catch(() => {});
+  await famPage
+    .locator('a:has-text("Model Town"), button:has-text("Model Town")')
+    .first()
+    .click()
+    .catch(() => {});
   await famPage.waitForTimeout(2200);
   const placeTxt = await famPage.evaluate(() => document.body.innerText);
-  const joinBtn = famPage.locator('button', { hasText: "I'm in" });
+  check("activity: the place screen opened", /Model Town/i.test(placeTxt), placeTxt.slice(0, 60));
+
+  const joinBtn = famPage.locator("button", { hasText: "I'm in" });
   if ((await joinBtn.count()) > 0) {
-    await joinBtn.first().click();
+    await joinBtn.first().click().catch(() => {});
     await famPage.waitForTimeout(2200);
   }
   const after = await famPage.evaluate(() => document.body.innerText);
   check(
     "activity: happening renders with join state",
-    /chai and carrom/i.test(placeTxt) && (/✓|in — room|on the list|is in/i.test(after)),
-    after.match(/[^\n]*(room|is in|list)[^\n]*/)?.[0]?.slice(0, 70) || placeTxt.slice(0, 70)
+    placeTxt.includes(activityMarker) && /✓|in — room|on the list|is in/i.test(after),
+    placeTxt.includes(activityMarker)
+      ? (/✓|in — room|on the list|is in/i.test(after) ? "joined" : "rendered, no join state")
+      : "the seeded happening did not render"
   );
+
+  /* Take it away again. A fixture this suite leaves behind is a
+     fixture the next run reads as real. */
+  if (seededPost) {
+    const iconSeed = await login("test-icon@saathban.dev");
+    await fetch(SUPA + "/rest/v1/community_posts?id=eq." + seededPost, {
+      method: "DELETE",
+      headers: authedHere(iconSeed),
+    });
+    const left = await (
+      await fetch(SUPA + "/rest/v1/community_posts?select=id&id=eq." + seededPost, {
+        headers: authedHere(iconSeed),
+      })
+    ).json();
+    check("activity: the suite takes its happening away again", (left || []).length === 0, JSON.stringify(left));
+  }
   await famCtx.close();
 }
 

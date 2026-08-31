@@ -53,7 +53,18 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
   const itemStyle = (isActive) => ({
     flex: "0 1 auto",
     minWidth: 0,
-    paddingInline: 9,
+    /* 5, not 9. The chip is wider than the bare icon it replaced,
+       and at 9 the five items came to 374px which, with the 8px of
+       gaps and the 8px of bar padding, is exactly 390 — so flex shrank
+       every item by a pixel and ALL FIVE LABELS ELLIPSED. Measured
+       scrollWidth against clientWidth: each needed 1-2px more than it
+       had, which is enough to read "Gam…" and "Out & abo…".
+
+       That is icon-only navigation arrived at by accident, which §3
+       forbids outright, and it is the exact failure the note on the
+       label below was written about. The chip made the bar tighter and
+       I did not re-measure it after. */
+    paddingInline: 5,
     minHeight: A11Y.minTapTargetPx,
     display: "flex",
     flexDirection: "column",

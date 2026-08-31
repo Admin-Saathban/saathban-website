@@ -34,6 +34,8 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
 import { touchPresence } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
+import { hasUnsentDraft } from "./draftGuard.js";
+import DiscardDialog from "../community/DiscardDialog.jsx";
 import NewChat from "./NewChat.jsx";
 import ThreadPage from "../people/ThreadPage.jsx";
 import InvitePage from "../people/InvitePage.jsx";
@@ -118,6 +120,12 @@ export default function MessagesWorld() {
   const { profile } = useSession();
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  /* One arrow, one question. Whatever screen the world is holding
+     registers whether it has unsent words; the arrow asks before it
+     closes anything. See draftGuard.js. */
+  const askBack = () => { if (hasUnsentDraft()) setConfirmLeave(true); else navigate(-1); };
 
   /* MOTION_SPEC §1: this world arrives from the side that was touched.
      Decided at DISPATCH — MessagesButton passes the logical "end" and
@@ -180,6 +188,12 @@ export default function MessagesWorld() {
           lib/motion.jsx. Two files, one vocabulary. */}
       <FullScreenStyles />
       <MotionStyles />
+      {confirmLeave && (
+        <DiscardDialog
+          onKeep={() => setConfirmLeave(false)}
+          onDiscard={() => { setConfirmLeave(false); navigate(-1); }}
+        />
+      )}
 
       {/* The world's own header: out, its name, and the pencil (§3). */}
       <header
@@ -200,7 +214,7 @@ export default function MessagesWorld() {
       >
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={askBack}
           aria-label={t("msg.back")}
           style={{
             minWidth: A11Y.minTapTargetPx,

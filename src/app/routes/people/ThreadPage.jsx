@@ -52,6 +52,7 @@ import { createSession, inviteToGame } from "../../lib/games.js";
 import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
 import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 import Icon from "../../components/Icon.jsx";
+import { registerDraftGuard } from "../messages/draftGuard.js";
 
 const POLL_MS = 4000;
 
@@ -83,6 +84,20 @@ export default function ThreadPage() {
   const [status, setStatus] = useState(null); // dm_requests.status
   const [messages, setMessages] = useState(null);
   const [draft, setDraft] = useState("");
+
+  /* The world's back arrow asks this before it closes the chat.
+
+     TEXT ONLY, and that is a fact about this screen rather than an
+     omission. In the post composer a recording waits for Share, so it
+     is a draft that can be lost. Here onRecorded uploads and sends the
+     moment the recording stops — there is no held voice note to
+     protect, because there is never one sitting unsent.
+
+     My first version guarded `pendingVoice`, which does not exist in
+     this file. It built cleanly: an undefined identifier in a render
+     path is a runtime error, not a compile one, and this one would
+     have thrown on every keystroke in a chat. */
+  useEffect(() => registerDraftGuard(() => !!draft.trim()), [draft]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [starting, setStarting] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);

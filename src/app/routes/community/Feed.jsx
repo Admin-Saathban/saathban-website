@@ -15,6 +15,7 @@ import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
+import DiscardDialog from "./DiscardDialog.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE } from "./communityCopy.js";
 import {
@@ -448,6 +449,11 @@ function PostCard({
      already exists (STICKERS_WIRING.md), so no column changed. */
   const [stickersOpen, setStickersOpen] = useState(false);
   const [commentReporting, setCommentReporting] = useState(null); // comment id
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const askCloseComments = () => {
+    if (commentBody.trim()) setConfirmDiscard(true);
+    else setCommentsOpen(false);
+  };
   const own = post.author_id === myId;
 
   /* HOLD THE FEED STILL. Without this the page behind the sheet keeps
@@ -769,7 +775,7 @@ function PostCard({
       {commentsOpen && (
         <div
           className="sb-dim"
-          onClick={() => setCommentsOpen(false)}
+          onClick={askCloseComments}
           style={{
             position: "fixed", inset: 0, zIndex: 80,
             background: "rgba(0,0,0,0.38)",
@@ -777,6 +783,12 @@ function PostCard({
           }}
         >
           <MotionStyles />
+          {confirmDiscard && (
+            <DiscardDialog
+              onKeep={() => setConfirmDiscard(false)}
+              onDiscard={() => { setConfirmDiscard(false); setCommentBody(""); setCommentsOpen(false); }}
+            />
+          )}
           <div
             className="sb-sheet"
             role="dialog"
@@ -799,7 +811,7 @@ function PostCard({
                 </strong>
                 <button
                   type="button"
-                  onClick={() => setCommentsOpen(false)}
+                  onClick={askCloseComments}
                   aria-label={t("common.back")}
                   style={{
                     minWidth: A11Y.minTapTargetPx, minHeight: A11Y.minTapTargetPx,

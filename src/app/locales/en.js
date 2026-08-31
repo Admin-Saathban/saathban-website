@@ -131,7 +131,6 @@ const en = {
     /* The action lives on the row: finding a thing and acting on it
        is one screen, not two. */
     join: "Join",
-    join: "Join",
     ask: "Ask to join",
     asked: "Asked",
     /* 0086 keeps a declined row so this row can say what happened.
@@ -139,6 +138,9 @@ const en = {
        does exactly that. */
     notThisTime: "Not this time — ask again",
     joined: "You are in",
+    /* The server’s own refusal is shown when it gives one; this is
+       only the fallback for a failure with no sentence attached. */
+    refused: "That did not go through. The group may have changed since you searched.",
     openIt: "Open",
     members: "{n} members",
     privateGroup: "Private group",
@@ -1061,6 +1063,13 @@ const en = {
   },
 
   community: {
+    /* One dialog for every unsent draft — post, comment, message. */
+    discard: {
+      title: "Keep what you have written?",
+      body: "You have something here that has not been sent yet.",
+      keep: "Keep writing",
+      discard: "Discard it",
+    },
     feed: {
       title: "Community",
       /* NAVIGATION_SPEC §4.3 — the reconnect row. No duration, ever:

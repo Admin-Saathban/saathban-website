@@ -36,6 +36,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
+import DiscardDialog from "./DiscardDialog.jsx";
 import { SWATCHES, STYLE_TAGS, VISIBILITIES } from "./postsData.js";
 import { fetchMyPeople } from "../people/myPeopleStore.js";
 import { VoiceRecorder, VoicePlayer } from "../people/VoiceNote.jsx";
@@ -116,6 +117,14 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
      voice post are text and stickers; there is deliberately no
      recorder on the comment box. */
   const [voice, setVoice] = useState(null);   // { blob, seconds, mime, url }
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  /* A RECORDING COUNTS. It is the draft that cannot be retyped from
+     memory, and the person who chose the microphone over the keyboard
+     is usually the one for whom typing it again is the hard part. */
+  const hasDraft = () => !!body.trim() || !!file || !!voice;
+
+  const askClose = () => { if (hasDraft()) setConfirmDiscard(true); else { reset(); onClose(); } };
 
   /* Only fetched when the picker is actually opened — a list of names
      loaded for a post that mentions nobody is a query nobody asked
@@ -181,6 +190,13 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
     >
       <MotionStyles />
 
+      {confirmDiscard && (
+        <DiscardDialog
+          onKeep={() => setConfirmDiscard(false)}
+          onDiscard={() => { setConfirmDiscard(false); reset(); onClose(); }}
+        />
+      )}
+
       <header
         style={{
           display: "flex",
@@ -194,7 +210,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
       >
         <button
           type="button"
-          onClick={() => { reset(); onClose(); }}
+          onClick={askClose}
           style={{ minWidth: A11Y.minTapTargetPx, minHeight: A11Y.minTapTargetPx, border: "none", background: "transparent", color: C.textMain, fontSize: ts(22), cursor: "pointer" }}
         >
           {t("posts.close")}

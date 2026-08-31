@@ -1014,6 +1014,7 @@ export default function LudoSession() {
           iAmHost={iAmHost}
           myId={myId}
           rules={rules}
+          joinCode={game.join_code}
           soft={soft}
           onClose={() => setSeatSheet(null)}
           onChanged={async () => {

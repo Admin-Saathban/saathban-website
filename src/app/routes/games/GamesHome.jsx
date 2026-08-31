@@ -260,7 +260,6 @@ export default function GamesHome() {
           : t("games.home.nextTheirTurn");
   const renderTable = (s) => {
     const g = byKey[s.game_key];
-    const myTurn = s.status === "active" && s.current_seat === s.my_seat;
     return (
       <Link
         key={s.id}
@@ -273,8 +272,8 @@ export default function GamesHome() {
             display: "flex",
             alignItems: "center",
             gap: 14,
-            borderColor: myTurn ? C.green : C.warmGray,
-            borderWidth: myTurn ? 2 : 1,
+            borderColor: C.warmGray,
+            borderWidth: 1,
             borderStyle: "solid",
           }}
         >
@@ -299,21 +298,10 @@ export default function GamesHome() {
               <Faces players={peopleAt.get(s.id)} size={28} />
             </span>
           </div>
-          {myTurn && (
-            <span
-              style={{
-                background: C.green,
-                color: C.cream,
-                borderRadius: 50,
-                padding: "8px 16px",
-                fontSize: ts(16),
-                fontWeight: 700,
-                animation: "sb-games-pulse 2s infinite",
-              }}
-            >
-              {t("games.home.yourTurnChip")}
-            </span>
-          )}
+          {/* No pulsing "Your move". It was the loudest thing on
+              the screen and it was the nag in miniature — a green
+              pill, animated, telling you to go and play. Whose turn
+              it is is the board's to say. */}
         </Card>
       </Link>
     );
@@ -375,7 +363,6 @@ export default function GamesHome() {
           <SectionLabel>{t("games.home.activeTitle")}</SectionLabel>
           {live.map(renderTable)}
         </>
-      )}
       )}
 
       {/* ── ONE way to start. A stack of per-game cards asked the

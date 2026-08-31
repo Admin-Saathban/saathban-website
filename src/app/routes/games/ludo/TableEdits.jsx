@@ -24,6 +24,7 @@ import { SEAT_COLORS, SEAT_INK } from "./board.js";
 /* The names, from where the hexes are — never a second list. */
 import { SEAT_COLOR_NAMES } from "../seatColors.js";
 import { reformTable, takeSeat, inviteToSeat, fetchAskable, fetchPieceMarks, setPieceMarks } from "./ludoRails.js";
+import ShareTableButton from "../ShareTableButton.jsx";
 
 /* One row in the sheet. 56px, full width, no icon-only anything —
    the same floor the rest of the app keeps (A11Y). */
@@ -346,7 +347,7 @@ function HouseRules({ sessionId, rules, onChanged }) {
    Opened by tapping a seat. Everything in it is about that seat,
    except the table-size row, which is about the seat in the truest
    way available: how many of them there are. */
-export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, rules = null, soft = true, onClose, onChanged }) {
+export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, rules = null, joinCode = null, soft = true, onClose, onChanged }) {
   const { t, ts } = useI18n();
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -436,6 +437,24 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
               {t("ludo.table.sitHere")}
             </Row>
           )}
+          {/* A LINK, which is the fourth way somebody gets a seat
+              (a person you name, a bot, the community, or a link).
+              The code is on the table for reading aloud down a
+              telephone, and the button hands the same thing to
+              WhatsApp. LTR-pinned so the digits do not reverse. */}
+          {isBot && iAmHost && soft && joinCode && (
+            <div style={{ textAlign: "center", marginTop: 4 }}>
+              <p
+                dir="ltr"
+                aria-label={joinCode.split("").join(" ")}
+                style={{ margin: "2px 0 8px", fontSize: ts(34), fontWeight: 800, letterSpacing: "0.3em", color: GAME.ink }}
+              >
+                {joinCode}
+              </p>
+              <ShareTableButton code={joinCode} compact />
+            </div>
+          )}
+
           {isBot && iAmHost && soft && (
             <Row disabled={busy} onClick={openAsk}>
               {t("ludo.table.askSomeone")}

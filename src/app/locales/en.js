@@ -130,6 +130,7 @@ const en = {
     /* The action lives on the row: finding a thing and acting on it
        is one screen, not two. */
     join: "Join",
+    join: "Join",
     ask: "Ask to join",
     asked: "Asked",
     /* 0086 keeps a declined row so this row can say what happened.
@@ -1061,6 +1062,15 @@ const en = {
   community: {
     feed: {
       title: "Community",
+      /* NAVIGATION_SPEC §4.3 — the reconnect row. No duration, ever:
+         the spec forbids saying how long it has been, and a string is
+         where that rule would most easily be broken by a later edit. */
+      reconnect: {
+        around: "{name} is around today",
+        hello: "Say hello",
+        play: "Play something",
+        dismissLabel: "Not just now",
+      },
       intro: "What people are sharing, newest first. No rankings, no feeds within feeds — just neighbours.",
       emptyFeed: "Nothing here yet. The first post starts the conversation.",
       emptyFeedReader:

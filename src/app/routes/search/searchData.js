@@ -170,6 +170,17 @@ export async function suggestedGroups(limit = 5) {
 
 /* ── Asking to join (NAVIGATION_SPEC §5, migration 0086/0087) ── */
 
+/* JOIN — a public group, immediately. NAVIGATION_SPEC §5 splits the
+   two: you JOIN what is open and you ASK what is not. 0089 refuses a
+   private group here at the database, so the button is never the only
+   thing standing between a stranger and a private group. */
+export async function joinPublicGroup(groupId) {
+  const { error } = await supabase.rpc("join_public_group", { p_group: groupId });
+  if (error) throw error;
+}
+
+/* ASK — a private group. The request lands in that group's Member
+   requests screen, which Lane 4 owns and binds to by name. */
 export async function requestToJoinGroup(groupId, message = null) {
   const { error } = await supabase.rpc("request_to_join_group", {
     p_group: groupId,

@@ -46,6 +46,7 @@ import {
   forgetRecents,
   suggestedGroups,
   requestToJoinGroup,
+  joinPublicGroup,
   myJoinRequests,
 } from "./searchData.js";
 
@@ -120,12 +121,21 @@ function Group({ title, children }) {
    would ask again and again, never learning that anything had
    happened. The row is the place they asked, so the row is where the
    answer belongs. */
-function GroupRow({ g, mine, asked, onAsk, onOpen, busy }) {
+function GroupRow({ g, mine, asked, onAsk, onJoin, onOpen, busy }) {
   const { t, ts } = useI18n();
   const isMember = mine.has(g.id);
   const state = asked[g.id];
   const open = g.privacy === "anyone";
 
+  /* §5: JOIN what is open, ASK what is not.
+
+     These were the wrong way round until 0089 — a public group
+     offered "Ask to join" and a private one offered nothing at all,
+     which made the open groups feel guarded and the closed ones
+     invisible. Now the row says what the group actually is.
+
+     The order matters: what you already are beats what happened last
+     time, which beats what you could do. */
   const action = isMember
     ? { label: t("search.joined"), act: null }
     : state === "pending"
@@ -133,11 +143,8 @@ function GroupRow({ g, mine, asked, onAsk, onOpen, busy }) {
     : state === "declined"
     ? { label: t("search.notThisTime"), act: onAsk }
     : open
-    ? { label: t("search.ask"), act: onAsk }
-    /* Invite-only, never asked: there is nothing honest to offer.
-       0086 refuses a knock on an invite_only group outright, so a
-       button here would be a button that fails. */
-    : { label: null, act: null };
+    ? { label: t("search.join"), act: onJoin }
+    : { label: t("search.ask"), act: onAsk };
 
   return (
     <li>
@@ -276,6 +283,20 @@ export default function SearchPage() {
   }, [q]);
 
   const [asking, setAsking] = useState(null);
+  /* Joining is not asking: it succeeds outright, so the row goes
+     straight to "You are in" and the group appears in `mine`. */
+  const join = async (id) => {
+    setAsking(id);
+    try {
+      await joinPublicGroup(id);
+      setMine(await myGroupIds());
+    } catch {
+      /* A refusal leaves the row as it was; nothing is claimed. */
+    } finally {
+      setAsking(null);
+    }
+  };
+
   const ask = async (id) => {
     setAsking(id);
     try {
@@ -411,6 +432,7 @@ export default function SearchPage() {
                       asked={asked}
                       busy={asking === g.id}
                       onAsk={() => ask(g.id)}
+                      onJoin={() => join(g.id)}
                       onOpen={() => go(`/app/groups/${g.id}`)}
                     />
                   ))}
@@ -492,6 +514,7 @@ export default function SearchPage() {
                       asked={asked}
                       busy={asking === g.id}
                       onAsk={() => ask(g.id)}
+                      onJoin={() => join(g.id)}
                       onOpen={() => go(`/app/groups/${g.id}`)}
                     />
                   ))}

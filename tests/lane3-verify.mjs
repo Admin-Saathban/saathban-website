@@ -16,7 +16,24 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
-const BASE = (process.env.BASE_URL || "http://localhost:5173").replace(/\/$/, "");
+/* NO DEFAULT PORT. An assumed localhost default cost a full run of
+   tests/messages-arrival.mjs: every lane works in this one directory,
+   the port was taken, vite preview walked up to another, and the
+   neighbour on the assumed port answered 200 to everything — so the
+   assertions ran against a STALE BUILD and read like a broken feature.
+   A default that silently points somewhere plausible is worse than no
+   default. Read the port vite actually printed and pass it. */
+const BASE = (process.env.BASE_URL || "").replace(new RegExp("/+$"), "");
+if (!BASE) {
+  console.error("Set BASE_URL — a deployed URL, or the port vite preview actually printed.");
+  process.exit(2);
+}
+let _u;
+try { _u = new URL(BASE); } catch { _u = null; }
+if (!_u || !_u.hostname || (_u.protocol === "http:" && _u.hostname === "localhost" && !_u.port)) {
+  console.error("BASE_URL is not a usable URL: " + JSON.stringify(BASE));
+  process.exit(2);
+}
 const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
 
 function envLocal(name) {

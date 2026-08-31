@@ -22,7 +22,24 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
-const BASE = (process.env.BASE_URL || "http://localhost:5173").replace(/\/$/, "");
+/* NO DEFAULT PORT. An assumed localhost default cost a full run of
+   tests/messages-arrival.mjs: every lane works in this one directory,
+   the port was taken, vite preview walked up to another, and the
+   neighbour on the assumed port answered 200 to everything — so the
+   assertions ran against a STALE BUILD and read like a broken feature.
+   A default that silently points somewhere plausible is worse than no
+   default. Read the port vite actually printed and pass it. */
+const BASE = (process.env.BASE_URL || "").replace(new RegExp("/+$"), "");
+if (!BASE) {
+  console.error("Set BASE_URL — a deployed URL, or the port vite preview actually printed.");
+  process.exit(2);
+}
+let _u;
+try { _u = new URL(BASE); } catch { _u = null; }
+if (!_u || !_u.hostname || (_u.protocol === "http:" && _u.hostname === "localhost" && !_u.port)) {
+  console.error("BASE_URL is not a usable URL: " + JSON.stringify(BASE));
+  process.exit(2);
+}
 const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
 const ROLE = process.env.ROLE || "icon";
 
@@ -148,4 +165,34 @@ if (errors.length) {
 }
 await ctx.close();
 await browser.close();
-process.exit(0);
+/* IT USED TO EXIT 0 WHATEVER IT FOUND.
+
+   This walks every link as a role and records the ones that land
+   somewhere other than their href — it is how the doors that opened the
+   wrong room were found in the first place. Then it printed the list and
+   returned success, so in a batch run it was indistinguishable from a
+   clean sweep, and the finding existed only if a person happened to read
+   the scrollback.
+
+   Same disease as thread-heart printing "should be 0" and exiting 0: a
+   number on stdout is not an assertion. If a link lands somewhere other
+   than it claims, that is a failure, and it belongs in the one channel a
+   batch run actually reads. Page errors count too — a link that reaches
+   the right route with a broken screen has not worked. */
+/* FAIL ON THE THING THIS TOOL IS ABOUT, AND ONLY THAT.
+
+   First attempt counted page errors as failures too, and it went red on
+   a run where nothing was wrong: headless contexts throw "Access is
+   denied for this document" reading localStorage, which is the harness,
+   not the app. An assertion that fires on environmental noise gets
+   ignored within a week, and an ignored assertion is worth less than
+   none — it trains people to skip the one channel a batch run reads.
+
+   A link landing somewhere other than its href cannot be environmental,
+   so that is the failure. Page errors are printed loudly and left as a
+   judgement for whoever is reading, because this tool cannot tell an
+   app error from a sandbox one. */
+const errs = [...new Set(errors)];
+if (errs.length) console.log(errs.length + " page error(s) above — check whether any are the app rather than the harness");
+console.log(wrong.length ? wrong.length + " LINK(S) LANDED SOMEWHERE ELSE" : "LINK WALK OK — every link landed where it claimed");
+process.exit(wrong.length ? 1 : 0);

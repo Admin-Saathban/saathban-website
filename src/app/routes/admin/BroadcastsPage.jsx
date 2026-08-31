@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { sendBroadcast } from "./api.js";
 import { Card, AdminBtn } from "./ui.jsx";
@@ -22,7 +22,7 @@ const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   minHeight: A11Y.minTapTargetPx,
-  fontFamily: FONTS.sans,
+  fontFamily: APP_FONT,
   fontSize: 17,
   color: C.textMain,
   background: C.cream,
@@ -87,7 +87,7 @@ export default function BroadcastsPage() {
     <div style={{ maxWidth: 720 }}>
       <h1
         style={{
-          fontFamily: FONTS.serif,
+          fontFamily: APP_FONT,
           fontSize: 32,
           fontWeight: 700,
           color: C.green,

@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useOutletContext } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { fetchQuestions, answerQuestion } from "./api.js";
 import { Card, AdminBtn, fmtDateTime } from "./ui.jsx";
@@ -23,7 +23,7 @@ import { Card, AdminBtn, fmtDateTime } from "./ui.jsx";
 const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
-  fontFamily: FONTS.sans,
+  fontFamily: APP_FONT,
   fontSize: 17,
   color: C.textMain,
   background: C.cream,
@@ -78,7 +78,7 @@ export default function QuestionsQueue() {
     <div style={{ maxWidth: 860 }}>
       <h1
         style={{
-          fontFamily: FONTS.serif,
+          fontFamily: APP_FONT,
           fontSize: 32,
           fontWeight: 700,
           color: C.green,

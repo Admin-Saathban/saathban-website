@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
@@ -121,14 +121,14 @@ export default function BuddyHome() {
           minHeight: "100vh",
           background: C.bg,
           color: C.textMain,
-          fontFamily: FONTS.sans,
+          fontFamily: APP_FONT,
           padding: "20px 16px 56px",
         }}
       >
         <div style={{ maxWidth: 620, margin: "0 auto" }}>
           <h1
             style={{
-              fontFamily: FONTS.serif,
+              fontFamily: APP_FONT,
               fontSize: 30,
               fontWeight: 700,
               color: C.green,
@@ -149,7 +149,7 @@ export default function BuddyHome() {
             <p style={{ color: C.textMuted }} role="status">Loading…</p>
           ) : application === null ? (
             <section style={card}>
-              <h2 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
                 {cooldown > 0 ? "About your application" : "Your volunteer application"}
               </h2>
               <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: "0 0 16px" }}>
@@ -177,7 +177,7 @@ export default function BuddyHome() {
             </section>
           ) : status === "suspended" ? (
             <section style={card}>
-              <h2 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
                 Your volunteering is paused
               </h2>
               <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: 0 }}>
@@ -188,7 +188,7 @@ export default function BuddyHome() {
           ) : (
             <>
               <section style={{ ...card, borderColor: status === "active" ? C.green : C.warmGray }}>
-                <h2 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.green, margin: "0 0 8px" }}>
+                <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.green, margin: "0 0 8px" }}>
                   {status === "active" ? "You're an active Saath-Buddy" : "Your application"}
                 </h2>
                 <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: 0 }}>
@@ -206,7 +206,7 @@ export default function BuddyHome() {
 
               {status === "active" && (
                 <section style={card}>
-                  <h2 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+                  <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
                     Your Saath-Icons
                   </h2>
                   <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, color: C.textMuted, margin: 0 }}>
@@ -222,7 +222,7 @@ export default function BuddyHome() {
           {/* ── Documents channel ── */}
           {showDocuments && (
             <section style={card}>
-              <h2 style={{ fontFamily: FONTS.serif, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
                 Documents
               </h2>
               <p style={{ fontSize: 16, color: C.textMuted, margin: "0 0 14px", lineHeight: 1.6 }}>
@@ -278,7 +278,7 @@ export default function BuddyHome() {
                             border: "none",
                             background: C.green,
                             color: C.cream,
-                            fontFamily: FONTS.sans,
+                            fontFamily: APP_FONT,
                             fontSize: A11Y.minBodyPx,
                             fontWeight: 600,
                             cursor: busyId === r.id ? "default" : "pointer",

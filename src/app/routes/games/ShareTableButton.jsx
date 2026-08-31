@@ -11,7 +11,7 @@
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
 import { shareJoinLink, joinUrl, digitsOnly } from "./joinLink.js";

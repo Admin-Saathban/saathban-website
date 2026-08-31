@@ -26,7 +26,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "./i18n.jsx";
 
 /* ─── Toast store (module level: any component can raise one) ─── */

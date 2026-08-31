@@ -25,7 +25,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";

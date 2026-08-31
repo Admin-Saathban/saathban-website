@@ -3,7 +3,7 @@
    picked by the active language. Tapping calls onPick(id); the caller
    sends stickerRef(id) as the message body (STICKERS_WIRING.md). */
 
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STICKER_SET, Sticker } from "./stickers.jsx";
 

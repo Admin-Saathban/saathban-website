@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Button } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { ensureProfile } from "../../lib/authFlow.js";

@@ -30,7 +30,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { SIZE, CELL, cellCenter } from "./board.js";
 import { ROUTES, bodyOutline } from "./art.js";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";

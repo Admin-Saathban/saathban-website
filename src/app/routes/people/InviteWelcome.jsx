@@ -26,7 +26,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { Card, BodyText, PrimaryBtn } from "../circle/ui.jsx";
 import { openInvite, acceptInvite } from "../../lib/invites.js";

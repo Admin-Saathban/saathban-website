@@ -7,7 +7,7 @@
    login form and land at /app/admin by role. */
 
 import { Link, Navigate } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession, AccountLoadError } from "../lib/session.jsx";
 import Logo from "../components/Logo.jsx";

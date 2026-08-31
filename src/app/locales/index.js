@@ -8,7 +8,7 @@
    meta.dir / meta.fonts / meta.lineHeight from useI18n().
    ════════════════════════════════════════════════ */
 
-import { FONTS } from "../../shared/tokens.js";
+import { APP_FONT } from "../../shared/tokens.js";
 import en from "./en.js";
 import ur from "./ur.js";
 
@@ -29,7 +29,9 @@ export const LOCALES = {
       // A language's own name is shown in that language — this is
       // convention, not a string for the translator, so it lives here.
       label: "English",
-      fonts: { body: FONTS.sans, heading: FONTS.serif },
+      /* §0.5 — one face. A heading is heavier and larger, not a
+         different typeface. */
+      fonts: { body: APP_FONT, heading: APP_FONT },
       lineHeight: 1.6,
     },
   },
@@ -43,8 +45,8 @@ export const LOCALES = {
       // no Arabic-script glyphs. The Latin faces stay in the stack so
       // untranslated [UR] placeholders still render cleanly.
       fonts: {
-        body: "'Noto Nastaliq Urdu', 'DM Sans', serif",
-        heading: "'Noto Nastaliq Urdu', 'Playfair Display', serif",
+        body: `'Noto Nastaliq Urdu', ${APP_FONT}`,
+        heading: `'Noto Nastaliq Urdu', ${APP_FONT}`,
       },
       // Nastaliq hangs far below the baseline; anything under ~2.0
       // clips descenders on the ~18px+ sizes the app uses.

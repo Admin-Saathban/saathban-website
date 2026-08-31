@@ -21,6 +21,63 @@ export const COLORS = {
   error: "#8C2F22",
 };
 
+/* ─── The APP's palette — PRODUCT_DECISIONS §0.5 ───
+
+   The owner's ruling of 30 August: the app does not follow the
+   Saathban colour scheme. Cream, the warm browns and the serif belong
+   to the marketing site and the logo, not to something a person opens
+   every morning. COLORS above is untouched and is still the site's —
+   src/App.jsx imports it from this same file, so the two now disagree
+   about colour ON PURPOSE.
+
+   SAME KEY NAMES AS COLORS, deliberately. Every screen in src/app/
+   already reads `C.bg`, `C.warmGray`, `C.cream`; keeping the shape
+   means the switch is one imported symbol per file rather than a
+   rewrite of nine hundred style objects. Keys that named a warm colour
+   now hold a neutral — `cream` is white, `brown` is ink. The names are
+   wrong and the values are right, which is the correct trade for one
+   night: renaming them across 175 files is a separate, mechanical pass.
+
+   ONE ACCENT. Green marks the thing you are meant to do next and
+   nothing else. A screen with four green elements has no accent. */
+export const APP_COLORS = {
+  /* the ground and the surfaces */
+  bg: "#F2F3F5",          // near-white grey, never cream
+  white: "#FFFFFF",        // cards, rows, sheets
+  cream: "#FFFFFF",        // was the warm ground; now simply a surface
+
+  /* ink */
+  textMain: "#1C1E21",
+  textMuted: "#65676B",
+  brown: "#1C1E21",        // was warm ink; now the same ink as everything
+  brownLight: "#65676B",
+  dark: "#1C1E21",
+
+  /* the one accent: Saathban green, and its two working shades */
+  green: "#0B5D2A",
+  greenLight: "#0E7536",
+  greenMuted: "#3F7A55",
+  sage: "#0B5D2A",         // was a second green; collapsed onto the accent
+  olive: "#65676B",        // was a third; it was never an accent, it was a label
+  accent: "#0B5D2A",
+
+  /* lines and dividers — neutral, and used far less than they were */
+  warmGray: "#DADDE1",
+
+  /* the only colour allowed to mean something on its own is none of
+     them: an error is always paired with words (§0.1) */
+  error: "#B3261E",
+};
+
+/* The APP's type — PRODUCT_DECISIONS §0.5. A system stack, and NO
+   SERIF ANYWHERE. Playfair is the brand's voice on a page somebody
+   reads once; it is not the face for a log a person fills in every
+   morning. The system stack also means no webfont on the critical path
+   and the shapes a person already reads everywhere else on their
+   phone. */
+export const APP_FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
 // ─── Type ───
 // serif  — headings, pull quotes, anything with a voice
 // sans   — body copy, UI chrome, form controls

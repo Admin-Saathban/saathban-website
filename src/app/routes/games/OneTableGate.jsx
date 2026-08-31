@@ -17,7 +17,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { leaveSession } from "../../lib/games.js";
 import { Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";

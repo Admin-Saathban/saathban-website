@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";

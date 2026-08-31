@@ -28,7 +28,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Field, Button, ErrorText, LinkButton } from "../../components/ui.jsx";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, isValidEmail } from "../../lib/authFlow.js";

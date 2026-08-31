@@ -28,7 +28,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { SEAT_LIGHT, SEAT_DEEP, SEAT_COLOR_NAMES } from "../seatColors.js";
 import Pawn from "../Pawn.jsx";
 import {

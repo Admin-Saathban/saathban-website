@@ -28,7 +28,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { COLORS as C } from "../../shared/tokens.js";
+import { APP_COLORS as C } from "../../shared/tokens.js";
 import { SEAT_COLORS } from "../routes/games/seatColors.js";
 import { playSound, playHopRun, unlockSound } from "./sound.js";
 import { hapticCapture, hapticWin, hapticTurn } from "./haptics.js";

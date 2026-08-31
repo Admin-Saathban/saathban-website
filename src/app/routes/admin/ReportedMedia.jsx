@@ -22,7 +22,7 @@
    ════════════════════════════════════════════════ */
 
 import { useState } from "react";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 
 const mmss = (n) => {

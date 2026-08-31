@@ -16,7 +16,7 @@
    - Colour never carries meaning alone: every shape is labelled.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { MOODS } from "../home/homeMock.js";
 import { Card, BodyText, SectionLabel } from "./ui.jsx";

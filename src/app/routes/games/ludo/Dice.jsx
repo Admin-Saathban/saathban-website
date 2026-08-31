@@ -13,7 +13,7 @@
    ring. Dim-vs-bright is only ever the second signal.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../../shared/tokens.js";
 
 /* Pip layout per face, on a 3×3 grid of ninths. */
 const PIPS = {

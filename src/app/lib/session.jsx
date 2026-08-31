@@ -31,7 +31,7 @@ import {
   useState,
 } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { COLORS as C } from "../../shared/tokens.js";
+import { APP_COLORS as C } from "../../shared/tokens.js";
 import supabase from "./supabase.js";
 
 export function roleHomePath(role) {

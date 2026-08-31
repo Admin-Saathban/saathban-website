@@ -20,7 +20,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { parseStickerRef, Sticker } from "../../assets/stickers/stickers.jsx";

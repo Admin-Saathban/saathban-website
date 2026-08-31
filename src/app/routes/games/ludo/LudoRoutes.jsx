@@ -11,7 +11,7 @@
 
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppHeader from "../../../components/AppHeader.jsx";
-import { COLORS as C } from "../../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { GAME } from "../gameSurface.js";
 import LudoHome from "./LudoHome.jsx";
 import LudoSession from "./LudoSession.jsx";

@@ -6,7 +6,7 @@
    carrom circle — drawn in the same seat palette so it reads as the
    same family. */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { SEAT_COLORS } from "./seatColors.js";
 
 export default function BoardThumb({ gameKey, size = 64 }) {

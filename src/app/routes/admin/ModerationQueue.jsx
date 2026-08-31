@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 import ReportedMedia from "./ReportedMedia.jsx";
@@ -132,7 +132,7 @@ export default function ModerationQueue() {
     <div style={{ maxWidth: 960 }}>
       <h1
         style={{
-          fontFamily: FONTS.serif,
+          fontFamily: APP_FONT,
           fontSize: 32,
           fontWeight: 700,
           color: C.green,
@@ -265,7 +265,7 @@ export default function ModerationQueue() {
                           minWidth: 220,
                           minHeight: A11Y.minTapTargetPx,
                           boxSizing: "border-box",
-                          fontFamily: FONTS.sans,
+                          fontFamily: APP_FONT,
                           fontSize: 17,
                           background: C.cream,
                           border: `1px solid ${C.warmGray}`,

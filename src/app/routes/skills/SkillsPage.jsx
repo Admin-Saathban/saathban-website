@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import supabase from "../../lib/supabase.js";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { STRINGS, SKILLS } from "./strings.js";

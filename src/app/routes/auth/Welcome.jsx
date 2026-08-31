@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Intro, Button } from "../../components/ui.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";

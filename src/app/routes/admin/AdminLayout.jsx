@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { NavLink, Outlet } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
 import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
@@ -116,7 +116,7 @@ export default function AdminLayout() {
         minHeight: "100vh",
         display: "flex",
         background: C.bg,
-        fontFamily: FONTS.sans,
+        fontFamily: APP_FONT,
         color: C.textMain,
         fontSize: A11Y.minBodyPx,
       }}
@@ -137,7 +137,7 @@ export default function AdminLayout() {
         <div style={{ padding: "0 10px 22px" }}>
           <div
             style={{
-              fontFamily: FONTS.serif,
+              fontFamily: APP_FONT,
               fontSize: 26,
               fontWeight: 700,
               lineHeight: 1.1,
@@ -317,7 +317,7 @@ export default function AdminLayout() {
                   fontWeight: 700,
                   textDecoration: "underline",
                   cursor: "pointer",
-                  fontFamily: FONTS.sans,
+                  fontFamily: APP_FONT,
                 }}
               >{t("admin.tryAgain")}</button>
             </p>

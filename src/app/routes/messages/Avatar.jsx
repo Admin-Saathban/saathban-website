@@ -9,7 +9,7 @@
    computed here, because whether presence may be shown at all is a
    question about permission and freshness, not about drawing. */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 
 export default function Avatar({ person, size = 52, about = false }) {
   const name = (person?.full_name || "").trim();

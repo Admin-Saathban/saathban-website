@@ -28,7 +28,7 @@
    and only the SURFACE — wood, stone, night — is a theme's own.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 
 /* Every theme supplies the same token set. The board and its
    surroundings read these and nothing else, so adding a theme is

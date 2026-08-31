@@ -36,7 +36,7 @@ import {
   ErrorText,
   NotMeExit,
 } from "../../components/ui.jsx";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { sendMagicLink, finishProfile, isValidEmail } from "../../lib/authFlow.js";
 import { consumePostLoginPath } from "../../lib/session.jsx";

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { Card, SectionLabel, BodyText, PrimaryBtn, GhostBtn, Toggle, Segmented } from "../../circle/ui.jsx";
 import { createSession, joinByCode, DEFAULT_RULES } from "./ludoRails.js";

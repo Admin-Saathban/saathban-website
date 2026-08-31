@@ -8,7 +8,7 @@
    the dark brown + weight + an explicit glyph, never colour alone.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { STATUS_LABELS } from "./data.js";
 
 // ─── Status chip ───
@@ -90,7 +90,7 @@ export function Card({ title, aside, children, style }) {
           {title && (
             <h2
               style={{
-                fontFamily: FONTS.serif,
+                fontFamily: APP_FONT,
                 fontSize: 21,
                 fontWeight: 600,
                 color: C.green,
@@ -150,7 +150,7 @@ export function AdminBtn({ kind = "outline", disabled, onClick, children, title 
         minHeight: A11Y.minTapTargetPx,
         padding: "0 22px",
         borderRadius: 10,
-        fontFamily: FONTS.sans,
+        fontFamily: APP_FONT,
         fontSize: 17,
         fontWeight: 600,
         cursor: disabled ? "not-allowed" : "pointer",

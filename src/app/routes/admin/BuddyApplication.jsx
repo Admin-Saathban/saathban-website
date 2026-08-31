@@ -23,7 +23,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { Link, useOutletContext, useParams } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import {
   PIPELINE,
   NEXT_STATUS,
@@ -48,7 +48,7 @@ const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   minHeight: A11Y.minTapTargetPx,
-  fontFamily: FONTS.sans,
+  fontFamily: APP_FONT,
   fontSize: 17,
   color: C.textMain,
   background: C.cream,
@@ -148,7 +148,7 @@ export default function BuddyApplication() {
       >
         <h1
           style={{
-            fontFamily: FONTS.serif,
+            fontFamily: APP_FONT,
             fontSize: 32,
             fontWeight: 700,
             color: C.green,
@@ -215,7 +215,7 @@ export default function BuddyApplication() {
           <Card title={t("admin.motivation")}>
             <p
               style={{
-                fontFamily: FONTS.serif,
+                fontFamily: APP_FONT,
                 fontSize: 20,
                 lineHeight: 1.7,
                 margin: 0,

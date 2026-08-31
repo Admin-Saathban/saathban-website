@@ -17,87 +17,81 @@
 
    ── WHY THIS FILE EXISTS RATHER THAN DIRECT IMPORTS ──
 
-   Every call site says `<Icon name="camera" />`, not
-   `import { Camera } from "lucide-react"`. Three reasons, in order of
-   how much they will matter later:
+   Every call site says `<Icon name="camera" />`, never a direct
+   lucide import. Three reasons, in order of how much they will matter
+   later:
 
-   1. The set is swappable in ONE file. If Lucide's licence changes or
-      the owner prefers Phosphor, this map changes and nothing else
-      does. Direct imports would put that decision in ninety files.
+   1. The set is swappable in ONE file. If the licence changes or the
+      owner prefers Phosphor, this map changes and nothing else does.
    2. The NAMES ARE OURS AND SEMANTIC. "outdoor" not "TreePine",
-      "mood" not "Smile". When Out & about gets renamed the icon name
-      does not have to lie, and a lane that wants "the outdoor icon"
-      does not have to know which tree Lucide picked.
-   3. It is where the accessibility rule lives. See below.
-
-   ── AN ICON IS NEVER THE ONLY THING SAYING IT ──
-
-   PRODUCT_DECISIONS §0.1: meaning is never carried by colour alone,
-   and §3 extends it — a bottom bar is never icon-only, because an
-   emoji or a glyph is a rebus a person has to solve every time.
-
-   So this renders `aria-hidden` by DEFAULT. An icon is decoration
-   sitting beside a word, and a screen reader that announces both reads
-   everything twice. Where an icon genuinely IS the control — a bare
-   close button — pass `label`, and it becomes an `img` role with that
-   accessible name. Those are the only two states; there is no third
-   where an icon is meaningful and silent.
+      "mood" not "Smile". When Out & about is renamed the icon name
+      does not have to lie.
+   3. It is where the accessibility rule lives — aria-hidden by
+      default, because an icon sits beside a word and a reader
+      announcing both says it twice. Pass `label` where the icon IS
+      the control.
    ════════════════════════════════════════════════ */
 
 import {
-  ArrowLeft, ArrowRight, Bell, Bookmark, Calendar, Camera, Check, ChevronLeft,
-  ChevronRight, CircleUser, Clock, CloudSun, Compass, Dices, Droplet, Footprints,
-  Heart, House, MapPin, Medal, Menu, MessageCircle, Moon, Pill, Plus, Search,
-  Settings, Sprout, Sun, ThumbsUp, TreePine, Users, Utensils, X,
+  Apple, ArrowLeft, ArrowRight, Bed, Bell, Bot, Bookmark, Cake, Calendar,
+  CalendarDays, Camera, Candy, Check, ChevronDown, ChevronLeft, ChevronRight,
+  CircleUser, Clock, Compass, CupSoda, Dices, DoorOpen, Droplet, Egg, Feather,
+  Flame, Flower2, Footprints, Globe, Hand, HandHeart, Hash, Heart,
+  HeartHandshake, House, Image, Landmark, Link2, Lock, LogOut, Mail, Medal,
+  Megaphone, Menu, MessageCircle, Mic, Milk, Moon, NotebookPen, PartyPopper,
+  Pill, Pin, Plus, Puzzle, RefreshCw, Salad, Sandwich, Scale, Search, Send,
+  Settings, ShoppingBag, Smile, Sprout, Stethoscope, Sun, Sunrise, ThumbsUp,
+  Trees, TreePine, TriangleAlert, Trophy, User, Users, Utensils, Volume2,
+  Waves, Wrench, X, MapPin,
 } from "lucide-react";
 
 /* Our names on the left, always. Never Lucide's on a call site. */
 const ICONS = {
   // ── the bottom bar (§1) ──
-  home: House,
-  games: Dices,
-  groups: Users,
-  outdoor: TreePine,
-  more: Menu,
+  home: House, games: Dices, groups: Users, outdoor: TreePine, more: Menu,
 
   // ── the header (§3) ──
-  search: Search,
-  bell: Bell,
-  messages: MessageCircle,
-  profile: CircleUser,
+  search: Search, bell: Bell, messages: MessageCircle, profile: CircleUser,
 
   // ── the More drawer (§6) ──
-  calendar: Calendar,
-  journey: Compass,
-  grow: Sprout,
-  badges: Medal,
-  saved: Bookmark,
-  settings: Settings,
-  help: MessageCircle,
+  calendar: Calendar, journey: Compass, grow: Sprout, badges: Medal,
+  saved: Bookmark, settings: Settings, help: MessageCircle,
 
   // ── the daily log ──
-  log: CloudSun,
-  mood: Sun,
-  sleep: Moon,
-  medication: Pill,
-  exercise: Footprints,
-  diet: Utensils,
-  water: Droplet,
+  log: Sun, mood: Smile, sleep: Moon, medication: Pill, exercise: Footprints,
+  diet: Utensils, water: Droplet, weight: Scale, note: NotebookPen,
+  voice: Mic, bloodPressure: Stethoscope, tracker: Hash,
+
+  // ── meals and foods, for the log's diet module ──
+  breakfast: Sunrise, lunch: Sun, dinner: Moon, snack: CupSoda,
+  egg: Egg, bread: Sandwich, greens: Salad, fruit: Apple, milk: Milk,
+  sweet: Candy,
+
+  // ── post and share types (§7) ──
+  badge: Trophy, walk: Footprints, activity: HandHeart, event: CalendarDays,
+  gameOpen: Dices, riddle: Puzzle, helpAsk: Hand, helpOffer: HeartHandshake,
+  milestone: Flame, memory: Feather, good: Flower2,
+
+  // ── out and about: place types (§12) ──
+  park: Trees, mosque: Landmark, market: ShoppingBag, museum: Landmark,
+  promenade: Footprints, water_place: Waves, place: MapPin,
+
+  // ── calendar entry kinds ──
+  birthday: Cake, appointment: Stethoscope, visit: DoorOpen, pinned: Pin,
+  gathering: PartyPopper,
+
+  // ── games ──
+  dice: Dices, bot: Bot, invite: Link2, celebrate: PartyPopper,
+  announce: Megaphone, rematch: RefreshCw, snakes: Waves, leave: LogOut,
+  sound: Volume2, seatOpen: User,
 
   // ── actions and furniture ──
-  camera: Camera,
-  check: Check,
-  close: X,
-  add: Plus,
-  chevron: ChevronRight,
-  chevronBack: ChevronLeft,
-  back: ArrowLeft,
-  forward: ArrowRight,
-  time: Clock,
-  place: MapPin,
-  heart: Heart,
-  like: ThumbsUp,
-  person: CircleUser,
+  camera: Camera, globe: Globe, check: Check, close: X, add: Plus,
+  chevron: ChevronRight, chevronBack: ChevronLeft, down: ChevronDown,
+  back: ArrowLeft, forward: ArrowRight, time: Clock, heart: Heart,
+  like: ThumbsUp, person: CircleUser, people: Users, photo: Image,
+  send: Send, locked: Lock, letter: Mail, warn: TriangleAlert,
+  tools: Wrench, rest: Bed,
 };
 
 export default function Icon({

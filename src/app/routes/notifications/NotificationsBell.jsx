@@ -15,7 +15,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useDrawer } from "../../components/Drawer.jsx";
 import { NOTIFICATIONS_DRAWER_ID } from "../../components/NotificationsDrawer.jsx";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { STRINGS } from "./strings.js";

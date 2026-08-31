@@ -19,7 +19,7 @@
    way.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 
 export const FAMILIES = {
   presence: {

@@ -22,7 +22,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { fetchBadgeDefinitions, fetchMyEarnedBadges } from "../../lib/points.js";
 import AppHeader from "../../components/AppHeader.jsx";

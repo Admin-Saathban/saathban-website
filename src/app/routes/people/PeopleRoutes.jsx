@@ -8,7 +8,7 @@
 
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppHeader from "../../components/AppHeader.jsx";
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import PersonPage from "./PersonPage.jsx";
 import ThreadPage from "./ThreadPage.jsx";
 import PeopleList from "./PeopleList.jsx";

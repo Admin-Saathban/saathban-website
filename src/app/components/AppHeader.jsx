@@ -18,7 +18,7 @@
    ════════════════════════════════════════════════ */
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../lib/session.jsx";
 import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";

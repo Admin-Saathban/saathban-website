@@ -6,7 +6,7 @@
    is a role="switch" that says On / Off.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 /* Extra props (className, ref, data-*) pass through: the feedback

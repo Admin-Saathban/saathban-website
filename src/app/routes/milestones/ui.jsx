@@ -3,7 +3,7 @@
    sessions are actively reshaping). Floors: ≥18px text, ≥48px
    targets, state never by colour alone. */
 
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 export function Screen({ children, width = 680 }) {

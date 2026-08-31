@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { COLORS as C, FONTS, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { PIPELINE, STATUS_LABELS } from "./data.js";
 import { StatusChip, FlagBadge, fmtDate } from "./ui.jsx";
 
@@ -37,7 +37,7 @@ export default function BuddyQueue() {
     <div>
       <h1
         style={{
-          fontFamily: FONTS.serif,
+          fontFamily: APP_FONT,
           fontSize: 32,
           fontWeight: 700,
           color: C.green,
@@ -76,7 +76,7 @@ export default function BuddyQueue() {
                 border: `2px solid ${selected ? C.green : C.warmGray}`,
                 background: selected ? C.green : C.white,
                 color: selected ? C.cream : isExit ? C.textMuted : C.textMain,
-                fontFamily: FONTS.sans,
+                fontFamily: APP_FONT,
                 fontSize: 16,
                 fontWeight: 600,
                 cursor: "pointer",

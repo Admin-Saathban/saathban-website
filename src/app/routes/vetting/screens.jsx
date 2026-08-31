@@ -8,7 +8,7 @@
    All copy resolves from locales/ under vetting.status.* and
    vetting.refused.*. */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { COOLDOWN_DAYS } from "./supabaseVetting.js";
 

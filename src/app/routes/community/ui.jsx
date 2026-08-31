@@ -4,7 +4,7 @@
    focus, state never colour alone. */
 
 import { Link } from "react-router-dom";
-import { COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {

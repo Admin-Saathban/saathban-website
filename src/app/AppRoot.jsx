@@ -19,7 +19,7 @@
 
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
-import { COLORS as C, FONTS, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
 import { supabaseConfigError } from "./lib/supabase.js";
 import AppHome from "./routes/AppHome.jsx";
 import AdminLayout from "./routes/admin/AdminLayout.jsx";
@@ -86,7 +86,7 @@ function AppConfigError() {
         minHeight: "100vh",
         background: C.bg,
         color: C.textMain,
-        fontFamily: FONTS.sans,
+        fontFamily: APP_FONT,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -96,7 +96,7 @@ function AppConfigError() {
       <div style={{ maxWidth: 620 }}>
         <h1
           style={{
-            fontFamily: FONTS.serif,
+            fontFamily: APP_FONT,
             fontSize: 30,
             fontWeight: 700,
             color: C.green,

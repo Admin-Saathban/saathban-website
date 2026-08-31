@@ -43,7 +43,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { COLORS as C } from "../../shared/tokens.js";
+import { APP_COLORS as C } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { DIM, TIMING, wantsLessMotion } from "./motion.jsx";
 import { BAR_HEIGHT } from "./BottomBar.jsx";

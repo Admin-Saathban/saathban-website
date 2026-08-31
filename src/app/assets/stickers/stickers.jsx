@@ -16,7 +16,7 @@
    they render as calligraphy in BOTH language modes.
    ════════════════════════════════════════════════ */
 
-import { COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C } from "../../../shared/tokens.js";
 
 const NASTALIQ = "'Noto Nastaliq Urdu', serif";
 

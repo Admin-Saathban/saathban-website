@@ -3,7 +3,7 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { COLORS as C, FONTS } from "../../../shared/tokens.js";
+import { APP_COLORS as C, APP_FONT } from "../../../shared/tokens.js";
 import { ApplicationStatus, KindErrorScreen } from "./screens.jsx";
 
 const FIXTURE_APP = (status) => ({
@@ -17,7 +17,7 @@ function Gallery() {
     <section key={label} style={{ marginBottom: 40 }}>
       <p
         style={{
-          fontFamily: FONTS.sans,
+          fontFamily: APP_FONT,
           fontSize: 18,
           fontWeight: 700,
           color: C.textMuted,
@@ -35,7 +35,7 @@ function Gallery() {
       style={{
         background: C.bg,
         minHeight: "100vh",
-        fontFamily: FONTS.sans,
+        fontFamily: APP_FONT,
         padding: "24px 16px 64px",
       }}
     >

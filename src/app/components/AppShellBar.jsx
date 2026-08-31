@@ -36,6 +36,7 @@ import { useSession } from "../lib/session.jsx";
 import BottomBar, { BAR_HEIGHT } from "./BottomBar.jsx";
 import useBuddyActive from "./useBuddyActive.js";
 import MoreDrawer, { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
+import useShutter from "./useShutter.js";
 import { useDrawer } from "./Drawer.jsx";
 import { MotionStyles } from "./motion.jsx";
 
@@ -55,6 +56,11 @@ export default function AppShellBar() {
      behind a condition is a hook that changes count between renders. */
   const { open: moreOpen, openDrawer: openMore, closeDrawer: closeMore } =
     useDrawer(MORE_DRAWER_ID);
+
+  /* MOTION §5. Never while the drawer is open: the bar is visible
+     behind the dim by design, and a bar that slid away under a drawer
+     would look like the drawer ate it. */
+  const shuttered = useShutter() && !moreOpen;
 
   /* THE ONBOARDING GATE IS NOT A PATH, which is why it needed saying
      here in words rather than in HIDDEN_PREFIXES. FirstRun renders
@@ -98,6 +104,7 @@ export default function AppShellBar() {
          five different transitions happened in the first place. */}
       <MotionStyles />
       <BottomBar
+        shuttered={shuttered}
         role={role}
         buddyActive={buddyActive}
         drawerOpen={moreOpen}

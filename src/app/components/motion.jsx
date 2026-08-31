@@ -162,6 +162,13 @@ export const MOTION_CSS = `
                  transform-origin: top left; }
 .sb-drawer-dim { animation: sb-drawer-dim-in ${TIMING.drawerOpen}ms ease-out both; }
 
+/* MOTION §5 — the shutter. The bars keep moving under reduced motion,
+   because that is layout rather than decoration and a person still
+   needs the space; they simply stop travelling to get there. */
+@media (prefers-reduced-motion: reduce) {
+  header.sb-header, nav[data-sb-bar] { transition: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Instant, not merely calmer. The container still appears — it just
      does not travel, scale or bounce to get there. */

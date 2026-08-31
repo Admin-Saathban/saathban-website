@@ -40,7 +40,7 @@ import Icon from "./Icon.jsx";
    asserting the key was present would have called this shipped. */
 export const BAR_HEIGHT = 92;
 
-export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpenDrawer }) {
+export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpenDrawer, shuttered = false }) {
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
@@ -122,6 +122,7 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
   return (
     <nav
       aria-label={t("hub.navLabel")}
+      data-sb-bar=""
       style={{
         position: "fixed",
         insetInlineStart: 0,
@@ -136,6 +137,11 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
         background: C.white,
         borderTop: `1px solid ${C.warmGray}`,
         boxShadow: "0 -2px 12px rgba(74,58,34,0.08)",
+        /* MOTION §5 — the shutter. It travels its own height rather
+           than fading, so the screen underneath genuinely gains the
+           space instead of hiding text behind a transparent bar. */
+        transform: shuttered ? `translateY(${BAR_HEIGHT}px)` : "none",
+        transition: "transform 180ms ease-out",
       }}
     >
       {items.map((item) =>

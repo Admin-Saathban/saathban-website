@@ -30,7 +30,7 @@
    ════════════════════════════════════════════════ */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { A11Y } from "../../shared/tokens.js";
+import { A11Y, APP_COLORS } from "../../shared/tokens.js";
 import { DEFAULT_LANG, LOCALES, NASTALIQ_FONT_URL } from "../locales/index.js";
 
 // The in-app text size control (independent of the phone's setting).
@@ -111,6 +111,20 @@ export function LanguageProvider({ children }) {
       {/* Nastaliq is requested unconditionally so switching to Urdu
           doesn't flash fallback glyphs while the font downloads. */}
       <style>{`@import url('${NASTALIQ_FONT_URL}');`}</style>
+      {/* THE GROUND AND THE FACE GO ON THE DOCUMENT, not only on the
+          wrapper below. The wrapper styles its own subtree, so
+          anything outside it — the ground behind a short screen, a
+          fixed layer, the moment before React paints — fell back to
+          the browser default, which is Times on a white page.
+
+          Measured on the deployed build: document.body reported
+          "Times New Roman" while every visible word was already sans,
+          because the face was never on the element the browser falls
+          back to. Nobody would have seen it in a screenshot; it shows
+          up as a flash on a slow phone and as serif behind a short
+          page. */}
+      <style>{`html, body { margin: 0; background: ${APP_COLORS.bg};` +
+        ` color: ${APP_COLORS.textMain}; font-family: ${meta.fonts.body}; }`}</style>
       <div
         dir={meta.dir}
         lang={lang}

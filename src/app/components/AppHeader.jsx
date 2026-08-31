@@ -28,6 +28,7 @@ import MessagesButton from "./MessagesButton.jsx";
 import SearchButton from "./SearchButton.jsx";
 import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDrawer.jsx";
 import { useDrawer } from "./Drawer.jsx";
+import useShutter from "./useShutter.js";
 
 export default function AppHeader() {
   const { t, meta } = useI18n();
@@ -39,6 +40,8 @@ export default function AppHeader() {
      screens that still draw a header. A bell that opens nothing on
      the admin shell would be a new dead control. */
   const { open: notifOpen, closeDrawer: closeNotif } = useDrawer(NOTIFICATIONS_DRAWER_ID);
+  /* Both bars move together, so the frame behaves as one thing (§5). */
+  const shuttered = useShutter() && !notifOpen;
 
   const home = profile ? roleHomePath(profile.role) : "/app";
   /* A way back on every inner page, except the admin shell, which has
@@ -67,6 +70,8 @@ export default function AppHeader() {
            control, so it separates by whitespace rather than a border
            that reads like one. */
         padding: "6px 10px",
+        transform: shuttered ? "translateY(-100%)" : "none",
+        transition: "transform 180ms ease-out",
       }}
     >
       <div

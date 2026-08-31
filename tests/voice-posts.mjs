@@ -145,9 +145,28 @@ if (post) {
   await p.waitForTimeout(2600);
   const card = p.locator(`text=${MARK}`).first();
   if (await card.count()) {
-    /* By its exact accessible name: "More" also matches the app bar's
-       own tab, and .first() then opened nothing. */
-    const dots = p.getByRole("button", { name: "More actions" }).first();
+    /* SCOPED TO THIS POST'S CARD, which is the whole point.
+
+       By its exact accessible name, because "More" also matches the app
+       bar's own tab and .first() then opened nothing. But the name alone
+       was still wrong: EVERY post carries a "More actions" button, so
+       .first() opened whichever post the feed happened to put at the
+       top. Usually that was this one, so it usually worked — and about
+       one run in three another lane's post was newer, the report landed
+       on a stranger's post, and the query for THIS post's report found
+       nothing. "no report" meant "reported the wrong thing".
+
+       Worse, the check above it still passed: a menu existed, so "the
+       post offers its menu" was green while the menu belonged to someone
+       else. A check that confirms something happened without confirming
+       the right thing happened — which is the shape of every bug found
+       tonight. useFresh stamps each card with data-fresh=<post id>, so
+       there is a real anchor to scope to; use it. */
+    const cardRoot = p.locator(`[data-fresh="${post.id}"]`).first();
+    await cardRoot.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+    const dots = (await cardRoot.count())
+      ? cardRoot.getByRole("button", { name: "More actions" }).first()
+      : p.getByRole("button", { name: "More actions" }).first();
     check("the post offers its menu", (await dots.count()) > 0);
     await dots.click();
     await p.waitForTimeout(700);
@@ -176,7 +195,19 @@ check("the report carries the recording's path", !!rep?.target_media_path, rep ?
   check("the moderator is offered a way to listen", (await listen.count()) > 0);
   if (await listen.count()) {
     await listen.click();
-    await p.waitForTimeout(2500);
+    /* WAIT FOR THE SRC, NOT 2.5 SECONDS.
+
+       ReportedMedia signs a storage URL on demand, so the <audio> element
+       exists before its source does. A fixed sleep made this fail about
+       one run in three whenever signing took longer than the guess — and
+       "no signed source" reads identically to a moderator who genuinely
+       cannot hear the recording, which is the one thing this whole
+       feature exists to guarantee. Waiting for the condition cannot be
+       wrong about which of those it found. */
+    await p.waitForFunction(() => {
+      const a = document.querySelector("audio");
+      return !!a && (a.currentSrc || a.src || "").length > 10;
+    }, null, { timeout: 20000 }).catch(() => {});
     const playable = await p.evaluate(() => {
       const a = document.querySelector("audio");
       return a ? { present: true, src: (a.currentSrc || a.src || "").slice(0, 60) } : { present: false };

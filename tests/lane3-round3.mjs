@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 import { createClient } from "@supabase/supabase-js";
+import { snapshotProbes, sweepProbes } from "./probes.mjs";
 
 /* NO DEFAULT PORT. This file used to default to an assumed localhost
    port, and that cost a full run of tests/messages-arrival.mjs: every
@@ -44,6 +45,10 @@ if (!_u || !_u.hostname || (_u.protocol === "http:" && _u.hostname === "localhos
   console.error(`BASE_URL is not a usable URL: ${JSON.stringify(BASE)}`);
   process.exit(2);
 }
+
+/* See tests/probes.mjs — both conditions, and it clears the
+   notifications this run's tags caused. */
+const probesBefore = await snapshotProbes();
 const raw = readFileSync("./.env.local", "utf8");
 const g = (n) => { const l = raw.split(/\r?\n/).find((x) => x.startsWith(n)); return l.slice(l.indexOf("=") + 1).trim(); };
 const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");
@@ -232,9 +237,27 @@ let taggedPostId = null;
   const famClient = createClient(SUPA, ANON, {
     global: { headers: { Authorization: `Bearer ${famSession.access_token}` } },
   });
+  /* ASK FOR THIS POST'S NOTIFICATION, not for the newest four and a hope.
+
+     This used to take the four most recent rows and look for one saying
+     "mentioned you". Several lanes share this account and generate
+     notifications constantly — the navigation lane's runs alone touched
+     eleven of them in three hours — so four newer arrivals between the
+     tag being created and this read would have pushed the real one off
+     the end, and "nobody was told" would have been reported for a
+     feature working perfectly.
+
+     Windowed by recency is the same error as scoped by nothing: an
+     answer that is absent from an arbitrary slice read as an answer that
+     does not exist. It filters on the post id, which cannot be crowded
+     out. Found because that lane noticed its own runs were marking this
+     account's notifications read and asked whether it was propping up
+     anyone else's green. It was not propping up mine — nothing here
+     asserts read state — but the question was the right one. */
   const { data: notes } = await famClient.from("notifications")
-    .select("title, link")
-    .order("created_at", { ascending: false }).limit(4);
+    .select("title, link, created_at")
+    .ilike("link", `%${taggedPostId || "nope"}%`)
+    .order("created_at", { ascending: false });
   const told = (notes || []).find((n) => /mentioned you/i.test(n.title || ""));
   check("§5 the tagged person was told", !!told, told?.title || (notes || []).map((n) => n.title).join(" / "));
   check("§5 the notification lands on the post", !!told && told.link.includes(taggedPostId || "nope"), told?.link || "");
@@ -257,6 +280,7 @@ let taggedPostId = null;
 }
 
 await sb.from("community_posts").delete().like("body", `${MARK}%`);
+await sweepProbes(probesBefore);
 
 console.log(fails ? `\n${fails} FAILED` : "\nROUND 3 OK");
 await browser.close();

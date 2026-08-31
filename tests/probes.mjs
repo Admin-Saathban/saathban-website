@@ -57,6 +57,40 @@ export async function snapshotProbes() {
   }
 }
 
+/* A DELETED POST LEAVES A LIVE NOTIFICATION POINTING AT IT.
+
+   Sweeping posts is not sweeping the run. Tagging someone writes a
+   notification whose link carries the post id, and deleting the post
+   does not touch it — five had built up aimed at posts that no longer
+   exist. Followed by hand, the app degrades gracefully (it lands on
+   the feed, no errors, no hang) so this is litter rather than a bug,
+   but it is litter in a shared account that the next lane would have
+   to reason about.
+
+   Scoped to the ids just deleted, so it can only remove notifications
+   about this run's own posts. */
+async function sweepNotifications(ids) {
+  if (!ids.length) return 0;
+  let gone = 0;
+  for (const email of ["test-fam@saathban.dev", "test-icon@saathban.dev"]) {
+    try {
+      const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");
+      const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
+        method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: "SaathTest!2026" }),
+      });
+      const s = await r.json();
+      if (!s?.access_token) continue;
+      const c = createClient(SUPA, ANON, { global: { headers: { Authorization: `Bearer ${s.access_token}` } } });
+      for (const id of ids) {
+        const { data } = await c.from("notifications").select("id").ilike("link", `%${id}%`);
+        for (const n of data || []) { await c.from("notifications").delete().eq("id", n.id); gone++; }
+      }
+    } catch { /* cleanup must never fail a suite */ }
+  }
+  return gone;
+}
+
 export async function sweepProbes(before) {
   if (!before) return 0;
   try {
@@ -71,7 +105,9 @@ export async function sweepProbes(before) {
       if (r.audio_path) await sb.storage.from("post-audio").remove([r.audio_path]).catch(() => {});
       await sb.from("community_posts").delete().eq("id", r.id);
     }
-    if (mine.length) console.log(`  (swept ${mine.length} probe post${mine.length > 1 ? "s" : ""})`);
+    const notes = await sweepNotifications(mine.map((r) => r.id));
+    if (mine.length) console.log(`  (swept ${mine.length} probe post${mine.length > 1 ? "s" : ""}` +
+                                 `${notes ? `, ${notes} notification${notes > 1 ? "s" : ""}` : ""})`);
     return mine.length;
   } catch {
     return 0;

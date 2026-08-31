@@ -734,6 +734,9 @@ export default function LudoSession() {
   const mySeatRow = seats.find((s) => s.profile_id === myId);
   const currentRow = seats.find((s) => s.seat === game.current_seat);
   const playing = game.status === "playing";
+  /* Waiting is a state of the table, not a different screen. */
+  const waiting = game.status === "lobby";
+  const atTable = playing || waiting;
   /* Seats whose person is not answering, so the bot is playing them. */
   const awaySeats = (seats || []).filter((r) => !r.is_bot && r.presence === "away");
   const isMyTurn = playing && currentRow?.profile_id === myId;
@@ -896,7 +899,7 @@ export default function LudoSession() {
           those screens are reading, not playing. */}
       <div
         style={
-          playing
+          atTable
             ? {
                 /* BORDER-BOX, and it is the whole bug.
 
@@ -964,10 +967,17 @@ export default function LudoSession() {
           <h1
             style={{
               fontFamily: meta.fonts.heading,
-              fontSize: ts(30),
+              /* Smaller than the lobby's 30: this sits over a board
+                 now, not over a page, and a two-line heading was
+                 taking the top of the table. */
+              fontSize: ts(22),
               fontWeight: 700,
-              color: C.green,
+              color: GAME.ink,
               margin: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "58vw",
             }}
           >
             {game.title || `🎲 ${t("ludo.title")}`}
@@ -1095,96 +1105,26 @@ export default function LudoSession() {
           play starts the seat plates carry all of this on the players
           themselves, and a second row of the same facts is board the
           phone does not have to give away (§1). */}
-      {game.status === "lobby" && (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        {seats.map((s) => (
-          <Pill
-            key={s.seat}
-            tone={game.status === "playing" && s.seat === game.current_seat ? "green" : "neutral"}
-          >
-            <span
-              aria-hidden="true"
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                background: SEAT_COLORS[s.seat],
-                color: C.cream,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              {s.seat + 1}
-            </span>
-            {seatName(s, t)}
-            {s.profile_id === myId ? ` (${t("ludo.seat.you")})` : ""}
-            {game.status === "playing" && s.seat === game.current_seat
-              ? ` — ${s.profile_id === myId ? t("ludo.seat.yourTurn") : t("ludo.seat.turn")}`
-              : ""}
-          </Pill>
-        ))}
-      </div>
-      )}
+      {/* The lobby's roll-call of seat chips is gone. The plates
+          around the board say who is at it, in the chairs they are
+          actually in — a second list above the board was the same
+          facts twice, and it was the half that did not show you
+          WHERE anybody was sitting. */}
 
-      {/* ── LOBBY ── */}
-      {game.status === "lobby" && (
-        <>
-          {/* ── Setting the table ──
-                 Waiting for seats to fill is not dead time, it is the
-                 moment before a game. Said once, warmly, above the
-                 code — not a spinner, because nothing is loading. */}
-          {ceremony === "setting" && (
-            <div role="status" className="sb-ceremony" style={{ textAlign: "center", margin: "4px 0 12px" }}>
-              <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green }}>
-                {t("ludo.ceremony.setting")}
-              </p>
-              <p style={{ margin: "2px 0 0", fontSize: ts(17), color: C.textMuted }}>
-                {t("ludo.ceremony.settingNote")}
-              </p>
-            </div>
-          )}
+      {/* THE LOBBY PAGE IS GONE (item 2).
 
-          <Card style={{ textAlign: "center" }}>
-            <BodyText muted>{t("ludo.lobby.codeHint")}</BodyText>
-            <p
-              dir="ltr"
-              style={{
-                fontFamily: meta.fonts.heading,
-                fontSize: ts(46),
-                fontWeight: 700,
-                letterSpacing: "0.14em",
-                color: C.green,
-                margin: "4px 0 8px",
-              }}
-            >
-              {game.join_code.replace(/(\d{3})(\d{3})/, "$1 $2")}
-            </p>
-            <BodyText muted style={{ margin: 0 }}>
-              {t("ludo.lobby.seats", {
-                filled: seats.length,
-                total: game.target_seats,
-              })}{" "}
-              {t("ludo.lobby.botFill")}
-            </BodyText>
-          </Card>
+          It was a ceremony card, the join code at 46px, a seat
+          count and a Start button — a whole screen explaining that
+          a table was not full yet, shown instead of the table. The
+          board says all of it by having an empty chair in it, and
+          the chair says whose it is.
 
-          <RulesPanel rules={rules} />
-
-          {game.created_by === myId ? (
-            <PrimaryBtn onClick={() => act(() => startSession(game.id))} disabled={busy} style={{ width: "100%" }}>
-              ▶ {t("ludo.lobby.startCta")}
-            </PrimaryBtn>
-          ) : (
-            <BodyText muted>{t("ludo.lobby.waitHost")}</BodyText>
-          )}
-        </>
-      )}
-
+          Start is gone with it too, and that is item 3: the game
+          begins by itself when the last seat fills, through the
+          countdown, rather than waiting for the host to press
+          something. */}
       {/* ── PLAYING ── */}
-      {game.status === "playing" && (
+      {atTable && (
         <>
           {/* Whose turn, and what just happened. No card and no
               countdown bar: the clock is drawn on the player (§2) and
@@ -1453,7 +1393,7 @@ export default function LudoSession() {
           {/* SOMEBODY'S SEAT IS BEING PLAYED FOR THEM.
 
               One line, and only while it is true. The table keeps
-              playing either way — the bot takes the turn — but a game
+              atTable either way — the bot takes the turn — but a game
               that quietly changes who it is against without saying so
               is a game that has lied to the people still at it. Named
               rather than counted, because "1 player away" is a
@@ -1729,9 +1669,9 @@ export default function LudoSession() {
           <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} game />
           <QuickChat onSend={sayQuick} disabled={game.status === "finished"} game />
           {!playing && game.status !== "finished" && (
-            <GhostBtn onClick={() => setLeaveAsk(true)} style={{ minHeight: 52 }}>
+            <GamePill onClick={() => setLeaveAsk(true)}>
               {t("ludo.ceremony.leaveCta")}
-            </GhostBtn>
+            </GamePill>
           )}
         </div>
       )}

@@ -136,20 +136,22 @@ export function SoundPanel({ onClose }) {
           height: 10px; border-radius: 5px; background: ${C.warmGray};
         }
         #sb-volume::-moz-range-progress {
-          height: 10px; border-radius: 5px; background: ${C.olive};
+          /* Brass: the filled part of a slider should read as
+             filled, and inside a game the accent is not green. */
+          height: 10px; border-radius: 5px; background: ${GAME.accentFlat};
         }
         #sb-volume::-webkit-slider-thumb {
           -webkit-appearance: none; appearance: none;
           width: 30px; height: 30px; margin-top: -10px;
-          border-radius: 50%; background: ${C.green};
+          border-radius: 50%; background: ${GAME.accentFlat};
           border: 3px solid ${C.white};
           box-shadow: 0 1px 4px rgba(45,36,24,0.4);
         }
         #sb-volume::-moz-range-thumb {
           width: 24px; height: 24px; border-radius: 50%;
-          background: ${C.green}; border: 3px solid ${C.white};
+          background: ${GAME.accentFlat}; border: 3px solid ${C.white};
         }
-        #sb-volume:focus-visible { outline: 3px solid ${C.greenMuted}; outline-offset: 4px; }
+        #sb-volume:focus-visible { outline: 3px solid ${GAME.accentFlat}; outline-offset: 4px; }
       `}</style>
       <h2 style={{ fontSize: ts(22), fontWeight: 800, color: C.brown, margin: "0 0 6px" }}>
         {t("games.sound.title")}

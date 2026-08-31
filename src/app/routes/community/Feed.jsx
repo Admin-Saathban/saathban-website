@@ -800,7 +800,14 @@ function PostCard({
               {/* Filled when it is yours, and the count says so in
                   figures besides: three signals, never colour alone. */}
               <Icon name={REACTION_ICON[emoji]} size={20} fill={mine ? tone : "none"} />
-              {n > 0 && <span style={{ fontWeight: 700, color: C.textMain }}>{n}</span>}
+              {/* The count takes the reaction's colour when it is yours, and
+                  stays ink when it is not — so the figure agrees with the
+                  glyph instead of contradicting it. It is also the reason
+                  this row is never colour alone: the number is the third
+                  signal after the fill and the weight. */}
+              {n > 0 && (
+                <span style={{ fontWeight: 700, color: mine ? tone : C.textMain }}>{n}</span>
+              )}
             </button>
           );
         })}
@@ -888,14 +895,35 @@ function PostCard({
                 the post. Nobody edited the line; the token under it changed
                 meaning. C.tint is the name for "material attached to
                 content", which is exactly what a comment is. */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", background: C.tint }}>
+            {/* COOL, NOT WARM, and the distinction is the system's not mine:
+                cool is another voice, warm is more of the same thing. A
+                comment is somebody else speaking, so it leaves SURFACE.tint
+                — which stays warm and still carries the help panel and the
+                composer's helper count, neither of which is a reply. */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", background: C.comment }}>
               {comments === null ? (
                 <BodyText muted role="status">…</BodyText>
               ) : comments.length === 0 ? (
                 <BodyText muted>{t("community.feed.noComments")}</BodyText>
               ) : (
                 comments.map((cm) => (
-                  <div key={cm.id} style={{ marginBottom: 10 }}>
+                  /* The quoted-reply shape: a rule down the edge and a step
+                     in. INLINE-start, not left, so it mirrors in Urdu — a
+                     rule pinned to the left of right-to-left text sits on
+                     the end of every line instead of the start.
+
+                     Plain comment, not the braced form: this is inside a
+                     map callback returning an expression, where a brace is
+                     an object literal. Exactly the break I repaired in two
+                     other lanes last night, made here by me. */
+                  <div
+                    key={cm.id}
+                    style={{
+                      marginBottom: 10,
+                      borderInlineStart: `2.5px solid ${C.commentRule}`,
+                      paddingInlineStart: 10,
+                    }}
+                  >
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                       <span style={{ fontSize: ts(17), fontWeight: 700, color: C.green }}>
                         {commentAuthors[cm.author_id]?.full_name || "…"}

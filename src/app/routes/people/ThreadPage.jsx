@@ -599,7 +599,7 @@ export default function ThreadPage() {
           messages.map((m) => {
             const mine = m.sender_id === myId;
             const setRef = (el) => { if (el) msgRefs.current[m.id] = el; };
-            const flashStyle = flashId === m.id ? { outline: "3px solid " + C.sage, outlineOffset: 4, borderRadius: 18 } : {};
+            const flashStyle = flashId === m.id ? { outline: "3px solid " + C.green, outlineOffset: 4, borderRadius: 18 } : {};
 
             /* Delete-for-everyone leaves a quiet stub — never a gap. */
             if (m.deleted_at) {
@@ -620,8 +620,14 @@ export default function ThreadPage() {
                 aria-label={t("people.thread.jumpToOriginal")}
                 style={{
                   display: "block", textAlign: "start", maxWidth: "82%", marginBottom: 4,
-                  padding: "6px 12px", borderInlineStart: "4px solid " + C.sage, borderRadius: 10,
-                  background: "rgba(143,166,126,0.15)", border: "none", color: C.textMuted,
+                  padding: "6px 12px", borderRadius: 10,
+                  /* border FIRST, then the inline-start rule. They were the
+                     other way round, and `border: "none"` is a shorthand
+                     that resets all four sides — so this quote's rule has
+                     never once rendered. Order is the whole bug. */
+                  border: "none",
+                  borderInlineStart: `2.5px solid ${C.commentRule}`,
+                  background: C.comment, color: C.textMuted,
                   fontSize: ts(16), fontFamily: "inherit", cursor: "pointer", minHeight: A11Y.minTapTargetPx,
                   overflowWrap: "anywhere",
                 }}
@@ -871,7 +877,7 @@ export default function ThreadPage() {
               style={{
                 maxWidth: "78%",
                 /* THE MESSAGE IN FLIGHT, and it was unreadable: C.textMain
-                   on C.sage measures 1.90:1 against an AA floor of 4.5.
+                   on C.green measures 1.90:1 against an AA floor of 4.5.
                    Not a near miss — under half.
 
                    It survived because the NAME said sage and sage used to
@@ -925,7 +931,15 @@ export default function ThreadPage() {
 
       {/* Reply strip — what you're replying to, one tap to cancel. */}
       {replyTo && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", borderInlineStart: "4px solid " + C.sage, background: "rgba(143,166,126,0.15)", borderRadius: 10 }}>
+        /* A quote is another voice, so it takes the comment pair rather
+           than the old pale-sage literal — which was the pre-collapse sage
+           hardcoded as an rgba, and so never moved with the palette.
+
+           Plain comment: inside `{replyTo && ( ... )}` is an expression
+           position. Second time tonight I have made the break I fixed for
+           two other lanes; the form is not a habit, it depends on whether
+           the line above ends with an opening paren. */
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", borderInlineStart: `2.5px solid ${C.commentRule}`, background: C.comment, borderRadius: 10 }}>
           <BodyText muted style={{ margin: 0, flex: 1, fontSize: ts(16), overflowWrap: "anywhere" }}>
             ↩ {t("people.thread.replyingTo", { name: replyTo.sender_id === myId ? t("people.thread.you") : first })}: {quoteText(replyTo)}
           </BodyText>

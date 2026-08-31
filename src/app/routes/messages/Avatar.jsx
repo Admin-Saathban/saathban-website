@@ -45,7 +45,7 @@ export default function Avatar({ person, size = 52, about = false }) {
             width: size,
             height: size,
             borderRadius: "50%",
-            background: C.sage,
+            background: C.green,
             color: C.cream,
             display: "inline-flex",
             alignItems: "center",

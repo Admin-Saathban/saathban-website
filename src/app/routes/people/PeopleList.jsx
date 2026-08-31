@@ -171,7 +171,7 @@ export default function PeopleList() {
               <div style={{ opacity: p.away ? 0.55 : 1, padding: "12px 4px", borderBottom: `1px solid ${C.warmGray}22` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   <span aria-hidden="true" style={{
-                    width: 52, height: 52, borderRadius: "50%", background: p.away ? C.warmGray : C.sage,
+                    width: 52, height: 52, borderRadius: "50%", background: p.away ? C.warmGray : C.green,
                     color: C.cream, display: "inline-flex", alignItems: "center", justifyContent: "center",
                     fontSize: ts(22), fontWeight: 700, flexShrink: 0,
                   }}>

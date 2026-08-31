@@ -291,7 +291,7 @@ export default function PersonPage() {
               width: 72,
               height: 72,
               borderRadius: "50%",
-              background: C.sage,
+              background: C.green,
               color: C.cream,
               display: "inline-flex",
               alignItems: "center",

@@ -87,8 +87,19 @@ export const REACTION_ICON = {
    inventing three would be brand noise wearing the costume of meaning.
    Colour here marks STATE — on versus off — and only the heart also
    carries a colour of its own. */
+/* Each reaction takes ITS OWN colour when it is on, and quiet grey
+   line-art when it is not. The heart had this already; the other three
+   fell back to the accent, so three different feelings arrived in one
+   colour and the row said less than it looked like it was saying.
+
+   Tokens only — no hexes here. These six values had no names until
+   this evening and I would not write one down: a raw hex beside a token
+   name is exactly how cream came to mean two colours. */
 export const REACTION_TONE = {
+  "👍": MEANING.thumb,
   "❤️": MEANING.liked,
+  "🌸": MEANING.flower,
+  "🤲": MEANING.hands,
 };
 
 /* Locale keys for the accessible name. The buttons had NONE — the glyph

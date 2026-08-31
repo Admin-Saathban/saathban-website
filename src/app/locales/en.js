@@ -1203,7 +1203,12 @@ const en = {
       walkTitle: "Who's up for a walk?",
       walkPlace: "Where?",
       walkShared: "Shared — neighbours can join your walk now.",
-      walkJoin: "Count me in",
+      /* ONE WORD FOR ONE ACT. The same thing was "Count me in" here,
+         "I'm coming" two lines down and "I'll come" in the outdoor
+         lane's component — three phrasings of one promise, which reads
+         as three different commitments to somebody deciding whether to
+         make it. The ruled word is "I'll come". */
+      walkJoin: "I'll come",
       walkJoined: "Lovely — your outing is noted. It shows on the park's page too.",
       walkJoinFailed: "That didn't work — please try again.",
       walkPast: "This walk has already happened.",
@@ -1231,7 +1236,7 @@ const en = {
       activityLimit: "How many people, at most? (optional)",
       activityNoLimit: "No limit",
       activityShared: "Shared — neighbours can join you now.",
-      activityJoin: "Count me in",
+      activityJoin: "I'll come",
       activityJoined: "Lovely — you're on the list.",
       activityFull: "This one has filled up — happy company to them!",
       activityClosed: "All places taken",
@@ -1243,8 +1248,8 @@ const en = {
       placeHome: "My home",
       placeCall: "On the phone",
       rsvpLabel: "Ask everyone to confirm",
-      rsvpHint: "Joining becomes a small promise — the button reads “I'm coming”.",
-      activityRsvpJoin: "I'm coming",
+      rsvpHint: "Joining becomes a small promise — the button reads “I'll come”.",
+      activityRsvpJoin: "I'll come",
       activityRsvpJoined: "Lovely — they'll know you're coming.",
       activityConfirmed: "{n} confirmed",
       activityConfirmedOne: "1 confirmed",

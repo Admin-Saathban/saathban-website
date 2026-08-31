@@ -74,7 +74,7 @@ export function GameBtn({ children, onClick, disabled, style = {}, ...rest }) {
           ? "inset 0 2px 6px rgba(0,0,0,0.35)"
           : `0 3px 0 ${GAME.accentEdge}, 0 6px 14px rgba(0,0,0,0.35)`,
         transform: down ? "translateY(2px)" : "none",
-        transition: "transform 90ms ease, box-shadow 90ms ease",
+        transition: "transform 100ms ease, box-shadow 100ms ease",
         ...style,
       }}
     >
@@ -114,7 +114,7 @@ export function GamePill({ children, onClick, disabled, style = {}, ...rest }) {
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.45 : 1,
         transform: down ? "translateY(1px)" : "none",
-        transition: "transform 90ms ease, background 90ms ease",
+        transition: "transform 100ms ease, background 100ms ease",
         ...style,
       }}
     >

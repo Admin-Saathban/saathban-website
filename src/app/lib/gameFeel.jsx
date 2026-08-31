@@ -303,7 +303,10 @@ export const GAME_MOTION_CSS = `
 .sb-press-svg:active { opacity: 0.65; }
 .sb-hop { animation: saath-hop-arc 150ms ease-out 1; }
 .sb-win-pop { animation: saath-win-pop 0.5s ease-out 1; }
-.sb-pressable { transition: transform 0.09s ease-out; }
+/* 100ms, matching lib/motion.jsx. Same feeling, one number —
+   the mechanic differs (scale here, tint there) and that is
+   deliberate; the duration has no reason to. */
+.sb-pressable { transition: transform 0.1s ease-out; }
 .sb-pressable:active { transform: scale(0.94); }
 
 /* ── the living table ── */

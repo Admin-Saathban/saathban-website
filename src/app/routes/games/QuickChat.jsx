@@ -225,7 +225,7 @@ function TriggerBtn({ onClick, disabled, label, glyph, game }) {
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
         transform: down ? "translateY(1px)" : "none",
-        transition: "transform 90ms ease, background 90ms ease",
+        transition: "transform 100ms ease, background 100ms ease",
       }}
     >
       <span aria-hidden="true" style={{ fontSize: ts(game ? 17 : 20) }}>{glyph}</span>

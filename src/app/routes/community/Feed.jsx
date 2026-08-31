@@ -813,8 +813,14 @@ export default function Feed({ composer = true }) {
      because a reconnect suggestion could not be computed would be a
      bad trade. Cadence is checked BEFORE fetching, so a person who has
      seen the row this week costs nothing to load. */
+  /* The role is read inline rather than through isIcon, which is declared
+     a hundred lines below this: a dependency array is evaluated where it
+     sits, so naming isIcon here threw "Cannot access before
+     initialization" and took the whole feed down with it. Caught by
+     looking at the screen — the page was blank and the console said so. */
+  const iAmIcon = profile?.role === "saath_icon";
   useEffect(() => {
-    if (!myId || !isIcon) return undefined;
+    if (!myId || !iAmIcon) return undefined;
     if (!rowAllowed()) return undefined;
     let alive = true;
     (async () => {
@@ -826,7 +832,7 @@ export default function Feed({ composer = true }) {
       } catch { /* no row, no noise */ }
     })();
     return () => { alive = false; };
-  }, [myId, isIcon]);
+  }, [myId, iAmIcon]);
 
   /* §1 — the composer is a screen now, opened from the row. */
   const [composerOpen, setComposerOpen] = useState(false);

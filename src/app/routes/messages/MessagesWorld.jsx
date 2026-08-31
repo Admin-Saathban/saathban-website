@@ -185,7 +185,7 @@ export default function MessagesWorld() {
     const read = () => setWorldNavH(n.offsetHeight);
     read();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(read) : null;
-    ro?.observe(n);
+    ro?.observe(n, { box: "border-box" });
     return () => ro?.disconnect();
   }, []);
 

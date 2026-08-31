@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: WITHOUT IT env(safe-area-inset-*) IS ZERO.
+         Eleven call sites across five lanes were already asking for the
+         insets — the bottom bar, the sheets, the celebration, the
+         Messages world — and every one of them had always resolved to
+         0px. Correct code, no effect, for as long as it has existed.
+         This is the attribute that turns the viewport from the safe box
+         into the whole glass, and it is why the app has black bands
+         above and below on a real device. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Saathban — Timeless Togetherness | Combating Elderly Loneliness</title>
     <meta name="description" content="Saathban is a vibrant ecosystem where generations flourish together. We cultivate a space where wisdom is inherited, life is shared, and every age thrives as one unified, timeless community." />
     <meta name="keywords" content="old age homes, senior living, senior citizens, senior community housing, senior living communities, aged care, social security, community, socialise, lonely, loneliness, well-being, elderly health, mental health, Saathban, timeless togetherness" />

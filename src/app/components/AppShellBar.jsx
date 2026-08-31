@@ -133,7 +133,7 @@ export default function AppShellBar() {
   useEffect(() => {
     if (hidden || shuttered) return undefined;
     const prev = document.body.style.paddingBottom;
-    document.body.style.paddingBottom = `calc(${BAR_HEIGHT}px + env(safe-area-inset-bottom, 0px))`;
+    document.body.style.paddingBottom = `calc(${BAR_HEIGHT}px + var(--sb-safe-bottom, 0px))`;
     return () => {
       document.body.style.paddingBottom = prev;
     };

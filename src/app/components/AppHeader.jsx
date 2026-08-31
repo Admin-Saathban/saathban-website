@@ -78,7 +78,14 @@ export default function AppHeader() {
            the chrome stops and the content starts. */
         background: C.nav,
         borderBottom: `1px solid ${C.navEdge}`,
-        padding: "6px 10px",
+        /* THE HEADER OWNS THE TOP INSET. Its jet fills the status-bar
+           area so the chrome reaches the top of the glass, while its own
+           row sits below the notch. Padding rather than a spacer above
+           it, because padding is part of the element — so when the
+           shutter translates the header by -100% the inset travels with
+           it and nothing dark is left behind at the top. A spacer would
+           have stayed. */
+        padding: "calc(6px + var(--sb-safe-top, 0px)) 10px 6px",
         transform: shuttered ? "translateY(-100%)" : "none",
         transition: "transform 180ms ease-out",
       }}

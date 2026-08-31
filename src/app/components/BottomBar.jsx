@@ -23,6 +23,7 @@
    AppShellBar below for exactly where it appears and why.
    ════════════════════════════════════════════════ */
 
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
@@ -41,6 +42,43 @@ import { IconChip } from "./Icon.jsx";
 export const BAR_HEIGHT = 92;
 
 export default function BottomBar({ role, buddyActive = true, shuttered = false }) {
+  /* THE SHUTTER TRAVELS THE BAR'S REAL HEIGHT, NOT THE CONSTANT.
+
+     BAR_HEIGHT is 92 and the bar is not 92 tall: it is 92 plus whatever
+     the safe-area inset adds, plus whatever the label line becomes at
+     the reader's text size. Measured at 390px it was 105 — so sliding
+     it by 92 left THIRTEEN PIXELS OF JET along the bottom of the glass
+     after it had supposedly gone, and on a phone with a home indicator
+     it would leave the whole inset behind. That black strip is what the
+     owner has been reporting.
+
+     BAR_HEIGHT stays exported: it is what the shell RESERVES, which is a
+     different question from what the bar OCCUPIES, and the reserve is
+     released on shutter anyway. */
+  const barRef = useRef(null);
+  const [barH, setBarH] = useState(BAR_HEIGHT);
+  useEffect(() => {
+    const n = barRef.current;
+    if (!n) return undefined;
+    /* offsetHeight, and the observer watches the BORDER box.
+
+       A ResizeObserver defaults to the content box, and everything
+       that changes this height changes PADDING instead — the
+       safe-area inset, the reader's text size. The content box never
+       moves, so the observer never fired: measured against a
+       simulated notch the bar grew to 139 and went on shuttering by
+       the 105 it had at mount, leaving 34px of jet across the bottom
+       of the glass. The same black strip, arrived at a second way.
+
+       offsetHeight rather than a rect because a rect is affected by
+       transforms, and this element is mid-transform exactly when the
+       number matters. */
+    const read = () => setBarH(n.offsetHeight || BAR_HEIGHT);
+    read();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(read) : null;
+    ro?.observe(n, { box: "border-box" });
+    return () => ro?.disconnect();
+  }, []);
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
@@ -150,6 +188,7 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
   return (
     <nav
       aria-label={t("hub.navLabel")}
+      ref={barRef}
       data-sb-bar=""
       style={{
         position: "fixed",
@@ -161,7 +200,10 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
         alignItems: "stretch",
         justifyContent: "space-evenly",
         gap: 2,
-        padding: "6px 4px calc(6px + env(safe-area-inset-bottom, 0px))",
+        /* THE BAR OWNS THE BOTTOM INSET, and through the named property
+           so it can be inspected and overridden in a check. Inside the
+           element, so it travels with the shutter. */
+        padding: "6px 4px calc(6px + var(--sb-safe-bottom, 0px))",
         /* The bar was C.white — the same surface as the posts it sits
            under, so on a feed that reaches both edges the bar and the
            bottom card were one continuous white. Its own tone and a
@@ -173,7 +215,7 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
         /* MOTION §5 — the shutter. It travels its own height rather
            than fading, so the screen underneath genuinely gains the
            space instead of hiding text behind a transparent bar. */
-        transform: shuttered ? `translateY(${BAR_HEIGHT}px)` : "none",
+        transform: shuttered ? `translateY(${barH}px)` : "none",
         transition: "transform 180ms ease-out",
       }}
     >

@@ -181,6 +181,30 @@ export function LanguageProvider({ children }) {
           }
         }
       `}</style>
+      {/* ── THE SAFE AREAS, NAMED ──
+
+          env() cannot be read back or overridden, which makes anything
+          built on it impossible to inspect and impossible to test off a
+          device. Behind a custom property it is both: the values still
+          come from env(), and a check can set --sb-safe-top to 47px and
+          watch the whole shell respond exactly as it would on a phone
+          with a notch.
+
+          The bars own their inset — the header the top, the bar the
+          bottom — so the jet runs to the physical edge of the glass
+          while the labels and icons inside them sit below the notch and
+          above the home indicator. */}
+      <style>{`
+        :root {
+          --sb-safe-top: env(safe-area-inset-top, 0px);
+          --sb-safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        /* The ground reaches the physical edges: with viewport-fit=cover
+           the areas beside the notch belong to the page, and a page that
+           does not paint them lets the platform's own black through —
+           which is the band the owner has been looking at. */
+        html { background: ${APP_COLORS.bg}; }
+      `}</style>
       <style>{`html, body { margin: 0; background: ${APP_COLORS.bg};` +
         ` color: ${APP_COLORS.textMain}; font-family: ${meta.fonts.body}; }`}</style>
       <div

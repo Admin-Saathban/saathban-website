@@ -83,7 +83,31 @@ export default function PlaceAccess() {
   const state = (placeId, feature) => (notes[placeId] || []).find((r) => r.feature === feature) || null;
 
   return (
-    <div>
+    <div className="sb-notes">
+      {/* This is a work queue somebody will empty from a phone —
+          seventeen notes, one tap each — not a desktop table that
+          happens to also load on mobile.
+
+          Below 640 the chips stop being chips: they become full-width
+          rows, one per line, each a whole tap target. Two-per-line
+          chips at 390px put a 48px target beside another 48px target
+          with 8px between them, which is how you confirm the wrong
+          note about a place you have never been to. */}
+      <style>{`
+        .sb-notes-chips { display: grid; gap: 8px; }
+        .sb-notes-chip { justify-content: flex-start; }
+        .sb-notes-confirm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        @media (min-width: 641px) {
+          .sb-notes-chips { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+        }
+        @media (max-width: 640px) {
+          .sb-notes-chips { grid-template-columns: 1fr; }
+          .sb-notes-chip { width: 100%; }
+          .sb-notes-confirm { display: block; }
+          .sb-notes-confirm > button { width: 100%; }
+          .sb-notes-hint { display: block; margin: 8px 0 0; margin-inline-start: 0 !important; }
+        }
+      `}</style>
       <h1 style={{ fontSize: ts(26), fontWeight: 800, color: C.brown, margin: "0 0 6px" }}>
         {t("admin.access.title")}
       </h1>
@@ -116,15 +140,21 @@ export default function PlaceAccess() {
           <Card
             key={p.id}
             title={p.name}
-            aside={`${p.area} · ${p.city}`}
+            /* Area under the name rather than beside it: at 390px
+               "Badshahi Mosque courtyard" and "Walled City · Lahore"
+               were each wrapping to two lines to share one row. */
+            aside={undefined}
           >
+            <p style={{ margin: "0 0 8px", fontSize: ts(15), color: C.textMuted }}>
+              {p.area} · {p.city}
+            </p>
             {unchecked.length > 0 && (
               <p style={{ margin: "0 0 10px", fontSize: ts(16), color: C.brown, fontWeight: 700 }}>
                 {t("admin.access.uncheckedHere", { n: unchecked.length })}
               </p>
             )}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div className="sb-notes-chips">
               {ALL.map((f) => {
                 const row = state(p.id, f);
                 const on = !!row;
@@ -156,13 +186,17 @@ export default function PlaceAccess() {
                           ? t("admin.access.hintRemove")
                           : t("admin.access.hintConfirm")
                     }
+                    className="sb-notes-chip"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 6,
-                      minHeight: A11Y.minTapTargetPx,
-                      padding: "0 14px",
-                      borderRadius: 20,
+                      gap: 8,
+                      /* Taller than the 48px floor: this is the one
+                         control on the screen and it is pressed
+                         seventeen times in a row. */
+                      minHeight: A11Y.minTapTargetPx + 6,
+                      padding: "0 16px",
+                      borderRadius: 14,
                       fontFamily: "inherit",
                       fontSize: ts(16),
                       fontWeight: 600,
@@ -193,7 +227,7 @@ export default function PlaceAccess() {
             </div>
 
             {unchecked.length > 0 && (
-              <div style={{ marginTop: 12 }}>
+              <div className="sb-notes-confirm" style={{ marginTop: 12 }}>
                 <AdminBtn
                   kind="solid"
                   disabled={busy === p.id}
@@ -205,7 +239,7 @@ export default function PlaceAccess() {
                 >
                   {t("admin.access.confirmAll", { n: unchecked.length })}
                 </AdminBtn>
-                <span style={{ fontSize: ts(15), color: C.textMuted, marginInlineStart: 12 }}>
+                <span className="sb-notes-hint" style={{ fontSize: ts(15), color: C.textMuted, marginInlineStart: 12 }}>
                   {t("admin.access.confirmAllHint")}
                 </span>
               </div>

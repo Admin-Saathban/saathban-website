@@ -242,11 +242,111 @@ function GotiMarks({ seat, myId, onSaved }) {
     </>
   );
 }
+/* ── The house rules, at the table (TASK 5) ─────────────────────
+   Four switches, each one a rule people actually argue about at a
+   real table. They write straight into house_rules, which is what
+   ludo_state_init reads at the first roll — so while the table is
+   soft they are live, and after that they are frozen into the
+   game's own state and cannot be changed under anybody. That is
+   the same window the rest of this sheet lives in, and it is why
+   this is safe to offer without a confirm. */
+const RULES = [
+  ["extra_roll_on_six", "ludo.rules.extraRoll", true],
+  ["exact_home", "ludo.rules.exactHome", true],
+  ["capture_before_home", "ludo.rules.captureFirst", false],
+  ["undo", "games.setup.undoOn", true],
+];
+
+function HouseRules({ sessionId, rules, onChanged }) {
+  const { t, ts } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const [local, setLocal] = useState(() => rules || {});
+
+  const flip = async (key, next) => {
+    if (busy) return;
+    setBusy(true);
+    setLocal((r) => ({ ...r, [key]: next }));
+    try {
+      await reformTable(sessionId, { houseRules: { [key]: next } });
+      await onChanged?.();
+    } catch {
+      setLocal((r) => ({ ...r, [key]: !next }));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <>
+      <p
+        style={{
+          margin: "10px 2px 2px",
+          fontSize: ts(15),
+          fontWeight: 800,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: GAME.inkMuted,
+        }}
+      >
+        {t("ludo.rules.title")}
+      </p>
+      {RULES.map(([key, labelKey, dflt]) => {
+        const on = local[key] === undefined ? dflt : !!local[key];
+        return (
+          <button
+            key={key}
+            type="button"
+            role="switch"
+            aria-checked={on}
+            disabled={busy}
+            onClick={() => flip(key, !on)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              width: "100%",
+              minHeight: 56,
+              marginTop: 8,
+              padding: "10px 14px",
+              borderRadius: 14,
+              border: `1px solid ${GAME.controlEdge}`,
+              background: GAME.control,
+              color: GAME.ink,
+              fontSize: ts(A11Y.minBodyPx),
+              fontWeight: 700,
+              textAlign: "start",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ minWidth: 0 }}>{t(labelKey)}</span>
+            {/* Never colour alone: the pill says the word as well as
+                sliding, because on/off by hue is unreadable to a
+                good number of people. */}
+            <span
+              aria-hidden="true"
+              style={{
+                flex: "0 0 auto",
+                padding: "4px 10px",
+                borderRadius: 20,
+                fontSize: ts(15),
+                fontWeight: 800,
+                background: on ? C.green : "rgba(255,255,255,0.12)",
+                color: on ? C.cream : GAME.inkMuted,
+              }}
+            >
+              {on ? t("circle.toggle.on") : t("circle.toggle.off")}
+            </span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
 /* ── The seat sheet ──────────────────────────────────────────────
    Opened by tapping a seat. Everything in it is about that seat,
    except the table-size row, which is about the seat in the truest
    way available: how many of them there are. */
-export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, soft = true, onClose, onChanged }) {
+export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, rules = null, soft = true, onClose, onChanged }) {
   const { t, ts } = useI18n();
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -347,6 +447,8 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
           {row?.profile_id && row.profile_id === myId && (
             <GotiMarks seat={seat} myId={myId} onSaved={onChanged} />
           )}
+
+          {iAmHost && soft && <HouseRules sessionId={sessionId} rules={rules} onChanged={onChanged} />}
 
           {iAmHost && soft && (
             <>

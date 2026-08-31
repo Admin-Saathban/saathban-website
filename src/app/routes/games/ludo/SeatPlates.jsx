@@ -393,6 +393,12 @@ function Plate({
   /* One die or two, on my own plate only. */
   spareDie,
   onToggleSpare,
+  /* How many dice this table plays with. A TWO-DICE TABLE HAS TO
+     LOOK LIKE ONE before anybody rolls: until now the difference
+     appeared only in the instant between a roll and a move, so a
+     person who chose two dice had no way of telling whether it
+     had taken. */
+  diceCount = 1,
 }) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
@@ -671,17 +677,27 @@ function Plate({
       {onToggleSpare && (
         <SpareDie on={!!spareDie} onToggle={onToggleSpare} label={t(spareDie ? "ludo.table.oneDie" : "ludo.table.twoDice")} />
       )}
+      {/* Nothing rolled yet: an empty die per die this table
+          plays with. TWO dice at a two-dice table, before anybody
+          touches anything — which is the whole of the owner's
+          complaint that a two-dice table looked exactly like a
+          one-die table. Both are the roll button. */}
       {dice && dice.length === 0 && isTurn && (
-        <SeatDie
-          value={null}
-          active={isTurn}
-          mine={isMe}
-          canRoll={canRoll}
-          colour={colour}
-          onRoll={onRoll}
-          rolling={rolling && isMe}
-          label={t("ludo.turn.rollCta")}
-        />
+        <span style={{ display: "flex", gap: 3, flexShrink: 0, alignItems: "center" }}>
+          {Array.from({ length: Math.max(1, Math.min(2, diceCount)) }).map((_, i) => (
+            <SeatDie
+              key={i}
+              value={null}
+              active={isTurn}
+              mine={isMe}
+              canRoll={canRoll}
+              colour={colour}
+              onRoll={onRoll}
+              rolling={rolling && isMe && i === 0}
+              label={t("ludo.turn.rollCta")}
+            />
+          ))}
+        </span>
       )}
     </div>
   );
@@ -719,6 +735,7 @@ export default function SeatPlates({
   pendingBySeat,
   spareDie,
   onToggleSpare,
+  diceCount = 1,
 }) {
   const wanted = where === "top" ? [0, 1] : [3, 2]; // TL,TR above · BL,BR below
   const plates = wanted.map((corner) => {
@@ -783,6 +800,7 @@ export default function SeatPlates({
               remaining={seat === currentSeat ? remaining : null}
               seconds={seat === currentSeat ? secondsLeft : null}
               onTapSeat={onTapSeat}
+              diceCount={diceCount}
               pending={pendingBySeat ? pendingBySeat[seat] : null}
               spareDie={spareDie}
               onToggleSpare={

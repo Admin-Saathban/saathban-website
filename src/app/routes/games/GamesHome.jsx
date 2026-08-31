@@ -17,6 +17,7 @@ import {
   joinByCode,
   liveSessionOf,
   liveSessionsOf,
+  leaveSession,
   fetchTablePeople,
   puzzleToday,
 } from "../../lib/games.js";
@@ -89,40 +90,34 @@ export default function GamesHome() {
   const openTable = async (key) => {
     if (opening) return;
 
-    /* §8.2 — ONE GAME AT A TIME IS ANSWERED BY THE TABLE ITSELF.
+    /* TAPPING A GAME OPENS THAT GAME.
 
-       This used to raise a card explaining the rule: three stacked
-       outlined boxes of prose where a game should be. The rule is
-       right — a table with empty seats is a promise to somebody — but
-       explaining it in front of the game was the wrong place to say
-       so, and it was the first thing a person saw when they tried to
-       play.
+       This sent you to whatever table you already had, whichever
+       game you tapped — so with a ludo table open, Carrom and
+       Snakes & Ladders both opened ludo. I wrote it that way to
+       answer the one-game-at-a-time rule, and answered it by
+       making two of the three games unreachable. A rule about how
+       many tables you may hold is not a reason to send you to the
+       wrong game.
 
-       So a tap while you already have a live table takes you TO that
-       table. It is the honest answer to "start a game" when you are
-       already in one, it is instant, and the way out is the door on
-       the table, which asks warmly and hands your seat to a bot. The
-       collision is handled where the collision is. */
+       Same game: back to your table, which is what you meant.
+       Different game: the old table is left first — the server
+       hands your seat to a bot so anybody else at it plays on —
+       and the game you tapped opens. Still one table at a time,
+       and the tap does what it says. */
     const mine = liveSessionOf(await fetchMySessions(profile.id).catch(() => []));
     if (mine) {
-      /* AND SAY SO IF IT IS A DIFFERENT GAME. Taking somebody to the
-         table they already have is the honest answer to "start a
-         game" — but only if the table says why they are there.
-         Measured on the deployed build: Carrom, Ludo and Snakes all
-         returned the identical session URL, so tapping Carrom
-         silently opened a Ludo board and two of the three games
-         looked broken. The name travels in history state and the
-         board says one line. */
-      const wanted = mine.game_key === key
-        ? null
-        : (games.find((g) => g.key === key)?.name || null);
-      navigate(
-        mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`,
-        wanted ? { state: { sbWantedName: wanted } } : undefined
-      );
-      return;
+      if (mine.game_key === key) {
+        navigate(mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`);
+        return;
+      }
+      setOpening(key);
+      try {
+        await leaveSession(mine.id);
+      } catch {
+        /* if it will not let go, the create below fails honestly */
+      }
     }
-
     setOpening(key);
     try {
       navigate(await openQuickTable(key));
@@ -137,6 +132,8 @@ export default function GamesHome() {
   const [solvedToday, setSolvedToday] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
   const [loadError, setLoadError] = useState(false);
+  /* Painted once, when there is nothing left to arrive. */
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -196,6 +193,10 @@ export default function GamesHome() {
         setSolvedToday(solved.some((a) => a.puzzle_date === puzzleToday()));
       } catch {
         if (alive) setLoadError(true);
+      } finally {
+        /* In `finally`, so a failed fetch shows the error rather
+           than holding the placeholder on screen for ever. */
+        if (alive) setReady(true);
       }
     })();
     return () => {
@@ -289,9 +290,9 @@ export default function GamesHome() {
                 {g ? gameName(g, lang) : s.game_key}
               </BodyText>
             )}
-            <BodyText muted style={{ margin: 0 }}>
-              {nextStep(s)}
-            </BodyText>
+            {/* No "it's your move". The row says which game and who
+                is at it; whether it is your turn is the board's to
+                say, once you have chosen to go there. */}
             {/* §9: who is at it, on every live table and not only
                 the first one. */}
             <span style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
@@ -329,6 +330,18 @@ export default function GamesHome() {
           arrived. The tables below say it by existing. */}
       {loadError && <BodyText role="alert">{t("games.loadError")}</BodyText>}
 
+      {/* Nothing until everything. The heading above is already
+          drawn and does not move, so the screen reads as settled
+          while it waits rather than as half-built. */}
+      {!ready && (
+        <div
+          aria-hidden="true"
+          style={{ height: 220, borderRadius: 18, background: "rgba(0,0,0,0.03)" }}
+        />
+      )}
+      {ready && (
+        <>
+
       {blockedBy && (
         <OneTableGate
           live={blockedBy}
@@ -342,72 +355,27 @@ export default function GamesHome() {
         />
       )}
 
-      {/* ── ACTIVE GAME: the one table on the go, first and biggest.
-             A board to recognise, whose turn it is in words, and one
-             tap to walk back into it. ── */}
-      {activeGame && (
+      {/* YOUR TABLES. Quiet.
+
+          This was a tall bordered card reading "YOUR GAME / It's
+          your move — tap to roll and move a piece" over a filled
+          "Your move" pill. That is the same nag that was taken off
+          Home, wearing the same clothes, and the objection has not
+          changed: a game is entered deliberately. A screen that
+          tells you it is your move is a screen asking you to play
+          rather than waiting for you to want to.
+
+          What §9 asks for stays — live tables first, with the faces
+          of whoever is at them — because a table you are already at
+          is a fact about your evening. It is a row now, not a
+          summons: the game, who is there, and nothing telling you
+          what to do about it. */}
+      {live.length > 0 && (
         <>
           <SectionLabel>{t("games.home.activeTitle")}</SectionLabel>
-          <Link
-            {...fresh.props(activeGame.id)}
-            to={`/app/games/s/${activeGame.id}`}
-            style={{ textDecoration: "none", color: "inherit", display: "block" }}
-          >
-            <Card
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                borderColor: C.green,
-                borderWidth: 2.5,
-                borderStyle: "solid",
-              }}
-            >
-              <BoardThumb gameKey={activeGame.game_key} size={64} />
-              {/* The chip sits UNDER the words, not beside them: at
-                  390px a thumbnail and a chip either side squeezed
-                  "Snakes & Ladders" into three broken lines. */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: ts(22), fontWeight: 800, margin: "0 0 4px" }}>
-                  {activeGame.title ||
-                    (byKey[activeGame.game_key]
-                      ? gameName(byKey[activeGame.game_key], lang)
-                      : activeGame.game_key)}
-                </p>
-                {activeGame.title && (
-                  <BodyText muted style={{ margin: "0 0 2px" }}>
-                    {byKey[activeGame.game_key]
-                      ? gameName(byKey[activeGame.game_key], lang)
-                      : activeGame.game_key}
-                  </BodyText>
-                )}
-                <BodyText muted style={{ margin: "0 0 10px" }}>
-                  {nextStep(activeGame)}
-                </BodyText>
-                {/* §9: the table, with who is at it. */}
-                <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <Faces players={peopleAt.get(activeGame.id)} size={32} />
-                </span>
-                <span
-                  style={{
-                    display: "inline-block",
-                    background: C.green,
-                    color: C.cream,
-                    borderRadius: 50,
-                    padding: "10px 20px",
-                    fontSize: ts(A11Y.minBodyPx),
-                    fontWeight: 700,
-                  }}
-                >
-                  {activeGame.status === "active" && activeGame.current_seat === activeGame.my_seat
-                    ? t("games.home.resumeYourTurn")
-                    : t("games.home.resumeCta")}
-                </span>
-              </div>
-            </Card>
-          </Link>
-          {otherLive.map(renderTable)}
+          {live.map(renderTable)}
         </>
+      )}
       )}
 
       {/* ── ONE way to start. A stack of per-game cards asked the
@@ -607,6 +575,8 @@ export default function GamesHome() {
               </GhostBtn>
             </>
           )}
+        </>
+      )}
         </>
       )}
     </GamesScreen>

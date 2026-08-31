@@ -1013,6 +1013,7 @@ export default function LudoSession() {
           seatsTotal={game.target_seats}
           iAmHost={iAmHost}
           myId={myId}
+          rules={rules}
           soft={soft}
           onClose={() => setSeatSheet(null)}
           onChanged={async () => {
@@ -1143,6 +1144,7 @@ export default function LudoSession() {
             secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
             {...platePins}
+            diceCount={diceCount}
           />
           </div>
 
@@ -1306,6 +1308,7 @@ export default function LudoSession() {
             secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
             {...platePins}
+            diceCount={diceCount}
           />
 
           <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
@@ -1322,7 +1325,13 @@ export default function LudoSession() {
                   survives because it says what to DO, which the die
                   does not. */}
             </div>
-            {last && (
+            {/* ONE MESSAGE AT A TIME. This line is the running
+                commentary — "admin test rolled 6 and moved" — and
+                it was stacking under an instruction and over a
+                chain card, three messages deep. It is the least
+                urgent of the three, so it stands down whenever
+                either of the others is speaking. */}
+            {last && !(isMyTurn && hasDice) && chain === 0 && (
               <BodyText
                 muted
                 style={{
@@ -1334,8 +1343,20 @@ export default function LudoSession() {
                      wrapped to three lines it took them off the
                      board. Ellipsis rather than a shorter sentence,
                      because the sentence is also read aloud. */
+                  /* NEVER TRUNCATED. This was one line with an
+                     ellipsis, and it produced "admin test rolled 6
+                     and moved — but the sixes h…" — a sentence cut
+                     off exactly where its meaning was. Two lines,
+                     wrapped, is four pixels of board and a message
+                     that finishes. */
                   ...(playing
-                    ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+                    ? {
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 2,
+                        overflow: "hidden",
+                        lineHeight: 1.35,
+                      }
                     : null),
                 }}
               >
@@ -1436,13 +1457,26 @@ export default function LudoSession() {
             </BodyText>
           )}
 
-          {/* ── The sixes chain, said plainly while it is still open ── */}
+          {/* ── The sixes chain, said plainly while it is still open ──
+
+              DRESSED FOR THIS TABLE. This was a cream card with brown
+              ink, which is the app's card — and on a dark board it
+              read as a page torn out of another screen and laid on
+              the felt. Same words, same shape, the table's own
+              colours. ── */}
           {chain > 0 && (
-            <Card style={{ marginTop: 10, borderColor: C.brown, background: "#fffaf2" }}>
-              <BodyText style={{ margin: 0, fontWeight: 700 }}>
+            <Card
+              style={{
+                marginTop: 10,
+                borderColor: GAME.controlEdge,
+                background: GAME.control,
+                color: GAME.ink,
+              }}
+            >
+              <BodyText style={{ margin: 0, fontWeight: 700, color: GAME.ink }}>
                 🎲 {t("ludo.chain.count", { n: chain })}
               </BodyText>
-              <BodyText muted style={{ margin: "4px 0 0" }}>
+              <BodyText muted style={{ margin: "4px 0 0", color: GAME.inkMuted }}>
                 {chain === 2 || chain === 5 || chain === 8
                   ? t("ludo.chain.careful")
                   : chain === 3 || chain === 6 || chain === 9

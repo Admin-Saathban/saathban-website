@@ -1476,6 +1476,26 @@ const en = {
     },
   },
   groups: {
+    cover: {
+      title: "Picture",
+      upload: "Use a photo of your own",
+    },
+    join: {
+      join: "Join this group",
+      openWhat: "Anyone can join this one. You can start straight away.",
+      ask: "Ask to join",
+      closedWhat: "The people who run this group decide who comes in. They will see your ask.",
+      asked: "You have asked to join. They will see it in their group.",
+      notThisTime: "Not this time — you are welcome to ask again.",
+    },
+    setup: {
+      title: "Finish setting up",
+      both: "A picture and a line about what this group is for. Neither is required — the group works without them.",
+      cover: "Add a picture, if you would like one. The group works without it.",
+      description: "Add a line about what this group is for.",
+      go: "Set it up",
+      dismiss: "Leave it as it is",
+    },
     welcome: {
       walking: "This is {name}. We walk together, at an easy pace.\n\nWe walk on ____ at ____, meeting at ____.\n\nAnyone is welcome to come at their own speed — nobody gets left behind.",
       chai: "This is {name}. We meet for chai and good conversation.\n\nWe meet on ____ at ____, at ____.\n\nCome when you can. There is no need to tell anyone in advance.",

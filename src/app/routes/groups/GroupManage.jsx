@@ -42,9 +42,10 @@ import {
   fetchGroup, fetchMembers, amIGroupAdmin,
   fetchJoinRequests, respondJoinRequest,
   setCoAdmin, removeMember, updateGroup, fetchGroupReports,
-  deleteGroup, transferGroupOwnership,
+  deleteGroup, transferGroupOwnership, setGroupCover, uploadGroupCover,
 } from "./groupsStore.js";
 import ReportedMedia from "../admin/ReportedMedia.jsx";
+import GroupCover, { COVER_PRESETS } from "./GroupCover.jsx";
 
 export default function GroupManage() {
   const { id } = useParams();
@@ -213,6 +214,52 @@ export default function GroupManage() {
       {/* ── 4. Group settings ── */}
       <SectionLabel>{t("groups.manage.settings")}</SectionLabel>
       <Card>
+        {/* §1: the type already gave this group a cover, so this is
+            never an empty slot demanding a photograph — it is a
+            choice between covers that already work. The upload is
+            offered second, for people who want their own. */}
+        <label style={{ display: "block", fontSize: ts(16), fontWeight: 700, marginBottom: 6 }}>
+          {t("groups.cover.title")}
+        </label>
+        <GroupCover group={group} height={96} />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+          {COVER_PRESETS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              disabled={busy === "cover"}
+              onClick={() => act(() => setGroupCover(id, `preset:${k}`), "cover")}
+              aria-label={t(`groups.type.${k}.name`)}
+              style={{
+                width: 52, height: 40, borderRadius: 10, cursor: "pointer",
+                border: group.cover === `preset:${k}` ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
+                background: "none", padding: 0, fontSize: 20,
+              }}
+            >
+              {t(`groups.type.${k}.emoji`)}
+            </button>
+          ))}
+        </div>
+        <label
+          style={{
+            display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx,
+            color: C.green, fontSize: ts(16), fontWeight: 600,
+            textDecoration: "underline", cursor: "pointer", marginBottom: 16,
+          }}
+        >
+          {t("groups.cover.upload")}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) act(() => uploadGroupCover(id, f), "cover");
+              e.target.value = "";
+            }}
+          />
+        </label>
+
         <label style={{ display: "block", fontSize: ts(16), fontWeight: 700, marginBottom: 6 }}>
           {t("groups.new.nameTitle")}
         </label>

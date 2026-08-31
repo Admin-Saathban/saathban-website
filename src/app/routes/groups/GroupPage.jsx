@@ -20,7 +20,9 @@ import {
   fetchGroup, fetchMembers, fetchPosts, addPost, fetchMessages, sendMessage,
   fetchConnections, inviteToGroup, removeMember, leaveGroup, reportTarget,
   amIGroupAdmin, pendingRequestCount, pinPost, unpinPost,
+  amIMember, joinPublicGroup, requestToJoinGroup, fetchMyJoinRequest, dismissGroupSetup,
 } from "./groupsStore.js";
+import GroupCover from "./GroupCover.jsx";
 
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
@@ -57,6 +59,12 @@ export default function GroupPage() {
      because a co-admin is not the creator and must still get in. */
   const [canManage, setCanManage] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  /* §3 — a non-member sees Join (public) or Ask (private), never the
+     composer. Undefined while we are still finding out, so the page
+     does not flash the wrong affordance at somebody. */
+  const [member, setMember] = useState(undefined);
+  const [myRequest, setMyRequest] = useState(null);
+  const [joining, setJoining] = useState(false);
 
   const iAmCreator = group && group.created_by === myId;
 
@@ -75,6 +83,8 @@ export default function GroupPage() {
       if (!g) { setGroup(null); return; }
       /* Best effort both: the group still opens if either call fails,
          it just offers no manage door and no badge. */
+      amIMember(id).then(setMember).catch(() => setMember(false));
+      fetchMyJoinRequest(id).then(setMyRequest).catch(() => {});
       amIGroupAdmin(id).then((ok) => {
         setCanManage(ok);
         if (ok) pendingRequestCount(id).then(setPendingCount).catch(() => {});
@@ -208,17 +218,57 @@ export default function GroupPage() {
 
   return (
     <Screen backTo="/app/groups" backLabel={s.back}>
+      {/* §3: cover · name · member count · the feed. Every group has
+          a cover from the moment it exists — §1 gives one from the
+          type, so nobody has to find a photo. */}
+      <GroupCover group={group} />
       <H1>{group.name}</H1>
       {group.description && <BodyText muted>{group.description}</BodyText>}
 
       {/* §3: cover · name · MEMBER COUNT · the group's own feed. The
           count is the cheapest signal that a group is alive, and its
           absence is why an empty-looking group reads as abandoned. */}
-      <BodyText muted style={{ margin: "2px 0 0" }}>
-        {members.length === 1
-          ? t("groups.interior.oneMember")
-          : t("groups.interior.memberCount", { n: members.length })}
-      </BodyText>
+      {/* Only to somebody who can actually read the member list. A
+          non-member counts zero — group_members is member-only — and
+          "0 people" on the join screen says the group is abandoned
+          when it is not. */}
+      {member !== false && (
+        <BodyText muted style={{ margin: "2px 0 0" }}>
+          {members.length === 1
+            ? t("groups.interior.oneMember")
+            : t("groups.interior.memberCount", { n: members.length })}
+        </BodyText>
+      )}
+
+      {/* §1/§3: "Cover photo and description are not steps. Both
+          become a dismissible Finish setting up row inside the group
+          afterwards." Only the owner sees it, only while something is
+          actually missing, and dismissing it is final — a person who
+          has said no to this should not be asked again. */}
+      {canManage && !group.setup_dismissed_at && (!group.cover || !group.description) && (
+        <Card style={{ borderColor: C.green, borderWidth: 2, borderStyle: "solid" }}>
+          <BodyText style={{ marginTop: 0, fontWeight: 700 }}>{t("groups.setup.title")}</BodyText>
+          <BodyText muted style={{ marginTop: 4 }}>
+            {!group.cover && !group.description
+              ? t("groups.setup.both")
+              : !group.cover
+                ? t("groups.setup.cover")
+                : t("groups.setup.description")}
+          </BodyText>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <PrimaryBtn onClick={() => navigate(`/app/groups/${id}/manage`)}>
+              {t("groups.setup.go")}
+            </PrimaryBtn>
+            <GhostBtn
+              onClick={async () => {
+                try { await dismissGroupSetup(id); await loadCore(); } catch { /* the row is not worth an error */ }
+              }}
+            >
+              {t("groups.setup.dismiss")}
+            </GhostBtn>
+          </div>
+        </Card>
+      )}
 
       {/* §7 is reached from the group itself, and only the people who
           run it are offered the door. A member who guesses the URL is
@@ -242,11 +292,60 @@ export default function GroupPage() {
 
       {tab === "feed" && (
         <>
-          <Card>
-            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={s.composerPh} rows={3} maxLength={4000} style={{ resize: "vertical" }} />
-            <div style={{ marginTop: 10 }}><PrimaryBtn onClick={share} disabled={!draft.trim()}>{s.post}</PrimaryBtn></div>
-          </Card>
-          {posts.length === 0 ? <BodyText muted>{s.feedEmpty}</BodyText> : posts.map((p) => (
+          {/* §3: "A Post button for members; Join or Ask for
+              non-members." A person who is not in the group is not
+              shown a box they cannot post into — they are shown the
+              way in.
+
+              WHICH VERB is the group's privacy, not the screen's
+              choice: NAVIGATION_SPEC §5 and 0089 give Join for a
+              public group (straight in, no approval) and Ask for a
+              private one (a request the owner approves). */}
+          {member === false ? (
+            <Card>
+              {myRequest?.status === "pending" ? (
+                <BodyText style={{ margin: 0 }}>{t("groups.join.asked")}</BodyText>
+              ) : (
+                <>
+                  <BodyText style={{ marginTop: 0 }}>
+                    {group.privacy === "anyone" ? t("groups.join.openWhat") : t("groups.join.closedWhat")}
+                  </BodyText>
+                  {myRequest?.status === "declined" && (
+                    <BodyText muted style={{ marginTop: 0 }}>{t("groups.join.notThisTime")}</BodyText>
+                  )}
+                  <PrimaryBtn
+                    disabled={joining}
+                    onClick={async () => {
+                      setJoining(true);
+                      try {
+                        if (group.privacy === "anyone") {
+                          await joinPublicGroup(id);
+                          setMember(true);
+                        } else {
+                          await requestToJoinGroup(id, null);
+                          setMyRequest({ status: "pending" });
+                        }
+                        await loadCore();
+                      } catch (e) {
+                        setError(String(e?.message || e));
+                      }
+                      setJoining(false);
+                    }}
+                  >
+                    {group.privacy === "anyone" ? t("groups.join.join") : t("groups.join.ask")}
+                  </PrimaryBtn>
+                </>
+              )}
+            </Card>
+          ) : (
+            <Card>
+              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={s.composerPh} rows={3} maxLength={4000} style={{ resize: "vertical" }} />
+              <div style={{ marginTop: 10 }}><PrimaryBtn onClick={share} disabled={!draft.trim()}>{s.post}</PrimaryBtn></div>
+            </Card>
+          )}
+          {posts.length === 0 ? (
+            member === false ? null : <BodyText muted>{s.feedEmpty}</BodyText>
+          ) : posts.map((p) => (
             <Card
               key={p.id}
               style={p.pinned_at ? { borderColor: C.green, borderWidth: 2, borderStyle: "solid" } : undefined}

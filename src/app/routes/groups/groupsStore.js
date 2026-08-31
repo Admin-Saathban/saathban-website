@@ -81,7 +81,13 @@ export async function respondInvite(inviteId, accept) {
 
 export async function fetchGroup(id) {
   const { data, error } = await supabase
-    .from("groups").select("id, name, description, created_by, created_at").eq("id", id).maybeSingle();
+    // privacy decides Join vs Ask (section 3), cover and
+    // setup_dismissed_at decide the cover and the finish-setting-up
+    // row. Selecting a narrow list means a new column is invisible
+    // until it is named here, which is why the UI saw none of them.
+    .from("groups")
+    .select("id, name, description, created_by, created_at, privacy, cover, setup_dismissed_at")
+    .eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -395,4 +401,116 @@ export async function transferGroupOwnership(groupId, toMemberId) {
     p_to: toMemberId,
   });
   if (error) throw new Error(error.message);
+}
+
+/* ═══════════════════════════════════════════════
+   §1/§3 covers, the finish-setting-up row, and §3's Join / Ask
+   ═══════════════════════════════════════════════ */
+
+/* A group always HAS a cover, even when nobody chose one: the type
+   picked on §1's first screen supplies it. That is the whole reason
+   cover is not a creation step — §1 is explicit that older users
+   abandon at the photo step. */
+export function coverFor(group) {
+  const raw = group?.cover;
+  if (raw && raw.startsWith("preset:")) return { kind: "preset", key: raw.slice(7) };
+  if (raw) return { kind: "photo", path: raw };
+  return { kind: "preset", key: "other" };
+}
+
+export async function setGroupCover(groupId, cover) {
+  const { error } = await supabase.rpc("set_group_cover", { p_group: groupId, p_cover: cover });
+  if (error) throw new Error(error.message);
+}
+
+export async function dismissGroupSetup(groupId) {
+  const { error } = await supabase.rpc("dismiss_group_setup", { p_group: groupId });
+  if (error) throw new Error(error.message);
+}
+
+/* The path is <group_id>/<file>, because 0110's storage policies read
+   the first path segment as the group. Changing this shape silently
+   breaks who may write a cover. */
+export async function uploadGroupCover(groupId, file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${groupId}/cover-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("group-covers").upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  await setGroupCover(groupId, path);
+  return path;
+}
+
+export async function signedCoverUrl(path) {
+  if (!path) return null;
+  const { data } = await supabase.storage.from("group-covers").createSignedUrl(path, 3600);
+  return data?.signedUrl || null;
+}
+
+/* ── §3: Join or Ask, for somebody who is not a member ──
+
+   NAVIGATION_SPEC §5 and Lane 2's 0089: JOIN a public group (straight
+   in, no approval), ASK for a private one (a request the owner
+   approves). Which verb a person sees is decided by the group's
+   privacy, never by the screen — so both live here rather than being
+   re-derived at each call site. */
+export async function joinPublicGroup(groupId) {
+  const { error } = await supabase.rpc("join_public_group", { p_group: groupId });
+  if (error) throw new Error(error.message);
+}
+
+/* Am I in this group at all? Cheaper and clearer than fetching the
+   whole member list to look for myself. */
+export async function amIMember(groupId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("group_members")
+    .select("member_id")
+    .eq("group_id", groupId)
+    .eq("member_id", user.id)
+    .maybeSingle();
+  return !!data;
+}
+
+/* ── §6: the group posts that may appear in the MAIN feed ──
+
+   Lane 3 owns Feed.jsx; this rule is mine, so the set comes from
+   here. Evaluated at READ time on purpose: a group flipping from
+   public to private, a member leaving, or a post being deleted all
+   take effect on the next read, with no stamp to unstick and no
+   removal path to build.
+
+   The filter mirrors group_post_in_main_feed() exactly — public AND
+   joined. §6 is "public groups YOU HAVE JOINED", not every public
+   group. */
+export async function fetchFeedGroupPosts(limit = 40) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data: mine } = await supabase
+    .from("group_members").select("group_id").eq("member_id", user.id);
+  const ids = (mine || []).map((r) => r.group_id);
+  if (ids.length === 0) return [];
+
+  const { data: open } = await supabase
+    .from("groups").select("id, name").eq("privacy", "anyone").in("id", ids);
+  const byId = Object.fromEntries((open || []).map((g) => [g.id, g.name]));
+  const openIds = Object.keys(byId);
+  if (openIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("group_posts")
+    .select("id, group_id, author_id, body, created_at")
+    .in("group_id", openIds)
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  const rows = data || [];
+  const names = await namesFor(rows.map((r) => r.author_id));
+  return rows.map((r) => ({
+    ...r,
+    groupName: byId[r.group_id],
+    authorName: names[r.author_id]?.full_name || "A member",
+  }));
 }

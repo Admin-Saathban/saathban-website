@@ -33,6 +33,8 @@ import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
 import { touchPresence } from "./messagesData.js";
+import Icon from "../../components/Icon.jsx";
+import NewChat from "./NewChat.jsx";
 import ChatsList from "./ChatsList.jsx";
 import RequestsList from "./RequestsList.jsx";
 import MessagesMenu from "./MessagesMenu.jsx";
@@ -42,7 +44,7 @@ import Thread from "../community/Thread.jsx";
 
 export const WORLD_BAR_HEIGHT = 66;
 
-function WorldTab({ to, end, emoji, label, badge }) {
+function WorldTab({ to, end, icon, label, badge }) {
   const { ts } = useI18n();
   return (
     <NavLink
@@ -77,7 +79,7 @@ function WorldTab({ to, end, emoji, label, badge }) {
               padding: "4px 16px",
             }}
           >
-            {emoji}
+            <Icon name={icon} size={22} />
           </span>
           <span>{label}</span>
           {badge > 0 && (
@@ -218,22 +220,36 @@ export default function MessagesWorld() {
         >
           {t("msg.title")}
         </h1>
+        {/* A LABELLED ACTION, AND IT STAYS IN THE WORLD.
+
+            This was a pencil linking to /app/people. Two faults in one
+            control: a glyph that means "compose" only to people who were
+            taught it, and a link that dropped you out of the world onto
+            an app screen with the header and bottom bar back — with
+            nothing to tell you that you had left.
+
+            The word is the control now, with the icon beside it rather
+            than instead of it, and the destination is a route inside
+            this world. */}
         <NavLink
-          to="/app/people"
-          aria-label={t("msg.compose")}
-          style={{
-            minWidth: A11Y.minTapTargetPx,
-            minHeight: A11Y.minTapTargetPx,
+          to="new"
+          style={({ isActive }) => ({
             display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 6,
+            minHeight: A11Y.minTapTargetPx,
+            padding: "0 12px",
             borderRadius: 50,
             textDecoration: "none",
-            color: C.green,
-            fontSize: ts(22),
-          }}
+            color: isActive ? C.white : C.green,
+            background: isActive ? C.green : "transparent",
+            fontSize: ts(16),
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          })}
         >
-          <span aria-hidden="true">✏️</span>
+          <Icon name="add" size={20} />
+          {t("msg.newChat.cta")}
         </NavLink>
       </header>
 
@@ -241,6 +257,7 @@ export default function MessagesWorld() {
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}>
           <Routes>
             <Route index element={<ChatsList />} />
+            <Route path="new" element={<NewChat />} />
             <Route path="requests" element={<RequestsList onCount={setPending} />} />
             <Route path="menu" element={<MessagesMenu />} />
             <Route path="menu/archived" element={<ArchivedChats />} />
@@ -266,9 +283,9 @@ export default function MessagesWorld() {
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        <WorldTab to="" end emoji="💬" label={t("msg.tab.chats")} />
-        <WorldTab to="requests" emoji="✉️" label={t("msg.tab.requests")} badge={pending} />
-        <WorldTab to="menu" emoji="⚙️" label={t("msg.tab.menu")} />
+        <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
+        <WorldTab to="requests" icon="letter" label={t("msg.tab.requests")} badge={pending} />
+        <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
       </nav>
     </div>
   );

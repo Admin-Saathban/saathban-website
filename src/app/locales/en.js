@@ -2127,6 +2127,12 @@ const en = {
      §3 forbids a blank line, because a row that says nothing is the
      one a person taps to find out what it was. ── */
   msg: {
+    /* The pencil replaced: a word, not a glyph nobody was taught. */
+    newChat: {
+      cta: "New chat",
+      pick: "Who would you like to write to?",
+      nobodyYet: "When you and somebody are connected, they appear here and you can write to them. Out & about and Groups are good places to meet people.",
+    },
     title: "Messages",
     back: "Back",
     compose: "Write to someone",

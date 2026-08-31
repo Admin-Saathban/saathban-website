@@ -104,15 +104,50 @@ export const SURFACE = {
   ground:  "#EFF3EE",   // the floor — a soft sage tint, not a grey
   content: "#FFFFFF",   // posts, chats, cards, sheets
   tint:    "#FBF0E6",   // comments, replies, quoted material
-  /* THE CHROME IS DARK NOW. Header and bottom bar both. A near-black
-     frame stops the chrome competing with content for the eye at all,
-     rather than competing quietly at one step of lightness — and it is
-     what makes the active tab's accent chip readable as a position
-     marker instead of one more pale thing among pale things. */
-  nav:       "#1B1E22",  // header and bottom bar
+  /* THE CHROME IS JET. Header and bottom bar both. A near-black frame
+     stops the chrome competing with content for the eye at all, rather
+     than competing quietly at one step of lightness — and it is what
+     makes the active tab's accent chip read as a position marker rather
+     than one more pale thing among pale things.
+
+     #1B1E22 was a warm near-black; this is jet. THE INK WAS RE-MEASURED
+     AFTER THE MOVE, which is the whole discipline this file keeps
+     failing to follow — five defects this week were a call site that was
+     right when written and wrong when a value changed underneath it, and
+     every one would have been caught by measuring the pairs after rather
+     than before.
+
+                              on #1B1E22   on #0F1113
+       navInk    #F2F3F5        15.07         17.04
+       navActive #7FD99A         9.79         11.08
+       white on the accent chip  6.41          6.41
+       navInk on the rest chip   9.69         11.56
+       badge cream on error      6.54          6.54
+       bronze on its own bed     3.45          3.93
+       blue   on its own bed     3.11          3.58
+
+     Everything improves or holds, and every non-text pair clears the
+     3:1 of WCAG 1.4.11.
+
+     TWO CORRECTIONS TO WHAT I REPORTED LAST TIME. I quoted bronze at
+     4.28:1 and blue at 3.79:1, measured against the BAR — but neither
+     icon sits on the bar, it sits on its own translucent bed, and a
+     0.18-alpha wash lightens the ground under it. Composited properly
+     they were 3.45 and 3.11: still passing, and much tighter than I
+     claimed. A contrast figure that ignores what is actually painted
+     underneath is a figure about a page that does not exist.
+
+     And the hairline was fiction. navEdge was #2A2E33 against a
+     #1B1E22 bar — 1.22:1, invisible — while its own comment claimed it
+     was "a lift rather than a shadow". It was neither; it was the bar.
+     #3A4048 gives 1.81:1 on jet, which is a lift you can actually see,
+     and still 9.33:1 against the light ground it borders so it never
+     shouts. Exactly the defect this file keeps naming: a name and a
+     comment that outlived the value. */
+  nav:       "#0F1113",  // header and bottom bar — jet, not a warm near-black
   navInk:    "#F2F3F5",  // labels and resting icons on the dark chrome
   navActive: "#7FD99A",  // the tab you are on, where accent-on-dark would sink
-  navEdge:   "#2A2E33",  // the hairline, now a lift rather than a shadow
+  navEdge:   "#3A4048",  // the lift along the chrome edge — see the note below
   pressed: "#E8EDE8",   // touched, or the row you are on
 
   /* THE ONE SURFACE THAT CARRIES A HUE, and it earns it: this is the

@@ -12,7 +12,12 @@
     <!-- PWA: the app at /app is installable (manifest start_url/scope
          are /app, so installing from any page opens the app) -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#063214" />
+    <!-- EXACTLY SURFACE.nav (src/shared/tokens.js). The status bar and
+         the app header are the same object to anyone holding the phone,
+         so a value that merely looks close reads as a seam across the
+         top of the screen. This was #063214 — the MARKETING green, two
+         accents ago, older than either app palette since. -->
+    <meta name="theme-color" content="#0F1113" />
     <!-- iOS add-to-home-screen -->
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />

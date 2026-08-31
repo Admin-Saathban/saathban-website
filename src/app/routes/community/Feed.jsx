@@ -46,6 +46,10 @@ import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx"
 import Composer, { ComposerRow } from "./Composer.jsx";
 import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
+import ReconnectRow from "./ReconnectRow.jsx";
+import { pickReconnect, rowAllowed, markRowSeen, hushPerson } from "./reconnect.js";
+import { fetchChats } from "../messages/messagesData.js";
+import SayHelloSheet from "../messages/SayHelloSheet.jsx";
 import { VoicePlayer } from "../people/VoiceNote.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
@@ -787,6 +791,11 @@ export default function Feed({ composer = true }) {
   const [access, setAccess] = useState(null); // null loading | true | false
   const [canWrite, setCanWrite] = useState(false);
   const [posts, setPosts] = useState([]);
+
+  /* NAVIGATION_SPEC §4.3 — the reconnect row. Null unless there is a
+     person to offer AND the weekly cadence allows it. */
+  const [reconnect, setReconnect] = useState(null);
+  const [helloWith, setHelloWith] = useState(null);
   /* Which ring the feed had to reach for. Shown as a quiet line, never
      as a setting: §7 is explicit that the person never changes one. */
   const [radius, setRadius] = useState("area");
@@ -798,6 +807,26 @@ export default function Feed({ composer = true }) {
   const fresh = useFresh();
   // Posts on their way to the server: rendered at once, quietly marked.
   const [pendingPosts, setPendingPosts] = useState([]);
+  /* §4.3. Deliberately its own effect and deliberately silent on
+     failure: this is a courtesy, and a feed that refused to render
+     because a reconnect suggestion could not be computed would be a
+     bad trade. Cadence is checked BEFORE fetching, so a person who has
+     seen the row this week costs nothing to load. */
+  useEffect(() => {
+    if (!myId || !isIcon) return undefined;
+    if (!rowAllowed()) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const chats = await fetchChats(myId);
+        if (!alive) return;
+        const pick = pickReconnect(chats);
+        if (pick) { setReconnect(pick); markRowSeen(); }
+      } catch { /* no row, no noise */ }
+    })();
+    return () => { alive = false; };
+  }, [myId, isIcon]);
+
   /* §1 — the composer is a screen now, opened from the row. */
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerStart, setComposerStart] = useState(null);
@@ -1214,6 +1243,13 @@ export default function Feed({ composer = true }) {
         onShare={share}
       />
 
+      {/* §4.3 -> §9.1. Sending closes the sheet and opens the chat with
+          the message in it; SayHelloSheet owns that, so this is only the
+          mount point. */}
+      {helloWith && (
+        <SayHelloSheet person={helloWith} onClose={() => setHelloWith(null)} />
+      )}
+
       {/* §10 — one sheet, growing from whichever three dots was tapped. */}
       {menuPost && (
         <PostMenu
@@ -1573,7 +1609,13 @@ export default function Feed({ composer = true }) {
                 </BodyText>
               );
             }
-            return visible.map((p) => (
+            /* §4.3 INLINE, not pinned. Placed after the third post so it
+               sits inside the feed a person is already reading rather
+               than displacing the newest thing their neighbours said —
+               and on a short feed it simply lands at the end. */
+            const RECONNECT_AT = 3;
+            return visible.flatMap((p, i) => {
+              const card = (
               <div key={`w-${p.id}`} {...fresh.props(p.id)}>
               <PostCard
                 key={p.id}
@@ -1612,7 +1654,20 @@ export default function Feed({ composer = true }) {
                 onMenu={setMenuPost}
               />
               </div>
-            ));
+              );
+              if (reconnect && i === Math.min(RECONNECT_AT, visible.length - 1)) {
+                return [
+                  card,
+                  <ReconnectRow
+                    key="reconnect-row"
+                    person={reconnect.person}
+                    onHello={() => setHelloWith(reconnect.person)}
+                    onDismiss={() => { hushPerson(reconnect.otherId); setReconnect(null); }}
+                  />,
+                ];
+              }
+              return card;
+            });
           })()}
         </>
       )}

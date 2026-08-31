@@ -306,7 +306,7 @@ export default function GroupManage() {
               display: "block", width: "100%", textAlign: "start", marginBottom: 10,
               padding: "12px 14px", borderRadius: 14, minHeight: A11Y.minTapTargetPx,
               border: privacy === key ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-              background: privacy === key ? "#EEF3E8" : C.white,
+              background: privacy === key ? C.selected : C.white,
               fontFamily: "inherit", cursor: "pointer",
             }}
           >

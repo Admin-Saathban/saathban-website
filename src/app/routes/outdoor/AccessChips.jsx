@@ -63,7 +63,7 @@ export default function AccessChips({ features, size = 15, style }) {
               fontSize: ts(size),
               fontWeight: 600,
               lineHeight: 1.5,
-              background: present ? "#EAF2E3" : C.cream,
+              background: present ? C.selected : C.cream,
               color: present ? C.green : C.textMuted,
               border: `1px solid ${present ? "#C6DCB4" : C.warmGray}`,
             }}

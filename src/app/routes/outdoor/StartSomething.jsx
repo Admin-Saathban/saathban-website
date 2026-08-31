@@ -356,7 +356,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
               display: "block", width: "100%", textAlign: "start", marginBottom: 10,
               padding: "14px 16px", borderRadius: 16, minHeight: A11Y.minTapTargetPx,
               border: audience === key ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-              background: audience === key ? "#EEF3E8" : C.white,
+              background: audience === key ? C.selected : C.white,
               fontFamily: "inherit", cursor: "pointer",
             }}
           >
@@ -435,7 +435,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
                 borderRadius: 16,
                 minHeight: A11Y.minTapTargetPx,
                 border: confirm === val ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-                background: confirm === val ? "#EEF3E8" : C.white,
+                background: confirm === val ? C.selected : C.white,
                 color: C.textMain,
                 fontFamily: "inherit",
                 fontSize: ts(A11Y.minBodyPx),

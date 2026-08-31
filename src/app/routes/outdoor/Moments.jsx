@@ -143,7 +143,7 @@ export default function Moments() {
                 display: "block", width: "100%", textAlign: "start", marginBottom: 10,
                 padding: "12px 14px", borderRadius: 14, minHeight: A11Y.minTapTargetPx,
                 border: visibility === key ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-                background: visibility === key ? "#EEF3E8" : C.white,
+                background: visibility === key ? C.selected : C.white,
                 fontFamily: "inherit", cursor: "pointer",
               }}
             >

@@ -69,7 +69,7 @@ export function SectionLabel({ children }) {
 
 export function Pill({ children, tone = "neutral" }) {
   const { ts } = useI18n();
-  const tones = { neutral: { bg: C.cream, fg: C.textMuted, bd: C.warmGray }, green: { bg: "#e8f0e6", fg: C.green, bd: C.sage }, brown: { bg: C.tint, fg: C.brown, bd: "#d9c3b2" } };
+  const tones = { neutral: { bg: C.cream, fg: C.textMuted, bd: C.warmGray }, green: { bg: C.selected, fg: C.green, bd: C.sage }, brown: { bg: C.tint, fg: C.brown, bd: "#d9c3b2" } };
   const t = tones[tone] || tones.neutral;
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ts(15), fontWeight: 600, color: t.fg, background: t.bg, border: `1px solid ${t.bd}`, borderRadius: 50, padding: "5px 13px" }}>{children}</span>;
 }

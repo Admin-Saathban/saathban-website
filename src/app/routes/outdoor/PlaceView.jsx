@@ -58,7 +58,7 @@ function VisibilityChoice({ value, onChange }) {
         minHeight: 72,
         borderRadius: 14,
         border: `2.5px solid ${value === val ? C.green : C.warmGray}`,
-        background: value === val ? "#eef3ea" : C.white,
+        background: value === val ? C.selected : C.white,
         fontFamily: "inherit",
         textAlign: "start",
         padding: "10px 14px",
@@ -418,7 +418,7 @@ export default function PlaceView() {
 
           {/* Check-in panel — Icons only; manual, visible choice first. */}
           {isIcon && (
-            <Card style={{ border: `2px solid ${C.sage}`, background: "#f4f7f1" }}>
+            <Card style={{ border: `2px solid ${C.sage}`, background: C.selected }}>
               {mine ? (
                 <>
                   <BodyText style={{ fontWeight: 600 }}>

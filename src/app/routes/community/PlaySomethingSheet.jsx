@@ -4,12 +4,21 @@
    "Tapping a game creates the table with her seat held, sends the
    invite, and lands you on the board. No menu, no confirm step."
 
-   That is exactly what one tap here does, using the two calls the games
-   lane already owns: openQuickTable seats the bots so the board is
-   playable the moment it appears, and inviteToSeat hands one named seat
-   to her while the bot goes on holding it — so the table does not stall
-   while she decides, and she is not required to be online for the tap
-   to make sense.
+   One tap creates the table, reserves her seat and opens the board,
+   using the two calls the games lane owns.
+
+   WHAT ARRIVES IS NOT THE SAME FOR ALL THREE, and the first version of
+   this comment said it was. Ludo and snakes are seated with bots, so
+   the board is playable the instant it appears and her invitation takes
+   over a chair a bot is holding. CARROM HAS NO BOT PLAYER BY DESIGN —
+   start_with_bots refuses it outright — so what opens is a table
+   WAITING FOR HER, not a game in progress, and her seat is reserved
+   against a seat number with no row behind it yet (migration 0098).
+
+   That difference must never turn into copy promising a game is about
+   to start: for carrom it would be false. Nothing user-facing here says
+   it — the sheet only names the three games — and it must stay that
+   way.
 
    WHAT IS NOT HERE, and it is the half the spec asks for that cannot be
    built yet. §9.2 wants "the games you both play", with a sub-line
@@ -60,10 +69,15 @@ export default function PlaySomethingSheet({ person, onClose }) {
     try {
       const path = await openQuickTable(gameKey);
       const id = String(path).split("/").pop();
-      /* Seat 1 is the first seat that is not the host's. The invite is
-         attempted after the table exists, so a failure here still leaves
-         a playable board rather than nothing — but it is not swallowed,
-         because "her seat is held" is the whole promise of the tap. */
+      /* Seat 1 is the first seat that is not the host's — a bot's chair in
+         ludo and snakes, a seat number with no row behind it in carrom.
+         inviteToSeat takes both shapes since 0098; before that, tapping
+         Carrom here threw "That seat is not free" because the function
+         only knew how to take over a bot.
+
+         Not swallowed: "her seat is held" is the whole promise of the
+         tap, so if the invitation fails the person is told rather than
+         landed on a board that is quietly just theirs. */
       await inviteToSeat(id, person.id, 1);
       onClose?.();
       navigate(path);

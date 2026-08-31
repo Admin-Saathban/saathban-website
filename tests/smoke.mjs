@@ -152,9 +152,42 @@ async function pageFor(browser, session) {
   return { ctx, page };
 }
 
-async function goto(page, path, settle = 1400) {
-  await page.goto(BASE + path, { waitUntil: "networkidle" });
+/* GOING SOMEWHERE IS NOT ARRIVING THERE.
+
+   Lane 42 found this one level up from my guarded clicks and it is
+   sharper than the click case, for a reason worth writing down: a
+   NEGATIVE assertion passes on the wrong page. "The destination
+   grid is gone from home" is true of the home, and equally true of
+   a login screen, a blank page and a 404. So a navigation that
+   quietly did not happen does not fail those checks — it turns them
+   green for a reason that has nothing to do with the app. This file
+   has several of that shape (the grid, "no blank re-application
+   form", "never shows a dead page").
+
+   I CANNOT DEMAND THE PATH I ASKED FOR, the way 42's suite can:
+   half the checks here are about being REDIRECTED — the signed-out
+   guards, the cross-role bounces — and those land somewhere else on
+   purpose. So arrival is opt-in: pass `expect` and the landing is
+   asserted; leave it out and a redirect is still allowed, which is
+   the only honest default for a suite that tests redirects.
+
+   The HTTP status is checked either way. An SPA answers 200 for its
+   own unknown routes, so this catches the case that matters — a
+   BASE_URL pointing at something that is not the app at all. */
+async function goto(page, path, settle = 1400, expect = null) {
+  const res = await page.goto(BASE + path, { waitUntil: "networkidle" });
+  if (res && !res.ok()) {
+    check(`navigation: ${path} answered ${res.status()}`, false, "the base url may not be the app");
+  }
   await page.waitForTimeout(settle);
+  if (expect) {
+    const landed = new URL(page.url()).pathname;
+    check(
+      `navigation: ${path} arrives`,
+      landed === expect,
+      landed === expect ? "" : `landed on ${landed} — every check below reads THAT screen`
+    );
+  }
   return (await page.evaluate(() => document.body.innerText)).trim();
 }
 const pathOf = (page) => new URL(page.url()).pathname;
@@ -205,7 +238,7 @@ for (const [email, label, home, foreign] of ROLES) {
 {
   const session = await login("test-icon@saathban.dev");
   const { ctx, page } = await pageFor(browser, session);
-  await goto(page, "/app/home");
+  await goto(page, "/app/home", 1400, "/app/home");
   // Wait for the thing being asserted, not for a guessed duration.
   await page.locator("text=/log|روزنامچہ/i").first().waitFor({ timeout: 15000 }).catch(() => {});
   /* THE PAGE, NOT THE FURNITURE. This read document.body, which now
@@ -713,7 +746,7 @@ for (const [email, label, home, foreign] of ROLES) {
     check("activity: the suite can seed its own happening", !!seededPost, seededPost || "no place or no insert");
   }
 
-  const outTxt = await goto(famPage, "/app/outdoor/places", 2200);
+  const outTxt = await goto(famPage, "/app/outdoor/places", 2200, "/app/outdoor/places");
   /* The fam fixture defaults to Karachi; the seeded place is in
      Lahore. One quiet control now, reading "Karachi · see Lahore". */
   if (!outTxt.includes("Model Town")) {

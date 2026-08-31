@@ -817,7 +817,7 @@ function PostCard({
    the log row (§4: header, composer, log, feed), so the Feed must not
    draw a second one. It still owns everything §11 asks for: it listens
    for the post landing, reloads, and marks the new row fresh. */
-export default function Feed({ composer = true }) {
+export default function Feed({ composer = true, embedded = false }) {
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
@@ -1296,7 +1296,7 @@ export default function Feed({ composer = true }) {
   const menuAuthor = menuPost ? authors[menuPost.author_id] : null;
 
   return (
-    <CommunityScreen>
+    <CommunityScreen embedded={embedded}>
       {/* §1 — full screen, opened from the row in the feed. */}
       <Composer
         open={composer && composerOpen}

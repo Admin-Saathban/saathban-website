@@ -251,7 +251,10 @@ function InvitePanel({ createInvite }) {
       {code ? (
         <>
           <p style={{ fontSize: ts(18), color: C.textMuted, margin: "4px 0" }}>{k("codeLabel")}</p>
+          {/* A code exists to be passed on: read down a phone line,
+              or copied. It must stay selectable. */}
           <p
+            className="sb-selectable"
             dir="ltr"
             style={{
               fontFamily: meta.fonts.heading,

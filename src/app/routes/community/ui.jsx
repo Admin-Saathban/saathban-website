@@ -7,19 +7,33 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
-export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
+/* `embedded`: this screen also renders INSIDE Home, and a screen inside
+   another screen must stop behaving like a page.
+
+   Two things went wrong while it did. It emitted a second <main>, so
+   Home shipped two main landmarks — invalid, and a screen reader
+   announces both. And it re-applied the 16px page inset on top of
+   Home's own, so a post card sat 32px in while .sb-bleed could only
+   pull back 16: measured on Home the same cards that reach 0..0 on
+   Community stopped at 16..16, which is exactly the gap the owner
+   keeps seeing on the screen he opens first.
+
+   Fixed at the cause rather than with a viewport-width trick, because
+   the nesting is the bug. Embedded it is a plain <div> with no inset;
+   the host supplies both. */
+export function CommunityScreen({ children, backTo, backLabel, width = 640, embedded = false }) {
   const { ts, meta } = useI18n();
+  const Tag = embedded ? "div" : "main";
   return (
-    <main
+    <Tag
       className="sb-community"
       style={{
-        minHeight: "100vh",
-        background: C.bg,
+        minHeight: embedded ? undefined : "100vh",
+        background: embedded ? undefined : C.bg,
         color: C.textMain,
-        /* The gutter is back, and the cards escape it instead — see
-           .sb-bleed in lib/i18n.jsx. Text and controls on this screen
-           now sit where every other screen puts them. */
-        padding: "0 16px 64px",
+        /* The page keeps its gutter and the cards escape it — see
+           .sb-bleed in lib/i18n.jsx. Embedded, the host owns both. */
+        padding: embedded ? 0 : "0 16px 64px",
       }}
     >
       <style>{`
@@ -68,7 +82,7 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640 }) {
         )}
         {children}
       </div>
-    </main>
+    </Tag>
   );
 }
 
@@ -109,11 +123,19 @@ export function Card({ children, style, className, ...rest }) {
   );
 }
 
-export function BodyText({ children, muted, style, ...props }) {
+export function BodyText({ children, muted, style, className, ...props }) {
   const { ts } = useI18n();
   return (
     <p
       {...props}
+      /* SELECTABLE, ALWAYS. The shell makes chrome unselectable so a
+         long press on a button stops opening the selection ribbon —
+         and body text is, by definition, not chrome. Marking it here
+         rather than at call sites is the difference between the rule
+         holding everywhere and holding on the one branch I remembered:
+         the first version tagged a single post body inside a ternary,
+         and the class was absent from the rendered page entirely. */
+      className={["sb-selectable", className].filter(Boolean).join(" ")}
       style={{
         fontSize: ts(A11Y.minBodyPx),
         lineHeight: 1.55,

@@ -191,7 +191,7 @@ export default function IconHub() {
               composer, Everyone/Friends filter, Connect, origin
               labels, automatic widening. A thinner second copy is what
               made them two screens in the first place. */}
-          <Feed composer={false} />
+          <Feed composer={false} embedded />
         </div>
       </main>
     </>

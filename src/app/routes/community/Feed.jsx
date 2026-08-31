@@ -78,6 +78,7 @@ import {
   removeTag,
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
+import RichText from "../../lib/richText.jsx";
 
 /* §7 shows where a post came from as a small label — the area if the
    author has one, else the city. It is information, not a filter: there
@@ -653,7 +654,7 @@ function PostCard({
             whiteSpace: "pre-wrap",
           }}
         >
-          {post.body}
+          <RichText text={post.body} />
         </div>
       ) : (
         /* A post body is somebody's words: selectable, so it can be
@@ -669,7 +670,7 @@ function PostCard({
            (Written without the closing-block sequence in it: my first
            repair quoted the braced form literally, which ended this
            comment early and broke the file a second way.) */
-        <BodyText className="sb-selectable" style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
+        <BodyText className="sb-selectable" style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}><RichText text={post.body} /></BodyText>
       ))}
 
       {/* §5 — who is named on this post, and a way off it for the
@@ -882,7 +883,7 @@ function PostCard({
               </div>
               {post.body ? (
                 <BodyText style={{ margin: "6px 0 0", maxHeight: 96, overflow: "hidden" }}>
-                  {post.body}
+                  <RichText text={post.body} />
                 </BodyText>
               ) : null}
             </div>
@@ -951,7 +952,7 @@ function PostCard({
                     {parseStickerRef(cm.body) && (
                       <Sticker id={parseStickerRef(cm.body)} size={96} />
                     )}
-                    <BodyText style={{ margin: "2px 0 0" }}>{cm.body}</BodyText>
+                    <BodyText style={{ margin: "2px 0 0" }}><RichText text={cm.body} /></BodyText>
                     {commentReporting === cm.id && (
                       <ReportForm
                         onCancel={() => setCommentReporting(null)}

@@ -26,6 +26,13 @@
    one screen at a time.
    ════════════════════════════════════════════════ */
 
+/* The press tint needs a colour, and this file had never imported one.
+   Written as a token reference with nothing in scope it would have
+   emitted the text "undefined" into the stylesheet — a declaration the
+   browser discards in silence, so every press would have done nothing
+   while the code read as though it worked. */
+import { APP_COLORS as C } from "../../shared/tokens.js";
+
 export const MOTION = {
   pushIn: 220,
   pushOut: 220,
@@ -37,6 +44,11 @@ export const MOTION = {
   /* The double-tap heart. Long enough to be seen leaving, short
      enough that it never delays the next tap. */
   heartPop: 420,
+  /* Press feedback. The games lane's .sb-pressable is 90ms; ten
+     milliseconds apart is not a difference anyone can see, but it is
+     two numbers for one feeling — flagged to them rather than quietly
+     matched, since theirs predates this. */
+  press: 100,
 };
 
 export const MOTION_CSS = `
@@ -75,6 +87,47 @@ export const MOTION_CSS = `
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
 }
+
+/* ── Press feedback ── */
+
+/* A tap gave nothing until its result arrived, which on anything that
+   waits on the network reads as a dead control — so people tap again,
+   and the second tap is the one that does something unintended.
+
+   TINT FOR THE BROAD RULE, SCALE ONLY WHERE ASKED. A background tint
+   costs no layout: it cannot nudge a neighbour, cannot reflow a row,
+   and cannot make a list jump while a thumb is on it. Scale is nicer
+   and riskier, so it is opt-in via .sb-press rather than sprayed over
+   every button in three folders.
+
+   Scoped to MY surfaces by their existing markers — the post card
+   (.sb-bleed), any sheet ([role=dialog]) and the Messages world — so
+   this does not reach into another lane's chrome and become a second
+   opinion about how their buttons feel.
+
+   SURFACE.pressed already existed for this. I did not invent a value. */
+.sb-bleed button:active,
+.sb-bleed a:active,
+[role="dialog"] button:active,
+[role="dialog"] a:active,
+[data-world="messages"] button:active,
+[data-world="messages"] a:active {
+  /* !important, and it is not laziness. Every surface in this app is
+     styled inline — background: "none" sits in the element's style
+     attribute, and an inline declaration beats any stylesheet rule
+     however specific. Measured: the tint reported rgba(0,0,0,0) while
+     held down, because the rule was correct and simply losing.
+
+     A press tint is a transient state that must win over the resting
+     paint by definition, so this is the one place the hammer is the
+     right tool. The alternative is threading a pressed flag through
+     several dozen call sites in three folders. */
+  background-color: ${C.pressed} !important;
+  transition: background-color ${MOTION.press}ms ease-out;
+}
+
+.sb-press { transition: transform ${MOTION.press}ms ease-out, background-color ${MOTION.press}ms ease-out; }
+.sb-press:active { transform: scale(0.97); }
 
 /* ── The double-tap heart (§3) ── */
 
@@ -131,6 +184,9 @@ export const MOTION_CSS = `
   /* §3 — the pop does not travel or scale. It appears and goes, so
      the confirmation is still there for somebody who cannot take
      movement. Not removed: it is the only feedback the gesture has. */
+  /* The TINT is not motion and stays: it is the only thing telling a
+     person their tap landed. Only the scale is removed. */
+  .sb-press:active { transform: none; }
   .sb-heart-pop {
     animation-name: sb-dim-in !important;
     animation-duration: 1ms !important;

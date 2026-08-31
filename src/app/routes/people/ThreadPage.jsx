@@ -53,6 +53,7 @@ import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
 import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 import Icon from "../../components/Icon.jsx";
 import { registerDraftGuard } from "../messages/draftGuard.js";
+import RichText from "../../lib/richText.jsx";
 
 const POLL_MS = 4000;
 
@@ -743,7 +744,7 @@ export default function ThreadPage() {
                   ) : (
                     <BodyText muted style={{ margin: 0 }}><Icon name="photo" size={18} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />…</BodyText>
                   )}
-                  {m.body && <BodyText style={{ margin: "6px 0 0", maxWidth: "82%" }}>{m.body}</BodyText>}
+                  {m.body && <BodyText style={{ margin: "6px 0 0", maxWidth: "82%" }}><RichText text={m.body} /></BodyText>}
                   {menu}
                 </div>
               );
@@ -764,7 +765,7 @@ export default function ThreadPage() {
                       {t("community.dm.gameOpenBoard")}
                     </Link>
                   </BodyText>
-                  {m.body && <BodyText style={{ margin: "6px 0 0" }}>{m.body}</BodyText>}
+                  {m.body && <BodyText style={{ margin: "6px 0 0" }}><RichText text={m.body} /></BodyText>}
                 </div>
               );
             }
@@ -833,7 +834,7 @@ export default function ThreadPage() {
                       whiteSpace: "pre-wrap",
                     }}
                   >
-                    {m.body}
+                    <RichText text={m.body} />
                   </div>
                 )}
                 {/* Report is a safety affordance: full tap target,

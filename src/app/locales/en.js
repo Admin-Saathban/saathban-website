@@ -2787,6 +2787,7 @@ const en = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   games: {
+    collision: { line: "You already have a table open. Finish or leave it, and {game} is waiting." },
     /* Setting the table. Almost every string here is an aria-label —
        the screen itself is pictures, and these are what a screen
        reader says in their place. */

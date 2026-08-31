@@ -105,7 +105,21 @@ export default function GamesHome() {
        collision is handled where the collision is. */
     const mine = liveSessionOf(await fetchMySessions(profile.id).catch(() => []));
     if (mine) {
-      navigate(mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`);
+      /* AND SAY SO IF IT IS A DIFFERENT GAME. Taking somebody to the
+         table they already have is the honest answer to "start a
+         game" — but only if the table says why they are there.
+         Measured on the deployed build: Carrom, Ludo and Snakes all
+         returned the identical session URL, so tapping Carrom
+         silently opened a Ludo board and two of the three games
+         looked broken. The name travels in history state and the
+         board says one line. */
+      const wanted = mine.game_key === key
+        ? null
+        : (games.find((g) => g.key === key)?.name || null);
+      navigate(
+        mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`,
+        wanted ? { state: { sbWantedName: wanted } } : undefined
+      );
       return;
     }
 

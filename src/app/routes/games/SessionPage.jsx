@@ -64,6 +64,7 @@ import { useGameFeel, GameMotionStyles, Confetti } from "../../lib/gameFeel.jsx"
 import { SoundButton, SoundPanel } from "./SoundControls.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
+import CollisionNote from "./CollisionNote.jsx";
 
 const POLL_MS = 2500;
 
@@ -817,6 +818,7 @@ function WaitingRoom({
 
   return (
     <>
+      <CollisionNote />
       {session.game_key === "ludo" && (
         <div
           aria-hidden="true"

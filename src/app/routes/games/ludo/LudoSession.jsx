@@ -40,6 +40,7 @@ import LudoCelebration from "./LudoCelebration.jsx";
 import { screenCorner } from "./SeatPlates.jsx";
 import { leaveSession } from "../../../lib/games.js";
 import { sendChat, fetchChat } from "./ludoRails.js";
+import CollisionNote from "../CollisionNote.jsx";
 
 const POLL_MS = 2500;
 
@@ -899,6 +900,8 @@ export default function LudoSession() {
           flex: "0 0 auto",
         }}
       >
+        {/* §8.2 — one line, on the board, never a screen before it. */}
+        <CollisionNote />
         {/* ONE WAY OUT (§2). The back chevron that used to sit here
             is gone: it left a live game instantly and without asking,
             which made the control that abandons your table the one

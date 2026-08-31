@@ -884,6 +884,17 @@ export default function LudoSession() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
+          /* THE ROW GETS ITS OWN INSET, and the board does not.
+
+             GAME.edge is 6px because §2 wants the board edge to edge,
+             which is right for a board and wrong for a 44px round
+             control: at 6px from the screen edge, on a dark ground, a
+             white circle reads as CLIPPED. Nothing was actually
+             overflowing — measured on the deployed table, no element
+             crossed the viewport at all — it simply had no room to
+             sit in, which is what the owner has been seeing on every
+             game screen. */
+          paddingInline: 8,
           margin: playing ? "0 0 4px" : "8px 0 10px",
           flex: "0 0 auto",
         }}

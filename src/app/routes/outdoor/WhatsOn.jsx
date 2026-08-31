@@ -333,7 +333,11 @@ export default function WhatsOn() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <Icon name={TYPE_ICONS[c.place.place_type] || PLACE_FALLBACK_ICON} size={26} />
+                <Icon
+                  name={TYPE_ICONS[c.place.place_type] || PLACE_FALLBACK_ICON}
+                  size={26}
+                  style={{ color: C.green }}
+                />
                 <span style={{ flex: "1 1 160px", minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
                     {t("whatson.isAt", { name: names[c.profile_id] || t("whatson.someone"), place: c.place.name })}
@@ -368,6 +372,7 @@ export default function WhatsOn() {
                   <Icon
                     name={h.kind === "event" ? EVENT_ICON : TYPE_ICONS[h.place?.place_type] || PLACE_FALLBACK_ICON}
                     size={24}
+                    style={{ color: C.green }}
                   />
                 </span>
                 <span style={{ flex: "1 1 170px", minWidth: 0 }}>

@@ -351,7 +351,7 @@ export default function PlaceView() {
             <Icon
               name={TYPE_ICONS[place.place_type] || PLACE_FALLBACK_ICON}
               size={30}
-              style={{ display: "inline-block", verticalAlign: "-4px", marginInlineEnd: 8 }}
+              style={{ display: "inline-block", verticalAlign: "-4px", marginInlineEnd: 8, color: C.green }}
             />
             {place.name}
           </h1>

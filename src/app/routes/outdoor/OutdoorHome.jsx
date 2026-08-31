@@ -294,21 +294,33 @@ export default function OutdoorHome() {
                     <Link
                       key={p.id}
                       to={p.id}
+                      className="sb-bleed"
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 14,
                         minHeight: A11Y.minTapTargetPx + 20,
                         background: C.white,
-                        border: `1px solid ${C.warmGray}`,
-                        borderRadius: 16,
-                        padding: "12px 18px",
-                        marginBottom: 10,
+                        /* Plain paper that reaches both edges, like
+                           every other surface. No border: on grey,
+                           white is already the edge. */
+                        padding: "14px 18px",
+                        marginBottom: 2,
                         textDecoration: "none",
+                        /* An anchor with no colour of its own inherits
+                           the browser's blue, and Icon draws with
+                           currentColor — which is how the place marks
+                           arrived blue the moment they stopped being
+                           emoji. */
+                        color: C.textMain,
                       }}
                     >
                       <span aria-hidden="true" style={{ fontSize: ts(26) }}>
-                        <Icon name={TYPE_ICONS[p.place_type] || PLACE_FALLBACK_ICON} size={26} />
+                        <Icon
+                          name={TYPE_ICONS[p.place_type] || PLACE_FALLBACK_ICON}
+                          size={26}
+                          style={{ color: C.green }}
+                        />
                       </span>
                       <span style={{ flex: 1 }}>
                         <span

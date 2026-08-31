@@ -7,7 +7,7 @@
 import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
-import Icon from "./Icon.jsx";
+import { IconChip } from "./Icon.jsx";
 import { openFullScreen } from "./motion.jsx";
 
 export default function SearchButton() {
@@ -31,7 +31,7 @@ export default function SearchButton() {
         cursor: "pointer",
       }}
     >
-      <Icon name="search" size={22} />
+      <IconChip name="search" size={22} onDark />
     </button>
   );
 }

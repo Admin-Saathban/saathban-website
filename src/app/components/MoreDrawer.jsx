@@ -67,8 +67,18 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
     openFullScreen(navigate, to, "end");
   };
 
+  /* FROM THE TOP, because More lives in the header's top-right corner
+     now rather than in the bar. MOTION §4 says a panel grows from the
+     button that opened it; the button moved, so the origin moves with it.
+     Drawer already mirrors this for RTL. Nothing else about §4 changes —
+     same timing, same dim, same first-tap-is-consumed.
+
+     (Plain comment: this sits in the return's expression position,
+     where a brace opens an object literal rather than a child slot.
+     Fourth time tonight across two lanes — it is not a typo, it is that
+     the correct form changes with position.) */
   return (
-    <Drawer id={MORE_DRAWER_ID} open={open} onClose={onClose} from="bottom" labelledBy="sb-more-title">
+    <Drawer id={MORE_DRAWER_ID} open={open} onClose={onClose} from="top" labelledBy="sb-more-title">
       <h2
         id="sb-more-title"
         style={{

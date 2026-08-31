@@ -32,8 +32,30 @@
 /* Measured from the file itself. */
 const INK = { x: 166, y: 692, w: 1677, h: 473, canvas: 2000 };
 
-export default function Logo({ height = 28, alt = "Saathban", style }) {
+/* THE CREAM PLATE CANNOT SIT ON NEAR-BLACK, and the file gives us no
+   choice about the plate: as the note above records, /logo-extended.png
+   is OPAQUE — dark ink baked onto a solid cream square, with no alpha
+   to knock out. Dropping it on the new #1B1E22 header would put a cream
+   rectangle in the corner of every screen.
+
+   `variant="light"` turns the wordmark white without a second asset:
+
+     filter: invert(1) grayscale(1)   ink becomes light, cream becomes
+                                      near-black; grayscale kills the
+                                      magenta that inverting a dark
+                                      green otherwise produces
+     mix-blend-mode: screen           screen against a dark backdrop
+                                      leaves near-black untouched and
+                                      lets the light ink through, so the
+                                      plate disappears
+
+   It is a treatment, not a hack around a missing file, and it is
+   reversible: if a tightly-cropped transparent asset ever lands, delete
+   the filter and the blend and set INK to the new bounds — every call
+   site follows, exactly as the original note promised. */
+export default function Logo({ height = 28, alt = "Saathban", variant = "dark", style }) {
   const s = height / INK.h;
+  const light = variant === "light";
   return (
     <span
       role="img"
@@ -47,6 +69,10 @@ export default function Logo({ height = 28, alt = "Saathban", style }) {
         backgroundSize: `${Math.round(INK.canvas * s)}px ${Math.round(INK.canvas * s)}px`,
         backgroundPosition: `-${Math.round(INK.x * s)}px -${Math.round(INK.y * s)}px`,
         backgroundRepeat: "no-repeat",
+        ...(light
+          ? { filter: "invert(1) grayscale(1) brightness(1.1) contrast(1.15)",
+              mixBlendMode: "screen" }
+          : null),
         ...style,
       }}
     />

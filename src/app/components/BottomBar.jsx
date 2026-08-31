@@ -27,7 +27,7 @@ import { NavLink } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { barItems } from "./navItems.js";
-import Icon from "./Icon.jsx";
+import { IconChip } from "./Icon.jsx";
 
 /* NASTALIQ NEEDS THE ROOM AND ENGLISH DOES NOT MIND HAVING IT.
 
@@ -40,7 +40,7 @@ import Icon from "./Icon.jsx";
    asserting the key was present would have called this shipped. */
 export const BAR_HEIGHT = 92;
 
-export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpenDrawer, shuttered = false }) {
+export default function BottomBar({ role, buddyActive = true, shuttered = false }) {
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
@@ -61,23 +61,40 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
     justifyContent: "center",
     gap: 3,
     paddingBlock: "8px 6px",
-    borderRadius: 16,
     border: "none",
     textDecoration: "none",
     fontFamily: "inherit",
     cursor: "pointer",
-    /* THE FILLED PILL. */
-    background: isActive ? C.green : "transparent",
-    color: isActive ? C.cream : C.textMain,
+    /* THE PILL IS GONE; THE CHIP CARRIES THE STATE NOW.
+
+       A filled pill behind icon AND label made the active tab a block
+       of solid colour about a third of the bar wide, which on dark
+       chrome would read as a hole. The chip is a smaller, rounder
+       target for the eye: it fills with the accent, the icon goes
+       white, and the label brightens under it. */
+    background: "transparent",
+    color: isActive ? C.navActive : C.navInk,
     fontWeight: isActive ? 800 : 600,
   });
 
-  const Inside = ({ item }) => (
+  const Inside = ({ item, active = false }) => (
     <>
-      {/* A drawn glyph, not an emoji. aria-hidden by default — the
-          label below says it, and a reader announcing both says it
-          twice. */}
-      <Icon name={item.icon} size={22} />
+      {/* A drawn glyph in a chip, not an emoji. aria-hidden by
+          default — the label below says it, and a reader announcing
+          both says it twice.
+
+          `tone` comes from the item: Messages is blue wherever it
+          appears, so the thing people hunt for looks the same in the
+          bar as it does anywhere else. When the tab is ACTIVE the
+          accent wins over the tone — where-you-are outranks
+          what-this-is. */}
+      <IconChip
+        name={item.icon}
+        size={22}
+        tone={item.tone || "ink"}
+        active={active}
+        onDark
+      />
       <span
         style={{
           /* THE BAR LABEL STOPS GROWING AT 1.2x, AND ONLY HERE.
@@ -149,68 +166,50 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
         transition: "transform 180ms ease-out",
       }}
     >
-      {items.map((item) =>
-        /* MORE IS A BUTTON, NOT A LINK (§6). It opens the drawer over
-           where you already are. Going to a whole screen to choose a
-           screen is exactly what §6 deletes — and a NavLink would also
-           mark itself active and steal the pill from the tab you are
-           actually on, which is a small lie about where you are.
+      {/* SIZED TO THE WORD, NOT TO AN EQUAL SHARE. Five equal shares
+          of 390px is 74px each, and "Community" needed 85 — it was
+          ellipsed to "Comm…" while Home used 43 of its 74. Content
+          sizing fits all five with room over, and shrinks rather than
+          clips if a language needs more than there is.
 
-           SIZED TO THE WORD, NOT TO AN EQUAL SHARE. Five equal shares
-           of 390px is 74px each, and "Community" needed 85 — it was
-           ellipsed to "Comm…" while Home used 43 of its 74. Content
-           sizing fits all five with room over, and shrinks rather than
-           clips if a language needs more than there is. */
-        item.drawer ? (
-          <button
-            key={item.to}
-            type="button"
-            onClick={onOpenDrawer}
-            aria-haspopup="dialog"
-            aria-expanded={Boolean(drawerOpen)}
-            /* NOT itemStyle(drawerOpen) — THE PILL STAYS WHERE YOU ARE.
+          NO MORE BUTTON AMONG THE TABS. More has moved to the
+          header's top-right, so every item here is a DESTINATION and
+          the branch that drew a menu button among four links is gone
+          with it. The bar no longer has to explain why one of its
+          five children behaves unlike the other four. */}
+      {items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.end}
+          onClick={(ev) => {
+            /* THE TAB YOU ARE ALREADY ON SCROLLS TO THE TOP.
 
-               §3 gives the filled pill to the active item, singular.
-               Lighting More while its drawer is open put two filled
-               pills in the bar at once, Home and More, which says you
-               are in two places. The drawer is an 80%-wide card over a
-               dimmed screen — nobody needs a pill to know it is open,
-               and aria-expanded above says so for anyone who cannot
-               see it. The pill is for where you will be when the
-               drawer closes, which is where you already are. */
-            style={itemStyle(false)}
-          >
-            <Inside item={item} />
-          </button>
-        ) : (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={(ev) => {
-              /* THE TAB YOU ARE ALREADY ON SCROLLS TO THE TOP.
+               Every phone app this audience already uses does this,
+               and without it the Home tab is the one control on the
+               screen that does nothing when pressed — which reads as
+               broken rather than as already-here. It is also the way
+               back to the composer, since MOTION §5 keeps that at the
+               top of the feed rather than floating over it.
 
-                 Every phone app this audience already uses does this,
-                 and without it the Home tab is the one control on the
-                 screen that does nothing when pressed — which reads as
-                 broken rather than as already-here. It is also the way
-                 back to the composer, since MOTION §5 keeps that at the
-                 top of the feed rather than floating over it.
-
-                 preventDefault so the router does not also re-navigate
-                 and remount the screen underneath the scroll. */
-              if (window.location.pathname === item.to) {
-                ev.preventDefault();
-                const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-                window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
-              }
-            }}
-            style={({ isActive }) => itemStyle(isActive)}
-          >
-            <Inside item={item} />
-          </NavLink>
-        )
-      )}
+               preventDefault so the router does not also re-navigate
+               and remount the screen underneath the scroll. */
+            if (window.location.pathname === item.to) {
+              ev.preventDefault();
+              const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+              window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+            }
+          }}
+          style={({ isActive }) => itemStyle(isActive)}
+        >
+          {/* Children as a FUNCTION, not an element: the chip has to
+              know whether this is the tab you are on, and `isActive`
+              exists only inside NavLink's render prop. Passing the
+              item alone gave every chip the resting treatment, so the
+              active tab looked like the other four. */}
+          {({ isActive }) => <Inside item={item} active={isActive} />}
+        </NavLink>
+      ))}
     </nav>
   );
 }

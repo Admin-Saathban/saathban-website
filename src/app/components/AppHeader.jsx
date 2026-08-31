@@ -24,7 +24,8 @@ import { roleHomePath, useSession } from "../lib/session.jsx";
 import NotificationsBell from "../routes/notifications/NotificationsBell.jsx";
 import Logo from "./Logo.jsx";
 import HeaderAvatar from "./HeaderAvatar.jsx";
-import MessagesButton from "./MessagesButton.jsx";
+import { IconChip } from "./Icon.jsx";
+import { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
 import SearchButton from "./SearchButton.jsx";
 import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDrawer.jsx";
 import { useDrawer } from "./Drawer.jsx";
@@ -39,6 +40,7 @@ export default function AppHeader() {
      because the bell is here and the shell is absent on several
      screens that still draw a header. A bell that opens nothing on
      the admin shell would be a new dead control. */
+  const { open: moreOpen, openDrawer: openMore } = useDrawer(MORE_DRAWER_ID);
   const { open: notifOpen, closeDrawer: closeNotif } = useDrawer(NOTIFICATIONS_DRAWER_ID);
   /* Both bars move together, so the frame behaves as one thing (§5). */
   const shuttered = useShutter() && !notifOpen;
@@ -128,13 +130,46 @@ export default function AppHeader() {
             minWidth: 0,
           }}
         >
-          <Logo height={30} />
+          <Logo height={30} variant="light" />
         </Link>
 
+        {/* RULED ORDER: avatar · logo · search · bell · more.
+
+            MESSAGES IS NOT HERE ANY MORE. It was a header icon that
+            opened a world, which is a lot of app hanging off a glyph
+            in the corner — it is a bar tab now, where a destination
+            belongs. What is left in this corner is the two things
+            that act ON the screen you are already looking at (find
+            something, see what happened) plus the menu. */}
         <nav style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
           <SearchButton />
           <NotificationsBell />
-          <MessagesButton />
+          {/* MORE, TOP-RIGHT (§6). The drawer grows from THIS corner
+              now — the button you pressed is where the panel comes
+              from, which is the whole of MOTION §4 and the reason it
+              used to grow from the bottom. Nothing else about §4
+              changes: same timing, same dim, same first-tap rule. */}
+          <button
+            type="button"
+            onClick={openMore}
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(moreOpen)}
+            aria-label={t("hub.more")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: A11Y.minTapTargetPx,
+              minWidth: A11Y.minTapTargetPx,
+              border: "none",
+              background: "none",
+              padding: 0,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <IconChip name="more" size={22} onDark />
+          </button>
         </nav>
       </div>
     </header>

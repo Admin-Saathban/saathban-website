@@ -32,6 +32,7 @@
       the control.
    ════════════════════════════════════════════════ */
 
+import { CHIP, APP_COLORS } from "../../shared/tokens.js";
 import {
   Apple, ArrowLeft, ArrowRight, Bed, Bell, Bot, Bookmark, Cake, Calendar,
   CalendarDays, Camera, Candy, Check, ChevronDown, ChevronLeft, ChevronRight,
@@ -130,6 +131,79 @@ export default function Icon({
       style={{ flexShrink: 0, display: "block", ...style }}
       {...rest}
     />
+  );
+}
+
+/* ─── THE CHIP ("alive", I2) ───
+
+   One component, because the picker chose a BEHAVIOUR and a behaviour
+   implemented five times is five behaviours. Every header and bar icon
+   goes through this; a lane writing its own rounded box around an Icon
+   is how we got five creams and five greens.
+
+   Three states and two landmarks:
+
+     rest        a whisper of a chip — a tint on light, a white film on
+                 the dark chrome
+     active      the chip FILLS with the accent and the icon goes white,
+                 so where-you-are is a shape you find without reading it
+     bronze/blue the bell and Messages keep a colour of their own,
+                 because they are landmarks rather than states and the
+                 two things people hunt for are easier to hunt for when
+                 they are not the same ink as everything else
+
+   `onDark` rather than sniffing the background: a component cannot see
+   what is painted behind it, and guessing is how a white icon ends up
+   on a white bar. The caller knows. */
+export function IconChip({
+  name,
+  size = 22,
+  tone = "ink",        // "ink" | "bronze" | "blue"
+  active = false,
+  onDark = false,
+  label,
+  badge,
+  style,
+  ...rest
+}) {
+  const bed =
+    active ? APP_COLORS.accent
+    : tone === "bronze" ? CHIP.bronzeBed
+    : tone === "blue" ? CHIP.blueBed
+    : onDark ? CHIP.restDark
+    : CHIP.restLight;
+
+  const ink =
+    active ? CHIP.activeInk
+    : tone === "bronze" ? CHIP.bronze
+    : tone === "blue" ? CHIP.blue
+    : onDark ? APP_COLORS.navInk
+    : APP_COLORS.textMain;
+
+  return (
+    <span
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size + 16,
+        height: size + 16,
+        borderRadius: CHIP.radius,
+        background: bed,
+        color: ink,
+        /* The chip is the thing that moves, not the icon inside it —
+           one transition, so a tab lighting up and a bell being pressed
+           feel like the same app. */
+        transition: "background 160ms ease-out, color 160ms ease-out",
+        flexShrink: 0,
+        ...style,
+      }}
+      {...rest}
+    >
+      <Icon name={name} size={size} label={label} />
+      {badge}
+    </span>
   );
 }
 

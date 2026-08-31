@@ -40,27 +40,38 @@ export function barItems(role, { buddyActive = true } = {}) {
    whole other screen to pick a screen is the thing §6 removes. */
   const more = { to: "/app/more", key: "hub.more", icon: "more", drawer: "more" };
 
+  /* THE RULED ORDER: Games · Out & about · HOME · Groups · Messages.
+
+     Home is the CENTRE, not the first slot, and that is the whole
+     point of the change. A thumb on a phone rests nearest the middle
+     of the bar, so the tab you return to most should be the one you
+     reach without moving your hand. First-slot Home is a desktop
+     habit — it comes from reading order, which is not how anyone holds
+     a phone.
+
+     Messages is a tab now. It was reachable only from inside Community
+     and then only from a header icon, and people did not find it.
+
+     MORE IS NOT IN THIS LIST ANY MORE — it has moved to the header's
+     top-right, so the bar is five DESTINATIONS rather than four and a
+     menu. `more` is still exported in the object below for the More
+     screen and for deep links; it is simply not bar furniture. */
+  const messages = { to: "/app/community/messages", key: "hub.messages", icon: "messages", tone: "blue" };
+
   if (role === "saath_icon") {
-    /* §1 merged Home and Community into one screen, so a Community
-       tab would now be a second door to the tab you are already on.
-       Messages takes the slot: it was reachable only from inside
-       Community, and the user never found it. */
     return [
-      home,
       games,
-      { to: "/app/groups", key: "hub.groupsShort", icon: "groups" },
       { to: "/app/outdoor", key: "hub.outdoor", icon: "outdoor" },
-      more,
+      home,
+      { to: "/app/groups", key: "hub.groupsShort", icon: "groups" },
+      messages,
     ];
   }
 
+  /* Fewer tabs, same rule: Home keeps the centre and the ruled
+     left-to-right order holds for whatever a role actually has. */
   if (role === "family_member") {
-    return [
-      home,
-      { to: "/app/community/messages", key: "hub.messages", icon: "messages" },
-      games,
-      more,
-    ];
+    return [games, home, messages];
   }
 
   if (role === "saath_buddy") {
@@ -68,9 +79,13 @@ export function barItems(role, { buddyActive = true } = {}) {
        Messages and Games are doors onto nothing for them. Absent
        rather than present-and-dead: the vetting screen is their whole
        app until they are through it. */
-    return buddyActive
-      ? [home, { to: "/app/community/messages", key: "hub.messages", icon: "messages" }, games, more]
-      : [home, more];
+    /* A Buddy before `active` now has Home alone, which is one item,
+       and a one-item bar is not navigation — the guard below drops it.
+       That is correct and is not a regression: More used to be the
+       second item and More is in the header now, so nothing has been
+       taken away. The vetting screen is their whole app until they are
+       through it. */
+    return buddyActive ? [games, home, messages] : [home];
   }
 
   /* Admins have a worklist, not a daily life in the app (§18). */

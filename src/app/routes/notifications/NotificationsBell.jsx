@@ -17,7 +17,7 @@ import { useDrawer } from "../../components/Drawer.jsx";
 import { NOTIFICATIONS_DRAWER_ID } from "../../components/NotificationsDrawer.jsx";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import Icon from "../../components/Icon.jsx";
+import { IconChip } from "../../components/Icon.jsx";
 import { STRINGS } from "./strings.js";
 import { fetchUnreadCount, NOTIFICATIONS_READ_EVENT } from "./data.js";
 
@@ -85,7 +85,13 @@ export default function NotificationsBell() {
         fontSize: ts(22),
       }}
     >
-      <Icon name="bell" size={22} />
+      {/* BRONZE, not ink. The bell and Messages are the two things
+          people hunt for in the chrome, and a landmark is easier to
+          find when it is not the same colour as everything beside
+          it. Bronze measures 4.28:1 on the dark chrome — non-text
+          needs 3:1 (WCAG 1.4.11) — and it carries a count badge and
+          an accessible name besides, so it is never colour alone. */}
+      <IconChip name="bell" size={22} tone="bronze" onDark />
       {count > 0 && (
         <span
           aria-hidden="true"

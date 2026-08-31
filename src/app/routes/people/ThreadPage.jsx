@@ -870,7 +870,23 @@ export default function ThreadPage() {
             <div
               style={{
                 maxWidth: "78%",
-                background: C.sage,
+                /* THE MESSAGE IN FLIGHT, and it was unreadable: C.textMain
+                   on C.sage measures 1.90:1 against an AA floor of 4.5.
+                   Not a near miss — under half.
+
+                   It survived because the NAME said sage and sage used to
+                   be a pale green; when it was collapsed onto the accent
+                   this became near-black ink on dark green, and nobody
+                   edited the line. The navigation lane found the identical
+                   failure in a status chip and went looking because of it.
+
+                   It is the SENDING bubble, so it is on screen for a
+                   second — the second in which a person checks that what
+                   they typed came out right. C.mine with ink is 13.56:1
+                   and matches the settled bubble, which is correct: it is
+                   the same message a moment earlier. The opacity still
+                   says "on its way". */
+                background: C.mine,
                 opacity: 0.72,
                 color: C.textMain,
                 borderRadius: 18,

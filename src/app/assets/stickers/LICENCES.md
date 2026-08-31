@@ -67,3 +67,53 @@ So the position is:
    the app before importing anything.
 5. Save the licence text into this folder next to the assets.
 6. Add a row above, with the date and the name of the person who checked.
+
+---
+
+## Sourcing review — 31 August 2026
+
+§8 says to source a pack rather than commission one. This is the review,
+including the packs that were REJECTED, because a record that only lists
+what was chosen cannot be checked by the next person.
+
+**The npm `license` field is not the artwork's licence.** For emoji packs
+it describes the wrapper code, and it is wrong often enough to be a trap:
+
+| package | npm says | the artwork actually is | verdict |
+|---|---|---|---|
+| `emoji-datasource` | MIT | Apple / Google / Twitter artwork, **not redistributable** | **reject** |
+| `twemoji` | MIT | CC-BY 4.0 (`LICENSE-GRAPHICS`) | usable with attribution |
+| `openmoji` | CC-BY-SA-4.0 | CC BY-SA 4.0 — **share-alike** | avoid |
+| `microsoft/fluentui-emoji` | MIT | MIT, confirmed in the repo's own `LICENSE` | **compliant** |
+
+Each verdict above was read from the project's own licence file, not from
+package metadata. `emoji-datasource` is the reason: it declares MIT and
+ships artwork nobody may redistribute, which is precisely the
+free-to-download-is-not-free-to-ship failure this file exists to prevent.
+
+### Recommended: Microsoft Fluent Emoji
+
+MIT, verified at `github.com/microsoft/fluentui-emoji/LICENSE`. Permits
+redistribution inside an application; requires the MIT notice to ship
+with it.
+
+**It is MIT, not CC0.** §8 asks for "CC0 or a purchased commercial
+licence". MIT meets the stated *rule* — it permits redistribution inside
+an application — but it is neither of the two named examples, and it
+carries a notice obligation CC0 does not. That difference is the owner's
+to accept, so it is written down rather than quietly treated as
+equivalent.
+
+### Why the art was NOT swapped tonight
+
+`stickerRef()` writes `:sticker/<id>:` into the body of a comment or a
+message, so **every sticker anyone has ever sent is stored as its id**.
+Replacing the set is therefore not an art change; it is a data change.
+It is safe only if the id set is preserved exactly, which means mapping
+26 authored concepts onto a third-party pack one by one and accepting
+its nearest equivalent for each.
+
+That is a decision about how the app looks and what those 26 things
+mean, not a licensing question, and the current set is already
+compliant — project-owned, no external rights-holder. So the sourcing
+question is answered and recorded here; the swap is left for the owner.

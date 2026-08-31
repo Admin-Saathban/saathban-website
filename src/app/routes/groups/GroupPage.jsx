@@ -401,7 +401,7 @@ export default function GroupPage() {
         <Card>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14, maxHeight: 380, overflowY: "auto" }}>
             {messages.length === 0 ? <BodyText muted>{s.chatEmpty}</BodyText> : messages.map((m) => (
-              <div key={m.id} style={{ background: m.sender_id === myId ? "#e8f0e6" : C.cream, borderRadius: 14, padding: "10px 14px", alignSelf: m.sender_id === myId ? "flex-end" : "flex-start", maxWidth: "85%" }}>
+              <div key={m.id} style={{ background: m.sender_id === myId ? C.mine : C.cream, borderRadius: 14, padding: "10px 14px", alignSelf: m.sender_id === myId ? "flex-end" : "flex-start", maxWidth: "85%" }}>
                 <div style={{ fontSize: ts(15), color: C.textMuted, fontWeight: 600 }}>{m.sender_id === myId ? s.you : m.senderName} · {clock(m.created_at)}</div>
                 {parseStickerRef(m.body) ? (
                   <Sticker id={parseStickerRef(m.body)} size={96} />

@@ -188,8 +188,13 @@ export default function MessagesWorld() {
           alignItems: "center",
           gap: 10,
           padding: "10px 12px",
-          borderBottom: `1px solid ${C.warmGray}`,
-          background: C.white,
+          /* C.nav + C.navEdge — the chrome tones the rest of the app
+             uses. This header and the bar below were the last white
+             chrome left, so on a phone the Messages world read as a
+             slightly different application from the screen you reached
+             it from. */
+          borderBottom: `1px solid ${C.navEdge}`,
+          background: C.nav,
           flexShrink: 0,
         }}
       >
@@ -292,8 +297,8 @@ export default function MessagesWorld() {
         aria-label={t("msg.title")}
         style={{
           display: "flex",
-          borderTop: `1px solid ${C.warmGray}`,
-          background: C.white,
+          borderTop: `1px solid ${C.navEdge}`,
+          background: C.nav,
           flexShrink: 0,
           paddingBottom: "env(safe-area-inset-bottom)",
         }}

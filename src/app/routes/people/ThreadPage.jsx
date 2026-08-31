@@ -769,7 +769,7 @@ export default function ThreadPage() {
                   <div
                     role="alert"
                     style={{
-                      background: "#f3e9df",
+                      background: C.tint,
                       border: `2px solid ${C.brown}`,
                       borderRadius: 14,
                       padding: "10px 14px",

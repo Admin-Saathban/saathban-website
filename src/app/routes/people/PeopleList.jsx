@@ -31,7 +31,7 @@ import Icon from "../../components/Icon.jsx";
    another lane. Tint carries the same three tones with no border. */
 const CHIP_TONE = {
   green: { bg: "#EEF3E8", fg: C.green },
-  brown: { bg: "#F5EEE6", fg: C.brown },
+  brown: { bg: C.tint, fg: C.brown },
   plain: { bg: "#00000008", fg: C.textMuted },
 };
 

@@ -50,15 +50,22 @@ import { GhostBtn, BodyText } from "./ui.jsx";
 import { openQuickTable } from "../games/quickTable.js";
 import { inviteToSeat } from "../../lib/games.js";
 
+/* `waits` is the one sub-line reason §9.2 asks for that can actually be
+   computed. Carrom has no computer player, so its table waits for her
+   instead of starting — and three tiles that look identical, one of
+   which opens a waiting room, is a surprise nobody asked for. The games
+   lane flagged the same gap on their Games home; this is the same defect
+   in my sheet, so it is fixed here rather than left as theirs. */
 const GAMES = [
   { key: "ludo", glyph: "🎲" },
-  { key: "carrom", glyph: "🎯" },
+  { key: "carrom", glyph: "🎯", waits: true },
   { key: "snakes", glyph: "🪜" },
 ];
 
 export default function PlaySomethingSheet({ person, onClose }) {
   const { t, ts } = useI18n();
   const navigate = useNavigate();
+  const first = (person?.full_name || "").trim().split(" ")[0] || "";
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
@@ -148,7 +155,14 @@ export default function PlaySomethingSheet({ person, onClose }) {
             }}
           >
             <span aria-hidden="true" style={{ fontSize: ts(26) }}>{g.glyph}</span>
-            {t(`people.thread.game_${g.key}`)}
+            <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span>{t(`people.thread.game_${g.key}`)}</span>
+              {g.waits ? (
+                <span style={{ fontSize: ts(15), fontWeight: 500, color: C.textMuted }}>
+                  {t("community.feed.reconnect.playWaits", { name: first })}
+                </span>
+              ) : null}
+            </span>
           </button>
         ))}
 

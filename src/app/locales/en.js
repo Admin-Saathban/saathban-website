@@ -1066,6 +1066,12 @@ const en = {
          the spec forbids saying how long it has been, and a string is
          where that rule would most easily be broken by a later edit. */
       reconnect: {
+        /* POSTS_SPEC §9.2 gives each game a sub-line "where one exists".
+           The reason it wants — "you played this in May" — is not
+           computable. This one is, and it is the difference that would
+           otherwise be a surprise: carrom has no computer player, so the
+           table waits rather than starts. */
+        playWaits: "This one waits for {name} to join",
         around: "{name} is around today",
         hello: "Say hello",
         play: "Play something",

@@ -98,7 +98,7 @@ export default function Moments() {
 
       {/* ── Saying where you are ── */}
       {mine ? (
-        <Card style={{ borderColor: C.green, borderWidth: 2, borderStyle: "solid" }}>
+        <Card emphasis>
           <BodyText style={{ margin: 0, fontWeight: 700 }}>{mine.label}</BodyText>
           <BodyText muted style={{ margin: "4px 0 12px" }}>
             {t("outdoor.moments.untilAbout", { time: timeOf(mine.expires_at, lang) })}

@@ -80,7 +80,7 @@ export function OutdoorScreen({ children, backTo, backLabel, width = 640 }) {
 /* Extra props (className, ref, data-*) pass through so the feedback
    layer can mark a freshly created card; a component that swallows
    them makes the highlight silently do nothing. */
-export function Card({ children, style, className, ...rest }) {
+export function Card({ children, style, className, emphasis, ...rest }) {
   return (
     <section {...rest}
       /* sb-bleed: a surface reaches both edges below a tablet. The
@@ -92,9 +92,11 @@ export function Card({ children, style, className, ...rest }) {
            edge — the border existed to separate white from cream and
            has had nothing to do since the ground changed. And an
            outline now means TAPPABLE, so an outlined card said "press
-           me" about a container that does nothing. */
+           me" about a container that does nothing. Emphasis is a
+           tint, for the same reason. */
         padding: 20,
         marginBottom: 12,
+        ...(emphasis ? { background: "#EEF3E8" } : null),
 
         ...style,
       }}

@@ -23,6 +23,7 @@ import {
   amIMember, joinPublicGroup, requestToJoinGroup, fetchMyJoinRequest, dismissGroupSetup,
 } from "./groupsStore.js";
 import GroupCover from "./GroupCover.jsx";
+import Icon from "../../components/Icon.jsx";
 
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
@@ -246,7 +247,7 @@ export default function GroupPage() {
           actually missing, and dismissing it is final — a person who
           has said no to this should not be asked again. */}
       {canManage && !group.setup_dismissed_at && (!group.cover || !group.description) && (
-        <Card style={{ borderColor: C.green, borderWidth: 2, borderStyle: "solid" }}>
+        <Card emphasis>
           <BodyText style={{ marginTop: 0, fontWeight: 700 }}>{t("groups.setup.title")}</BodyText>
           <BodyText muted style={{ marginTop: 4 }}>
             {!group.cover && !group.description
@@ -348,7 +349,7 @@ export default function GroupPage() {
           ) : posts.map((p) => (
             <Card
               key={p.id}
-              style={p.pinned_at ? { borderColor: C.green, borderWidth: 2, borderStyle: "solid" } : undefined}
+              emphasis={!!p.pinned_at}
             >
               {/* §8: one pinned post per group, and the seeded welcome
                   is pinned by default. A group whose top post says who
@@ -356,7 +357,7 @@ export default function GroupPage() {
                   that survives and one that dies in a week. */}
               {p.pinned_at && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <span aria-hidden="true">📌</span>
+                  <Icon name="pinned" size={18} />
                   <span style={{ fontSize: ts(15), fontWeight: 700, color: C.green }}>
                     {t("groups.interior.pinned")}
                   </span>

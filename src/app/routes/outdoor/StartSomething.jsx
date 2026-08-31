@@ -208,7 +208,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
   };
 
   return (
-    <Card style={{ marginBottom: 18, borderColor: C.green, borderWidth: 2, borderStyle: "solid" }}>
+    <Card emphasis style={{ marginBottom: 18 }}>
       <h2
         style={{
           fontFamily: meta.fonts.heading,

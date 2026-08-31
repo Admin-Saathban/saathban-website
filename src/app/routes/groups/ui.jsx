@@ -35,8 +35,26 @@ export function H1({ children }) {
 /* Extra props (className, ref, data-*) pass through so the feedback
    layer can mark a freshly created card; a component that swallows
    them makes the highlight silently do nothing. */
-export function Card({ children, style, ...rest }) {
-  return <section {...rest} style={{ background: C.white, border: `1px solid ${C.warmGray}`, borderRadius: 18, padding: 20, marginBottom: 16, ...style }}>{children}</section>;
+/* Plain white paper on the grey ground, reaching both edges below a
+   tablet — the same card the community feed and Out & about now use.
+   The border went because on grey, white IS the edge; it only ever
+   existed to separate white from cream. And an outline now means
+   TAPPABLE, so an outlined card claimed a press it does not answer.
+
+   Left inset by the caller passing a style, not by this component:
+   the group page's own cards were the only ones on my screens still
+   arriving bordered, which showed up immediately next to an outdoor
+   card once both were on screen in the same pass. */
+export function Card({ children, style, className, emphasis, ...rest }) {
+  return (
+    <section
+      {...rest}
+      className={["sb-bleed", className].filter(Boolean).join(" ")}
+      style={{ background: C.white, padding: 20, marginBottom: 12, ...(emphasis ? { background: "#EEF3E8" } : null), ...style }}
+    >
+      {children}
+    </section>
+  );
 }
 
 export function BodyText({ children, muted, style, ...rest }) {

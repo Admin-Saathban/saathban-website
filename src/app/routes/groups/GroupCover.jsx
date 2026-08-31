@@ -26,19 +26,25 @@
 import { useEffect, useState } from "react";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import Icon from "../../components/Icon.jsx";
 import { coverFor, signedCoverUrl } from "./groupsStore.js";
 
 /* Deliberately not the brand green for all six: a group's cover is
    the one place a group gets to look like itself rather than like the
    app. Muted, because a cover sits behind a name that must stay
    readable. */
+/* Marks come from the app's drawn set, not the system emoji font.
+   A cover is the largest mark on the screen, so an emoji here was
+   the most visible piece of the old vocabulary left. Names checked
+   against components/Icon.jsx — it renders nothing for one it does
+   not know. */
 const PRESETS = {
-  walking:   { from: "#5B7A46", to: "#8CA86B", mark: "🚶" },
-  chai:      { from: "#8A5A2B", to: "#C08B54", mark: "☕" },
-  books:     { from: "#3F5A78", to: "#7192B5", mark: "📚" },
-  family:    { from: "#7A4A5E", to: "#B0798F", mark: "🏡" },
-  gardening: { from: "#3F6B4A", to: "#79A882", mark: "🌱" },
-  other:     { from: "#6B5E52", to: "#A29384", mark: "✨" },
+  walking:   { from: "#5B7A46", to: "#8CA86B", mark: "walk" },
+  chai:      { from: "#8A5A2B", to: "#C08B54", mark: "diet" },
+  books:     { from: "#3F5A78", to: "#7192B5", mark: "saved" },
+  family:    { from: "#7A4A5E", to: "#B0798F", mark: "people" },
+  gardening: { from: "#3F6B4A", to: "#79A882", mark: "park" },
+  other:     { from: "#6B5E52", to: "#A29384", mark: "gathering" },
 };
 
 /* The picker reads this rather than listing the six itself — one
@@ -79,8 +85,8 @@ export default function GroupCover({ group, height = 132 }) {
       }}
     >
       {!photo && (
-        <span style={{ fontSize: Math.round(height * 0.42), opacity: 0.9, padding: "0 16px 8px 0" }}>
-          {preset.mark}
+        <span style={{ opacity: 0.9, padding: "0 18px 12px 0", color: "#fff" }}>
+          <Icon name={preset.mark} size={Math.round(height * 0.34)} strokeWidth={1.5} />
         </span>
       )}
     </div>

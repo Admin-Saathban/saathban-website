@@ -690,7 +690,7 @@ export default function PlaceView() {
           {/* Start something here — an Icon can initiate at any moment. */}
           {isIcon && !planOpen && !actOpen && (
             startOpen ? (
-              <Card style={{ border: `2px solid ${C.green}` }}>
+              <Card emphasis>
                 <BodyText style={{ fontWeight: 700 }}>{t("outdoor.place.startTitle")}</BodyText>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <GhostBtn

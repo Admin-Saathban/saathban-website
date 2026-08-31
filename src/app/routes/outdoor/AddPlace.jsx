@@ -136,7 +136,7 @@ export default function AddPlace({ defaultCity = "", onAdded }) {
   };
 
   return (
-    <Card style={{ border: `2px solid ${C.green}`, marginTop: 12 }}>
+    <Card emphasis style={{ marginTop: 12 }}>
       <SectionLabel>{t("outdoor.add.title")}</SectionLabel>
       <BodyText muted style={{ marginBottom: 10 }}>{t("outdoor.add.intro")}</BodyText>
       <form onSubmit={save}>

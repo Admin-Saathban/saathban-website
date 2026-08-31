@@ -220,8 +220,13 @@ export default function WhatsOn() {
     try {
       await (h.rsvped ? cancelRsvp(h.id) : rsvpToEvent(h.id));
       await load();
-    } catch {
-      pushToast(t("whatson.joinFailed"), { tone: "error", key: "whatson" });
+    } catch (e) {
+      /* A rule is not a network hiccup. "Try once more" on a refusal
+         sends a person round the same wall; the server's own sentence
+         is plain enough to show. */
+      const msg = String(e?.message || "");
+      pushToast(msg && !/fetch|network/i.test(msg) ? msg : t("whatson.joinFailed"),
+        { tone: "error", key: "whatson" });
     }
     setBusyId(null);
   };
@@ -400,11 +405,19 @@ export default function WhatsOn() {
                     they are coming and to see who else is. */}
                 {h.to && (
                   <>
-                    <ComingButton
-                      coming={h.rsvped}
-                      onClick={() => rsvp(h)}
-                      disabled={busyId === h.id}
-                    />
+                    {/* RSVP is Icon-only at the database. Offering the
+                        button to everyone and letting the server say
+                        no produced a control that failed every time
+                        for a Fam member, with a message telling them
+                        to try again. Somebody who cannot say they are
+                        coming can still see who is. */}
+                    {canStart && (
+                      <ComingButton
+                        coming={h.rsvped}
+                        onClick={() => rsvp(h)}
+                        disabled={busyId === h.id}
+                      />
+                    )}
                     <Link
                       to={h.to}
                       style={{

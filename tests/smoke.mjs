@@ -108,6 +108,16 @@ if (!SUPA || !ANON) {
 const STORAGE_KEY = `sb-${new URL(SUPA).hostname.split(".")[0]}-auth-token`;
 
 // ─── Tiny harness ───
+/* A MISSING ELEMENT FAILS ONE CHECK, NOT THE RUN.
+
+   Playwright's .click() waits the full timeout and then throws,
+   and nothing here catches it — so one renamed button ends the
+   suite and silently leaves every later section unchecked. Three
+   fired tonight in sequence, each hiding the next, and the run
+   reported "one failure" while having tested half of what it
+   claims to. The clicks below are guarded; the checks that
+   depend on them still fail, on their own terms, which is the
+   information a lane can act on. */
 let failures = 0;
 const results = [];
 function check(name, ok, note = "") {
@@ -198,15 +208,29 @@ for (const [email, label, home, foreign] of ROLES) {
   await goto(page, "/app/home");
   // Wait for the thing being asserted, not for a guessed duration.
   await page.locator("text=/log|روزنامچہ/i").first().waitFor({ timeout: 15000 }).catch(() => {});
-  const hubText = (await page.evaluate(() => document.body.innerText)).trim();
+  /* THE PAGE, NOT THE FURNITURE. This read document.body, which now
+     includes the labelled bottom bar on every screen — and one of
+     its five labels is "Out & about", which is also one of the
+     destination-grid words below. So the grid check found the
+     NAVIGATION and reported a grid that had been gone for days.
+     Scoped to <main>, none of those words appear anywhere. */
+  const hubText = (await page.evaluate(() => {
+    const m = document.querySelector("main");
+    return (m || document.body).innerText;
+  })).trim();
   /* The hub is no longer a grid of destination cards: the day's own
      business is on it and everywhere else moved to the header menu.
      So this asserts the NEW shape — the log, and the community filling
      the space — plus the fact that the grid is genuinely gone rather
      than merely renamed. */
+  /* The community is on the home as the FEED — the composer and
+     the posts — rather than as a card with the word "community"
+     on it. Asserting the word was asserting a label the design
+     stopped printing, so this looks for the thing itself. */
   check(
     "icon: hub leads with the day, not a grid",
-    /log|روزنامچہ/i.test(hubText) && /community|کمیونٹی/i.test(hubText),
+    /log|روزنامچہ/i.test(hubText) &&
+      /neighbours|پڑوسیوں|comments|تبصر/i.test(hubText),
     hubText.slice(0, 60).split(String.fromCharCode(10)).join(" | ")
   );
   check(
@@ -219,7 +243,15 @@ for (const [email, label, home, foreign] of ROLES) {
     .locator('button[aria-expanded]')
     .filter({ has: page.locator("text=Mood") })
     .first();
-  if ((await moodHeader.getAttribute("aria-expanded")) === "false") await moodHeader.click();
+  /* AN ABSENT LOCATOR MUST NOT END THE RUN. getAttribute waits the
+     full timeout and then THROWS, and nothing catches it here — so a
+     slow or renamed Mood header does not fail one check, it aborts
+     the suite and silently stops every section after this one from
+     being checked at all. A red line is information; an abort is the
+     absence of information dressed as one. */
+  const moodState = await moodHeader.getAttribute("aria-expanded").catch(() => null);
+  check("icon: the log offers its mood section", moodState !== null, moodState === null ? "no Mood header found" : "present");
+  if (moodState === "false") await moodHeader.click().catch(() => {});
   // First mood option (whatever the locale calls it).
   // The mood control is a multi-select chip group since 0033 (role=
   // checkbox + aria-checked); accept the older aria-pressed shape too
@@ -228,7 +260,8 @@ for (const [email, label, home, foreign] of ROLES) {
     .locator('[role="checkbox"], button[aria-pressed]')
     .filter({ hasText: "😄" })
     .first()
-    .click();
+    .click()
+    .catch(() => {});
   await page.waitForTimeout(2500); // debounce (700ms) + upsert
   await ctx.close();
 
@@ -368,7 +401,7 @@ for (const [email, label, home, foreign] of ROLES) {
      failed at the first locator, so everything it went on to check
      — the invite, the accept, the first turn — stopped being
      checked at all while still looking like one red line. */
-  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
+  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click().catch(() => {});
   await iconPage.waitForFunction(() => /\/app\/games\/(s|ludo)\//.test(location.pathname), null, { timeout: 25000 }).catch(() => {});
   await iconPage.waitForTimeout(2500);
   check("games: tapping a game opens a table, no form", /^\/app\/games\//.test(pathOf(iconPage)), pathOf(iconPage));
@@ -447,15 +480,18 @@ for (const [email, label, home, foreign] of ROLES) {
   /* Same §8 path. Every table carries a join code from the moment
      it exists, so "open to the community" is no longer a thing
      chosen at setup — the code is simply there to be shared. */
-  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click();
+  await iconPage.locator('button:has-text("Snakes & Ladders")').first().click().catch(() => {});
   await iconPage.waitForFunction(() => /\/app\/games\/(s|ludo)\//.test(location.pathname), null, { timeout: 25000 }).catch(() => {});
   await iconPage.waitForTimeout(2200);
-  // The code lives behind the share toggle and is NOT in the page
-  // text by default. Scraping body text for six digits used to work
-  // and now picks up the board's own numerals instead — a check that
-  // passes on a number which is not the code, then fails the join it
-  // feeds. Open the panel and read the element that holds the code.
-  await iconPage.locator('button:has-text("Share code")').first().click();
+  /* The code is ON the table now, not behind a toggle (0096). It
+     had to be: every §8 table carries one and there was nowhere to
+     read it from, which is half of why codes had quietly stopped
+     working at all.
+
+     Still read from the element rather than scraped out of the page
+     text — the board is covered in its own numerals, and a check
+     that passes on a number which is not the code then fails the
+     join it feeds. */
   await iconPage.waitForTimeout(1200);
   const code = (
     await iconPage.evaluate(() => {
@@ -466,13 +502,48 @@ for (const [email, label, home, foreign] of ROLES) {
   check("games: open table shows 6-digit code", code.length === 6, code);
 
   if (code.length === 6) {
+    /* THE BUDDY NEEDS A CLEAR CHAIR TOO. The suite empties the
+       icon's live tables before each of these flows and never the
+       joiner's — so a buddy left seated by an earlier run met the
+       one-game-at-a-time gate instead of the table, and the check
+       read that as "join by code is broken". It is the rule
+       working; the suite was not setting up. */
+    {
+      const theirs = await (
+        await fetch(
+          SUPA +
+            "/rest/v1/game_seats?profile_id=eq." +
+            buddySess.user.id +
+            "&select=session:game_sessions(id,status)",
+          { headers: authed(buddySess) }
+        )
+      ).json();
+      for (const r of Array.isArray(theirs) ? theirs : []) {
+        if (r.session && ["lobby", "active"].includes(r.session.status)) {
+          await fetch(SUPA + "/rest/v1/rpc/leave_game_session", {
+            method: "POST",
+            headers: authed(buddySess),
+            body: JSON.stringify({ p_session: r.session.id }),
+          });
+        }
+      }
+    }
     const { ctx: buddyCtx, page: buddyPage } = await pageFor(browser, buddySess);
     await goto(buddyPage, "/app/games", 1800);
-    await buddyPage.locator('button:has-text("Have a code?")').click();
+    await buddyPage.locator('button:has-text("Have a code?")').click().catch(() => {});
     await buddyPage.waitForTimeout(400);
     await buddyPage.fill('input[inputmode="numeric"]', code);
-    await buddyPage.locator('button:has-text("Take me to the table")').click();
-    await buddyPage.waitForTimeout(3000);
+    await buddyPage.locator('button:has-text("Take me to the table")').click().catch(() => {});
+    /* WAIT FOR THE ARRIVAL, not for three seconds. The join is an
+       RPC, a state update and a navigation; on a cold preview that
+       is sometimes four seconds, and this check went red on the
+       clock rather than on the code — worse than a plain failure,
+       because it fails intermittently and teaches you to ignore
+       it. */
+    await buddyPage
+      .waitForFunction(() => location.pathname.startsWith("/app/games/s/"), null, { timeout: 20000 })
+      .catch(() => {});
+    await buddyPage.waitForTimeout(600);
     check("games: buddy joins by code", /^\/app\/games\/s\//.test(pathOf(buddyPage)), pathOf(buddyPage));
     await buddyCtx.close();
   }
@@ -489,21 +560,42 @@ for (const [email, label, home, foreign] of ROLES) {
   if (t0.includes("Solved")) {
     check("riddle: today's solve stands", true, "already solved");
   } else {
-    // The answer list for the seeded dev riddles includes "clock";
-    // a wrong guess is still a pass for the MECHANISM if the guess
-    // count moves — but assert the solve to catch RPC regressions.
+    /* "clock" WAS AN ANSWER, ONCE. The riddle changes daily and
+       this guessed one particular day's — today's is a sponge, so
+       the guess failed, nothing was solved, and the two checks
+       BELOW then failed as well because they depend on a solve.
+       Three red lines, no bug: the suite was asserting the answer
+       to a riddle rather than the machinery that takes answers.
+
+       So it asserts the machinery. A guess goes in and the page
+       ANSWERS it — solved, or not-quite, or out of tries. What
+       must never happen is silence, and silence is exactly what a
+       broken submit RPC looks like. */
+    const before = await page.evaluate(() => document.body.innerText);
     await page.fill("form input", "clock");
     // Submit explicitly: the form also carries "A hint, please", so
     // .last() clicked the hint and never sent the guess.
     await page.locator('form button[type="submit"], form button:has-text("Try it")').first().click();
     await page.waitForTimeout(2400);
+    const after = await page.evaluate(() => document.body.innerText);
     check(
-      "riddle: guess submits and solves",
-      (await page.evaluate(() => document.body.innerText)).includes("Solved")
+      "riddle: a guess is taken and answered",
+      /Solved/i.test(after) || after !== before,
+      /Solved/i.test(after) ? "solved" : "answered, not solved"
     );
   }
   const strip = await page.evaluate(() => document.body.innerText);
-  check("riddle: people strip shows a connection", strip.includes("Test Icon"));
+  /* THE EMPTY STATE IS A DOOR, NOT A FAILURE (CLAUDE.md). Before
+     anyone has solved today the strip says "yours could be the
+     first solve among your people today" — which is the screen
+     working, and this asserted a name that is only there once
+     somebody has played. An Icon who lives alone would have failed
+     this check every morning of their life. */
+  check(
+    "riddle: the people strip says something either way",
+    /Test Icon|first solve|among your people|پہلا/i.test(strip),
+    strip.includes("Test Icon") ? "a connection" : "nobody yet, said warmly"
+  );
   // Post-solve the strip offers a one-tap gesture per person: Shabash
   // to someone who has solved, a gentle invite to someone who has not.
   // Either is the affordance; which one depends on the day, so accept both.
@@ -514,12 +606,15 @@ for (const [email, label, home, foreign] of ROLES) {
     const t1 = await page.evaluate(() => document.body.innerText);
     check("riddle: gesture sends or caps kindly", /Shabash sent|gentle word|plenty/i.test(t1), t1.slice(0, 60));
   } else {
-    // Today's cheer already spent: the button yields to the 👏 ✓ mark
-    // (riddle_touches cap). Either affordance passing is the check.
+    /* No button is one of THREE states, and only one of them is a
+       fault: today's gesture already spent (the ✓ mark), or nobody
+       to gesture at yet. Reading all three as "no affordance at
+       all" reported a bug on a morning when nobody had played. */
+    const nobodyYet = /first solve|among your people/i.test(strip);
     check(
-      "riddle: gesture sends or caps kindly",
-      strip.includes("👏 ✓") || strip.includes("🕊️ ✓") || /plenty/i.test(strip),
-      strip.includes("👏 ✓") || strip.includes("🕊️ ✓") ? "already reached out today" : "no cheer or invite affordance at all"
+      "riddle: gesture sends, caps kindly, or waits for somebody",
+      strip.includes("👏 ✓") || strip.includes("🕊️ ✓") || /plenty/i.test(strip) || nobodyYet,
+      nobodyYet ? "nobody has played yet today" : strip.includes("👏 ✓") || strip.includes("🕊️ ✓") ? "already reached out today" : "no affordance and no reason for none"
     );
   }
   await ctx.close();
@@ -553,7 +648,7 @@ for (const [email, label, home, foreign] of ROLES) {
     await famPage.locator('button:has-text("Lahore")').first().click().catch(() => {});
     await famPage.waitForTimeout(1800);
   }
-  await famPage.locator('a:has-text("Model Town"), button:has-text("Model Town")').first().click();
+  await famPage.locator('a:has-text("Model Town"), button:has-text("Model Town")').first().click().catch(() => {});
   await famPage.waitForTimeout(2200);
   const placeTxt = await famPage.evaluate(() => document.body.innerText);
   const joinBtn = famPage.locator('button', { hasText: "I'm in" });

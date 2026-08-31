@@ -56,9 +56,21 @@ export default function AppShellBar() {
   const { open: moreOpen, openDrawer: openMore, closeDrawer: closeMore } =
     useDrawer(MORE_DRAWER_ID);
 
+  /* THE ONBOARDING GATE IS NOT A PATH, which is why it needed saying
+     here in words rather than in HIDDEN_PREFIXES. FirstRun renders
+     conditionally INSIDE HomeRoutes at /app/home, so the bar saw an
+     ordinary home screen and drew five tabs across a screen a person
+     has not finished — Games, Groups, Out & about and a More drawer
+     of seven rows, every one of them a way out of a gate.
+
+     Icons only: FirstRun is HomeRoutes', and Fam and Buddies land
+     elsewhere and have no gate to escape. */
+  const onboarding = role === "saath_icon" && !profile?.settings?.onboarded_at;
+
   const hidden =
     !profile ||
     !role ||
+    onboarding ||
     HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) ||
     isLudoTable(pathname);
 

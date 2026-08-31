@@ -41,7 +41,6 @@ import { MOODS, isoDate, greetingKeyForHour } from "../home/homeMock.js";
 import { useDailyLogs } from "../home/logStore.js";
 import { useIconPrefs, toggleModule } from "../../lib/iconPrefs.js";
 import supabase from "../../lib/supabase.js";
-import AppHeader from "../../components/AppHeader.jsx";
 
 /* §5's defaults, named here so screen two shows the same three on and
    the same three off that the log itself will use. */
@@ -59,7 +58,16 @@ function Screen({ title, children, note }) {
   const { ts, meta } = useI18n();
   return (
     <>
-    <AppHeader />
+    {/* NO APP HEADER. This is a GATE, and a gate with navigation in
+        it is not a gate.
+
+        It used to draw one, from when the header was a mark and a
+        back arrow. Rebuilding the header on 30 August gave it an
+        avatar, search, a bell and messages — four ways out of a
+        screen nobody has finished — and nothing failed, because the
+        onboarding gate is a conditional render inside HomeRoutes
+        rather than a route, so no prefix rule could ever have
+        noticed. Found by looking at the §9 screenshot. */}
     <main
       style={{
         minHeight: "100vh",

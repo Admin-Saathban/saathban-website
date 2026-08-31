@@ -1117,6 +1117,7 @@ const ur = {
       gameOpenLine: "کھلی بساط — {game}",
       gameOpenSeats: "{total} میں سے {taken} نشستیں پُر",
       gameOpenCta: "نشست لیں",
+      gameOpenGo: "میز کھولیں",
       gameOpenTaken: "آپ شامل ہیں — بساط پر ملاقات ہو گی۔",
       gameOpenFull: "یہ بساط بھر چکی",
       puzzleResultLine: "میں نے آج کی پہیلی {n} کوششوں میں بوجھ لی!",

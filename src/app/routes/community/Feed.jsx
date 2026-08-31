@@ -332,13 +332,26 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
             total: p.seats_total ?? "…",
           })}
         </p>
-        {!own && (
-          <div style={{ marginTop: 10 }}>
+        {/* A WAY IN, WHOEVER IS LOOKING.
+
+            This used to be `!own &&` and nothing else, so the person
+            who opened the table saw their own card announcing "1 of 2
+            seats taken" with no control on it at all. Correct that
+            they cannot take a seat they are already sitting in —
+            and a dead end, because the card is where they came back
+            to find the table. Tapping it did nothing because there
+            was nothing to tap. */}
+        <div style={{ marginTop: 10 }}>
+          {own ? (
+            <PrimaryBtn onClick={() => onAction("openGameTable", post)}>
+              {t("community.shares.gameOpenGo")}
+            </PrimaryBtn>
+          ) : (
             <PrimaryBtn onClick={() => onAction("claimGameSeat", post)}>
               {t("community.shares.gameOpenCta")}
             </PrimaryBtn>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
@@ -1125,6 +1138,9 @@ export default function Feed({ composer = true }) {
         } catch {
           showToast(t("community.shares.walkJoinFailed"));
         }
+      } else if (kind === "openGameTable") {
+        /* Already seated: the table itself, not the seat RPC. */
+        navigate(`/app/games/s/${target.ref_id}`);
       } else if (kind === "claimGameSeat") {
         /* ref_id is the game session; the RPC is idempotent for
            someone already seated and auto-starts on the last seat. */

@@ -1189,6 +1189,7 @@ const en = {
       gameOpenLine: "An open table — {game}",
       gameOpenSeats: "{taken} of {total} seats taken",
       gameOpenCta: "Take a seat",
+      gameOpenGo: "Open the table",
       gameOpenTaken: "You're in — see you at the table.",
       gameOpenFull: "This table has filled up",
       puzzleResultLine: "I cracked the Daily Riddle in {n} guesses!",

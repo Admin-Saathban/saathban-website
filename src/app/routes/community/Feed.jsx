@@ -726,8 +726,15 @@ function PostCard({
            inside the card. */
         <div
           style={{
-            background: C.cream,
-            borderTop: `1px solid ${C.warmGray}`,
+            /* C.tint, not C.cream. Everything the comment above says
+               about needing a tint was already true and already written
+               here — and then `cream` was collapsed onto white in the
+               palette flip, so the band it describes quietly became the
+               same white as the card, and the reasoning outlived the
+               effect. A token that stops meaning what its name says is
+               worse than no token at all. */
+            background: C.tint,
+            borderTop: `1px solid ${C.navEdge}`,
             margin: "10px -16px -14px",
             padding: "12px 16px 14px",
           }}
@@ -1715,7 +1722,7 @@ export default function Feed({ composer = true, embedded = false }) {
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
                       <span style={{
                         fontSize: 13, fontWeight: 600, color: C.green,
-                        background: C.cream, borderRadius: 999, padding: "3px 10px",
+                        background: C.ground, borderRadius: 999, padding: "3px 10px",
                       }}>{gp.groupName}</span>
                       <span style={{ fontSize: 14, color: C.textMuted }}>{gp.authorName}</span>
                     </div>

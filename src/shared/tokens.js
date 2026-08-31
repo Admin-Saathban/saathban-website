@@ -40,11 +40,83 @@ export const COLORS = {
 
    ONE ACCENT. Green marks the thing you are meant to do next and
    nothing else. A screen with four green elements has no accent. */
+/* ─── SURFACE TONES ───
+
+   The app went from cream-everything to white-everything, and the
+   second is worse: with one surface doing every job, nothing tells a
+   region from the region next to it. A post, the bar it sits under and
+   the comment attached to it were all #FFFFFF, so the eye had only
+   position to go on.
+
+   FIVE TONES, AND THEY ARE A LADDER, not a palette. Each one is a
+   step of separation, not a decoration:
+
+     ground   what shows BETWEEN things. Cards float on it.
+     content  the thing itself — a post, a chat bubble, a card.
+     tint     material attached to content: comments, replies, quoted
+              text. Warm, so it reads as a response rather than as a
+              second post.
+     nav      chrome — header and bottom bar. Distinct from content
+              because it is not content: it is the frame around it.
+     pressed  the moment of touch, and the resting state of the thing
+              you are currently on.
+
+   THE TINT IS ONE VALUE. It arrived three times over — #FBF0E6 in
+   messages, #f3e9df in circle, fam and groups, #F5EEE6 in people —
+   three creams nobody chose, each a shade off the others, which is how
+   a system dies. Lane 3's is the one that stays. Wherever a warm band
+   means "attached to the thing above it", it is this and only this.
+
+   NAV IS NOT BRANDED. A grey-green a hair off white, plus a hairline.
+   Colouring the chrome green would make the bar the loudest object on
+   every screen, and the bar is furniture. If the hairline alone reads
+   clearly enough on a real phone, the tint can go and the hairline can
+   stay — that is the direction to fail in, not the other one. */
+export const SURFACE = {
+  ground:  "#F2F3F5",   // the floor
+  content: "#FFFFFF",   // posts, chats, cards, sheets
+  tint:    "#FBF0E6",   // comments, replies, quoted material
+  nav:     "#F7F9F7",   // header and bottom bar
+  navEdge: "#E1E7E1",   // the hairline that does the real work
+  pressed: "#E8EDE8",   // touched, or the row you are on
+};
+
+/* ─── WHAT A COLOUR MEANS ───
+
+   Semantic colour came off the icons when the emoji did, and it should
+   not have: the emoji were the problem, not the colour. A line-art
+   heart that stays grey after you press it does not tell you it worked.
+
+   So: DRAWN ALWAYS, COLOURED WHEN IT MEANS SOMETHING. At rest an icon
+   is grey line-art. Active, it takes the colour of what it now means —
+   a liked heart is red, a confirmed check is green, a warning is amber.
+
+   Never colour alone (SPEC, accessibility): every one of these is
+   paired with a fill, a word, or a state change as well. Red on a heart
+   is the second signal, not the only one. */
+export const MEANING = {
+  liked:     "#E0245E",  // a heart you have pressed
+  confirmed: "#0B5D2A",  // done, going, yes — the app accent
+  warning:   "#B26A00",  // amber that still passes on white
+  danger:    "#B3261E",  // destructive, and always worded
+  rest:      "#65676B",  // line-art at rest: the muted ink
+};
+
 export const APP_COLORS = {
-  /* the ground and the surfaces */
-  bg: "#F2F3F5",          // near-white grey, never cream
-  white: "#FFFFFF",        // cards, rows, sheets
-  cream: "#FFFFFF",        // was the warm ground; now simply a surface
+  /* the ground and the surfaces — the named ladder above, reachable as
+     C.ground / C.surface / C.tint / C.nav / C.pressed in every file
+     that already imports APP_COLORS as C. No new import, so adopting
+     the system is an edit to the style object and nothing else. */
+  ground:  SURFACE.ground,
+  surface: SURFACE.content,
+  tint:    SURFACE.tint,
+  nav:     SURFACE.nav,
+  navEdge: SURFACE.navEdge,
+  pressed: SURFACE.pressed,
+
+  bg: SURFACE.ground,     // older name for the ground; same value
+  white: SURFACE.content,  // older name for a content surface
+  cream: SURFACE.content,  // was the warm ground; now simply a surface
 
   /* ink */
   textMain: "#1C1E21",

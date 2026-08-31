@@ -36,8 +36,10 @@ export default function HelpStrip({ status, authorName, authorComplete, helperNa
     marginTop: 12,
     padding: "12px 14px",
     borderRadius: 14,
-    border: `2px solid ${C.warmGray}`,
-    background: C.cream,
+    /* Attached to the post above it, so it takes the tint rather than
+       the card colour it was sitting invisibly on top of. */
+    border: `2px solid ${C.navEdge}`,
+    background: C.tint,
   };
 
   if (status.state === "done" || status.state === "closed") {

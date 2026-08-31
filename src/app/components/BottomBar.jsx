@@ -134,9 +134,14 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
         justifyContent: "space-evenly",
         gap: 2,
         padding: "6px 4px calc(6px + env(safe-area-inset-bottom, 0px))",
-        background: C.white,
-        borderTop: `1px solid ${C.warmGray}`,
-        boxShadow: "0 -2px 12px rgba(74,58,34,0.08)",
+        /* The bar was C.white — the same surface as the posts it sits
+           under, so on a feed that reaches both edges the bar and the
+           bottom card were one continuous white. Its own tone and a
+           hairline; the shadow goes, because a shadow was doing the
+           separating that a tone should do, and it was warm-tinted
+           from the cream era besides. */
+        background: C.nav,
+        borderTop: `1px solid ${C.navEdge}`,
         /* MOTION §5 — the shutter. It travels its own height rather
            than fading, so the screen underneath genuinely gains the
            space instead of hiding text behind a transparent bar. */

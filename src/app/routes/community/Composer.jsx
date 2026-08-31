@@ -333,7 +333,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
 
           {/* §6.2 — the poster sets how many helpers they want. */}
           {styleTag === "help" && (
-            <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 14, background: C.cream, border: `1.5px solid ${C.warmGray}` }}>
+            <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 14, background: C.tint, border: `1.5px solid ${C.navEdge}` }}>
               <p style={{ margin: "0 0 8px", fontSize: ts(16), color: C.textMain, fontWeight: 600 }}>
                 {t("posts.help.wanted")}
               </p>

@@ -65,10 +65,17 @@ export default function AppHeader() {
         position: "sticky",
         top: 0,
         zIndex: 20,
-        background: C.bg,
-        /* §4.1 — an outline means you can tap it. The header is not a
-           control, so it separates by whitespace rather than a border
-           that reads like one. */
+        /* NAV IS NOT CONTENT AND NOT THE GROUND. This was C.bg, the
+           same tone as the floor the page sits on, so the header had
+           nothing to separate it from the screen — and with the whole
+           app on white, whitespace was separating one white from
+           another. It now has its own tone plus a hairline.
+
+           §4.1 still holds: an outline means you can tap it. A
+           hairline along one edge is not an outline — it is where
+           the chrome stops and the content starts. */
+        background: C.nav,
+        borderBottom: `1px solid ${C.navEdge}`,
         padding: "6px 10px",
         transform: shuttered ? "translateY(-100%)" : "none",
         transition: "transform 180ms ease-out",

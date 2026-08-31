@@ -62,8 +62,10 @@ export function BodyText({ children, muted, style }) {
 export function Pill({ children, tone = "neutral", style }) {
   const { ts } = useI18n();
   const tones = {
-    neutral: { bg: C.cream, fg: C.textMuted, border: C.warmGray },
-    brown: { bg: "#f3e9df", fg: C.brown, border: "#d9c3b2" },
+    /* A neutral pill was C.cream on a white card — a chip you could
+       not see. Chips are labels, so they take the ground. */
+    neutral: { bg: C.ground, fg: C.textMuted, border: C.warmGray },
+    brown: { bg: C.tint, fg: C.brown, border: C.navEdge },
     green: { bg: "#e8f0e6", fg: C.green, border: C.sage },
   };
   const t = tones[tone] ?? tones.neutral;

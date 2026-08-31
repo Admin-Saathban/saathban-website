@@ -129,7 +129,7 @@ export function Pill({ children, tone = "neutral", style }) {
   const tones = {
     neutral: { bg: C.cream, fg: C.textMuted, border: C.warmGray },
     green: { bg: "#e8f0e6", fg: C.green, border: C.sage },
-    brown: { bg: "#f3e9df", fg: C.brown, border: "#d9c3b2" },
+    brown: { bg: C.tint, fg: C.brown, border: C.navEdge },
   };
   const t = tones[tone] ?? tones.neutral;
   return (

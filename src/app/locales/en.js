@@ -1073,6 +1073,7 @@ const en = {
            otherwise be a surprise: carrom has no computer player, so the
            table waits rather than starts. */
         playWaits: "This one waits for {name} to join",
+        playedIn: "You played this together in {month}",
         around: "{name} is around today",
         hello: "Say hello",
         play: "Play something",

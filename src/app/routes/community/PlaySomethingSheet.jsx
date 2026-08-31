@@ -49,6 +49,8 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { GhostBtn, BodyText } from "./ui.jsx";
 import { openQuickTable } from "../games/quickTable.js";
 import { inviteToSeat, fetchGames } from "../../lib/games.js";
+import { useSession } from "../../lib/session.jsx";
+import { playedTogether, playedWhen } from "./playedTogether.js";
 import Icon from "../../components/Icon.jsx";
 
 /* GLYPHS ONLY. The games themselves come from the registry.
@@ -74,9 +76,11 @@ const GLYPH = { ludo: "dice", carrom: "carrom", snakes: "snakes" };
 
 export default function PlaySomethingSheet({ person, onClose }) {
   const { t, ts, lang } = useI18n();
+  const { profile } = useSession();
   const navigate = useNavigate();
   const first = (person?.full_name || "").trim().split(" ")[0] || "";
   const [games, setGames] = useState(null);   /* null = still loading */
+  const [shared, setShared] = useState(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
@@ -91,8 +95,11 @@ export default function PlaySomethingSheet({ person, onClose }) {
          down, which is the only thing this sheet is for. */
       .then((rows) => { if (alive) setGames((rows || []).filter((g) => g.enabled && (g.max_seats || 0) >= 2)); })
       .catch(() => { if (alive) setGames([]); });
-    return () => { alive = false; };
-  }, []);
+    playedTogether(profile?.id, person?.id)
+      .then((m) => { if (alive) setShared(m); })
+      .catch(() => { if (alive) setShared(new Map()); });
+  return () => { alive = false; };
+  }, [profile?.id, person?.id]);
 
   const start = async (game) => {
     if (starting || !person?.id) return;
@@ -123,6 +130,19 @@ export default function PlaySomethingSheet({ person, onClose }) {
       setStarting(false);
     }
   };
+
+  /* Component scope, not effect scope. This was first inserted before
+     the useEffect's CLEANUP return — the effect's `return () => {}` is
+     also a line beginning `return (`, so the anchor matched the wrong
+     one and `ordered` was scoped to the effect. The sheet then threw
+     "ordered is not defined" and rendered nothing at all. */
+  const withHistory = (g) => (shared ? shared.get(g.key) : null) || null;
+  const ordered = (games || []).slice().sort((a, b) => {
+  const A = withHistory(a), B = withHistory(b);
+  if (!!A !== !!B) return A ? -1 : 1;
+  if (A && B) return new Date(B.at || 0) - new Date(A.at || 0);
+  return 0;
+  });
 
   return (
     <div
@@ -162,7 +182,20 @@ export default function PlaySomethingSheet({ person, onClose }) {
           <BodyText muted role="status">{t("common.loading")}</BodyText>
         ) : null}
 
-        {(games || []).map((g) => (
+        {/* §9.2 — THE GAMES YOU BOTH PLAY, FIRST.
+
+            A game the two of them have actually finished together
+            leads, most recent first, and carries the reason. The rest
+            follow with no sub-line, because a reason invented for them
+            would be the app claiming a memory that does not exist.
+
+            The others are not dropped. §9.2 says "the games you both
+            play", but two people who have never played would then get
+            an empty sheet from a button offering to play — so the
+            shared ones are promoted rather than the rest hidden. That
+            is my call where the spec assumed a shared history exists;
+            flagged in the report. */}
+        {(ordered || []).map((g) => (
           <button
             key={g.key}
             type="button"
@@ -191,11 +224,22 @@ export default function PlaySomethingSheet({ person, onClose }) {
             <Icon name={GLYPH[g.key] || "dice"} size={26} />
             <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
               <span>{lang === "ur" ? g.name_ur : g.name_en}</span>
-              {g.timeout_style === "pass_turn" ? (
-                <span style={{ fontSize: ts(15), fontWeight: 500, color: C.textMuted }}>
-                  {t("community.feed.reconnect.playWaits", { name: first })}
-                </span>
-              ) : null}
+              {(() => {
+                /* The REASON first, the caveat second. "You played this
+                   together in May" is what §9.2 asks for and is the
+                   warmer of the two; the waiting note only earns the
+                   line when there is no memory to put there. */
+                const h = withHistory(g);
+                const when = h ? playedWhen(h.at, lang) : null;
+                const text = when
+                  ? t("community.feed.reconnect.playedIn", { month: when })
+                  : g.timeout_style === "pass_turn"
+                    ? t("community.feed.reconnect.playWaits", { name: first })
+                    : null;
+                return text ? (
+                  <span style={{ fontSize: ts(15), fontWeight: 500, color: C.textMuted }}>{text}</span>
+                ) : null;
+              })()}
             </span>
           </button>
         ))}

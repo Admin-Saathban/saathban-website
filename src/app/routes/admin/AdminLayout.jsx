@@ -111,7 +111,41 @@ export default function AdminLayout() {
   return (
     <>
     <AppHeader />
+    {/* ADMIN ON A PHONE. The shell was a flex row with a fixed 240px
+        sidebar and no media query anywhere in the file — so on a 390px
+        screen the sidebar took 240, the 32px main padding took 64, and
+        the queue rendered into about 86px. Every report card overflowed
+        sideways: resolution notes clipped mid-word, reporter names broken
+        across lines, controls pushed off the edge.
+
+        Moderation is not a desktop-only job. Reported content hits the
+        queue within hours (SPEC, Community) and the person who acts on it
+        is as likely to be holding a phone as sitting at a desk — a
+        moderator who cannot read the report cannot act on it.
+
+        Below 900px the sidebar stops being a column beside the content
+        and becomes a scrollable strip above it. Nothing is removed: every
+        destination stays reachable, which matters more here than
+        tidiness, because an admin nav that hides items hides the one
+        somebody needs. */}
+    <style>{`
+      @media (max-width: 900px) {
+        .sb-admin-shell { flex-direction: column; }
+        .sb-admin-side {
+          width: 100% !important;
+          flex-direction: row !important;
+          overflow-x: auto;
+          padding: 10px 12px !important;
+          gap: 8px !important;
+          align-items: center;
+        }
+        .sb-admin-side > * { flex: 0 0 auto; }
+        .sb-admin-head { padding: 12px 16px !important; }
+        .sb-admin-main { padding: 18px 14px !important; }
+      }
+    `}</style>
     <div
+      className="sb-admin-shell"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -123,6 +157,7 @@ export default function AdminLayout() {
     >
       {/* ─── Sidebar ─── */}
       <aside
+        className="sb-admin-side"
         style={{
           width: 240,
           flexShrink: 0,
@@ -268,6 +303,7 @@ export default function AdminLayout() {
       {/* ─── Main column ─── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <header
+          className="sb-admin-head"
           style={{
             display: "flex",
             alignItems: "center",
@@ -291,7 +327,7 @@ export default function AdminLayout() {
           </span>
         </header>
 
-        <main style={{ flex: 1, padding: "30px 32px", minWidth: 0 }}>
+        <main className="sb-admin-main" style={{ flex: 1, padding: "30px 32px", minWidth: 0 }}>
           {loadError && (
             <p
               role="alert"

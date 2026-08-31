@@ -19,12 +19,14 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
+import { useSession } from "../../../lib/session.jsx";
 import { GAME } from "../gameSurface.js";
 import { SEAT_COLORS, SEAT_INK } from "./board.js";
 /* The names, from where the hexes are — never a second list. */
 import { SEAT_COLOR_NAMES } from "../seatColors.js";
 import { reformTable, takeSeat, inviteToSeat, fetchAskable, fetchPieceMarks, setPieceMarks } from "./ludoRails.js";
 import ShareTableButton from "../ShareTableButton.jsx";
+import { createShare } from "../../community/communityData.js";
 
 /* One row in the sheet. 56px, full width, no icon-only anything —
    the same floor the rest of the app keeps (A11Y). */
@@ -349,10 +351,16 @@ function HouseRules({ sessionId, rules, onChanged }) {
    way available: how many of them there are. */
 export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, rules = null, joinCode = null, soft = true, onClose, onChanged }) {
   const { t, ts } = useI18n();
+  const { profile } = useSession();
+  /* Icons post; everyone else reads. Organisations too, which is the
+     same test SessionPage applies for its own open table — taken
+     from there rather than invented here. */
+  const canPost = profile?.role === "saath_icon" || profile?.is_org;
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState(false);
   const [people, setPeople] = useState(null);
   const [note, setNote] = useState("");
+  const [posted, setPosted] = useState(false);
 
   const colour = SEAT_COLORS[seat];
   const isBot = !!row?.is_bot;
@@ -459,6 +467,41 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
             <Row disabled={busy} onClick={openAsk}>
               {t("ludo.table.askSomeone")}
             </Row>
+          )}
+
+          {/* AND THE COMMUNITY, which is the fourth way into a seat
+              and the last one still missing from this table: a
+              person you name, a bot, a link, or anybody who sees
+              it. It posts an open invitation to the feed; the seat
+              stays a bot's until somebody takes it, so the table
+              does not stall while the post sits there.
+
+              Icons post and everyone else reads (CLAUDE.md), so
+              this is offered to an Icon and not to a Fam member
+              who happens to be hosting — the same rule the other
+              games' lobby already follows, rather than a new one
+              invented here. */}
+          {isBot && iAmHost && soft && canPost && !posted && (
+            <Row
+              disabled={busy}
+              onClick={() =>
+                act(async () => {
+                  await createShare(myId, "game_open", sessionId, {
+                    game_key: "ludo",
+                    seats_total: seatsTotal,
+                    seats_taken: seats.filter((x) => !x.is_bot).length,
+                  });
+                  setPosted(true);
+                })
+              }
+            >
+              {t("games.lobby.openPostCta")}
+            </Row>
+          )}
+          {posted && (
+            <p style={{ margin: "6px 2px 0", fontSize: ts(16), color: GAME.inkMuted }}>
+              {t("games.lobby.openPosted")}
+            </p>
           )}
 
           {/* My own seat: what I wear on my four. Not gated on the

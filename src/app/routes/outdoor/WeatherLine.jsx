@@ -76,25 +76,25 @@ export default function WeatherLine({ city }) {
         let cooler = null;
         const times = j?.hourly?.time || [];
         const temps = j?.hourly?.temperature_2m || [];
-        const nowMs = Date.now();
+
+        /* The API's own clock, in the place's zone: "2026-08-31T14:00".
+           Everything below compares strings in that frame. */
+        const nowStamp = j?.current?.time || "";
+        const today = nowStamp.slice(0, 10);
+
         for (let i = 0; i < times.length; i++) {
-          const at = new Date(times[i]);
-          if (at.getTime() <= nowMs) continue;
-          if (at.getTime() - nowMs > 9 * 3600 * 1000) break;
-          /* Only an hour somebody could actually go out in. Before
-             this, at 10pm it would happily suggest 5am — true, and no
-             use to anyone deciding when to ask a friend for a walk. */
-          /* Later TODAY, and at an hour somebody could go out in.
-             Restricting the hours alone was not enough: at 10pm the
-             first match became 6am, which is inside the window and
-             still tomorrow. If the day has no cooler hour left, the
-             line simply gives the temperature — there is no advice to
-             offer about when to go out today. */
-          const h = at.getHours();
-          if (at.getDate() !== new Date(nowMs).getDate()) break;
-          if (h < 6 || h > 20) continue;
+          const stamp = times[i];
+          if (!stamp || stamp <= nowStamp) continue;
+          // Later TODAY only — a cooler hour tomorrow is not advice
+          // about when to go out today.
+          if (stamp.slice(0, 10) !== today) break;
+          // And an hour somebody could plausibly go out in.
+          const hour = Number(stamp.slice(11, 13));
+          if (hour < 6 || hour > 20) continue;
+          // Meaningfully cooler, not merely lower: nobody changes
+          // their plans over half a degree.
           if (Number.isFinite(temps[i]) && now - temps[i] >= 3) {
-            cooler = at;
+            cooler = new Date(stamp);
             break;
           }
         }

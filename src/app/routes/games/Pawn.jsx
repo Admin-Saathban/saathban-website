@@ -157,7 +157,7 @@ export default function Pawn({
     >
       <defs>
         {/* the top face, lit from the upper left */}
-        <radialGradient id={`${gid}-dome`} cx="33%" cy="27%" r="82%">
+        <radialGradient id={`${gid}-dome`} cx="30%" cy="30%" r="80%">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
           <stop offset="26%" stopColor={light} />
           <stop offset="72%" stopColor={fill} />
@@ -195,9 +195,15 @@ export default function Pawn({
           the shadow with it, and a shadow that rises with the object
           casting it is the one thing that reads instantly as fake.
           The hop shrinks this to 0.7 while the token climbs. */}
+      {/* DOWN AND TO THE RIGHT, and blurred. The light on this
+          board comes from the upper left — the dome's highlight is
+          at 30%/30% and the zones are lit along their top edge —
+          so a shadow centred under the piece contradicted every
+          other cue on the screen. Offsetting it is what makes the
+          token sit ON the board rather than in it. */}
       <g className="sb-goti-shadow">
-        <ellipse cx="0.8" cy="6.2" rx="14.4" ry="4.6" fill="#00000026" />
-        <ellipse cx="0" cy="4.8" rx="10.6" ry="2.9" fill="#00000038" />
+        <ellipse cx="2.4" cy="6.6" rx="14.6" ry="4.8" fill="#00000030" style={{ filter: "blur(1.6px)" }} />
+        <ellipse cx="1.5" cy="5.2" rx="10.8" ry="3.1" fill="#00000040" style={{ filter: "blur(0.8px)" }} />
       </g>
       <g className="sb-goti-body">
 

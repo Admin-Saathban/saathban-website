@@ -30,6 +30,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { SEAT_LIGHT, SEAT_DEEP, SEAT_COLOR_NAMES } from "../seatColors.js";
+import { NO_SELECT } from "../gameSurface.js";
 import Pawn from "../Pawn.jsx";
 import {
   TRACK,
@@ -915,6 +916,13 @@ export default function LudoBoard({
         role="img"
         aria-label="Ludo board"
         style={{
+          /* A LONG PRESS ON THE BOARD MUST NOT RAISE THE BROWSER'S
+             SELECTION RIBBON. Every label on this board is SVG
+             text, which selects like any other text — so holding a
+             goti to think about it put Copy / Search / Translate
+             across the game. Nothing is more app-like than the
+             browser's own furniture appearing over a board. */
+          ...NO_SELECT,
           width: "100%",
           height: "auto",
           display: "block",

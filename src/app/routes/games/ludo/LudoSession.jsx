@@ -792,7 +792,25 @@ export default function LudoSession() {
      in — those change the table for everybody at it. The server
      draws exactly this line; this is the same line drawn in
      pixels so nobody taps into a refusal. */
-  const editable = soft && playing && !!mySeatRow;
+  /* SETTINGS LOCK WHEN PLAY STARTS, and `soft` alone was not
+     enough to say when that is.
+
+     game_table_is_soft asks the SERVER, which answers on a poll
+     — so for up to one poll after the first roll the client still
+     believed the table was editable, and the owner saw a green +
+     on the die offering two-dice mode in the middle of a game.
+     Worse, the badge is drawn beside dice that have already been
+     thrown, which is the exact moment changing their number
+     would be nonsense.
+
+     Three local facts close that window without waiting for a
+     round trip: dice in hand, a move already made, or a piece
+     off its yard. Any of them means the game has begun, whatever
+     the last poll said. The server refuses these edits anyway
+     (0092); this is about not OFFERING what will be refused. */
+  const anyPieceMoved = (state?.pieces || []).some((row) => (row || []).some((p) => p > 0));
+  const begun = hasDice || !!state?.last || anyPieceMoved;
+  const editable = soft && playing && !!mySeatRow && !begun;
   /* THE CLOCK IS HELD, SO NO CLOCK IS DRAWN (0094). Before the
      first roll, at a table holding nobody but bots, the server
      does not take the opening turn — the person is still setting
@@ -956,16 +974,28 @@ export default function LudoSession() {
         {playing && mySeatRow && (
           <button
             type="button"
-            onClick={() => setLeaveAsk(true)}
-            aria-label={t("ludo.ceremony.leaveCta")}
-            title={t("ludo.ceremony.leaveCta")}
+            /* BACKING OUT NEVER FORCES A CHOICE. This asked "are
+               you sure you want to leave the table?" — and the
+               honest answer was usually "I did not want to leave
+               the table, I wanted to look at something else".
+               The table is yours; going back to Games does not
+               give it up, and returning resumes it exactly where
+               it was. So this simply leaves.
+
+               GIVING UP THE SEAT is a different act and still
+               asks, on the seat sheet, where it reads as a
+               decision about the table rather than about the
+               screen. */
+            onClick={() => navigate("/app/games")}
+            aria-label={t("ludo.back")}
+            title={t("ludo.back")}
             style={{
               flex: "0 0 auto",
               width: 44,
               height: 44,
               borderRadius: 22,
-              border: `1px solid ${GAME.controlEdge}`,
-              background: GAME.control,
+              border: `1px solid ${GAME.pillEdge}`,
+              background: GAME.pill,
               color: GAME.ink,
               display: "inline-flex",
               alignItems: "center",

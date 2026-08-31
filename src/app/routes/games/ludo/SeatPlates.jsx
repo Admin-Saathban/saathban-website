@@ -653,8 +653,10 @@ function Plate({
                     borderRadius: 11,
                     border: "none",
                     padding: 0,
-                    background: C.green,
-                    color: C.cream,
+                    /* Brass, not green. Green is Saathban's and
+                       nothing inside a game may wear it. */
+                    background: GAME.accentFlat,
+                    color: GAME.accentInk,
                     fontSize: 14,
                     fontWeight: 900,
                     lineHeight: "22px",

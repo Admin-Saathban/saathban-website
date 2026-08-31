@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { GAME, NO_SELECT } from "./gameSurface.js";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import { SEAT_COLORS } from "./seatColors.js";
@@ -126,10 +127,12 @@ function Sheet({ hint, onClose, children }) {
           finding a small ✕ is a trap on a phone. */}
       <div
         onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 69, background: "rgba(45,36,24,0.28)" }}
+        className="sb-game-veil"
+        style={{ position: "fixed", inset: 0, zIndex: 69, background: "rgba(20,8,20,0.55)" }}
       />
       <div
         role="dialog"
+        className="sb-game-panel"
         aria-label={hint}
         style={{
           position: "fixed",
@@ -137,7 +140,11 @@ function Sheet({ hint, onClose, children }) {
           right: 0,
           bottom: 0,
           zIndex: 70,
-          background: C.white,
+          /* The game's panel: plum with a gold edge, the way the
+             reference dresses every sheet it raises over a board. */
+          background: GAME.panel,
+          borderTop: `2px solid ${GAME.panelEdge}`,
+          color: GAME.ink,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
           boxShadow: "0 -8px 30px rgba(45,36,24,0.28)",
@@ -147,7 +154,7 @@ function Sheet({ hint, onClose, children }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <p style={{ flex: 1, margin: 0, fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>{hint}</p>
+          <p style={{ flex: 1, margin: 0, fontSize: ts(A11Y.minBodyPx), color: GAME.inkMuted }}>{hint}</p>
           <button
             type="button"
             onClick={onClose}
@@ -173,43 +180,64 @@ function Sheet({ hint, onClose, children }) {
   );
 }
 
-function TriggerBtn({ onClick, disabled, label, glyph }) {
+/* THE GAME'S PILL, NOT THE APP'S.
+
+   This was a white capsule with a warm-grey border and brown ink —
+   the app's button, sitting under a dark board, and one of the
+   loudest reasons the play screen still read as Saathban with the
+   lights off.
+
+   `game` keeps the old look available for anywhere outside a game
+   surface, so this component does not have to know where it is.
+
+   UNDER 40px TALL when it is in a game, which is a deliberate
+   exception to the app's 48px floor: these are conveniences beside
+   a board, not the action of the screen, and the pill is wide
+   enough that the target stays comfortable. */
+function TriggerBtn({ onClick, disabled, label, glyph, game }) {
   const { ts } = useI18n();
+  const [down, setDown] = useState(false);
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
+      onPointerDown={() => setDown(true)}
+      onPointerUp={() => setDown(false)}
+      onPointerLeave={() => setDown(false)}
+      onPointerCancel={() => setDown(false)}
       style={{
-        minHeight: A11Y.minTapTargetPx,
-        minWidth: A11Y.minTapTargetPx,
-        padding: "0 16px",
-        borderRadius: 50,
-        border: `2px solid ${C.warmGray}`,
-        background: C.white,
-        color: C.brown,
-        fontSize: ts(18),
+        ...(game ? NO_SELECT : null),
+        minHeight: game ? 36 : A11Y.minTapTargetPx,
+        minWidth: game ? 0 : A11Y.minTapTargetPx,
+        padding: game ? "6px 14px" : "0 16px",
+        borderRadius: game ? 18 : 50,
+        border: `1px solid ${game ? GAME.pillEdge : C.warmGray}`,
+        background: game ? (down ? GAME.pillPressed : GAME.pill) : C.white,
+        color: game ? GAME.ink : C.brown,
+        fontSize: ts(game ? 16 : 18),
         fontWeight: 700,
         fontFamily: "inherit",
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
+        gap: 7,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
+        transform: down ? "translateY(1px)" : "none",
+        transition: "transform 90ms ease, background 90ms ease",
       }}
     >
-      <span aria-hidden="true" style={{ fontSize: ts(20) }}>{glyph}</span>
+      <span aria-hidden="true" style={{ fontSize: ts(game ? 17 : 20) }}>{glyph}</span>
       {label}
     </button>
   );
 }
-
 /* ── The emoji button: a grid of faces, one tap to send ──
    Our sticker set IS our emoji set — hand-drawn, bilingual labels,
    already sized for a 64px cell. A second parallel set of faces would
    be two things to translate and two to keep warm. */
-export function EmojiButton({ onSend, disabled }) {
+export function EmojiButton({ onSend, disabled, game }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const sending = useRef(false);
@@ -230,6 +258,7 @@ export function EmojiButton({ onSend, disabled }) {
         disabled={disabled}
         label={t("ludo.quick.emojiOpen")}
         glyph="🙂"
+        game={game}
       />
       {open && (
         <Sheet hint={t("ludo.quick.emojiHint")} onClose={() => setOpen(false)}>
@@ -241,7 +270,7 @@ export function EmojiButton({ onSend, disabled }) {
 }
 
 /* ── The chat button: ten things people say, one tap each ── */
-export default function QuickChat({ onSend, disabled }) {
+export default function QuickChat({ onSend, disabled, game }) {
   const { t, ts } = useI18n();
   const [open, setOpen] = useState(false);
   const sending = useRef(false);
@@ -262,6 +291,7 @@ export default function QuickChat({ onSend, disabled }) {
         disabled={disabled}
         label={t("ludo.quick.open")}
         glyph="💬"
+        game={game}
       />
       {open && (
         <Sheet hint={t("ludo.quick.hint")} onClose={() => setOpen(false)}>

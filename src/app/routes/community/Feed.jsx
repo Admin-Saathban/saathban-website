@@ -14,6 +14,7 @@ import { claimOpenSeat } from "../../lib/games.js";
 import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
+import { MotionStyles } from "../../lib/motion.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE } from "./communityCopy.js";
 import {
@@ -449,8 +450,43 @@ function PostCard({
   const [commentReporting, setCommentReporting] = useState(null); // comment id
   const own = post.author_id === myId;
 
+  /* HOLD THE FEED STILL. Without this the page behind the sheet keeps
+     scrolling — a drag meant for the comments moves the feed instead,
+     and closing lands somewhere the person never chose. Measured: open
+     at 600, close at 68.
+
+     The scroll position is captured when the sheet opens and restored
+     when it goes, so "closing returns exactly to where you were" is a
+     thing the code does rather than a thing it hopes for. */
+  const feedYRef = useRef(0);
+  useEffect(() => {
+    if (!commentsOpen) return undefined;
+    /* The position is taken at TAP time, in openComments, not here.
+       Read in this effect it was already wrong: the effect runs after
+       the sheet has mounted, and mounting had itself moved the page —
+       opened at 600 it restored to 68, which is the number the effect
+       saw rather than the number the person left behind.
+
+       Body is pinned with position:fixed and a negative top rather than
+       overflow:hidden, because the document scrolls on <html> here and
+       hiding the body's overflow does not hold it. */
+    const y = feedYRef.current;
+    const b = document.body;
+    const prev = { position: b.style.position, top: b.style.top, width: b.style.width };
+    b.style.position = "fixed";
+    b.style.top = `-${y}px`;
+    b.style.width = "100%";
+    return () => {
+      b.style.position = prev.position;
+      b.style.top = prev.top;
+      b.style.width = prev.width;
+      window.scrollTo(0, y);
+    };
+  }, [commentsOpen]);
+
   const openComments = async () => {
     const next = !commentsOpen;
+    if (next) feedYRef.current = window.scrollY;
     setCommentsOpen(next);
     if (next && comments === null) {
       try {
@@ -716,110 +752,160 @@ function PostCard({
         </GhostBtn>
       </div>
 
+      {/* §1 — COMMENTS ARE A LAYER, NOT A STRIP IN THE FEED.
+
+          They used to expand inside the post card, which scrolled the
+          whole feed to reach them and left the person hunting for their
+          place afterwards. Now the post is pinned at the top of a sheet
+          that rises from the bottom (MOTION_SPEC §2), the comments
+          scroll under it, and the box sits at the foot where a thumb is.
+
+          Closing restores the feed EXACTLY — but NOT "by construction",
+          which is what this comment claimed until I looked. A fixed
+          overlay does not stop the page beneath it scrolling: opened at
+          y=600 and closed, the feed came back at y=68. The position has
+          to be held on purpose, so the effect below freezes the body
+          while the sheet is up and puts the page back where it was. */}
       {commentsOpen && (
-        /* A TINTED REGION, NOT A HAIRLINE.
-
-           This was a 1.5px warmGray rule on the same white as the card,
-           so the comments sat in the post rather than under it and the
-           whole thing read as one block of text — you could not see
-           where somebody else started speaking.
-
-           A tint says "different kind of thing" at a glance and at any
-           text size, where a hairline is the first casualty of a small
-           screen or poor contrast. It bleeds to the card edges (the card
-           pads 14/16, so the negative margins undo exactly that) because
-           a band that stops short of the edge reads as another card
-           inside the card. */
         <div
+          className="sb-dim"
+          onClick={() => setCommentsOpen(false)}
           style={{
-            /* C.tint, not C.cream. Everything the comment above says
-               about needing a tint was already true and already written
-               here — and then `cream` was collapsed onto white in the
-               palette flip, so the band it describes quietly became the
-               same white as the card, and the reasoning outlived the
-               effect. A token that stops meaning what its name says is
-               worse than no token at all. */
-            background: C.tint,
-            borderTop: `1px solid ${C.navEdge}`,
-            margin: "10px -16px -14px",
-            padding: "12px 16px 14px",
+            position: "fixed", inset: 0, zIndex: 80,
+            background: "rgba(0,0,0,0.38)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
           }}
         >
-          {comments === null ? (
-            <BodyText muted role="status">…</BodyText>
-          ) : comments.length === 0 ? (
-            <BodyText muted>{t("community.feed.noComments")}</BodyText>
-          ) : (
-            comments.map((cm) => (
-              <div key={cm.id} style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: ts(17), fontWeight: 700, color: C.green }}>
-                    {commentAuthors[cm.author_id]?.full_name || "…"}
-                  </span>
-                  {/* Report is a safety affordance: full 48px target,
-                      full 18px text (QUALITY_REPORT §3 must-fix). */}
-                  <button
-                    type="button"
-                    onClick={() => setCommentReporting(cm.id)}
-                    style={{
-                      minHeight: A11Y.minTapTargetPx,
-                      background: "none",
-                      border: "none",
-                      color: C.textMuted,
-                      fontSize: ts(18),
-                      fontFamily: "inherit",
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                      padding: "0 8px",
-                    }}
-                  >
-                    {t("community.feed.menuReport")}
-                  </button>
-                </div>
-                {parseStickerRef(cm.body) && (
-                  <Sticker id={parseStickerRef(cm.body)} size={96} />
-                )}
-                <BodyText style={{ margin: "2px 0 0" }}>{cm.body}</BodyText>
-                {commentReporting === cm.id && (
-                  <ReportForm
-                    onCancel={() => setCommentReporting(null)}
-                    onSend={(reason) => {
-                      setCommentReporting(null);
-                      onAction("reportComment", { ...cm, post_id: post.id }, reason);
-                    }}
-                  />
-                )}
-              </div>
-            ))
-          )}
-          {canWrite && (
-            <>
-              {stickersOpen && (
-                <div style={{ marginTop: 8 }}>
-                  <StickerPicker onPick={sendSticker} label={t("community.feed.stickerLabel")} />
-                </div>
-              )}
-              <form onSubmit={sendComment} style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <input
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  placeholder={t("community.feed.commentPlaceholder")}
-                  style={{ flex: 1 }}
-                />
-                <GhostBtn
-                  onClick={() => setStickersOpen((v) => !v)}
-                  aria-expanded={stickersOpen}
-                  aria-label={t("community.feed.stickerLabel")}
-                  style={{ padding: "0 14px" }}
+          <MotionStyles />
+          <div
+            className="sb-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("community.feed.comments")}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 640, maxHeight: "92vh",
+              background: C.bg,
+              borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              display: "flex", flexDirection: "column", overflow: "hidden",
+            }}
+          >
+            {/* THE POST, PINNED. Whose words are being replied to stays
+                on screen however far the comments run. */}
+            <div style={{ padding: "14px 16px 10px", background: C.white, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <strong style={{ fontSize: ts(17), color: C.green }}>
+                  {author?.full_name || "…"}
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => setCommentsOpen(false)}
+                  aria-label={t("common.back")}
+                  style={{
+                    minWidth: A11Y.minTapTargetPx, minHeight: A11Y.minTapTargetPx,
+                    border: "none", background: "transparent", color: C.textMuted,
+                    cursor: "pointer", borderRadius: 10,
+                  }}
                 >
-                  <Icon name="good" size={19} />
-                </GhostBtn>
-                <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
-                  {t("community.feed.commentCta")}
-                </GhostBtn>
-              </form>
-            </>
-          )}
+                  <Icon name="close" size={20} />
+                </button>
+              </div>
+              {post.body ? (
+                <BodyText style={{ margin: "6px 0 0", maxHeight: 96, overflow: "hidden" }}>
+                  {post.body}
+                </BodyText>
+              ) : null}
+            </div>
+
+            {/* The comments themselves scroll; the post and the box do not. */}
+            {/* C.tint, NOT C.cream. This band was written as a warm tint
+                and a nine-line comment explains why a band beats a
+                hairline — then cream was collapsed onto white in the
+                palette flip and the band silently became the same white as
+                the post. Nobody edited the line; the token under it changed
+                meaning. C.tint is the name for "material attached to
+                content", which is exactly what a comment is. */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", background: C.tint }}>
+              {comments === null ? (
+                <BodyText muted role="status">…</BodyText>
+              ) : comments.length === 0 ? (
+                <BodyText muted>{t("community.feed.noComments")}</BodyText>
+              ) : (
+                comments.map((cm) => (
+                  <div key={cm.id} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <span style={{ fontSize: ts(17), fontWeight: 700, color: C.green }}>
+                        {commentAuthors[cm.author_id]?.full_name || "…"}
+                      </span>
+                      {/* Report is a safety affordance: full 48px target,
+                          full 18px text (QUALITY_REPORT §3 must-fix). */}
+                      <button
+                        type="button"
+                        onClick={() => setCommentReporting(cm.id)}
+                        style={{
+                          minHeight: A11Y.minTapTargetPx,
+                          background: "none",
+                          border: "none",
+                          color: C.textMuted,
+                          fontSize: ts(18),
+                          fontFamily: "inherit",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          padding: "0 8px",
+                        }}
+                      >
+                        {t("community.feed.menuReport")}
+                      </button>
+                    </div>
+                    {parseStickerRef(cm.body) && (
+                      <Sticker id={parseStickerRef(cm.body)} size={96} />
+                    )}
+                    <BodyText style={{ margin: "2px 0 0" }}>{cm.body}</BodyText>
+                    {commentReporting === cm.id && (
+                      <ReportForm
+                        onCancel={() => setCommentReporting(null)}
+                        onSend={(reason) => {
+                          setCommentReporting(null);
+                          onAction("reportComment", { ...cm, post_id: post.id }, reason);
+                        }}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ padding: "10px 16px 16px", background: C.bg, flexShrink: 0 }}>
+              {canWrite && (
+                <>
+                  {stickersOpen && (
+                    <div style={{ marginTop: 8 }}>
+                      <StickerPicker onPick={sendSticker} label={t("community.feed.stickerLabel")} />
+                    </div>
+                  )}
+                  <form onSubmit={sendComment} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <input
+                      value={commentBody}
+                      onChange={(e) => setCommentBody(e.target.value)}
+                      placeholder={t("community.feed.commentPlaceholder")}
+                      style={{ flex: 1 }}
+                    />
+                    <GhostBtn
+                      onClick={() => setStickersOpen((v) => !v)}
+                      aria-expanded={stickersOpen}
+                      aria-label={t("community.feed.stickerLabel")}
+                      style={{ padding: "0 14px" }}
+                    >
+                      <Icon name="good" size={19} />
+                    </GhostBtn>
+                    <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
+                      {t("community.feed.commentCta")}
+                    </GhostBtn>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </Card>

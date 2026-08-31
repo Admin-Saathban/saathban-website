@@ -122,6 +122,9 @@ for (const lang of ["en", "ur"]) {
     next: "Next",
     moments: "I'm out",
     manage: "Manage this group",
+    q1: "What are you up for?",
+    qLater: "Who can see it?",
+    qLater2: "How many can come?",
     notYours: "This part is for the people who run the group",
   }, ur: {
     explainer: "گھر سے باہر اچھی جگہیں",
@@ -135,6 +138,9 @@ for (const lang of ["en", "ur"]) {
     next: "آگے",
     moments: "میں باہر ہوں",
     manage: "اس گروپ کا انتظام",
+    q1: "آپ کا کیا ارادہ ہے؟",
+    qLater: "یہ کون دیکھ سکتا ہے؟",
+    qLater2: "کتنے لوگ آ سکتے ہیں؟",
     notYours: "یہ حصہ ان لوگوں کے لیے ہے",
   } }[lang];
 
@@ -173,8 +179,18 @@ for (const lang of ["en", "ur"]) {
     await askBtn.click();
     await icon.page.waitForTimeout(900);
     const s1 = (await icon.page.evaluate(() => document.body.innerText)).trim();
-    check(`[${lang}] §7 the form is one question at a time`,
-      s1.includes(w.next) || s1.includes("…"), "");
+    /* "One question at a time" means the FIRST question is on screen
+       and the LATER ones are not. The previous version accepted
+       `s1.includes("…")`, so any ellipsis anywhere on the page — a
+       loading state, a truncated name — satisfied it, and it never
+       checked that the other questions were absent. It would have
+       passed unchanged against the seven-question scroll this
+       section exists to replace. */
+    check(`[${lang}] §7 the first question is on screen`,
+      s1.includes(w.q1), s1.includes(w.q1) ? "" : "missing");
+    check(`[${lang}] §7 and the LATER questions are not — one at a time`,
+      !s1.includes(w.qLater) && !s1.includes(w.qLater2),
+      s1.includes(w.qLater) ? "whoSees leaked" : s1.includes(w.qLater2) ? "howMany leaked" : "");
     check(`[${lang}] §7 the old "Ask them to confirm?" wording is gone`,
       !s1.includes(w.oldConfirm), "");
   } else {

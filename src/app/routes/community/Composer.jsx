@@ -158,7 +158,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
     padding: "0 16px",
     borderRadius: 50,
     border: on ? `2.5px solid ${C.green}` : `1.5px solid ${C.warmGray}`,
-    background: on ? "#EEF3E8" : C.white,
+    background: on ? C.selected : C.white,
     color: on ? C.green : C.textMain,
     fontFamily: "inherit",
     fontSize: ts(A11Y.minBodyPx),
@@ -466,7 +466,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
                   minHeight: 62, padding: "12px 14px", marginBottom: 10,
                   borderRadius: 14,
                   border: visibility === v ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-                  background: visibility === v ? "#EEF3E8" : C.white,
+                  background: visibility === v ? C.selected : C.white,
                   fontFamily: "inherit", textAlign: "start", cursor: "pointer",
                 }}
               >

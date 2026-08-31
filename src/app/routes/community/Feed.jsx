@@ -148,7 +148,7 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   const { t, ts, lang } = useI18n();
   const p = post.payload || {};
   const box = {
-    background: "#f4f7f1",
+    background: C.selected,
     border: `2px solid ${C.sage}`,
     borderRadius: 14,
     padding: "14px 16px",

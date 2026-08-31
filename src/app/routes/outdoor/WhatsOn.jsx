@@ -34,7 +34,8 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
-import { TYPE_ICONS } from "./outdoorCopy.js";
+import { TYPE_ICONS, PLACE_FALLBACK_ICON, EVENT_ICON } from "./outdoorCopy.js";
+import Icon from "../../components/Icon.jsx";
 import {
   canUseCommunity,
   fetchPlaces,
@@ -49,7 +50,7 @@ import {
 } from "./outdoorData.js";
 import { fetchAppEvents, isUpcoming, fetchMyRsvps, rsvpToEvent, cancelRsvp } from "../events/eventsStore.js";
 import { bandFor, dayBucket, sinceLabel, BAND_ORDER, TODAY, TOMORROW, LATER } from "./bands.js";
-import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, ComingButton, comingPill } from "./ui.jsx";
+import { OutdoorScreen, Card, BodyText, SectionLabel, PrimaryBtn, ComingButton, comingPill , footAction } from "./ui.jsx";
 import StartSomething from "./StartSomething.jsx";
 import AddPlace from "./AddPlace.jsx";
 import WeatherLine from "./WeatherLine.jsx";
@@ -332,9 +333,7 @@ export default function WhatsOn() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <span aria-hidden="true" style={{ fontSize: 26 }}>
-                  {TYPE_ICONS[c.place.place_type] || "📍"}
-                </span>
+                <Icon name={TYPE_ICONS[c.place.place_type] || PLACE_FALLBACK_ICON} size={26} />
                 <span style={{ flex: "1 1 160px", minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
                     {t("whatson.isAt", { name: names[c.profile_id] || t("whatson.someone"), place: c.place.name })}
@@ -366,7 +365,10 @@ export default function WhatsOn() {
             <Card key={h.key} style={{ marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <span aria-hidden="true" style={{ fontSize: 24 }}>
-                  {h.kind === "event" ? "🎪" : TYPE_ICONS[h.place?.place_type] || "📍"}
+                  <Icon
+                    name={h.kind === "event" ? EVENT_ICON : TYPE_ICONS[h.place?.place_type] || PLACE_FALLBACK_ICON}
+                    size={24}
+                  />
                 </span>
                 <span style={{ flex: "1 1 170px", minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
@@ -433,39 +435,28 @@ export default function WhatsOn() {
           §12: "Places have no list of their own — they exist inside
           happenings, plus one quiet 'Places near you' link." */}
       <div style={{ marginTop: 26, paddingTop: 14, borderTop: `1px solid ${C.warmGray}` }}>
-        {/* section 8 — saying where you are without creating a
-            permanent place. Sits beside "Places near you" because it
-            is the same question answered the other way round: the
-            places we keep, and the ones we are only at for an hour. */}
-        <Link
-          to="/app/outdoor/moments"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            color: C.greenMuted,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 600,
-            textDecoration: "underline",
-            marginInlineEnd: 16,
-          }}
-        >
-          {t("outdoor.moments.title")}
-        </Link>
-        <Link
-          to="/app/outdoor/places"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: A11Y.minTapTargetPx,
-            color: C.greenMuted,
-            fontSize: ts(A11Y.minBodyPx),
-            fontWeight: 600,
-            textDecoration: "underline",
-          }}
-        >
-          {t("whatson.placesNearYou")}
-        </Link>
+        {/* §8 and the places list, as ACTIONS rather than underlined
+            words at the foot of the page.
+
+            Underlined text was the old system's way of saying
+            tappable; the current rule is that an outline says it. Two
+            underlined phrases sitting on the grey ground read as a
+            footnote — the least important thing on screen — when one
+            of them is the whole of §8.
+
+            They keep the page inset rather than reaching the glass:
+            these are controls, not surfaces, and .sb-bleed is for
+            surfaces. */}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link to="/app/outdoor/moments" style={footAction(ts)}>
+            <Icon name="walk" size={20} />
+            {t("outdoor.moments.title")}
+          </Link>
+          <Link to="/app/outdoor/places" style={footAction(ts)}>
+            <Icon name="place" size={20} />
+            {t("whatson.placesNearYou")}
+          </Link>
+        </div>
         {/* section 2: "Add a place" used to sit here as a text link AND
             as a box on the places screen — the same action twice, in
             two visual styles. It now lives once, on the places screen,

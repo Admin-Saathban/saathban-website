@@ -219,7 +219,19 @@ export default function MessagesWorld() {
 
            (env() only started resolving at all when viewport-fit=cover
            was added, so this had never been exercised.) */
-        bottom: `calc(${BAR_HEIGHT}px + var(--sb-safe-bottom, 0px))`,
+        /* var(--sb-bar-h) alone — the bar's MEASURED height, and it
+           already contains the safe-area inset, because the inset is
+           padding on that element.
+
+           Adding var(--sb-safe-bottom) to it would double-count the
+           inset: the same trap as before, pointing the other way, and
+           visible only on a notched device. Two wrongs in one week from
+           one question — is the number I am adding already in the number
+           I am adding it to.
+
+           BAR_HEIGHT is no longer used here: it is what the shell
+           RESERVES, and the bar is taller than that by a label line. */
+        bottom: "var(--sb-bar-h, 92px)",
         /* ABOVE THE APP'S BOTTOM BAR, which is also fixed and also sat
            at 60 — same layer, and it mounts after the routes, so it won
            and drew its five tabs across the bottom of the world. §2 is

@@ -23,12 +23,32 @@
    there rather than in front.
    ════════════════════════════════════════════════ */
 
-import { createSession, startWithBots } from "../../lib/games.js";
+import { createSession, startWithBots, fetchGames } from "../../lib/games.js";
 
-/* Seats a game opens with when nobody has said otherwise. Carrom is
-   always two; the others are four, because a ludo board with two
-   empty quadrants looks like a game someone left. */
-const DEFAULT_SEATS = { ludo: 4, snakes: 4, carrom: 2 };
+/* HOW MANY SEATS COMES FROM THE REGISTRY, not from a map keyed by
+   the game's name.
+
+   This was { ludo: 4, snakes: 4, carrom: 2 } with a `|| 4`, which
+   is the trap games.js already warns about one layer down: a
+   fourth game would have opened a four-seat table whatever its
+   own max_seats said, and a two-player game would have been
+   created with four chairs it can never fill. Carrom was two only
+   because somebody had typed its name here.
+
+   max_seats is the right field: a table opens as full as the game
+   allows, because a ludo board with two empty quadrants looks
+   like a game someone left. Deriving it reproduces exactly the
+   three numbers that were hardcoded, which is the check that it
+   is the right field rather than a plausible one.
+
+   (Lane 38 hit the same trap in their own sheet tonight, from my
+   advice, and deriving it there uncovered a game that should
+   never have been offered at all. Mine hid a smaller thing: a
+   table size nobody would notice until a game was added.) */
+function seatsFor(game) {
+  const n = Number(game?.max_seats);
+  return Number.isFinite(n) && n >= 2 ? Math.min(4, n) : 4;
+}
 
 /* The house rules the form would have produced untouched. Kept HERE
    rather than read from the form so that deleting the form later
@@ -68,8 +88,19 @@ function defaultHouseRules(gameKey) {
    Throws on failure rather than returning null: the caller is about
    to navigate, and navigating to a table that does not exist is
    worse than staying put with an error. */
-export async function openQuickTable(gameKey) {
-  const seats = DEFAULT_SEATS[gameKey] || 4;
+/* Takes the registry ROW when the caller has one (the games home
+   already fetched it), or a bare key when it does not — lane 38's
+   "Play something" passes a key and must keep working. Given a
+   key it reads the row rather than guessing, which costs one
+   small query on a tap and is the difference between carrom
+   opening with two chairs and opening with four. */
+export async function openQuickTable(gameOrKey) {
+  let game = typeof gameOrKey === "string" ? null : gameOrKey;
+  const gameKey = game ? game.key : gameOrKey;
+  if (!game) {
+    game = (await fetchGames().catch(() => [])).find((g) => g.key === gameKey) || null;
+  }
+  const seats = seatsFor(game);
   const id = await createSession(gameKey, seats, defaultHouseRules(gameKey), null);
   if (!id) throw new Error("no session");
 

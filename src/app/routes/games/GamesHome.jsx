@@ -87,7 +87,11 @@ export default function GamesHome() {
      /app/games/new/:key; that screen still exists for anything that
      links to it, but nothing here does any more. */
   const [opening, setOpening] = useState(null);
-  const openTable = async (key) => {
+  /* Takes the registry row. quickTable needs it for the seat
+     count, and this screen already has it — passing the key would
+     make it fetch what is sitting in this component's state. */
+  const openTable = async (game) => {
+    const key = game.key;
     if (opening) return;
 
     /* TAPPING A GAME OPENS THAT GAME.
@@ -120,7 +124,7 @@ export default function GamesHome() {
     }
     setOpening(key);
     try {
-      navigate(await openQuickTable(key));
+      navigate(await openQuickTable(game));
     } catch {
       setOpening(null);
     }
@@ -206,7 +210,14 @@ export default function GamesHome() {
 
   const byKey = useMemo(() => Object.fromEntries(games.map((g) => [g.key, g])), [games]);
   const tables = sessions.filter((s) => byKey[s.game_key]?.kind === "turns");
-  const turnGames = games.filter((g) => g.kind === "turns");
+  /* Games with a table: taken in turns, and with room for more
+     than one person. `kind` alone was enough today — the daily
+     riddle is kind 'daily' and falls out — but the seat test is
+     the one that actually says what this list is FOR, and lane 38
+     found a solo puzzle sitting in their equivalent list because
+     they had asked a different question. The riddle keeps its own
+     card further down, where a solo puzzle belongs. */
+  const turnGames = games.filter((g) => g.kind === "turns" && (g.max_seats ?? 0) >= 2);
 
   const submitCode = async (e) => {
     e.preventDefault();
@@ -380,7 +391,7 @@ export default function GamesHome() {
               key={g.key}
               type="button"
               disabled={!g.enabled}
-              onClick={() => openTable(g.key)}
+              onClick={() => openTable(g)}
               style={{
                 display: "flex",
                 alignItems: "center",

@@ -93,12 +93,17 @@ export default function PlaySomethingSheet({ person, onClose }) {
     return () => { alive = false; };
   }, []);
 
-  const start = async (gameKey) => {
+  const start = async (game) => {
     if (starting || !person?.id) return;
     setStarting(true);
     setError("");
     try {
-      const path = await openQuickTable(gameKey);
+      /* The ROW, not the key. openQuickTable reads the registry when it
+         is handed a bare key, and this sheet has already fetched every
+         row to build the list — so passing the key would buy a second
+         query for something sitting in state. Seat count comes off
+         max_seats either way; this only decides who pays for it. */
+      const path = await openQuickTable(game);
       const id = String(path).split("/").pop();
       /* Seat 1 is the first seat that is not the host's — a bot's chair in
          ludo and snakes, a seat number with no row behind it in carrom.
@@ -161,7 +166,7 @@ export default function PlaySomethingSheet({ person, onClose }) {
             key={g.key}
             type="button"
             disabled={starting}
-            onClick={() => start(g.key)}
+            onClick={() => start(g)}
             style={{
               display: "flex",
               alignItems: "center",

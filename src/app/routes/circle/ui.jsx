@@ -77,7 +77,7 @@ export function Pill({ children, tone = "neutral", style }) {
        not see. Chips are labels, so they take the ground. */
     neutral: { bg: C.ground, fg: C.textMuted, border: C.warmGray },
     brown: { bg: C.tint, fg: C.brown, border: C.navEdge },
-    green: { bg: "#e8f0e6", fg: C.green, border: C.sage },
+    green: { bg: C.selected, fg: C.green, border: C.sage },
   };
   const t = tones[tone] ?? tones.neutral;
   return (
@@ -188,7 +188,7 @@ export function Toggle({ checked, onChange, label, hint, busy }) {
           padding: "0 8px 0 14px",
           borderRadius: 50,
           border: `2px solid ${checked ? C.green : C.warmGray}`,
-          background: checked ? "#e8f0e6" : C.white,
+          background: checked ? C.selected : C.white,
           color: checked ? C.green : C.textMuted,
           // On/Off announces the state of a role="switch" — floor at 18
           // (QUALITY_REPORT §3, interactive text).

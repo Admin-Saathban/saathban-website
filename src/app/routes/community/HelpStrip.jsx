@@ -44,7 +44,7 @@ export default function HelpStrip({ status, authorName, authorComplete, helperNa
 
   if (status.state === "done" || status.state === "closed") {
     return (
-      <div style={{ ...box, background: "#EEF3E8", borderColor: C.green }}>
+      <div style={{ ...box, background: C.selected, borderColor: C.green }}>
         <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green }}>
           <Icon name="check" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.confirmed }} />
           {status.state === "closed"

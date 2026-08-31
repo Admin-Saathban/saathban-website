@@ -209,7 +209,7 @@ export default function PlaceAccess() {
                         : confirmed
                           ? `2px solid ${present ? "#C6DCB4" : C.warmGray}`
                           : `2px dashed ${C.brown}`,
-                      background: !on ? C.white : confirmed ? (present ? "#EAF2E3" : C.cream) : "#FFF6E8",
+                      background: !on ? C.white : confirmed ? (present ? C.selected : C.cream) : "#FFF6E8",
                       color: !on ? C.textMuted : confirmed ? (present ? C.green : C.textMuted) : C.brown,
                       opacity: busy === key ? 0.5 : 1,
                     }}

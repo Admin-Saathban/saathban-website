@@ -79,6 +79,29 @@ export const SURFACE = {
   nav:     "#F7F9F7",   // header and bottom bar
   navEdge: "#E1E7E1",   // the hairline that does the real work
   pressed: "#E8EDE8",   // touched, or the row you are on
+
+  /* THE ONE SURFACE THAT CARRIES A HUE, and it earns it: this is the
+     app saying yes. The option you chose, the switch that is on, the
+     panel for a thing that is done, the person who is present.
+
+     Lane 4 asked for it rather than guessing, and asking was right —
+     neither of the two nearest tokens fits. `tint` is cream and would
+     look wrong beside the green border these always carry; `pressed`
+     is grey-green and would flatten the affordance on a screen whose
+     whole task is choosing one of two.
+
+     IT WAS ALREADY FIVE COLOURS: #EEF3E8 (29 uses), #eef3ea (8),
+     #e8f0e6 (6), #f4f7f1 (5), #EAF2E3 (2) — the cream problem again in
+     the green family, fifty uses deep, and Lane 4 caught their own
+     sixth on the way to becoming a seventh. The majority value wins,
+     the same rule that settled the cream: adopt what is already there
+     rather than mint something nobody has seen.
+
+     SELECTION AND COMPLETION SHARE IT DELIBERATELY. They are the same
+     affirmative family, and giving them two identical values under two
+     names is exactly how five creams happened. What tells them apart is
+     the border and the words, which differ already. */
+  selected: "#EEF3E8",
 };
 
 /* ─── WHAT A COLOUR MEANS ───
@@ -113,6 +136,7 @@ export const APP_COLORS = {
   nav:     SURFACE.nav,
   navEdge: SURFACE.navEdge,
   pressed: SURFACE.pressed,
+  selected: SURFACE.selected,
 
   bg: SURFACE.ground,     // older name for the ground; same value
   white: SURFACE.content,  // older name for a content surface

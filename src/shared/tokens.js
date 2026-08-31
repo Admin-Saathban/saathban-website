@@ -101,11 +101,18 @@ export const COLORS = {
    clearly enough on a real phone, the tint can go and the hairline can
    stay — that is the direction to fail in, not the other one. */
 export const SURFACE = {
-  ground:  "#F2F3F5",   // the floor
+  ground:  "#EFF3EE",   // the floor — a soft sage tint, not a grey
   content: "#FFFFFF",   // posts, chats, cards, sheets
   tint:    "#FBF0E6",   // comments, replies, quoted material
-  nav:     "#F7F9F7",   // header and bottom bar
-  navEdge: "#E1E7E1",   // the hairline that does the real work
+  /* THE CHROME IS DARK NOW. Header and bottom bar both. A near-black
+     frame stops the chrome competing with content for the eye at all,
+     rather than competing quietly at one step of lightness — and it is
+     what makes the active tab's accent chip readable as a position
+     marker instead of one more pale thing among pale things. */
+  nav:       "#1B1E22",  // header and bottom bar
+  navInk:    "#F2F3F5",  // labels and resting icons on the dark chrome
+  navActive: "#7FD99A",  // the tab you are on, where accent-on-dark would sink
+  navEdge:   "#2A2E33",  // the hairline, now a lift rather than a shadow
   pressed: "#E8EDE8",   // touched, or the row you are on
 
   /* THE ONE SURFACE THAT CARRIES A HUE, and it earns it: this is the
@@ -129,7 +136,17 @@ export const SURFACE = {
      affirmative family, and giving them two identical values under two
      names is exactly how five creams happened. What tells them apart is
      the border and the words, which differ already. */
-  selected: "#EEF3E8",
+  /* MOVED WITH THE GROUND, and it had to be. #EEF3E8 sits a distance
+     of 6 from the new #EFF3EE ground — indistinguishable, so every
+     chosen option, every switch that is on and every done panel would
+     have quietly stopped reading as chosen. Retuned to the new accent's
+     family: distance 21 from the ground, 5.28:1 under accent ink.
+
+     The brief did not name this token. It did not have to: changing the
+     ground changes what every wash ON the ground is worth, and a value
+     that survives a palette change unexamined is exactly how `sage`
+     ended up meaning solid accent. */
+  selected: "#DCEDE7",
 
   /* WHOSE MESSAGE THIS IS — authorship, not affirmation.
 
@@ -171,7 +188,23 @@ export const SURFACE = {
      A wrong reason for a right answer is worse than no reason: it
      survives exactly until somebody checks it, and takes the answer
      with it. */
-  mine: "#E8F0E6",
+  mine: "#DCEDE7",   // own-message bubble; same wash as `selected`, retuned with it
+
+  /* ── THE COMMENT PAIR ── owner-specified, and a PAIR on purpose.
+
+     A comment is not a warm aside, it is a different voice, and it now
+     says so in a cool wash with a rule down its inline-start edge:
+     2.5px of `commentRule` and a 10px indent, which is the shape a
+     quoted reply has had since email. Lane 3 consumes both for the DM
+     thread; the feed's comment band uses them too, so the two places a
+     person reads replies finally match.
+
+     THIS IS NOT A REVISION OF `tint`. tint (#FBF0E6) stays warm and
+     stays what it was — attached material that is not a reply: the help
+     panel, the pending-request card, the SOS pill. Cool for another
+     voice, warm for more of the same thing. */
+  comment:     "#EBF0F4",
+  commentRule: "#8FA6BC",
 };
 
 /* ─── WHAT A COLOUR MEANS ───
@@ -189,10 +222,29 @@ export const SURFACE = {
    is the second signal, not the only one. */
 export const MEANING = {
   liked:     "#E0245E",  // a heart you have pressed
-  confirmed: "#0B5D2A",  // done, going, yes — the app accent
+  confirmed: "#0E6B5C",  // done, going, yes — the app accent, moved with it
   warning:   "#B26A00",  // amber that still passes on white
   danger:    "#B3261E",  // destructive, and always worded
   rest:      "#65676B",  // line-art at rest: the muted ink
+
+  /* ── WHAT EACH REACTION MEANS WHEN IT IS ON ──
+
+     I ruled the opposite of this a few hours ago: that only the heart
+     earns a colour of its own and the other three keep the accent,
+     because inventing three colours would be brand noise wearing the
+     costume of meaning. The owner has since picked all four from a live
+     comparison, which is a better instrument than my argument — they
+     looked at it. Four named colours, one owner, no hexes at call
+     sites.
+
+     Lane 3 asked for these by name before building against them rather
+     than writing the hexes down and sweeping later. That is the right
+     instinct and it is why they are here: a raw hex beside a token name
+     that will exist tomorrow is precisely how COLORS.cream and
+     APP_COLORS.cream came to mean two different colours. */
+  thumb:     "#1877F2",
+  flower:    "#E91E8C",
+  hands:     "#F5A623",
 };
 
 export const APP_COLORS = {
@@ -203,8 +255,12 @@ export const APP_COLORS = {
   ground:  SURFACE.ground,
   surface: SURFACE.content,
   tint:    SURFACE.tint,
-  nav:     SURFACE.nav,
-  navEdge: SURFACE.navEdge,
+  nav:       SURFACE.nav,
+  navInk:    SURFACE.navInk,
+  navActive: SURFACE.navActive,
+  navEdge:   SURFACE.navEdge,
+  comment:     SURFACE.comment,
+  commentRule: SURFACE.commentRule,
   pressed: SURFACE.pressed,
   selected: SURFACE.selected,
   mine: SURFACE.mine,
@@ -221,12 +277,17 @@ export const APP_COLORS = {
   dark: "#1C1E21",
 
   /* the one accent: Saathban green, and its two working shades */
-  green: "#0B5D2A",
-  greenLight: "#0E7536",
-  greenMuted: "#3F7A55",
-  sage: "#0B5D2A",         // was a second green; collapsed onto the accent
+  /* ONE ACCENT, AND IT IS TEAL NOW. #0B5D2A everywhere it appeared:
+     buttons, active states, Send, links. green/accent/sage are the same
+     value and always were — see the header note about names outliving
+     values — so all three move together rather than leaving one of them
+     pointing at the old brand green for something to drift back onto. */
+  green: "#0E6B5C",
+  greenLight: "#12836F",
+  greenMuted: "#3F8A7C",
+  sage: "#0E6B5C",         // was a second green; collapsed onto the accent
   olive: "#65676B",        // was a third; it was never an accent, it was a label
-  accent: "#0B5D2A",
+  accent: "#0E6B5C",
 
   /* lines and dividers — neutral, and used far less than they were */
   warmGray: "#DADDE1",
@@ -289,6 +350,36 @@ export const GOOGLE_FONTS_URL =
 
    Inside a game screen neither floor applies —
    GAMES_IMMERSION_SPEC §3. */
+/* ─── ICON CHIPS ("alive", I2) ───
+
+   Every header and bar icon sits in a soft rounded chip. At rest the
+   chip is a whisper; on the dark chrome it is a white film. The tab you
+   are ON fills its chip with the accent and turns its icon white, so
+   position is carried by a shape you can find without reading.
+
+   TWO OF THEM KEEP THEIR OWN COLOUR because they are landmarks rather
+   than states: the bell is bronze and Messages is blue. Those are the
+   two icons people hunt for, and hunting is easier when the thing has a
+   colour of its own. Everything else is ink.
+
+   Exported so the chip is a shared treatment. The whole point of I2 is
+   that it is one component's behaviour — a lane building its own chip
+   is five chips again, which is the road this palette was rescued from.
+
+   Non-text contrast (WCAG 1.4.11) needs 3:1. On the dark chrome bronze
+   measures 4.28:1 and blue 3.79:1 against #1B1E22; both clear it, and
+   both are paired with a label besides. */
+export const CHIP = {
+  restLight: "rgba(14,107,92,0.08)",   // on a light surface
+  restDark:  "rgba(255,255,255,0.14)", // on the dark chrome
+  activeInk: "#FFFFFF",                // icon inside the accent-filled chip
+  bronze:    "#A8781F",                // the bell
+  bronzeBed: "rgba(168,120,31,0.18)",
+  blue:      "#2E7CC0",                // Messages
+  blueBed:   "rgba(46,124,192,0.18)",
+  radius:    14,
+};
+
 export const A11Y = {
   minBodyPx: 16,
   minTapTargetPx: 44,

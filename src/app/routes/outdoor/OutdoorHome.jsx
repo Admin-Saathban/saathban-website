@@ -227,40 +227,56 @@ export default function OutdoorHome() {
             </BodyText>
           )}
           {/* §2: "the city stated as quiet tappable text on the right —
-              NOT a toggle to answer." A person should not be asked to
-              choose their own city every time they open the screen;
-              the city they are in is a fact the app already has, so it
-              is stated, and tapping it offers the other one. */}
-          {cities.length > 1 && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const i = cities.indexOf(city);
-                  pickCity(cities[(i + 1) % cities.length]);
-                }}
-                aria-label={t("outdoor.home.cityTapLabel", {
-                  city: cities[(cities.indexOf(city) + 1) % cities.length],
-                })}
-                style={{
-                  minHeight: A11Y.minTapTargetPx,
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  color: C.textMuted,
-                  fontFamily: "inherit",
-                  fontSize: ts(16),
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {city}
-                <span aria-hidden="true" style={{ textDecoration: "underline", marginInlineStart: 8 }}>
-                  {t("outdoor.home.cityChange")}
-                </span>
-              </button>
-            </div>
-          )}
+              NOT a toggle to answer." One control, not one per city:
+              a person should not be asked to choose their own city
+              every time they open the screen.
+
+              It NAMES THE DESTINATION rather than saying "change".
+              Two reasons, and the second is one I broke and did not
+              notice. A control that says only "change" does not tell
+              you what you would get. And the chips this replaced
+              carried something the plain version lost: for a Fam
+              member, the chip for their person's city said so —
+              "Lahore · Ammi's city" — which is the one tap that
+              matters to somebody in Karachi whose mother is in
+              Lahore. I dropped that when I replaced the chips, and
+              every test of mine ran as an Icon already in the right
+              city, so nothing ever showed me the loss. */}
+          {cities.length > 1 && (() => {
+            const next = cities[(cities.indexOf(city) + 1) % cities.length];
+            const whose = personCities[next];
+            return (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => pickCity(next)}
+                  aria-label={t("outdoor.home.cityTapLabel", { city: next })}
+                  style={{
+                    minHeight: A11Y.minTapTargetPx,
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    color: C.textMuted,
+                    fontFamily: "inherit",
+                    fontSize: ts(16),
+                    fontWeight: 600,
+                    textAlign: "end",
+                    cursor: "pointer",
+                  }}
+                >
+                  {city}
+                  <span style={{ textDecoration: "underline", marginInlineStart: 8, color: C.greenMuted }}>
+                    {t("outdoor.home.citySee", { city: next })}
+                  </span>
+                  {whose && (
+                    <span style={{ marginInlineStart: 6 }}>
+                      · {t("outdoor.home.personCity", { name: whose })}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          })()}
 
           {Object.keys(byArea).length === 0 ? (
             <Card>

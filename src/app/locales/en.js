@@ -1755,6 +1755,7 @@ const en = {
       wrongFailed: "That didn't send. Please try again.",
     },
     home: {
+        citySee: "see {city}",
         cityChange: "change",
         cityTapLabel: "Show places in {city} instead",
       title: "Outdoor",

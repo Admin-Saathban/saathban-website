@@ -1647,6 +1647,7 @@ const ur = {
       wrongFailed: "بھیجا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
     },
     home: {
+        citySee: "{city} دیکھیں",
         cityChange: "بدلیں",
         cityTapLabel: "اس کے بجائے {city} کی جگہیں دکھائیں",
       title: "باہر کی دنیا",

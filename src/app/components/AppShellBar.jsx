@@ -85,15 +85,33 @@ export default function AppShellBar() {
      means a button that cannot be pressed. Rather than adding padding
      to forty screens and to every screen written after this one, the
      shell pays for its own chrome: body padding while the bar is up,
-     removed the moment it is not. */
+     removed the moment it is not.
+
+     `shuttered` IS PART OF "IS NOT", and it was missing. The comment
+     above described this behaviour and the dependency list did not
+     implement it — `hidden` is the route-level flag, so the padding
+     stayed put while the bar slid away.
+
+     Mid-feed that is invisible, which is why it survived: the bar
+     overlays content there and sliding it down reveals the post
+     underneath, exactly as intended. AT THE END OF A SCROLL it is the
+     whole bug — measured at 390px on the community feed, the last
+     92px of the viewport was BODY, the reserved padding, painted in
+     the ground colour. The bar left and gave back nothing.
+
+     Removing the padding here shrinks the document by the bar height
+     at the moment the bar goes, so the browser clamps the scroll and
+     the last content settles down into the space. Mid-document it
+     changes total height and nothing else moves; at the bottom it
+     does precisely what the bar leaving should do. */
   useEffect(() => {
-    if (hidden) return undefined;
+    if (hidden || shuttered) return undefined;
     const prev = document.body.style.paddingBottom;
     document.body.style.paddingBottom = `calc(${BAR_HEIGHT}px + env(safe-area-inset-bottom, 0px))`;
     return () => {
       document.body.style.paddingBottom = prev;
     };
-  }, [hidden]);
+  }, [hidden, shuttered]);
 
   if (hidden) return null;
 

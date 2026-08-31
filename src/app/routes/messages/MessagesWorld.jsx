@@ -45,6 +45,7 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
 import { touchPresence } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
+import { BAR_HEIGHT } from "../../components/BottomBar.jsx";
 import { hasUnsentDraft } from "./draftGuard.js";
 import DiscardDialog from "../community/DiscardDialog.jsx";
 import NewChat from "./NewChat.jsx";
@@ -78,8 +79,7 @@ function WorldTab({ to, end, icon, label, badge }) {
            same white held back when it is not. Green measured 2.61:1
            and muted ink 2.95:1 against the dark bar — both under the
            4.5 floor, on the only labels that say where you are. */
-        color: CHIP.activeInk,
-        opacity: isActive ? 1 : 0.68,
+        color: isActive ? C.green : C.textMuted,
         fontWeight: isActive ? 800 : 600,
         fontSize: ts(14),
         position: "relative",
@@ -178,7 +178,19 @@ export default function MessagesWorld() {
       data-world="messages"
       style={{
         position: "fixed",
-        inset: 0,
+        /* STOPS ABOVE THE APP BAR rather than covering it. Messages is a
+           tab now, so this is tab CONTENT and the five tabs below it must
+           stay reachable — inset:0 covered them, and moving my own bar to
+           the top only changed which of my elements was doing the
+           covering. Measured: a thumb at the foot hit the chats list.
+
+           BAR_HEIGHT comes from BottomBar.jsx rather than a number typed
+           here, so the two cannot drift apart. The safe-area inset is
+           added because the bar carries one too. */
+        top: 0,
+        insetInlineStart: 0,
+        insetInlineEnd: 0,
+        bottom: `calc(${BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
         /* ABOVE THE APP'S BOTTOM BAR, which is also fixed and also sat
            at 60 — same layer, and it mounts after the routes, so it won
            and drew its five tabs across the bottom of the world. §2 is
@@ -295,6 +307,43 @@ export default function MessagesWorld() {
         </NavLink>
       </header>
 
+      {/* SUB-NAVIGATION AT THE TOP, because the bottom now belongs to the
+          app. Messages became a bar tab, and this row was still a second
+          bottom bar painting over the first — measured on the built app,
+          both ended at 844 and a thumb anywhere along the bottom hit
+          "Invite someone". Landing on the Messages tab left no way to
+          reach the other four.
+
+          The file used to say "the world sits on top of their bar; it does
+          not ask them to hide it", and that was right while Messages was a
+          world reached from a header glyph. As a tab it is wrong.
+
+          Stacking the two was the obvious repair and costs ~158px of an
+          844px screen — a fifth of the display given to navigation on an
+          app built for large text. Sub-navigation belongs under its own
+          title anyway; the bottom bar is now app-level and a second one
+          beneath it competes rather than nests.
+
+          NOTE THE INK CHANGES WITH THE GROUND. On the dark chrome these
+          labels were CHIP.activeInk; here they sit on the world's light
+          ground, where white would be invisible. Moving a mark to a new
+          surface revalues it — the failure this week keeps producing. */}
+      <nav
+        aria-label={t("msg.title")}
+        style={{
+          display: "flex",
+          borderBottom: `1px solid ${C.navEdge}`,
+          background: C.bg,
+          flexShrink: 0,
+
+        }}
+      >
+        <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
+        <WorldTab to="requests" icon="letter" label={t("msg.tab.requests")} badge={pending} />
+        <WorldTab to="invite" icon="add" label={t("people.list.inviteCta")} />
+        <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
+      </nav>
+
       <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}>
           <Routes>
@@ -328,21 +377,7 @@ export default function MessagesWorld() {
       </main>
 
       {/* §2 — three items. The app's five tabs do not exist in here. */}
-      <nav
-        aria-label={t("msg.title")}
-        style={{
-          display: "flex",
-          borderTop: `1px solid ${C.navEdge}`,
-          background: C.nav,
-          flexShrink: 0,
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
-      >
-        <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
-        <WorldTab to="requests" icon="letter" label={t("msg.tab.requests")} badge={pending} />
-        <WorldTab to="invite" icon="add" label={t("people.list.inviteCta")} />
-        <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
-      </nav>
+
     </div>
   );
 }

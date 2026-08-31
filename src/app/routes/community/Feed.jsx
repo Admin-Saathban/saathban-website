@@ -563,7 +563,10 @@ function PostCard({
           {post.body}
         </div>
       ) : (
-        <BodyText style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
+        {/* A post body is somebody's words: selectable, so it can be
+            copied or read out. §4 of tonight's brief — chrome is not
+            text, but this is text. */}
+        <BodyText className="sb-selectable" style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
       ))}
 
       {/* §5 — who is named on this post, and a way off it for the

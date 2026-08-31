@@ -2624,6 +2624,7 @@ const en = {
       safeSquaresHint: "Standard keeps the eight classic safe squares; none means nowhere to hide.",
       safeStandard: "Standard",
       safeNone: "None",
+      narrate: "Narrate moves",
     },
     /* §8 — changing the table AT the table. Every one of these is
        the label on a tap that used to be a field on a form. */

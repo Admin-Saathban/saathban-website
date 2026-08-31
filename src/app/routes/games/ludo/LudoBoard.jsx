@@ -96,16 +96,41 @@ const SPARKS = Array.from({ length: 6 }, (_, i) => {
   return [Math.cos(a), Math.sin(a)];
 });
 
+/* A four-pointed sparkle, drawn rather than typed.
+
+   The second recording is nine seconds of a capture, and what it
+   shows is a scatter of soft gold stars at the point of contact
+   and along the path the taken piece travels home. No sentence
+   anywhere: the board says what happened by what it does.
+
+   Our capture threw straight shards, which reads as an impact
+   rather than as the small piece of theatre a capture is. Same
+   moment, better shape. */
+function sparkPath(x, y, r) {
+  const w = r * 0.20;
+  return [
+    `M ${x} ${y - r}`,
+    `Q ${x + w} ${y - w} ${x + r} ${y}`,
+    `Q ${x + w} ${y + w} ${x} ${y + r}`,
+    `Q ${x - w} ${y + w} ${x - r} ${y}`,
+    `Q ${x - w} ${y - w} ${x} ${y - r}`,
+    "Z",
+  ].join(" ");
+}
+
 export const BOARD_MOTION_CSS = `
   @keyframes sb-spark {
-    0%   { opacity: 0;   transform: scale(0.25); }
-    30%  { opacity: 0.95; }
-    100% { opacity: 0;   transform: scale(1); }
+    0%   { opacity: 0;   transform: scale(0.2) rotate(-18deg); }
+    25%  { opacity: 1;   transform: scale(1.15) rotate(0deg); }
+    100% { opacity: 0;   transform: scale(0.75) rotate(12deg); }
   }
   .sb-spark {
     transform-box: fill-box;
-    transform-origin: 0% 50%;
-    animation: sb-spark 620ms ease-out both;
+    /* Its OWN centre. The shards pivoted on 0% 50% because they
+       were lines starting at the capture square; a star is drawn
+       around its own middle and has to grow from there. */
+    transform-origin: 50% 50%;
+    animation: sb-spark 760ms cubic-bezier(.2,.8,.3,1) both;
   }
 
   /* The ring round a goti you can move, breathing.
@@ -1465,22 +1490,25 @@ export default function LudoBoard({
              it entirely (the flash stays, because that one carries
              information rather than delight). ── */}
         {[...captured.values()].map(([cc, rr], i) =>
-          SPARKS.map(([dx, dy], k) => (
-            <line
-              key={`spark-${i}-${k}`}
-              className="sb-spark"
-              x1={cc * CELL}
-              y1={rr * CELL}
-              x2={cc * CELL + dx * CELL * 0.62}
-              y2={rr * CELL + dy * CELL * 0.62}
-              stroke="#F2C044"
-              strokeWidth={2.4}
-              strokeLinecap="round"
-              style={{ animationDelay: `${k * 22}ms` }}
-              pointerEvents="none"
-              aria-hidden="true"
-            />
-          ))
+          SPARKS.map(([dx, dy], k) => {
+            /* Scattered rather than evenly spoked: a ring of
+               identical stars reads as a diagram of an explosion.
+               The sizes and distances vary with the index, which
+               is enough irregularity to look thrown. */
+            const dist = CELL * (0.32 + ((k * 7) % 5) * 0.09);
+            const size = CELL * (0.11 + ((k * 3) % 4) * 0.035);
+            return (
+              <path
+                key={`spark-${i}-${k}`}
+                className="sb-spark"
+                d={sparkPath(cc * CELL + dx * dist, rr * CELL + dy * dist, size)}
+                fill={k % 3 === 0 ? "#FFFFFF" : "#F7D07A"}
+                style={{ animationDelay: `${k * 26}ms` }}
+                pointerEvents="none"
+                aria-hidden="true"
+              />
+            );
+          })
         )}
         {[...captured.values()].map(([cc, rr], i) => (
           <rect

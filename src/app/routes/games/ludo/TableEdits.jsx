@@ -265,6 +265,8 @@ const RULES = [
   ["exact_home", "ludo.rules.exactHome", true],
   ["capture_before_home", "ludo.rules.captureFirst", false],
   ["undo", "games.setup.undoOn", true],
+  /* Off by default: the board narrates itself by moving. */
+  ["narrate", "ludo.rules.narrate", false],
 ];
 
 function HouseRules({ sessionId, rules, onChanged }) {

@@ -795,6 +795,22 @@ export default function LudoSession() {
     ? Math.max(0, Math.ceil((new Date(game.turn_deadline).getTime() - now) / 1000))
     : null;
   const last = state.last;
+  /* NARRATION IS OFF UNLESS ASKED FOR.
+
+     "Bot rolled 5 and moved" is the board describing itself to
+     somebody who is watching it happen. The dice tumble and the
+     token travels; that IS the feedback, and everybody at the
+     table already knows how ludo works. A running line under a
+     board people have played for fifty years is the app
+     explaining the obvious, and it costs the board height to do
+     it.
+
+     House rules can turn it on for anyone who wants it — someone
+     playing at arm's length, or with the sound off, may. What
+     stays regardless is the rare and the consequential: somebody
+     leaving, and the countdown. Those announce themselves once
+     and leave. */
+  const narrate = rules?.narrate === true;
 
   /* §8 — WHAT MAY BE TAPPED, and by whom.
 
@@ -1377,7 +1393,7 @@ export default function LudoSession() {
                 chain card, three messages deep. It is the least
                 urgent of the three, so it stands down whenever
                 either of the others is speaking. */}
-            {last && !(isMyTurn && hasDice) && chain === 0 && awaySeats.length === 0 && (
+            {narrate && last && !(isMyTurn && hasDice) && chain === 0 && awaySeats.length === 0 && (
               <BodyText
                 muted
                 style={{

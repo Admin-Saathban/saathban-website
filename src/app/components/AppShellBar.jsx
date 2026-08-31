@@ -35,8 +35,10 @@ import { useLocation } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import BottomBar, { BAR_HEIGHT } from "./BottomBar.jsx";
 import useBuddyActive from "./useBuddyActive.js";
+import { barItems } from "./navItems.js";
 import MoreDrawer, { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
 import useShutter from "./useShutter.js";
+import useTabSwipe from "./useTabSwipe.js";
 import { useDrawer } from "./Drawer.jsx";
 import { MotionStyles } from "./motion.jsx";
 
@@ -62,6 +64,16 @@ export default function AppShellBar() {
      would look like the drawer ate it. */
   const shuttered = useShutter() && !moreOpen;
 
+  /* SWIPE BETWEEN THE TABS, from the same list the bar renders — never
+     a second copy of the order. Two lists that must agree are two lists
+     that eventually will not, and a swipe that disagrees with the tabs
+     about what comes next is worse than no swipe at all.
+
+     Called above the early return, like the hooks around it, and told
+     whether it is live rather than being mounted conditionally: a hook
+     behind a condition is a hook that changes count between renders. */
+  
+
   /* THE ONBOARDING GATE IS NOT A PATH, which is why it needed saying
      here in words rather than in HIDDEN_PREFIXES. FirstRun renders
      conditionally INSIDE HomeRoutes at /app/home, so the bar saw an
@@ -79,6 +91,20 @@ export default function AppShellBar() {
     onboarding ||
     HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) ||
     isLudoTable(pathname);
+
+  /* SWIPE BETWEEN THE TABS, from the same list the bar renders — never
+     a second copy of the order. Two lists that must agree are two lists
+     that eventually will not, and a swipe disagreeing with the tabs
+     about what comes next is worse than no swipe at all.
+
+     BELOW `hidden`, ABOVE THE EARLY RETURN. My first placement put it
+     above both: `hidden` is a const declared further down, so reading it
+     there threw a ReferenceError out of the temporal dead zone — and
+     THE BUILD PASSED, because that is a runtime error. Still
+     unconditional, so the hook count cannot change between renders; it
+     is told whether it is live rather than mounted only sometimes. */
+  const swipeItems = barItems(role, { buddyActive });
+  useTabSwipe(swipeItems, !hidden && !moreOpen);
 
   /* A FIXED BAR RESERVES NO SPACE, so the last thing on every screen
      would sit underneath it — which for a screen ending in a button

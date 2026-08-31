@@ -13,11 +13,22 @@
    belongs to the navigation lane. The world sits on top of their bar;
    it does not ask them to hide it.)
 
-   Getting in is the header icon or a swipe from the right edge (§1).
-   Both do the same thing, and both leave the same way — the back
-   arrow, the browser's back, or a swipe back. It is a push from the
-   side that was touched, 220ms, instant under prefers-reduced-motion
-   (MOTION_SPEC §3).
+   GETTING IN IS THE MESSAGES TAB. It is a bar tab now, fourth from
+   the left in the ruled order, so the world opens as tab content with
+   the inner Chats/Requests/Menu bar below untouched.
+
+   The header icon is gone and so is the edge swipe. The edge swipe is
+   deleted in the sense that matters — nothing may implement it — but
+   it is worth recording that NOTHING EVER DID. Searched before
+   removing: these two lines were the only occurrence of the word in
+   the whole app outside the games folder, and no pointer or touch
+   handler anywhere opened this world. A gesture that existed only as a
+   sentence in a comment read, to anyone who came here to find out how
+   the world opened, exactly like a gesture that existed.
+
+   A horizontal swipe now moves between TABS (components/useTabSwipe.js)
+   and yields to anything inside a screen that scrolls or drags
+   sideways, so the inner surfaces here keep their own gestures.
 
    The inside of a conversation is NOT here. §6 of PRODUCT_DECISIONS
    governs it and the people lane builds it; tapping a chat leaves the

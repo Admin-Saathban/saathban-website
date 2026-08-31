@@ -86,10 +86,15 @@ export function Card({ children, style, ...rest }) {
         borderRadius: 20,
         padding: 20,
         marginBottom: 16,
-        /* Cancels the column's gutter so the card reaches both edges
-           (the shell's edge-to-edge rule) while its CONTENT stays
-           inset by its own 20px. */
-        marginInline: -GUTTER,
+        /* Deliberately does NOT cancel the column gutter.
+
+           I tried that first, to keep the shell's edge-to-edge look,
+           and the screens then had two gutters at once: Card ran to
+           the glass while the place rows — which are Links with their
+           own styling, not Cards — stayed inset. Adjacent screens in
+           one section disagreeing about their margin looks like a
+           bug, because it is one. One gutter for everything in
+           outdoor. */
         ...style,
       }}
     >

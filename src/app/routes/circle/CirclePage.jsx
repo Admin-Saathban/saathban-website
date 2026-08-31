@@ -214,8 +214,12 @@ function RequestCard({ r, busy, onApprove }) {
   const body = r.person
     ? t("circle.requests.body", { name })
     : t("circle.requests.byEmail", { email: r.invitee_email });
+  /* A pending request is attached material, not a separate object:
+     the tint says so, where a dashed olive outline said "tap me".
+     (Plain comment, not the braced form: this sits in the return's
+     expression position, where a brace opens an object literal.) */
   return (
-    <Card style={{ background: C.cream, border: `1px dashed ${C.olive}` }}>
+    <Card style={{ background: C.tint }}>
       <h3 style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), fontWeight: 700, color: C.brown, margin: "0 0 6px" }}>
         {r.person ? name : (r.invitee_email || t("circle.requests.unknownFallback"))}
       </h3>
@@ -402,7 +406,7 @@ export default function CirclePage() {
   }, [wanted, loading, members]);
 
   return (
-    <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
+    <main style={{ minHeight: "100vh", background: C.ground, color: C.textMain, padding: "20px 16px 64px" }}>
       {welcomeName && <WelcomeSheet name={welcomeName} onClose={() => setWelcomeName(null)} />}
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 8px" }}>

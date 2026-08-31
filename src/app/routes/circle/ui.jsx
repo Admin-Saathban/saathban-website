@@ -12,16 +12,27 @@ import { useI18n } from "../../lib/i18n.jsx";
 /* Extra props (className, ref, data-*) pass through: the feedback
    layer marks a freshly created or deep-linked card by class + ref,
    and a component that swallows them silently does nothing. */
-export function Card({ children, style, ...rest }) {
+/* IN LINE WITH THE COMMUNITY CARD, and for the same two reasons.
+
+   §4.1: an outline means you can tap it. A member card answers no
+   press — the controls INSIDE it do — so the 1px box around it was
+   promising something it does not deliver, on the screen where the
+   things being described are people.
+
+   And a rounded card floating on the ground was the last place in the
+   app still doing that, which made My Circle look like a screen from an
+   older version of the product sitting next to Home and Community. The
+   surface tones now do the separating: content on ground, with a gap
+   between rather than a line around. */
+export function Card({ children, style, className, ...rest }) {
   return (
     <section
       {...rest}
+      className={["sb-bleed", className].filter(Boolean).join(" ")}
       style={{
-        background: C.white,
-        border: `1px solid ${C.warmGray}`,
-        borderRadius: 20,
-        padding: 22,
-        marginBottom: 18,
+        background: C.surface,
+        padding: "16px",
+        marginBottom: 8,
         ...style,
       }}
     >

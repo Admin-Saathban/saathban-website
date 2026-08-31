@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
-import { GAME } from "../gameSurface.js";
+import { GAME, NO_SELECT } from "../gameSurface.js";
 import { SEAT_COLORS, SEAT_INK } from "./board.js";
 /* The names, from where the hexes are — never a second list. */
 import { SEAT_COLOR_NAMES } from "../seatColors.js";
@@ -45,9 +45,9 @@ function Row({ onClick, children, tone = "plain", disabled }) {
         minHeight: 56,
         padding: "10px 14px",
         borderRadius: 14,
-        border: `1px solid ${tone === "plain" ? GAME.controlEdge : "transparent"}`,
-        background: tone === "plain" ? GAME.control : C.green,
-        color: tone === "plain" ? GAME.ink : C.cream,
+        border: `1px solid ${tone === "plain" ? GAME.pillEdge : GAME.accentEdge}`,
+        background: tone === "plain" ? GAME.pill : GAME.accent,
+        color: tone === "plain" ? GAME.ink : GAME.accentInk,
         fontSize: ts(A11Y.minBodyPx),
         fontWeight: 700,
         textAlign: "start",
@@ -75,11 +75,12 @@ function Sheet({ title, onClose, children }) {
   return (
     <div
       onClick={onClose}
+      className="sb-game-veil"
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 60,
-        background: "rgba(10,4,7,0.62)",
+        background: "rgba(20,8,20,0.58)",
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
@@ -90,6 +91,7 @@ function Sheet({ title, onClose, children }) {
         tabIndex={-1}
         role="dialog"
         aria-label={title}
+        className="sb-game-panel"
         onClick={(e) => e.stopPropagation()}
         style={{
           boxSizing: "border-box",
@@ -99,10 +101,15 @@ function Sheet({ title, onClose, children }) {
           overflowY: "auto",
           padding: "14px 14px 22px",
           borderRadius: "20px 20px 0 0",
-          background: GAME.surface,
-          border: `1px solid ${GAME.controlEdge}`,
+          /* A PANEL, not a slab of the table. The reference puts a
+             gold edge round every sheet it raises over a board,
+             and that edge is most of what separates "a panel has
+             come up" from "the screen has changed colour". */
+          ...NO_SELECT,
+          background: GAME.panel,
+          border: `2px solid ${GAME.panelEdge}`,
           borderBottom: "none",
-          boxShadow: "0 -12px 40px rgba(0,0,0,0.5)",
+          boxShadow: GAME.panelShadow,
           display: "flex",
           flexDirection: "column",
           gap: 8,
@@ -313,7 +320,7 @@ function HouseRules({ sessionId, rules, onChanged }) {
               padding: "10px 14px",
               borderRadius: 14,
               border: `1px solid ${GAME.controlEdge}`,
-              background: GAME.control,
+              background: GAME.pill,
               color: GAME.ink,
               fontSize: ts(A11Y.minBodyPx),
               fontWeight: 700,
@@ -333,8 +340,8 @@ function HouseRules({ sessionId, rules, onChanged }) {
                 borderRadius: 20,
                 fontSize: ts(15),
                 fontWeight: 800,
-                background: on ? C.green : "rgba(255,255,255,0.12)",
-                color: on ? C.cream : GAME.inkMuted,
+                background: on ? GAME.accentFlat : "rgba(255,255,255,0.12)",
+                color: on ? GAME.accentInk : GAME.inkMuted,
               }}
             >
               {on ? t("circle.toggle.on") : t("circle.toggle.off")}
@@ -454,6 +461,8 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
             <div style={{ textAlign: "center", marginTop: 4 }}>
               <p
                 dir="ltr"
+                /* The one selectable string inside a game. */
+                style={{ userSelect: "text", WebkitUserSelect: "text" }}
                 aria-label={joinCode.split("").join(" ")}
                 style={{ margin: "2px 0 8px", fontSize: ts(34), fontWeight: 800, letterSpacing: "0.3em", color: GAME.ink }}
               >
@@ -546,9 +555,9 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
                         flex: 1,
                         minHeight: 56,
                         borderRadius: 14,
-                        border: on ? `2px solid ${C.green}` : `1px solid ${GAME.controlEdge}`,
-                        background: on ? C.green : GAME.control,
-                        color: on ? C.cream : GAME.ink,
+                        border: on ? `2px solid ${GAME.accentEdge}` : `1px solid ${GAME.pillEdge}`,
+                        background: on ? GAME.accent : GAME.pill,
+                        color: on ? GAME.accentInk : GAME.ink,
                         fontSize: ts(20),
                         fontWeight: 800,
                         opacity: n < floor ? 0.35 : 1,

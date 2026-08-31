@@ -59,6 +59,8 @@ import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
 import { createShare } from "../community/communityData.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn, TableHeading } from "./ui.jsx";
+import { GAME } from "./gameSurface.js";
+import { GameBtn, GamePill, GamePanel, GameMotion } from "./GameUI.jsx";
 import SeatLinks from "./SeatLinks.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../lib/gameFeel.jsx";
 import { SoundButton, SoundPanel } from "./SoundControls.jsx";
@@ -193,6 +195,9 @@ export default function SessionPage() {
   );
   const gameName = game ? (lang === "ur" ? game.name_ur : game.name_en) : "";
   const mySeat = session?.seats.find((s) => s.profile_id === profile.id);
+  /* A table you could still sit at, as opposed to one that has
+     finished. Only these get the game's own surface. */
+  const live = ["lobby", "active"].includes(session?.status);
   const isHost = session?.created_by === profile.id;
   /* Seats a bot is holding, 0-based the way inviteToSeat wants.
 
@@ -360,7 +365,8 @@ export default function SessionPage() {
 
   if (notMine && !session) {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
+      <GameMotion />
         <BodyText style={{ fontWeight: 600 }}>{t("games.board.notYours")}</BodyText>
         <PrimaryBtn onClick={() => navigate("/app/games")}>{t("games.board.backHome")}</PrimaryBtn>
       </GamesScreen>
@@ -368,7 +374,7 @@ export default function SessionPage() {
   }
   if (loadError && !session) {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
         <BodyText role="alert">{t("games.loadError")}</BodyText>
         <PrimaryBtn onClick={() => navigate("/app/games")}>{t("games.board.backHome")}</PrimaryBtn>
       </GamesScreen>
@@ -378,7 +384,7 @@ export default function SessionPage() {
     // Loading, or the fetch failed: say so and offer a retry — a page
     // with nothing but "Back to games" reads as broken.
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
         {loadError ? (
           <>
             <BodyText role="alert" style={{ fontWeight: 600 }}>{t("games.loadError")}</BodyText>
@@ -398,7 +404,7 @@ export default function SessionPage() {
   // and they deserve a sentence rather than a broken table.
   if (session.status === "cancelled") {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
         {confirmLeave && (
         <Card style={{ borderColor: C.brown, borderWidth: 2 }}>
           <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 6px" }}>
@@ -458,7 +464,7 @@ export default function SessionPage() {
   }
 
   return (
-    <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")}>
+    <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
       <GameMotionStyles />
       {/* Confetti falls only for the person who won. A table where the
           loser's screen throws a party for someone else is a table
@@ -535,16 +541,19 @@ export default function SessionPage() {
           says down a telephone to another. It is pinned LTR so the
           digits do not reverse under Urdu. */}
       {soft && session.status !== "lobby" && session.join_code && (
-        <Card style={{ textAlign: "center" }}>
-          <SectionLabel>{t("ludo.lobby.codeHint")}</SectionLabel>
+        <GamePanel style={{ textAlign: "center", padding: 16, marginBottom: 12 }}>
+          <SectionLabel style={{ color: GAME.inkMuted }}>{t("ludo.lobby.codeHint")}</SectionLabel>
           <p
             dir="ltr"
+            /* The one selectable string inside a game (item 7). */
             aria-label={session.join_code.split("").join(" ")}
             style={{
               fontSize: ts(40),
               fontWeight: 800,
               letterSpacing: "0.3em",
-              color: C.green,
+              color: GAME.accentFlat,
+              userSelect: "text",
+              WebkitUserSelect: "text",
               margin: "4px 0 10px",
             }}
           >
@@ -555,7 +564,7 @@ export default function SessionPage() {
             game={game}
             hostName={session.seats.find((x) => x.profile_id === session.created_by)?.name || ""}
           />
-        </Card>
+        </GamePanel>
       )}
       {/* ASKING SOMEONE TO A TABLE THAT IS ALREADY PLAYING (§8).
 
@@ -576,13 +585,13 @@ export default function SessionPage() {
           the JSX was ever evaluated. It would have crashed the
           page the moment the feature started working. */}
       {isHost && soft && session.status !== "lobby" && botSeats.length > 0 && askable.length > 0 && (
-        <Card>
-          <SectionLabel>{t("games.lobby.inviteTitle")}</SectionLabel>
+        <GamePanel style={{ padding: 16, marginBottom: 12 }}>
+          <SectionLabel style={{ color: GAME.inkMuted }}>{t("games.lobby.inviteTitle")}</SectionLabel>
           {askable.map((p) => (
-            <GhostBtn
+            <GamePill
               key={p.id}
               disabled={busy}
-              style={{ marginTop: 8, width: "100%" }}
+              style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
               onClick={() =>
                 act(async () => {
                   /* The first seat a bot is holding. Which one hardly
@@ -594,9 +603,9 @@ export default function SessionPage() {
               }
             >
               {p.full_name || t("ludo.seat.someone")}
-            </GhostBtn>
+            </GamePill>
           ))}
-        </Card>
+        </GamePanel>
       )}
       {session.status === "lobby" && (
         <WaitingRoom

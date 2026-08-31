@@ -5,21 +5,65 @@
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { GAME } from "./gameSurface.js";
 
-export function GamesScreen({ children, backTo, backLabel, width = 640 }) {
+/* `game` puts this screen on the table rather than on the app's
+   cream. Carrom cannot seat a bot, so tapping it opens a table
+   with one chair and an invitation to send — and on cream, with
+   the app's header above it, that read as a page that had failed
+   to load rather than as a game waiting for somebody. A table
+   waiting is still a table, and it should look like one. */
+export function GamesScreen({ children, backTo, backLabel, width = 640, game }) {
   const { ts, meta } = useI18n();
   return (
     <main
-      className="sb-games"
+      className={game ? "sb-games sb-on-table" : "sb-games"}
       style={{
         minHeight: "100vh",
-        background: C.bg,
-        color: C.textMain,
+        background: game ? GAME.surfaceLift : C.bg,
+        backgroundColor: game ? GAME.surface : C.bg,
+        color: game ? GAME.ink : C.textMain,
         padding: "20px 16px 64px",
       }}
     >
       <style>{`
         .sb-games *, .sb-games *::before, .sb-games *::after { box-sizing: border-box; }
+
+        /* ON THE TABLE. Painting the ground dark and leaving the
+           contents alone is worse than not painting it at all: the
+           heading went dark-on-dark and the cards stayed white, so
+           carrom's waiting room read as a half-loaded page rather
+           than as a table. These override the inline colours of
+           components shared with the rest of the app, which is what
+           !important is for and the only place it is used here. */
+        .sb-on-table h1, .sb-on-table h2, .sb-on-table h3 { color: ${GAME.ink} !important; }
+        .sb-on-table .sb-card {
+          background: ${GAME.panel} !important;
+          border: 2px solid ${GAME.panelEdge} !important;
+          color: ${GAME.ink} !important;
+        }
+        .sb-on-table .sb-card p, .sb-on-table .sb-card span { color: ${GAME.ink}; }
+        .sb-on-table a { color: ${GAME.ink} !important; }
+        /* The app+s two buttons, re-dressed. Brass for the one you
+           press, plum for the rest — the same two roles GameUI gives
+           the ludo table, so a carrom table waiting and a ludo table
+           playing are recognisably the same furniture. */
+        .sb-on-table .sb-primary {
+          background: ${GAME.accent} !important;
+          color: ${GAME.accentInk} !important;
+          border: 1px solid ${GAME.accentEdge} !important;
+        }
+        .sb-on-table .sb-ghost {
+          background: ${GAME.pill} !important;
+          color: ${GAME.ink} !important;
+          border: 1px solid ${GAME.pillEdge} !important;
+        }
+        .sb-on-table input, .sb-on-table textarea {
+          background: rgba(0,0,0,0.22) !important;
+          color: ${GAME.ink} !important;
+          border-color: ${GAME.pillEdge} !important;
+        }
+        .sb-on-table input::placeholder, .sb-on-table textarea::placeholder { color: ${GAME.inkMuted} !important; }
         .sb-games input, .sb-games textarea, .sb-games select {
           width: 100%;
           min-height: ${A11Y.minTapTargetPx}px;
@@ -108,6 +152,7 @@ export function TableHeading({ title, gameName, ts, style }) {
 export function Card({ children, style }) {
   return (
     <section
+      className="sb-card"
       style={{
         background: C.white,
         border: `1px solid ${C.warmGray}`,
@@ -164,6 +209,7 @@ export function PrimaryBtn({ children, style, ...props }) {
   return (
     <button
       type="button"
+      className="sb-primary"
       {...props}
       style={{
         display: "inline-flex",
@@ -193,6 +239,7 @@ export function GhostBtn({ children, style, ...props }) {
   return (
     <button
       type="button"
+      className="sb-ghost"
       {...props}
       style={{
         display: "inline-flex",

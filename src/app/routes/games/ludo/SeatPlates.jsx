@@ -288,69 +288,6 @@ function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, r
 }
 
 
-/* ── THE SPARE DIE (§8) ────────────────────────────────────────
-   One die or two used to be a pair of radio pills on a form. It is
-   a die now: a ghost of a second one, sitting where the second one
-   would sit, next to the first. Tap it and it is there; tap it
-   again and it is gone.
-
-   It only exists while the table is soft — before anybody has
-   rolled — because after that the dice on the table are the dice
-   of a game in progress and a spare beside them would be a lie
-   about what the next roll will do. */
-function SpareDie({ on, onToggle, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={on}
-      aria-label={label}
-      title={label}
-      style={{
-        position: "relative",
-        flexShrink: 0,
-        width: 44,
-        height: 44,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        border: "none",
-        background: "transparent",
-        padding: 0,
-        cursor: "pointer",
-        /* Present but plainly not thrown yet. The solid state is
-           still under full opacity of the real dice beside it, so
-           the eye reads it as a setting rather than a result. */
-        opacity: on ? 0.85 : 0.3,
-      }}
-    >
-      <DieFace value={on ? 2 : 5} size={30} ink={on ? "#2F2A24" : "#6E6152"} />
-      <span
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          right: 0,
-          bottom: 1,
-          minWidth: 17,
-          height: 17,
-          borderRadius: 9,
-          background: on ? C.green : "rgba(255,255,255,0.85)",
-          color: on ? C.cream : "#2F2A24",
-          fontSize: 13,
-          fontWeight: 900,
-          lineHeight: "17px",
-          textAlign: "center",
-        }}
-      >
-        {on ? "\u2212" : "+"}
-      </span>
-    </button>
-  );
-}
-
-/* The seat as a tap target. Without a handler it renders nothing of
-   its own — mid-game a plate is a plate, and a control that does
-   nothing is worse than no control. */
 function SeatTap({ onTap, seat, row, children }) {
   const { t } = useI18n();
   if (!onTap) return children;
@@ -673,29 +610,61 @@ function Plate({
       )}
       {/* Nothing rolled yet: the empty die is the roll button, and only
           for the person whose turn it is. */}
-      {/* §8: one die or two, tapped rather than filled in. */}
-      {onToggleSpare && (
-        <SpareDie on={!!spareDie} onToggle={onToggleSpare} label={t(spareDie ? "ludo.table.oneDie" : "ludo.table.twoDice")} />
-      )}
+
       {/* Nothing rolled yet: an empty die per die this table
           plays with. TWO dice at a two-dice table, before anybody
           touches anything — which is the whole of the owner's
           complaint that a two-dice table looked exactly like a
           one-die table. Both are the roll button. */}
+      {/* Nothing rolled yet: one empty die per die this table
+          plays with, and they ARE the roll button. The last one
+          wears the +/− while the table can still be changed. */}
       {dice && dice.length === 0 && isTurn && (
         <span style={{ display: "flex", gap: 3, flexShrink: 0, alignItems: "center" }}>
-          {Array.from({ length: Math.max(1, Math.min(2, diceCount)) }).map((_, i) => (
-            <SeatDie
-              key={i}
-              value={null}
-              active={isTurn}
-              mine={isMe}
-              canRoll={canRoll}
-              colour={colour}
-              onRoll={onRoll}
-              rolling={rolling && isMe && i === 0}
-              label={t("ludo.turn.rollCta")}
-            />
+          {Array.from({ length: Math.max(1, Math.min(2, diceCount)) }).map((_, i, all) => (
+            <span key={i} style={{ position: "relative", display: "inline-flex" }}>
+              <SeatDie
+                value={null}
+                active={isTurn}
+                mine={isMe}
+                canRoll={canRoll}
+                colour={colour}
+                onRoll={onRoll}
+                rolling={rolling && isMe && i === 0}
+                label={t("ludo.turn.rollCta")}
+              />
+              {onToggleSpare && i === all.length - 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    /* The die under this badge is the roll button.
+                       Without stopping here, changing the dice would
+                       also throw them. */
+                    e.stopPropagation();
+                    onToggleSpare();
+                  }}
+                  aria-label={t(diceCount === 2 ? "ludo.table.oneDie" : "ludo.table.twoDice")}
+                  style={{
+                    position: "absolute",
+                    right: -4,
+                    bottom: -4,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    border: "none",
+                    padding: 0,
+                    background: C.green,
+                    color: C.cream,
+                    fontSize: 14,
+                    fontWeight: 900,
+                    lineHeight: "22px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {diceCount === 2 ? "\u2212" : "+"}
+                </button>
+              )}
+            </span>
           ))}
         </span>
       )}

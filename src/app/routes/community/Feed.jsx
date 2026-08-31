@@ -15,7 +15,7 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { REACTIONS } from "./communityCopy.js";
+import { REACTIONS, REACTION_ICON, REACTION_LABEL } from "./communityCopy.js";
 import {
   canUseCommunity,
   canPostCommunity,
@@ -670,14 +670,17 @@ function PostCard({
               key={emoji}
               type="button"
               aria-pressed={mine}
+              aria-label={t(REACTION_LABEL[emoji])}
               onClick={() => onToggleReaction(post.id, emoji, mine)}
               /* ONE LINE OF PLAIN ACTIONS — no pills, no boxes.
 
                  Four outlined pills under every post was four more
                  outlines than §4.1 allows, and on a feed of ten posts
                  that is forty boxes drawn around things whose meaning
-                 is the glyph itself. The emoji STAYS: a reaction is one
-                 a person picked, which §0.5 keeps as the exception.
+                 is the glyph itself. The GLYPH is now drawn rather than
+                 an emoji: four emoji in a row carry four line weights and
+                 four palettes chosen by a font vendor, and no amount of
+                 layout makes them sit together.
 
                  Mine is marked by weight and ink, not by a filled
                  capsule — and the count beside it says so in figures,
@@ -697,7 +700,7 @@ function PostCard({
                 gap: 5,
               }}
             >
-              <span aria-hidden="true">{emoji}</span>
+              <Icon name={REACTION_ICON[emoji]} size={20} />
               {n > 0 && <span style={{ fontWeight: 700, color: C.textMain }}>{n}</span>}
             </button>
           );
@@ -708,7 +711,27 @@ function PostCard({
       </div>
 
       {commentsOpen && (
-        <div style={{ borderTop: `1.5px solid ${C.warmGray}`, marginTop: 10, paddingTop: 12 }}>
+        /* A TINTED REGION, NOT A HAIRLINE.
+
+           This was a 1.5px warmGray rule on the same white as the card,
+           so the comments sat in the post rather than under it and the
+           whole thing read as one block of text — you could not see
+           where somebody else started speaking.
+
+           A tint says "different kind of thing" at a glance and at any
+           text size, where a hairline is the first casualty of a small
+           screen or poor contrast. It bleeds to the card edges (the card
+           pads 14/16, so the negative margins undo exactly that) because
+           a band that stops short of the edge reads as another card
+           inside the card. */
+        <div
+          style={{
+            background: C.cream,
+            borderTop: `1px solid ${C.warmGray}`,
+            margin: "10px -16px -14px",
+            padding: "12px 16px 14px",
+          }}
+        >
           {comments === null ? (
             <BodyText muted role="status">…</BodyText>
           ) : comments.length === 0 ? (
@@ -776,7 +799,7 @@ function PostCard({
                   aria-label={t("community.feed.stickerLabel")}
                   style={{ padding: "0 14px" }}
                 >
-                  🌸
+                  <Icon name="good" size={19} />
                 </GhostBtn>
                 <GhostBtn type="submit" onClick={sendComment} style={{ borderColor: C.green, color: C.green }}>
                   {t("community.feed.commentCta")}

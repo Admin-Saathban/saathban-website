@@ -1026,6 +1026,12 @@ const ur = {
       stickerLabel: "اسٹیکر بھیجیں",
       noComments: "ابھی کوئی تبصرہ نہیں۔",
       reactAria: "اس پوسٹ پر اظہار کریں",
+      reaction: {
+        like: "اچھا",
+        heart: "بہت پسند آیا",
+        flower: "خوبصورت",
+        care: "آپ کا خیال ہے",
+      },
       menuAria: "مزید اختیارات",
       menuReport: "اطلاع دیں",
       menuMute: "انہیں خاموش کریں",

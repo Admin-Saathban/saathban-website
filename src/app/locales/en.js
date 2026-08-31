@@ -1100,6 +1100,14 @@ const en = {
       stickerLabel: "Send a sticker",
       noComments: "No comments yet.",
       reactAria: "React to this post",
+      /* The four reactions had no accessible name at all — the glyph was
+         aria-hidden and only the count was announced. */
+      reaction: {
+        like: "Good",
+        heart: "Love this",
+        flower: "Lovely",
+        care: "Thinking of you",
+      },
       menuAria: "More actions",
       menuReport: "Report",
       menuMute: "Mute this person",

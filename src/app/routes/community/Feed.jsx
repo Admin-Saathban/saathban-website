@@ -51,6 +51,7 @@ import { pickReconnect, rowAllowed, markRowSeen, hushPerson } from "./reconnect.
 import { fetchChats } from "../messages/messagesData.js";
 import SayHelloSheet from "../messages/SayHelloSheet.jsx";
 import { VoicePlayer } from "../people/VoiceNote.jsx";
+import { openDmWith } from "../people/peopleStore.js";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {

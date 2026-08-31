@@ -123,9 +123,48 @@ export function LanguageProvider({ children }) {
           back to. Nobody would have seen it in a screenshot; it shows
           up as a flash on a slow phone and as serif behind a short
           page. */}
+      {/* ── EDGE TO EDGE BELOW A TABLET, INSET ABOVE ONE ──
+
+          Measured on the deployed build at 390px: body 390, main 390,
+          CONTENT 358. The missing 32px was not one shell wrapper — it
+          was `padding: "20px 16px"` written onto <main> in forty
+          separate screens, each of which looked reasonable alone.
+
+          The maxWidth wrappers those screens also carry are KEPT: at
+          620-640px they do nothing on a phone and stop a feed
+          becoming a 1400px line of text on a laptop, which is what
+          they were for. So the rule is a breakpoint rather than a
+          deletion — below 768px the page gutter goes and surfaces
+          reach the glass; above it, nothing changes.
+
+          THE GUTTER COMES BACK ON TEXT, and that is the whole
+          subtlety. Zeroing the page padding alone would press every
+          heading and paragraph against the edge of the screen, which
+          is worse than the inset it replaced. A CARD should bleed; a
+          SENTENCE should not. So headings and loose paragraphs get
+          their 16px back individually, and anything with its own
+          background — a card, a row — spans the full width.
+
+          !important is needed because all forty screens set padding
+          through the style attribute, which no stylesheet can
+          otherwise reach. It is scoped to <main> inside the app, so
+          it cannot touch the marketing site. */}
+      <style>{`
+        @media (max-width: 767px) {
+          .sb-appshell main { padding-left: 0 !important; padding-right: 0 !important; }
+          .sb-appshell main > h1, .sb-appshell main > h2, .sb-appshell main > h3,
+          .sb-appshell main > p, .sb-appshell main > form,
+          .sb-appshell main > div > h1, .sb-appshell main > div > h2,
+          .sb-appshell main > div > h3, .sb-appshell main > div > p,
+          .sb-appshell main > div > form, .sb-appshell main > div > label {
+            padding-left: 16px; padding-right: 16px;
+          }
+        }
+      `}</style>
       <style>{`html, body { margin: 0; background: ${APP_COLORS.bg};` +
         ` color: ${APP_COLORS.textMain}; font-family: ${meta.fonts.body}; }`}</style>
       <div
+        className="sb-appshell"
         dir={meta.dir}
         lang={lang}
         style={{

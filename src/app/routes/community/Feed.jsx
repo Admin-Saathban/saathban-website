@@ -563,9 +563,19 @@ function PostCard({
           {post.body}
         </div>
       ) : (
-        {/* A post body is somebody's words: selectable, so it can be
-            copied or read out. §4 of tonight's brief — chrome is not
-            text, but this is text. */}
+        /* A post body is somebody's words: selectable, so it can be
+           copied or read out. Chrome is not text, but this is text.
+
+           A PLAIN COMMENT, NOT THE BRACED JSX FORM. In JSX, braces are a
+           child slot only where children are expected. Here the comment
+           sits in a ternary's expression position, where braces are an
+           object literal instead — so the braced comment form that is
+           correct three lines above is a syntax error here, and it took
+           the whole build down rather than this one card.
+
+           (Written without the closing-block sequence in it: my first
+           repair quoted the braced form literally, which ended this
+           comment early and broke the file a second way.) */
         <BodyText className="sb-selectable" style={{ margin: "10px 0 12px", whiteSpace: "pre-wrap" }}>{post.body}</BodyText>
       ))}
 

@@ -25,7 +25,8 @@ import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAv
 import { tableIsSoft, reformTable, fetchSeatInvites, fetchPieceMarks } from "./ludoRails.js";
 import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
-import { GAME } from "../gameSurface.js";
+import { GAME, NO_SELECT } from "../gameSurface.js";
+import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine } from "../GameUI.jsx";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import { stopAllSound, resumeSound } from "../../../lib/sound.js";
@@ -840,6 +841,7 @@ export default function LudoSession() {
           definition wins — a source reorder away from silently
           animating again for people who asked it not to. */}
       <GameMotionStyles />
+      <GameMotion />
       <Confetti active={game.status === "finished" && game.winner_seat === mySeatRow?.seat} />
 
       {/* THE COLUMN. During play it is the viewport: flex, no scroll,
@@ -862,6 +864,7 @@ export default function LudoSession() {
                    off-screen that one of its two dice was cut in
                    half. One box model, two "bugs" that were the same
                    bug. */
+                ...NO_SELECT,
                 boxSizing: "border-box",
                 display: "flex",
                 flexDirection: "column",
@@ -1408,18 +1411,20 @@ export default function LudoSession() {
             </BodyText>
           )}
 
-          {/* ── What to do next, in one sentence ── */}
+          {/* THE PERMANENT INSTRUCTION IS DELETED.
+
+              "Tap a die, then tap the goti it should move" sat under
+              the board on every turn of every game for ever. A
+              sentence that is always there is not read after the
+              second time — it becomes furniture, and this furniture
+              was costing the board height it needed more.
+
+              It says it once, when it becomes true, and then stops.
+              Keyed on the dice, so a new roll says it again. */}
           {isMyTurn && hasDice && (
-            <BodyText
-              style={{
-                fontWeight: 700,
-                margin: "10px 0 0",
-                textAlign: "center",
-                color: GAME.ink,
-              }}
-            >
+            <FlashLine keyed={diceKey}>
               {spendable > 1 ? t("ludo.turn.pickDie") : t("ludo.turn.pickPiece")}
-            </BodyText>
+            </FlashLine>
           )}
           {/* §7 puts undo beside the dice. It sits above the action
               row rather than inside the seat plate, because the plate
@@ -1600,22 +1605,24 @@ export default function LudoSession() {
               target is r=42 in board units, about 50 CSS px at phone
               width and larger than the token it surrounds, so §10's
               48px floor is met by the thing you actually tap. */}
+          {/* NOT A FULL-WIDTH BAR. It was 100% wide and 56 tall — a slab
+              across the bottom of the screen that read as the most
+              important object on it, competing with the board for the eye
+              and taking height the board wanted. It is the only brass
+              thing on the screen now, which is enough to make it the
+              thing you press.
+
+              Braced, and OUTSIDE the parentheses. It was written braced
+              INSIDE them, where a brace is an object literal rather than a
+              child slot, and that one character of position broke the
+              whole build. Among children the braced form is the correct
+              one; in an expression position it is fatal. */}
           {isMyTurn && !hasDice && !chooser && (
-            <PrimaryBtn
-              onClick={doRoll}
-              disabled={busy || rolling}
-              style={{
-                width: "100%",
-                /* Comfortably past the 48px floor without taking a
-                   sixth of a small phone. */
-                minHeight: 56,
-                fontSize: ts(20),
-                marginTop: 8,
-                flex: "0 0 auto",
-              }}
-            >
-              🎲 {t("ludo.turn.rollCta")}
-            </PrimaryBtn>
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 6, flex: "0 0 auto" }}>
+              <GameBtn onClick={doRoll} disabled={busy || rolling} style={{ minWidth: 168 }}>
+                🎲 {t("ludo.turn.rollCta")}
+              </GameBtn>
+            </div>
           )}
         </>
       )}
@@ -1657,8 +1664,9 @@ export default function LudoSession() {
             flex: "0 0 auto",
           }}
         >
-          <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} />
-          <QuickChat onSend={sayQuick} disabled={game.status === "finished"} />
+          {/* The game's own pills, not the app's white ones. */}
+          <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} game />
+          <QuickChat onSend={sayQuick} disabled={game.status === "finished"} game />
           {!playing && game.status !== "finished" && (
             <GhostBtn onClick={() => setLeaveAsk(true)} style={{ minHeight: 52 }}>
               {t("ludo.ceremony.leaveCta")}

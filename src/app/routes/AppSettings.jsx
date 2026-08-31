@@ -311,7 +311,7 @@ export default function AppSettings() {
               background: C.cream,
               borderRadius: 16,
               padding: 20,
-              borderInlineStart: `4px solid ${C.sage}`,
+              borderInlineStart: `4px solid ${C.green}`,
             }}
           >
             <h3

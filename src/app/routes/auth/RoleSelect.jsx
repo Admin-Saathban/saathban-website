@@ -21,7 +21,7 @@ import { AccountLoadError, roleHomePath, useSession } from "../../lib/session.js
 function TeacupArt() {
   return (
     <svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M14 28h30v12a15 15 0 0 1-30 0z" fill={C.sage} />
+      <path d="M14 28h30v12a15 15 0 0 1-30 0z" fill={C.green} />
       <path
         d="M44 30h5a6 6 0 0 1 0 12h-6"
         fill="none"
@@ -44,7 +44,7 @@ function CompanionsArt() {
   return (
     <svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true">
       <circle cx="22" cy="21" r="8" fill={C.olive} />
-      <circle cx="42" cy="21" r="8" fill={C.sage} />
+      <circle cx="42" cy="21" r="8" fill={C.green} />
       <path
         d="M10 50c2-10 8-15 12-15 3 0 6 3 10 3s7-3 10-3c4 0 10 5 12 15"
         fill="none"
@@ -68,7 +68,7 @@ function HomeHeartArt() {
       />
       <path
         d="M32 46c-6-5-9-8-9-11.5a5 5 0 0 1 9-2.8 5 5 0 0 1 9 2.8C41 38 38 41 32 46z"
-        fill={C.sage}
+        fill={C.green}
       />
     </svg>
   );

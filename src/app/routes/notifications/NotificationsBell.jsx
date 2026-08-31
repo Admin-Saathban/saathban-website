@@ -78,7 +78,11 @@ export default function NotificationsBell() {
         justifyContent: "center",
         minHeight: A11Y.minTapTargetPx,
         minWidth: A11Y.minTapTargetPx,
-        color: C.brown,
+        /* The chip paints the glyph itself, but this is what anything
+           ELSE inside the button inherits, and on dark chrome brown is
+           the colour of the bar. Latent rather than visible, which is
+           the kind that waits for someone to add a character. */
+        color: C.navInk,
         border: "none",
         background: "none",
         cursor: "pointer",

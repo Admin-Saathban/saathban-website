@@ -108,7 +108,20 @@ export default function AppHeader() {
               minWidth: 36,
               border: "none",
               background: "none",
-              color: C.textMain,
+              /* C.navInk, NOT C.textMain. Measured on the new chrome:
+                 textMain is #1C1E21 against a #1B1E22 bar — 1.00:1. The
+                 back arrow was painted EXACTLY the colour of the bar it
+                 sits on, and on a full-screen route it is the only way
+                 out.
+
+                 I moved the nav surface and did not revalue the ink
+                 standing on it. Lane 3 hit the identical bug in their
+                 world and told me; measuring after their message is the
+                 only reason I looked at mine. A call site that was right
+                 when written and became wrong when a token moved
+                 underneath it — the fourth of that exact shape this
+                 week. */
+              color: C.navInk,
               fontSize: 20,
               cursor: "pointer",
               flexShrink: 0,

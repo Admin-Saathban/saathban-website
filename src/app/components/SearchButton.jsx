@@ -26,7 +26,7 @@ export default function SearchButton() {
         minWidth: A11Y.minTapTargetPx,
         border: "none",
         background: "none",
-        color: C.textMain,
+        color: C.navInk,   /* dark chrome: textMain here IS the bar */
         fontSize: 20,
         cursor: "pointer",
       }}

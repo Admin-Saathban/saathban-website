@@ -178,7 +178,30 @@ export default function BottomBar({ role, buddyActive = true, drawerOpen, onOpen
             <Inside item={item} />
           </button>
         ) : (
-          <NavLink key={item.to} to={item.to} end={item.end} style={({ isActive }) => itemStyle(isActive)}>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            onClick={(ev) => {
+              /* THE TAB YOU ARE ALREADY ON SCROLLS TO THE TOP.
+
+                 Every phone app this audience already uses does this,
+                 and without it the Home tab is the one control on the
+                 screen that does nothing when pressed — which reads as
+                 broken rather than as already-here. It is also the way
+                 back to the composer, since MOTION §5 keeps that at the
+                 top of the feed rather than floating over it.
+
+                 preventDefault so the router does not also re-navigate
+                 and remount the screen underneath the scroll. */
+              if (window.location.pathname === item.to) {
+                ev.preventDefault();
+                const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+                window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+              }
+            }}
+            style={({ isActive }) => itemStyle(isActive)}
+          >
             <Inside item={item} />
           </NavLink>
         )

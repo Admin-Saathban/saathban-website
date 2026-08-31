@@ -372,3 +372,23 @@ export async function setPieceMarks(marks) {
   if (error) throw new Error(error.message);
   return four;
 }
+
+
+/* A board that is open says so (0099).
+
+   The turn clock cannot tell somebody reading the board from
+   somebody who has gone, and it used to resolve that by
+   declaring them gone — the owner watched his own seat say BOT
+   while he was looking at it. This is the missing fact: a
+   browser with the board open touches its seat, and game_tick
+   plays a lapsed turn for a watching seat WITHOUT labelling
+   the person away.
+
+   Fire-and-forget on purpose. If it fails the worst case is the
+   old behaviour, and it must never delay a poll or raise. */
+export function seen(sessionId) {
+  supabase.rpc("game_seen", { p_session: sessionId }).then(
+    () => {},
+    () => {}
+  );
+}

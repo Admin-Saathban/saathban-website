@@ -369,9 +369,15 @@ function Plate({
            rather than a page-coloured card. Dark enough that light
            text sits on it, bright enough to be the thing your eye
            goes to first. */
-        background: isTurn ? `${colour}2e` : "transparent",
-        border: isTurn ? `2px solid ${colour}` : "2px solid transparent",
-        boxShadow: isTurn ? `0 2px 14px ${colour}33` : "none",
+        /* NO FRAME. The reference marks the active player with the
+           die beside them lighting up, not with a coloured box
+           around their whole plate — which on the red seat drew a
+           red rectangle round two dice and a face, and read as an
+           error state. The ring on the avatar and the lit tray say
+           it instead, and the plate stays quiet. */
+        background: "transparent",
+        border: "2px solid transparent",
+        boxShadow: "none",
       }}
     >
       {/* THE SEAT IS THE BUTTON (§8). Wrapping the avatar rather
@@ -401,6 +407,13 @@ function Plate({
 
       <span
         style={{
+          /* POSITIONED, so the spans inside that hide themselves
+             with position:absolute clip against THIS column
+             instead of escaping to whatever is positioned further
+             up the tree. Without it "thinking…" — a span meant to
+             be one clipped pixel — was being laid over the
+             opponent's face. */
+          position: "relative",
           minWidth: 0,
           textAlign: align === "end" ? "end" : "start",
           display: "flex",
@@ -430,8 +443,14 @@ function Plate({
                   whiteSpace: "nowrap",
                 }
               : {
-                  display: "block",
-                  fontSize: ts(16),
+                  display: "inline-block",
+                  /* A chip, the way the recording labels its
+                     players — not loose text lying on the table. */
+                  background: "rgba(0,0,0,0.30)",
+                  borderRadius: 9,
+                  padding: "1px 7px",
+                  maxWidth: "100%",
+                  fontSize: ts(15),
                   fontWeight: 700,
                   /* Everything is on the table now, so everything is
                      light. The cream card that used to justify dark
@@ -588,8 +607,24 @@ function Plate({
         </span>
       )}
 
+      {/* THE TRAY. In the recording the die sits in a rounded
+          holder beside its player, dark when it is not their go
+          and lit gold when it is — which is how the board says
+          whose turn it is without drawing anything around the
+          person. */}
       {dice && dice.length > 0 && (
-        <span style={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
+        <span
+          style={{
+            display: "flex",
+            gap: 2,
+            flexShrink: 0,
+            alignItems: "center",
+            padding: "3px 4px",
+            borderRadius: 10,
+            background: isTurn ? "rgba(240,196,98,0.22)" : "rgba(0,0,0,0.22)",
+            border: `1px solid ${isTurn ? "#E3B052" : "rgba(255,255,255,0.10)"}`,
+          }}
+        >
           {dice.map((d, i) => (
             <Die
               key={i}

@@ -15,7 +15,8 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { supabase } from "../../lib/supabase.js";
 import { useSession } from "../../lib/session.jsx";
 import { fetchMembershipsAsMember } from "../../lib/circle.js";
-import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
+import { TYPE_ICONS, PLACE_FALLBACK_ICON, firstNameOf } from "./outdoorCopy.js";
+import Icon from "../../components/Icon.jsx";
 import {
   canUseCommunity,
   fetchPlaces,
@@ -307,7 +308,7 @@ export default function OutdoorHome() {
                       }}
                     >
                       <span aria-hidden="true" style={{ fontSize: ts(26) }}>
-                        {TYPE_ICONS[p.place_type] || "🌳"}
+                        <Icon name={TYPE_ICONS[p.place_type] || PLACE_FALLBACK_ICON} size={26} />
                       </span>
                       <span style={{ flex: 1 }}>
                         <span

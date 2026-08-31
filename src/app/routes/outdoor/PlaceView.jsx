@@ -15,7 +15,8 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
-import { TYPE_ICONS, firstNameOf } from "./outdoorCopy.js";
+import { TYPE_ICONS, PLACE_FALLBACK_ICON, firstNameOf } from "./outdoorCopy.js";
+import Icon from "../../components/Icon.jsx";
 import {
   fetchPlaces,
   fetchLiveCheckins,
@@ -345,7 +346,14 @@ export default function PlaceView() {
               margin: "0 0 4px",
             }}
           >
-            <span aria-hidden="true">{TYPE_ICONS[place.place_type] || "🌳"}</span> {place.name}
+            {/* Sits on the heading line, so it takes the heading's
+                colour and rides its text size. */}
+            <Icon
+              name={TYPE_ICONS[place.place_type] || PLACE_FALLBACK_ICON}
+              size={30}
+              style={{ display: "inline-block", verticalAlign: "-4px", marginInlineEnd: 8 }}
+            />
+            {place.name}
           </h1>
           <BodyText muted style={{ marginBottom: 4 }}>
             {place.area} · {place.city}

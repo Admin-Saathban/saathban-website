@@ -49,10 +49,21 @@ function defaultHouseRules(gameKey) {
 
 /* Open a table and hand back where to go.
 
-   Bots fill every seat that is not yours, immediately, so the board
-   is playable the moment it appears — §8's "dice ready". A person
-   who wants people instead invites them from the table, where the
-   seat they are replacing is visible.
+   FOR LUDO AND SNAKES, bots fill every seat that is not yours and
+   the board is playable the moment it appears — §8's "dice ready".
+
+   FOR CARROM IT IS NOT, and this comment used to say otherwise.
+   Carrom's timeout_style is 'pass_turn': start_with_bots refuses
+   it outright, because a carrom table with a bot in it could never
+   finish. So tapping carrom opens a table that WAITS FOR A PERSON
+   — one seat, yours, and an invitation to send. That is not a
+   degraded ludo table, it is what carrom is.
+
+   Do not write "the board is playable on arrival" anywhere a
+   person will read it without naming the game. Lane 38 quoted the
+   old version of this comment into their own file and had to
+   correct it there too; a confident sentence about behaviour the
+   code does not have travels further than the code does.
 
    Throws on failure rather than returning null: the caller is about
    to navigate, and navigating to a table that does not exist is
@@ -62,14 +73,21 @@ export async function openQuickTable(gameKey) {
   const id = await createSession(gameKey, seats, defaultHouseRules(gameKey), null);
   if (!id) throw new Error("no session");
 
-  /* Seat the bots. If this fails the table still exists and still
-     opens — it simply waits for people, which is the old behaviour
-     rather than a broken one, so it is not worth refusing the
-     navigation over. */
+  /* Seat the bots. THIS FAILS BY DESIGN FOR CARROM — start_with_bots
+     raises "This game is played between people" for any game whose
+     timeout_style is 'pass_turn' — and the catch below is what lets
+     carrom open at all.
+
+     So the catch is not defensive padding against an unlikely
+     error; it is the carrom path, taken every single time anybody
+     taps carrom. It was written as though it were the former,
+     which is why the table it leaves behind went unexamined until
+     an invitation to one of its seats failed (0098). */
   try {
     await startWithBots(id);
   } catch {
-    /* the table opens as a waiting room; the seats can be filled there */
+    /* the table opens as a waiting room — for carrom, the only room
+       it has. The seats are filled by invitation from the table. */
   }
 
   /* The board glows the row it just made, the way the form's tables

@@ -52,6 +52,13 @@ const PRESETS = {
    other. */
 export const COVER_PRESETS = Object.keys(PRESETS);
 
+/* The picker must offer the mark it will actually apply. It was
+   showing the type emoji beside a cover that draws an icon, so the
+   choice and its result disagreed on the same screen. */
+export function coverMark(key) {
+  return (PRESETS[key] || PRESETS.other).mark;
+}
+
 export default function GroupCover({ group, height = 132 }) {
   const { ts } = useI18n();
   const [photo, setPhoto] = useState(null);

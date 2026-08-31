@@ -45,7 +45,8 @@ import {
   deleteGroup, transferGroupOwnership, setGroupCover, uploadGroupCover,
 } from "./groupsStore.js";
 import ReportedMedia from "../admin/ReportedMedia.jsx";
-import GroupCover, { COVER_PRESETS } from "./GroupCover.jsx";
+import GroupCover, { COVER_PRESETS, coverMark } from "./GroupCover.jsx";
+import Icon from "../../components/Icon.jsx";
 
 export default function GroupManage() {
   const { id } = useParams();
@@ -233,10 +234,12 @@ export default function GroupManage() {
               style={{
                 width: 52, height: 40, borderRadius: 10, cursor: "pointer",
                 border: group.cover === `preset:${k}` ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-                background: "none", padding: 0, fontSize: 20,
+                background: "none", padding: 0,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                color: C.textMain,
               }}
             >
-              {t(`groups.type.${k}.emoji`)}
+              <Icon name={coverMark(k)} size={20} />
             </button>
           ))}
         </div>

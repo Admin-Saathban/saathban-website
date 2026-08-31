@@ -95,7 +95,13 @@ export default function OutdoorHome() {
                 // First name only. §3 and the check-in copy both show a
                 // first name; a full name at a park is more than the
                 // person agreed to share by arriving.
-                name: (who.full_name || "").trim().split(/s+/)[0] || "",
+                // firstNameOf, not a regex written here. My inline
+                // version lost its backslash to shell escaping and
+                // became split(/s+/) — which splits on the LETTER s,
+                // so "Hassan Raza" rendered as "Ha" and "Asif Iqbal"
+                // as "A". It looked correct only because the test
+                // account is "Smoke Icon", with no lowercase s in it.
+                name: firstNameOf(who.full_name),
                 avatarUrl: who.avatar_url,
               });
             }

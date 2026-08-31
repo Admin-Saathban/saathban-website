@@ -2805,6 +2805,7 @@ const ur = {
       openCta: "کھولیں",
       playCta: "بساط بچھائیں",
       comingSoon: "جلد آ رہا ہے",
+      waitsForSomeone: "کسی کے شامل ہونے کا انتظار کرے گی",
       puzzleSolved: "حل ہو گئی — نئی پہیلی کل آئے گی",
       puzzleCta: "آج کی پہیلی آپ کی منتظر ہے",
     },

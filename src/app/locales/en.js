@@ -2996,6 +2996,7 @@ const en = {
       openCta: "Open",
       playCta: "Open a table",
       comingSoon: "On its way",
+      waitsForSomeone: "Waits for someone to join you",
       puzzleSolved: "Solved — a new one arrives tomorrow",
       puzzleCta: "Today's riddle awaits",
     },

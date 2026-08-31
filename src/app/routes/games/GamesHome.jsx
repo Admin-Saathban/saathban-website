@@ -420,6 +420,23 @@ export default function GamesHome() {
                     {t("games.home.comingSoon")}
                   </span>
                 )}
+                {/* The one fact that changes what the tap does.
+
+                    Not a warning and not a lesser option: a table
+                    held open for a person is arguably the better
+                    thing, and it is certainly not something to
+                    apologise for. It says what happens and stops.
+
+                    It also does not mention bots. A person
+                    choosing a game does not need to know what a
+                    bot is, and the version that explains the
+                    machinery is the version that talks past
+                    them. */}
+                {g.enabled && g.timeout_style === "pass_turn" && (
+                  <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
+                    {t("games.home.waitsForSomeone")}
+                  </span>
+                )}
               </span>
               <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
                 ›

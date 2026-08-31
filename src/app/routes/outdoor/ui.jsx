@@ -4,7 +4,7 @@
    never colour alone. */
 
 import { Link } from "react-router-dom";
-import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 
 /* The page inset. NOT applied again by this file: <main> above
@@ -96,7 +96,7 @@ export function Card({ children, style, className, emphasis, ...rest }) {
            tint, for the same reason. */
         padding: 20,
         marginBottom: 12,
-        ...(emphasis ? { background: "#EEF3E8" } : null),
+        ...(emphasis ? { background: C.tint } : null),
 
         ...style,
       }}
@@ -248,6 +248,10 @@ export function comingPill(ts) {
 export function ComingButton({ coming, onClick, disabled, busyLabel }) {
   const { t, ts } = useI18n();
 
+  /* Colour marks the STATE, not the control. At rest this is the
+     ordinary outlined action; once you are coming it takes
+     MEANING.confirmed — and keeps the tick and the tint, because the
+     rule is never colour alone. */
   const base = {
     display: "inline-flex",
     alignItems: "center",
@@ -255,9 +259,9 @@ export function ComingButton({ coming, onClick, disabled, busyLabel }) {
     minHeight: A11Y.minTapTargetPx,
     padding: "0 18px",
     borderRadius: 50,
-    border: `2px solid ${C.green}`,
-    background: coming ? "#EAF2E3" : C.white,
-    color: C.green,
+    border: `2px solid ${coming ? MEANING.confirmed : C.green}`,
+    background: coming ? C.tint : C.white,
+    color: coming ? MEANING.confirmed : C.green,
     fontFamily: "inherit",
     fontSize: ts(A11Y.minBodyPx),
     fontWeight: 700,

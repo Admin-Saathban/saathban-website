@@ -42,7 +42,7 @@ import {
   fetchGroup, fetchMembers, amIGroupAdmin,
   fetchJoinRequests, respondJoinRequest,
   setCoAdmin, removeMember, updateGroup, fetchGroupReports,
-  deleteGroup, transferGroupOwnership, setGroupCover, uploadGroupCover,
+  deleteGroup, transferGroupOwnership, setGroupCover, uploadGroupCover, reportTarget,
 } from "./groupsStore.js";
 import ReportedMedia from "../admin/ReportedMedia.jsx";
 import GroupCover, { COVER_PRESETS, coverMark } from "./GroupCover.jsx";
@@ -394,7 +394,6 @@ export default function GroupManage() {
               disabled={!help.trim() || busy === "help"}
               onClick={() =>
                 act(async () => {
-                  const { reportTarget } = await import("./groupsStore.js");
                   await reportTarget({
                     kind: "group",
                     targetId: id,

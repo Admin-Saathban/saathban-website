@@ -9,12 +9,14 @@
    is, so if the geometry in board.js ever changes, the arrows follow
    it instead of quietly lying.
 
-   Three kinds, matching a classic board:
-     · a curved arrow where each seat's tokens ENTER the track;
-     · straight arrows along the arms, spaced so they read as a flow
-       rather than a stripe of clutter at phone width;
-     · a coloured arrow at each arm's tip, turning into that seat's
-       own home column.
+   Two kinds are drawn: straight arrows along the arms, spaced so
+   they read as a flow rather than a stripe of clutter at phone
+   width, and one at each arm's tip turning into that seat's own
+   home column.
+
+   A third kind — a curved doorway on each seat's start square —
+   still exists here and is no longer drawn. Every one of them landed
+   on a star. See allArrows.
 
    All of it is drawn in BOARD space, so the per-seat POV rotation
    carries the arrows round with everything else — an arrow that
@@ -107,8 +109,35 @@ export function homeArrows() {
   });
 }
 
-/* Everything at once, in draw order (flow underneath, doorways and
-   home turns on top). */
+/* Everything at once, in draw order.
+
+   NO ARROW ON A STAR, and the entry arrows are all on stars.
+
+   flowArrows has skipped safe squares since it was written, for a
+   reason stated three paragraphs up: two glyphs in one 40-unit cell
+   is not twice the information, it is half the legibility. The
+   entry arrows were exempt from their own rule — every one of them
+   is drawn on a seat's start square, which is a safe square, which
+   carries a star.
+
+   Cropping the eight stars out of a real board and laying them side
+   by side is what showed it: the four on opening cells each had a
+   grey chevron lying across them and the four on pre-home cells did
+   not. That is the owner's "some shaded, some not" — not a fill, a
+   second glyph.
+
+   Nothing is lost by dropping them. An entry arrow said "you leave
+   the yard this way"; the star says the square matters, the tint
+   says whose it is, and the flow arrows on the next cells say which
+   way. The doorway was the one thing on the board saying something
+   three other marks already said.
+
+   entryArrows stays exported: board-geometry asserts one per seat on
+   that seat's own start square, and that is still true and still
+   worth knowing. */
 export function allArrows(opts) {
-  return [...flowArrows(opts), ...entryArrows(), ...homeArrows()];
+  const safe = new Set(SAFE_ABS.map((a) => TRACK[a].join(",")));
+  return [...flowArrows(opts), ...entryArrows(), ...homeArrows()].filter(
+    (a) => !safe.has(a.cell.join(","))
+  );
 }

@@ -2880,6 +2880,8 @@ const en = {
       },
     },
     jota: {
+      asJota: "Move as a jota",
+      moveOne: "Move one",
       chooseTitle: "Two of your gotis are on that square.",
       together: "Move both together — {n} steps",
       alone: "Move just one — {n} steps",

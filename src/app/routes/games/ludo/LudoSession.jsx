@@ -1783,89 +1783,61 @@ export default function LudoSession() {
           </div>
           </div>
 
-          {/* ── Choosing between the pair and the single, when a goti
-                 standing in a jota could do either ── */}
-          {chooser && dice && dice[pickedDie] && (
-            <Card style={{ marginTop: 10, borderColor: C.green, borderWidth: 2, flex: "0 0 auto" }}>
-              <BodyText style={{ fontWeight: 700, margin: "0 0 4px", fontSize: ts(20) }}>
-                {t("ludo.jota.chooseTitle")}
-              </BodyText>
-              <BodyText muted style={{ margin: "0 0 10px", fontSize: ts(A11Y.minBodyPx) }}>
-                {t("ludo.jota.onceOnly")}
-              </BodyText>
+          {/* ── THE JOTA QUESTION, AS TWO WORDS AND TWO WORDS ──
 
-              {/* BOTH TOGETHER. Half the dice, as a pair always
-                  travels, and the number says so rather than the
-                  player discovering it after the fact. */}
+                 It was a bordered card with a heading, a sentence
+                 of explanation, a primary button naming half the
+                 die, a second heading asking WHICH goti, two more
+                 buttons for that, and a cancel. Seven things, to
+                 answer a question with two answers.
+
+                 Two choices on one line. The rulebook explains
+                 what a jota is; a person mid-turn does not need it
+                 explained again, and the ones who do not know are
+                 not going to learn it from a caption over a
+                 button.
+
+                 WHICH goti is not asked any more either. Nothing
+                 is drawn on a goti now, so the two on that square
+                 are identical pins — asking a person to choose
+                 between two things they cannot tell apart is a
+                 question with no content. "Move one" moves the one
+                 they tapped.
+
+                 Tapping the board again dismisses it, so there is
+                 nothing to cancel. ── */}
+          {chooser && dice && dice[pickedDie] && (
+            <div
+              style={{
+                position: "absolute",
+                insetInline: 12,
+                bottom: 92,
+                zIndex: 30,
+                display: "flex",
+                gap: 10,
+              }}
+            >
               {chooser.opts.some((o) => o.kind === "pair") && (
-                <PrimaryBtn
-                  disabled={busy}
+                <GameBtn
                   onClick={() =>
                     sendMove(chooser.piece, chooser.opts.find((o) => o.kind === "pair"))
                   }
-                  style={{ width: "100%", minHeight: 64, fontSize: ts(20), marginBottom: 10 }}
+                  style={{ flex: "1 1 0", minHeight: 56 }}
                 >
-                  {t("ludo.jota.together", { n: Math.floor(dice[pickedDie].v / 2) })}
-                </PrimaryBtn>
+                  {t("ludo.jota.asJota")}
+                </GameBtn>
               )}
-
-              {/* JUST ONE — and now, which one. Two gotis that used to
-                  be interchangeable each carry a number, so "move one"
-                  without saying which would be the app choosing for
-                  you and hoping you did not notice. With only one
-                  candidate it stays a single button. */}
-              {chooser.opts.some((o) => o.kind === "single") &&
-                (chooser.mates && chooser.mates.length > 1 ? (
-                  <>
-                    <BodyText style={{ fontWeight: 700, margin: "0 0 8px", fontSize: ts(A11Y.minBodyPx) }}>
-                      {t("ludo.jota.aloneWhich", { n: dice[pickedDie].v })}
-                    </BodyText>
-                    <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                      {chooser.mates.map((idx) => (
-                        <GhostBtn
-                          key={idx}
-                          disabled={busy}
-                          onClick={() =>
-                            sendMove(
-                              idx,
-                              options.find((o) => o.piece === idx && o.kind === "single")
-                            )
-                          }
-                          style={{
-                            flex: "1 1 0",
-                            minHeight: 64,
-                            fontSize: ts(20),
-                            borderColor: C.green,
-                            color: C.textMain,
-                          }}
-                        >
-                          {t("ludo.jota.goti", { n: idx + 1 })}
-                        </GhostBtn>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <GhostBtn
-                    disabled={busy}
-                    onClick={() =>
-                      act(() =>
-                        move(game.id, {
-                          piece: chooser.piece,
-                          die: pickedDie,
-                          split: chooser.opts.find((o) => o.kind === "single").split,
-                        })
-                      )
-                    }
-                    style={{ width: "100%", minHeight: 64, fontSize: ts(20), borderColor: C.green, marginBottom: 10 }}
-                  >
-                    {t("ludo.jota.alone", { n: dice[pickedDie].v })}
-                  </GhostBtn>
-                ))}
-
-              <GhostBtn onClick={() => setChooser(null)} style={{ width: "100%", minHeight: 52 }}>
-                {t("outdoor.place.formCancel")}
-              </GhostBtn>
-            </Card>
+              {chooser.opts.some((o) => o.kind === "single") && (
+                <GamePill
+                  onClick={() =>
+                    sendMove(chooser.piece, chooser.opts.find((o) => o.kind === "single"))
+                  }
+                  style={{ flex: "1 1 0", minHeight: 56, justifyContent: "center" }}
+                >
+                  {t("ludo.jota.moveOne")}
+                </GamePill>
+              )}
+            </div>
           )}
 
           {/* The roll button is the one honest ≥48px target left, and

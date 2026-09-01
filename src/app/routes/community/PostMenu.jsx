@@ -23,6 +23,7 @@
 import { useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 import { MotionStyles } from "../../lib/motion.jsx";
 
 function Item({ label, sub, onClick, danger, disabled }) {
@@ -59,6 +60,11 @@ function Item({ label, sub, onClick, danger, disabled }) {
 }
 
 export default function PostMenu({ post, mine, authorName, saved, following, onClose, actions }) {
+  /* This sheet is mounted only while it is open, so mounted IS open.
+     Back now dismisses it instead of leaving the feed — it held its
+     state in the parent with no history entry, like 21 other surfaces
+     audited across the app. */
+  useBackToClose(true, onClose);
   const { t, ts, meta } = useI18n();
   const [note, setNote] = useState("");
   /* Delete asks first, and asks HERE — in the sheet the person is

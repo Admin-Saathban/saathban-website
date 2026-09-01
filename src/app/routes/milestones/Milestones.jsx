@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 import {
   fetchMyProgress,
   fetchBadgeDefinitions,
@@ -149,6 +150,10 @@ export default function Milestones() {
   const [earned, setEarned] = useState([]);
   const [badgeProgress, setBadgeProgress] = useState({}); // trigger_kind -> {current,target}
   const [queue, setQueue] = useState([]); // unseen earned rows, celebrated one by one
+
+  /* The celebration is a dialog over the page; back should dismiss it
+     and leave you on Milestones. */
+  useBackToClose(queue.length > 0, () => setQueue((q) => q.slice(1)));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 

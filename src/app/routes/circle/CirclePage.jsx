@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 import { useSession } from "../../lib/session.jsx";
 import { useCircle } from "./circleStore.js";
 import { useToast, useFresh, pushToast } from "../../lib/feedback.jsx";
@@ -388,6 +389,12 @@ export default function CirclePage() {
   const { members, requests, loading, error, busyIds, actions } = useCircle(iconId);
   const sosCount = members.filter((m) => m.is_sos_contact).length;
   const [welcomeName, setWelcomeName] = useState(null);
+
+  /* Back closes the welcome sheet instead of leaving My Circle. It
+     held its open state locally, like 21 other surfaces in the app,
+     so the Android back gesture navigated away from the screen
+     underneath rather than dismissing what was on top of it. */
+  useBackToClose(welcomeName !== null, () => setWelcomeName(null));
   const fresh = useFresh();
 
   /* The notification's deep link (/app/circle?member=<id>) lands here:

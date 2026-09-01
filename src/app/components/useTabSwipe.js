@@ -276,17 +276,42 @@ export default function useTabSwipe(items, enabled = true) {
       }, going ? SETTLE_MS : SETTLE_MS + 40);
     };
 
+    /* Put it back and forget it: no navigation, no committed state. */
+    const abandon = () => {
+      const s = st.current;
+      const on = s.on;
+      s.on = false; s.dead = true; s.v = 0;
+      if (s.timer) { window.clearTimeout(s.timer); s.timer = 0; }
+      if (!on || wantsLessMotion()) { clear(); return; }
+      root.classList.remove("sb-dragging");
+      root.classList.add("sb-settling");
+      setDrag(0);
+      s.timer = window.setTimeout(() => { s.timer = 0; clear(); }, SETTLE_MS + 40);
+    };
+
     document.addEventListener("touchstart", start, { passive: true });
     /* Not passive: once the drag is engaged it has to stop the page
        scrolling, and a passive listener may not preventDefault. */
     document.addEventListener("touchmove", move, { passive: false });
     document.addEventListener("touchend", end, { passive: true });
-    document.addEventListener("touchcancel", end, { passive: true });
+    /* CANCEL IS NOT A LIFT. The OS sends touchcancel when something
+       takes the gesture away — a call arrives, the system claims the
+       edge, a palm lands. Routing it to the same handler as a finger
+       lifting meant an INTERRUPTED swipe still committed: the drag was
+       past the threshold, so the app changed tab while the person was
+       answering their phone. Found on synthetic input, which surprised
+       me — it is the one hard case a scripted touch can produce
+       faithfully, because touchcancel carries no coordinates to get
+       wrong.
+
+       Cancelling abandons: the pane settles back and nothing
+       navigates. */
+    document.addEventListener("touchcancel", abandon, { passive: true });
     return () => {
       document.removeEventListener("touchstart", start);
       document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", end);
-      document.removeEventListener("touchcancel", end);
+      document.removeEventListener("touchcancel", abandon);
       /* A pending settle must not navigate after this hook is gone. */
       if (st.current.timer) { window.clearTimeout(st.current.timer); st.current.timer = 0; }
       clear();

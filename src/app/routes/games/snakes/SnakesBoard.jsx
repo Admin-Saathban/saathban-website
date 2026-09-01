@@ -1,407 +1,408 @@
 /* ════════════════════════════════════════════════
-   Snakes & Ladders — the board art.
+   The Snakes & Ladders board — table, frame, paper and everything
+   living on it. Owner-specified in the live designers, and every
+   colour below is one of the values given there.
 
-   One SVG, 100 cells, and the two things on it must not be mistaken
-   for one another. The old board drew both in muted sage and tan, at
-   the same weight, and at arm's length a ladder and a snake were the
-   same beige tangle. They are opposites — one is the best thing that
-   can happen to you and one is the worst — so they are now drawn as
-   opposites:
+   THE BOARD IS AN OBJECT ON A TABLE, not a diagram on a page. That is
+   the whole design and it is why there are three surfaces here rather
+   than one: a dark lacquered table with damask on it, a WOODEN FRAME
+   with a lit face and a dark edge, and inside that a sheet of warm
+   PARCHMENT. The shadow under the frame is what tells you the board
+   is sitting on the table rather than printed on it.
 
-   LADDERS are straight, wooden, and built. Two rails that converge
-   slightly with height, rungs with a shadow under each, warm timber
-   colour. Nothing about a ladder curves.
+   EVERYTHING IS CLIPPED TO THE PAPER. A coiling body that swings past
+   the edge and over the frame stops reading as a board and starts
+   reading as a bug — so the whole cast is drawn inside one clip path
+   and nothing can bleed over the wood. Belt and braces: serpent.js
+   also clamps its samples away from the edge, because a body pressed
+   flat against a clip line looks cut off even when it is contained.
 
-   SNAKES are vivid, curved and alive. A tapered body from a thick
-   neck to a fine tail, scales along its back, a head with eyes and a
-   forked tongue at the square that swallows you. Three colourways
-   (green, red, brown) assigned so no two neighbours share one.
-
-   A snake still LOOKS like what it costs: body weight grows with the
-   drop, so the two long ones read as real hazards and the short ones
-   stay gentle.
-
-   NUMERALS WIN. The art is drawn UNDER the numbers, and every numeral
-   carries a paper-coloured halo, because the number is the thing a
-   player actually needs and a snake crossing a square must never cost
-   them it. Colour never carries meaning alone: 1 and 100 are marked
-   with a flag and a crown as well as a tint, and every token shows its
-   seat number.
+   DRAWING ORDER IS DELIBERATE. Paper, squares, grid, the two special
+   tiles, then the NUMBERS, then ladders, then snakes, then tokens.
+   Numbers go under the cast because a number is reference and a snake
+   is the thing you are looking at; a 63 printed on top of the dragon
+   would be neither.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from "react";
-import { APP_COLORS as C } from "../../../../shared/tokens.js";
-import { SIZE, CELL, cellCenter } from "./board.js";
-import { ROUTES, bodyOutline } from "./art.js";
-import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
-import Pawn from "../Pawn.jsx";
+import { cellCenter, SIZE } from "./board.js";
+import {
+  spine, outline, ridge, headAngle, wavesFor, ladderGeometry,
+} from "./serpent.js";
+import { SNAKE_SETS } from "./skins.js";
+import Pin from "./Pin.jsx";
 
-const TOKEN_FILLS = SEAT_COLORS;
+/* ── The owner's palette, verbatim ──────────────────────────────── */
+export const TABLE = {
+  from: "#17203A",
+  to: "#060A14",
+  damask: "rgba(255,255,255,.045)",
+};
+export const WOOD = { body: "#9A6A33", edge: "#5E3C1B" };
+export const PAPER = {
+  base: "#F5E8CC",
+  alt: "#EBD9B4",
+  grid: "#C6AE82",
+  ink: "#6B5E48",
+};
+/* The two tiles that are not squares but places. */
+const START_TILE = "#D8E8C8";
+const FINISH_TILE = "#F2E0A0";
 
-/* A real ladder: two timber rails and rungs between them.
+/* The damask, as a data URI so the table needs no network and no
+   second element. Two dots per tile on a 24px repeat — the owner's
+   spacing — offset from each other so the field reads as a weave
+   rather than as a grid of pinpricks. */
+export const DAMASK_CSS =
+  `url("data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="6" cy="6" r="1.6" fill="rgba(255,255,255,.045)"/><circle cx="18" cy="18" r="1.6" fill="rgba(255,255,255,.045)"/></svg>`
+  )}")`;
 
-   The rails CONVERGE slightly toward the top — a little forced
-   perspective, so the thing reads as leaning away from you rather
-   than lying flat on the paper. Each rung gets a darker line beneath
-   it, which is what makes it look like a bar you could stand on
-   instead of a stripe. */
-function Ladder({ from, to }) {
+export const tableStyle = {
+  background: `${DAMASK_CSS}, radial-gradient(120% 100% at 50% 18%, ${TABLE.from} 0%, ${TABLE.to} 100%)`,
+  backgroundColor: TABLE.to,
+};
+
+/* ── A cell's rectangle, for the two special tiles ─────────────── */
+function cellRect(n) {
+  const c = cellCenter(n);
+  return { x: c.x - 5, y: c.y - 5, w: 10, h: 10 };
+}
+
+/* ══ SNAKE ═══════════════════════════════════════════════════════
+   One snake, drawn from its own sampled spine. The body, the ridge
+   along its back, and a head with eyes on the front of it.
+
+   The dragon is the same function with more of everything: a thicker
+   belly, its own dark-red gradient whatever colour set the table is
+   using, spikes down the spine, horns, slit eyes and a forked tongue.
+   It is not a separate component because then there would be two
+   places that know how a body is filled, and they would drift.
+   ══════════════════════════════════════════════════════════════ */
+function Snake({ from, to, boss, tone, phase, id }) {
   const a = cellCenter(from);
   const b = cellCenter(to);
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const nx = -uy;
-  const ny = ux;
-  const footHalf = 1.75;
-  const topHalf = 1.25;                        // the perspective
-  const rungs = Math.max(3, Math.round(len / 3.2));
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const pts = spine(a, b, {
+    waves: wavesFor(len),
+    amp: boss ? 0.13 : 0.17,
+    phase,
+  });
 
-  const rail = (side) =>
-    `M ${a.x + nx * footHalf * side} ${a.y + ny * footHalf * side}` +
-    ` L ${b.x + nx * topHalf * side} ${b.y + ny * topHalf * side}`;
+  const profile = boss
+    ? { neck: 6.4, belly: 7.6, tail: 1.1 }
+    : { neck: 4.2, belly: 5.0, tail: 0.8 };
 
-  return (
-    <g>
-      {/* the shadow the whole ladder casts */}
-      <g transform="translate(0.35 0.35)" opacity="0.18">
-        <path d={rail(1)} stroke="#000" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-        <path d={rail(-1)} stroke="#000" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-      </g>
-      {Array.from({ length: rungs - 1 }, (_, i) => {
-        const t = (i + 1) / rungs;
-        const half = footHalf + (topHalf - footHalf) * t;
-        const x = a.x + dx * t;
-        const y = a.y + dy * t;
-        const x1 = x + nx * half;
-        const y1 = y + ny * half;
-        const x2 = x - nx * half;
-        const y2 = y - ny * half;
-        return (
-          <g key={i}>
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8a5a2b" strokeWidth="1.15" strokeLinecap="round" />
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#d8a05c" strokeWidth="0.62" strokeLinecap="round" />
-          </g>
-        );
-      })}
-      <path d={rail(1)} stroke="#8a5a2b" strokeWidth="1.35" fill="none" strokeLinecap="round" />
-      <path d={rail(-1)} stroke="#8a5a2b" strokeWidth="1.35" fill="none" strokeLinecap="round" />
-      <path d={rail(1)} stroke="#c98a4b" strokeWidth="0.7" fill="none" strokeLinecap="round" />
-      <path d={rail(-1)} stroke="#c98a4b" strokeWidth="0.7" fill="none" strokeLinecap="round" />
-    </g>
-  );
-}
-
-/* Three colourways, so two snakes meeting on the board are never
-   the same animal. Assigned by position in the map rather than at
-   random: the board looks the same every time you open it. */
-const SKINS = [
-  { back: "#1E7A3C", belly: "#8FD6A2", scale: "#0F5A2A", eye: "#FFF6DC" },
-  { back: "#B8342C", belly: "#F0A79C", scale: "#8C1F1A", eye: "#FFF6DC" },
-  { back: "#7A4A22", belly: "#D6A878", scale: "#553113", eye: "#FFF6DC" },
-];
-
-/* A snake, drawn as a body rather than a line.
-
-   SVG cannot taper a stroke, so the body is a filled outline that
-   narrows from a thick neck to a fine tail (bodyOutline in art.js).
-   On top of it: a paler belly stripe down the middle, scale marks
-   along the back, and a head at the square that swallows you — eyes,
-   a highlight, and a forked tongue.
-
-   The head is at `from` and the tail at `to`, both exactly on their
-   square's centre, because a player traces this with a finger to work
-   out where they will land. */
-function Snake({ route, index }) {
-  const { from, to, a: h, b: t, pts } = route;
-  const drop = from - to;
-  const skin = SKINS[index % SKINS.length];
-  const neck = 2.9 + Math.min(1.9, drop / 14);
-  const tip = 0.7;
-
-  // Heading at the head, for the eyes and tongue.
-  const hx = pts[1].x - pts[0].x;
-  const hy = pts[1].y - pts[0].y;
-  const hl = Math.hypot(hx, hy) || 1;
-  const ux = hx / hl;
-  const uy = hy / hl;      // points down the body, away from the head
-  const nx = -uy;
-  const ny = ux;
-  /* Capped in ABSOLUTE terms, not just relative to the body. A short
-     snake has a thick neck for its length, and an unclamped head on
-     one of those filled a third of a square and read as an owl. */
-  const headR = Math.min(neck * 0.8, 2.15);
+  const ang = headAngle(pts);
+  const headR = boss ? 4.6 : 3.2;
 
   return (
     <g>
-      <path d={bodyOutline(pts, neck, tip)} fill={skin.back} />
-      {/* belly: a paler line down the middle, thinner than the body */}
-      <path d={bodyOutline(pts, neck * 0.42, tip * 0.5)} fill={skin.belly} opacity="0.75" />
-      {/* scales along the back */}
-      {pts.map((p, i) => {
-        if (i % 2 || i === 0 || i > pts.length - 3) return null;
-        const w = (neck + (tip - neck) * (i / (pts.length - 1))) * 0.5;
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          {boss ? (
+            <>
+              <stop offset="0%" stopColor="#8E1414" />
+              <stop offset="55%" stopColor="#4A0A10" />
+              <stop offset="100%" stopColor="#140609" />
+            </>
+          ) : (
+            <>
+              <stop offset="0%" stopColor={tone.light} />
+              <stop offset="60%" stopColor={tone.body} />
+              <stop offset="100%" stopColor={tone.deep} />
+            </>
+          )}
+        </linearGradient>
+      </defs>
+
+      {/* SPIKES FIRST, so the body covers their roots and only the
+          points show — a spine of triangles laid on top of the fill
+          reads as scales stuck on rather than as growing out. */}
+      {boss && pts.filter((p) => p.t > 0.08 && p.t < 0.86).filter((_, i) => i % 7 === 0).map((p, i, arr) => {
+        const j = pts.indexOf(p);
+        const q = pts[Math.min(j + 1, pts.length - 1)];
+        const o = pts[Math.max(j - 1, 0)];
+        const dx = q.x - o.x, dy = q.y - o.y;
+        const L = Math.hypot(dx, dy) || 1;
+        /* Shrinking towards the tail, like the body they sit on. */
+        const h = 3.4 * (1 - p.t * 0.7);
+        const nx = (-dy / L), ny = (dx / L);
+        const tipX = p.x + nx * h, tipY = p.y + ny * h;
+        const bx = (dx / L) * 1.7, by = (dy / L) * 1.7;
         return (
-          <circle key={i} cx={p.x} cy={p.y} r={Math.max(0.16, w * 0.4)} fill={skin.scale} opacity="0.55" />
+          <path
+            key={i}
+            d={`M ${p.x - bx},${p.y - by} L ${tipX},${tipY} L ${p.x + bx},${p.y + by} Z`}
+            fill="#2A0A0E"
+          />
         );
       })}
-      {/* head */}
-      <ellipse
-        cx={h.x + ux * headR * 0.15}
-        cy={h.y + uy * headR * 0.15}
-        rx={headR * 1.15}
-        ry={headR * 0.92}
-        fill={skin.back}
-        transform={`rotate(${(Math.atan2(uy, ux) * 180) / Math.PI} ${h.x} ${h.y})`}
-      />
-      <ellipse
-        cx={h.x - ux * headR * 0.35}
-        cy={h.y - uy * headR * 0.35}
-        rx={headR * 0.5}
-        ry={headR * 0.34}
-        fill="#ffffff"
-        opacity="0.22"
-        transform={`rotate(${(Math.atan2(uy, ux) * 180) / Math.PI} ${h.x} ${h.y})`}
-      />
-      {/* eyes, one either side of the spine */}
-      {[1, -1].map((side) => (
-        <g key={side}>
-          <circle cx={h.x + nx * headR * 0.42 * side} cy={h.y + ny * headR * 0.42 * side} r={headR * 0.3} fill={skin.eye} />
-          <circle cx={h.x + nx * headR * 0.42 * side} cy={h.y + ny * headR * 0.42 * side} r={headR * 0.14} fill="#1a1a1a" />
-        </g>
-      ))}
-      {/* forked tongue, flicking away from the body */}
+
+      {/* THE BODY. A filled outline, not a stroke — SVG cannot taper
+          a stroke, and a snake that is the same width at the tail as
+          behind the head is a hose. */}
+      <path d={outline(pts, profile)} fill={`url(#${id})`} />
+
+      {/* THE RIDGE. Drawn from the same samples, pulled in, so the
+          highlight can never sit off the back it belongs to. Fades
+          out before the tail because that is where a real highlight
+          runs out of body to catch light on. */}
       <path
-        d={`M ${h.x - ux * headR * 0.9} ${h.y - uy * headR * 0.9}
-            L ${h.x - ux * headR * 1.9} ${h.y - uy * headR * 1.9}
-            M ${h.x - ux * headR * 1.9} ${h.y - uy * headR * 1.9}
-            L ${h.x - ux * headR * 2.5 + nx * headR * 0.4} ${h.y - uy * headR * 2.5 + ny * headR * 0.4}
-            M ${h.x - ux * headR * 1.9} ${h.y - uy * headR * 1.9}
-            L ${h.x - ux * headR * 2.5 - nx * headR * 0.4} ${h.y - uy * headR * 2.5 - ny * headR * 0.4}`}
-        stroke="#D6202A"
-        strokeWidth="0.3"
+        d={ridge(pts)}
         fill="none"
+        stroke={boss ? "rgba(255,150,120,.28)" : "rgba(255,255,255,.34)"}
+        strokeWidth={boss ? 1.5 : 1.0}
         strokeLinecap="round"
       />
-      {/* the tail comes to a point */}
-      <circle cx={t.x} cy={t.y} r={tip * 0.6} fill={skin.back} />
+
+      {/* THE HEAD, turned to face the way the body leaves it. */}
+      <g transform={`translate(${a.x} ${a.y}) rotate(${ang})`}>
+        {boss && (
+          <>
+            {/* Horns, swept back off the skull. */}
+            <path d="M -1.2,-3.2 L -4.6,-6.2 L -1.0,-4.6 Z" fill="#E8C87A" />
+            <path d="M -1.2,3.2 L -4.6,6.2 L -1.0,4.6 Z" fill="#E8C87A" />
+            {/* The forked tongue, out in front. */}
+            <path
+              d="M 5.4,0 L 9.4,0 M 9.4,0 L 11.2,-1.5 M 9.4,0 L 11.2,1.5"
+              stroke="#D81B36" strokeWidth="0.85" fill="none" strokeLinecap="round"
+            />
+          </>
+        )}
+        <ellipse
+          rx={headR * 1.15} ry={headR}
+          fill={boss ? "#5E0C12" : tone.body}
+          stroke={boss ? "#1A0508" : tone.deep}
+          strokeWidth={boss ? 0.6 : 0.4}
+        />
+        {/* EYES. Cartoon on the snakes — a white ball with a black
+            pupil, because a snake a child can read is the brief.
+            The dragon gets yellow slits instead, which is the one
+            place this board is allowed to be a little frightening. */}
+        {boss ? (
+          <>
+            <ellipse cx={1.5} cy={-1.9} rx={1.5} ry={1.1} fill="#F5D020" transform="rotate(-18 1.5 -1.9)" />
+            <ellipse cx={1.5} cy={1.9} rx={1.5} ry={1.1} fill="#F5D020" transform="rotate(18 1.5 1.9)" />
+            <path d={`M 1.5,-2.9 L 1.5,-0.9`} stroke="#180406" strokeWidth="0.62" strokeLinecap="round" />
+            <path d={`M 1.5,0.9 L 1.5,2.9`} stroke="#180406" strokeWidth="0.62" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx={1.0} cy={-1.45} r={1.15} fill="#FFFFFF" />
+            <circle cx={1.0} cy={1.45} r={1.15} fill="#FFFFFF" />
+            <circle cx={1.45} cy={-1.45} r={0.58} fill="#14100A" />
+            <circle cx={1.45} cy={1.45} r={0.58} fill="#14100A" />
+          </>
+        )}
+      </g>
     </g>
   );
 }
 
-/* ── the walk ──────────────────────────────────
-   A token travels; it does not teleport. Same idea as the ludo
-   board's useWalk, with one difference the game demands: a move here
-   has TWO LEGS. You roll to a square, and only then does a ladder
-   carry you up or a snake take you down. Collapsing that into one
-   slide loses the reason you ended up where you did — and the whole
-   drama of snakes and ladders is in the second leg.
-
-   So: hop square by square to where the dice put you, pause long
-   enough for it to register, then travel the jump.
-
-   It snaps rather than walks when the move can't be a single roll —
-   a fresh load, a rematch, someone else's table arriving mid-game —
-   because a token strolling forty squares on page load is a lie
-   about what just happened. */
-const STEP_MS = 150;
-const JUMP_PAUSE_MS = 320;
-
-function useWalk(seats, lastMove) {
-  const target = {};
-  for (const s of seats) target[s.seat_no] = Number(s.score) || 0;
-  const key = seats.map((s) => `${s.seat_no}:${Number(s.score) || 0}`).join(",");
-
-  const [shown, setShown] = useState(target);
-  const prevRef = useRef(null);
-
-  useEffect(() => {
-    const prev = prevRef.current;
-    prevRef.current = target;
-
-    // First paint of this board: show the truth, walk nothing.
-    if (!prev) {
-      setShown(target);
-      return undefined;
-    }
-
-    const seat = Number(lastMove?.seat_no);
-    const m = lastMove?.move || {};
-    const from = Number(m.from);
-    const landed = Number(m.landed);
-    const to = Number(m.to);
-
-    const changed = Object.keys(target).filter((k) => target[k] !== prev[k]);
-    const walkable =
-      changed.length === 1 &&
-      Number(changed[0]) === seat &&
-      isFinite(from) && isFinite(landed) && isFinite(to) &&
-      target[seat] === to &&
-      prev[seat] === from &&
-      landed > from &&
-      landed - from <= 12;
-
-    if (!walkable) {
-      setShown(target);
-      return undefined;
-    }
-
-    const timers = [];
-    const steps = landed - from;
-    setShown({ ...target, [seat]: from });
-
-    // leg one: the dice
-    for (let i = 1; i <= steps; i++) {
-      timers.push(
-        window.setTimeout(() => setShown({ ...target, [seat]: from + i }), i * STEP_MS)
-      );
-    }
-    // leg two: the ladder or the snake, after a beat on the landing square
-    if (to !== landed) {
-      timers.push(
-        window.setTimeout(() => setShown(target), steps * STEP_MS + JUMP_PAUSE_MS)
-      );
-    }
-    return () => timers.forEach((id) => window.clearTimeout(id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, lastMove?.id]);
-
-  return shown;
+/* ══ LADDER ══════════════════════════════════════════════════════
+   Two rails and the rungs between them, in wood. Rails are drawn
+   with a dark stroke under a lighter one so each rail has an edge —
+   the same trick the frame uses, at a smaller size.
+   ══════════════════════════════════════════════════════════════ */
+function Ladder({ from, to }) {
+  const g = ladderGeometry(cellCenter(from), cellCenter(to));
+  return (
+    <g>
+      {g.rungs.map((r, i) => (
+        <g key={i}>
+          <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={WOOD.edge} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke="#C08B4A" strokeWidth="0.85" strokeLinecap="round" />
+        </g>
+      ))}
+      {g.rails.map((r, i) => (
+        <g key={i}>
+          <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={WOOD.edge} strokeWidth="2.1" strokeLinecap="round" />
+          <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={WOOD.body} strokeWidth="1.25" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  );
 }
 
-export default function SnakesBoard({ seats = [], currentSeat = null, label = "", mySeat = null, lastMove = null }) {
-  const walked = useWalk(seats, lastMove);
-  const cells = [];
-  const numerals = [];
-  for (let n = 1; n <= SIZE * SIZE; n++) {
-    const { x, y } = cellCenter(n);
-    const row = Math.floor((n - 1) / SIZE);
-    const isFinish = n === 100;
-    const isStart = n === 1;
-    /* Tint by ROW, not by cell. The numbers run boustrophedon — left
-       to right, then right to left — and a chequerboard fights that,
-       while a banded row makes the turn at the end of each line
-       obvious. A player following 19, 20, 21 needs to see that the
-       count doubles back. */
-    const band = row % 2 === 0;
-    cells.push(
-      <g key={n}>
-        <rect
-          x={x - CELL / 2}
-          y={y - CELL / 2}
-          width={CELL}
-          height={CELL}
-          fill={isFinish ? "#F6DFA8" : isStart ? "#DCEFD6" : band ? "#FBF4E8" : "#F3E7D2"}
-          stroke="#E0CBA8"
-          strokeWidth="0.28"
-        />
-      </g>
-    );
-    /* Numerals ride ABOVE the art, each on its own paper-coloured
-       halo — a snake crossing a square must never cost you the
-       number. Big and dark: this is the thing a player reads. */
-    numerals.push(
-      <text
-        key={`n${n}`}
-        x={x - CELL / 2 + 1.1}
-        y={y - CELL / 2 + 4.2}
-        fontSize="4.3"
-        fontWeight="800"
-        fontFamily="DM Sans, sans-serif"
-        fill="#2A2118"
-        stroke="#FFFBF2"
-        strokeWidth="1.35"
-        paintOrder="stroke"
-        strokeLinejoin="round"
-      >
-        {n}
-      </text>
-    );
-  }
-
-  // tokens: seats sharing a cell fan out slightly so none hides another
-  const byCell = {};
-  for (const s of seats) (byCell[walked[s.seat_no] ?? s.score ?? 0] ||= []).push(s);
+/* ══ THE BOARD ═══════════════════════════════════════════════════ */
+export default function SnakesBoard({
+  board,
+  /* [{ key, cell, colorIdx, name }] — where every token stands. A
+     token being animated passes an explicit {x, y} instead of a cell,
+     which is how the slide down a snake and the climb up a ladder
+     put it between squares. */
+  tokens = [],
+  colorSet = "classic",
+  /* The square under a token that is mid-move, lit so the eye can
+     follow it. */
+  highlight = null,
+  size = 340,
+}) {
+  const tone = SNAKE_SETS[colorSet] || SNAKE_SETS.classic;
+  const clipId = "sb-snakes-paper";
 
   return (
-    <svg
-      viewBox={`-1 -1 ${SIZE * CELL + 2} ${SIZE * CELL + CELL + 2}`}
-      role="img"
-      aria-label={label}
-      style={{ width: "100%", height: "auto", display: "block", borderRadius: 14, background: C.cream }}
+    <div
+      style={{
+        width: size,
+        maxWidth: "100%",
+        /* THE FRAME. Padding is the wood; the gradient across it is
+           the light falling on a bevel, top face lit and bottom face
+           in shadow. The dark 1px outer edge is what stops it looking
+           like a coloured margin. */
+        padding: Math.max(9, size * 0.033),
+        borderRadius: 16,
+        background: `linear-gradient(160deg, #B98244 0%, ${WOOD.body} 42%, #7E5327 100%)`,
+        border: `1.5px solid ${WOOD.edge}`,
+        /* The board sits ON the table. */
+        boxShadow: "0 18px 38px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.22)",
+        boxSizing: "border-box",
+      }}
     >
-      {/* The board sits on a timber frame rather than floating on the
-          page — it reads as an object you could put on a table. */}
-      <rect
-        x={-0.9}
-        y={-0.9}
-        width={SIZE * CELL + 1.8}
-        height={SIZE * CELL + 1.8}
-        rx={1.6}
-        fill="none"
-        stroke="#B98A50"
-        strokeWidth="1.8"
-      />
-      {cells}
-      {ROUTES.filter((r) => r.kind === "ladder").map((r) => (
-        <Ladder key={`l${r.from}`} from={r.from} to={r.to} />
-      ))}
-      {ROUTES.filter((r) => r.kind === "snake").map((r, i) => (
-        <Snake key={`s${r.from}`} route={r} index={i} />
-      ))}
-      {/* 1 and 100 say what they are with a SHAPE, not only a tint —
-          a flag where you begin and a crown where you finish. */}
-      <text
-        x={cellCenter(1).x + 1.9}
-        y={cellCenter(1).y + 3.2}
-        fontSize="4.6"
-        textAnchor="middle"
-        aria-hidden="true"
+      <svg
+        viewBox="0 0 100 100"
+        style={{
+          display: "block",
+          width: "100%",
+          height: "auto",
+          borderRadius: 6,
+          border: `1px solid ${WOOD.edge}`,
+          background: PAPER.base,
+        }}
       >
-        🚩
-      </text>
-      <text
-        x={cellCenter(100).x + 1.9}
-        y={cellCenter(100).y + 3.2}
-        fontSize="4.6"
-        textAnchor="middle"
-        aria-hidden="true"
-      >
-        👑
-      </text>
-      {numerals}
-      {/* the waiting row, below cell 1 */}
-      <text
-        x={CELL * 1.2}
-        y={SIZE * CELL + CELL * 0.65}
-        fontSize="2.6"
-        fontFamily="DM Sans, sans-serif"
-        fill={C.textMuted}
-      >
-        ▶
-      </text>
-      {Object.entries(byCell).flatMap(([cell, group]) =>
-        group.map((s, i) => {
-          const { x, y } = cellCenter(Number(cell));
-          const spread = group.length > 1 ? (i - (group.length - 1) / 2) * 2.6 : 0;
-          const turn = currentSeat != null && s.seat_no === currentSeat;
-          const mine = mySeat != null && s.seat_no === mySeat;
-          return (
-            <g key={s.seat_no} transform={`translate(${x + spread} ${y})`}>
-              {mine && <circle r={4.4} fill="none" stroke={C.brown} strokeWidth="0.5" strokeDasharray="1 1" />}
-              {turn && <circle r={4.4} fill="none" stroke={C.green} strokeWidth="0.7" />}
-              {/* Keyed by the square so each hop restarts the little
-                  lift — a token that slides flat reads as a cursor,
-                  one that rises reads as a piece being picked up. */}
-              <g key={`hop-${cell}`} className="sb-hop">
-                <Pawn seat={s.seat_no - 1} cx={0} cy={0} r={3.4} />
-              </g>
+        <defs>
+          <clipPath id={clipId}>
+            <rect x="0" y="0" width="100" height="100" rx="1.5" />
+          </clipPath>
+        </defs>
+
+        <g clipPath={`url(#${clipId})`}>
+          {/* ── the paper ── */}
+          <rect x="0" y="0" width="100" height="100" fill={PAPER.base} />
+
+          {/* ── alternating squares, checkerboard over the serpentine
+                 numbering rather than over the grid, so the pattern
+                 runs with the path a player's eye takes ── */}
+          {Array.from({ length: 100 }, (_, i) => {
+            const n = i + 1;
+            const r = cellRect(n);
+            const row = Math.floor((n - 1) / SIZE);
+            const col = (n - 1) % SIZE;
+            if ((row + col) % 2 === 0) return null;
+            return <rect key={n} x={r.x} y={r.y} width={r.w} height={r.h} fill={PAPER.alt} />;
+          })}
+
+          {/* ── the two places ── */}
+          {(() => {
+            const s = cellRect(1);
+            const f = cellRect(100);
+            return (
+              <>
+                <rect x={s.x} y={s.y} width={s.w} height={s.h} fill={START_TILE} />
+                <rect x={f.x} y={f.y} width={f.w} height={f.h} fill={FINISH_TILE} />
+              </>
+            );
+          })()}
+
+          {/* ── the grid ── */}
+          {Array.from({ length: SIZE + 1 }, (_, i) => (
+            <g key={i}>
+              <line x1={i * 10} y1="0" x2={i * 10} y2="100" stroke={PAPER.grid} strokeWidth="0.35" />
+              <line x1="0" y1={i * 10} x2="100" y2={i * 10} stroke={PAPER.grid} strokeWidth="0.35" />
             </g>
-          );
-        })
-      )}
-    </svg>
+          ))}
+
+          {/* ── the numbers, 1–100, bold and centred ── */}
+          {Array.from({ length: 100 }, (_, i) => {
+            const n = i + 1;
+            const c = cellCenter(n);
+            if (n === 1 || n === 100) return null;   // those two carry a mark instead
+            return (
+              <text
+                key={n}
+                x={c.x}
+                y={c.y}
+                fill={PAPER.ink}
+                fontSize="3.5"
+                fontWeight="700"
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={{ fontFamily: "inherit" }}
+              >
+                {n}
+              </text>
+            );
+          })}
+
+          {/* ── square 1: the red flag ── */}
+          {(() => {
+            const c = cellCenter(1);
+            return (
+              <g transform={`translate(${c.x - 2.4} ${c.y - 3.6})`}>
+                <line x1="0" y1="0" x2="0" y2="7.4" stroke="#5E4A2C" strokeWidth="0.7" strokeLinecap="round" />
+                <path d="M 0.35,0.3 L 4.9,1.9 L 0.35,3.5 Z" fill="#C8202C" />
+              </g>
+            );
+          })()}
+
+          {/* ── square 100: the gold crown ── */}
+          {(() => {
+            const c = cellCenter(100);
+            return (
+              <g transform={`translate(${c.x} ${c.y})`}>
+                <path
+                  d="M -3.6,1.7 L -3.6,-1.6 L -1.8,0.1 L 0,-2.3 L 1.8,0.1 L 3.6,-1.6 L 3.6,1.7 Z"
+                  fill="#E0A81E" stroke="#8A5F08" strokeWidth="0.32" strokeLinejoin="round"
+                />
+                <rect x="-3.6" y="2.1" width="7.2" height="1.15" rx="0.4" fill="#E0A81E" stroke="#8A5F08" strokeWidth="0.28" />
+              </g>
+            );
+          })()}
+
+          {/* ── the square a moving token is on ── */}
+          {highlight != null && highlight >= 1 && highlight <= 100 && (() => {
+            const r = cellRect(highlight);
+            return (
+              <rect
+                x={r.x + 0.4} y={r.y + 0.4} width={r.w - 0.8} height={r.h - 0.8}
+                fill="none" stroke="#E0A81E" strokeWidth="0.8" rx="1"
+              />
+            );
+          })()}
+
+          {/* ── ladders, then snakes over them ── */}
+          {board.ladders.map((l) => <Ladder key={`l${l.from}`} from={l.from} to={l.to} />)}
+          {board.snakes.map((s, i) => (
+            <Snake
+              key={`s${s.from}`}
+              from={s.from}
+              to={s.to}
+              boss={s.boss}
+              /* Alternating through the chosen set, so two snakes
+                 that meet are never the same colour. */
+              tone={tone.snakes[i % tone.snakes.length]}
+              phase={i % 2 === 0 ? 1 : -1}
+              id={`sb-snk-${s.from}`}
+            />
+          ))}
+
+          {/* ── the players ── */}
+          {tokens.map((tk) => {
+            const p = tk.at || cellCenter(tk.cell);
+            return (
+              <Pin
+                key={tk.key}
+                cx={p.x}
+                cy={p.y}
+                r={3.6}
+                colorIdx={tk.colorIdx}
+                label={tk.name}
+                lifted={!!tk.at}
+              />
+            );
+          })}
+        </g>
+      </svg>
+    </div>
   );
 }

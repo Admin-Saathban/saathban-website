@@ -29,7 +29,7 @@
    sound and the picture come apart.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cellCenter } from "./board.js";
 import { spine, wavesFor, pointAt, ladderGeometry } from "./serpent.js";
 import { playSound } from "../../../lib/sound.js";
@@ -126,7 +126,19 @@ export default function useTokenWalk(board, onDone) {
 
   useEffect(() => cancel, []);
 
-  const play = (seat, move) => {
+  /* STABLE, and that is load-bearing rather than tidy.
+
+     play() used to be rebuilt on every render, and the caller had it
+     in an effect's dependency array — so the effect re-ran on every
+     render and its cleanup cancelled the move fetch that was still in
+     flight. Nothing errored. Moves simply never played: the board
+     drew every piece on its square, correctly, for ever. Two hours of
+     an animation that was written, wired, and never once run.
+
+     The board only changes when the host changes the table, so the
+     identity of this function should change then and at no other
+     time. */
+  const play = useCallback((seat, move) => {
     const legs = scriptFor(move, board);
     if (!legs) {
       setFrame(null);
@@ -186,7 +198,7 @@ export default function useTokenWalk(board, onDone) {
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
-  };
+  }, [board]);
 
   return { frame, play, busy: !!frame };
 }

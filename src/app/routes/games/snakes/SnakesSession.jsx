@@ -122,7 +122,13 @@ export default function SnakesSession() {
   const [rolling, setRolling] = useState(false);
   const seenRef = useRef(0);
 
-  const board = useMemo(() => boardFor(session), [session]);
+  /* Keyed on the COUNTS, not on the session object. fetchSession
+     returns a fresh object every 2.6 seconds; memoising on it rebuilt
+     the board every poll, which rebuilt play(), which is exactly the
+     instability the hook was just fixed for. */
+  const bKey = `${session?.house_rules?.snakes ?? ""}:${session?.house_rules?.ladders ?? ""}`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const board = useMemo(() => boardFor(session), [bKey]);
 
   const load = useCallback(async () => {
     try {
@@ -159,20 +165,22 @@ export default function SnakesSession() {
      mark so a poll that returns the same move twice does not walk the
      piece twice. */
   useEffect(() => {
-    if (!active && !finished) return;
-    let stop = false;
-    (async () => {
+    if (!active && !finished) return undefined;
+    let alive = true;
+    const pull = async () => {
       try {
         const fresh = await fetchMoves(sessionId, seenRef.current);
-        if (stop || !fresh?.length) return;
+        if (!alive || !fresh?.length) return;
         seenRef.current = fresh[fresh.length - 1].id;
         setMoves((m) => [...m, ...fresh]);
         const last = fresh[fresh.length - 1];
         if (last?.move) play(last.seat_no, last.move);
       } catch { /* a dropped poll is not an error a player needs */ }
-    })();
-    return () => { stop = true; };
-  }, [session?.updated_at, active, finished, sessionId, play]);
+    };
+    pull();
+    const id = setInterval(pull, 1500);
+    return () => { alive = false; clearInterval(id); };
+  }, [active, finished, sessionId, play]);
 
   const mySeat = useMemo(
     () => (session?.seats || []).find((s) => s.profile_id === myId) || null,

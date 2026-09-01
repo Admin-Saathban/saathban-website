@@ -1670,11 +1670,23 @@ export default function LudoBoard({
                        gold is the only colour on this board that
                        belongs to nobody's seat, so it can mean
                        "this one" without also meaning "this
-                       player". */
+                       player".
+
+                       AND IT HAS TO CLEAR THE PIECE. At r=23 it
+                       was a 46-unit ring around a 38-unit goti
+                       standing in a 44.8-unit socket — so on the
+                       track it showed as a hairline and in the
+                       YARD it was hidden underneath the socket's
+                       own rim entirely. Four gotis were haloed in
+                       the DOM, stroke rgb(243,206,94), and not one
+                       pixel of gold was on the screen. A halo you
+                       cannot see is the same as no halo, and the
+                       spec makes this the ONLY thing telling you
+                       which pieces can move. */
                     className="sb-pulse"
                     cx={cx}
                     cy={cy - 1}
-                    r={23}
+                    r={26.5}
                     fill="none"
                     stroke="#F3CE5E"
                     strokeWidth={3}

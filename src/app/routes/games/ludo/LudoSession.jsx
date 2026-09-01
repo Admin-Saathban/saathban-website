@@ -1551,31 +1551,36 @@ export default function LudoSession() {
               read as a page torn out of another screen and laid on
               the felt. Same words, same shape, the table's own
               colours. ── */}
+          {/* ONE LINE, NEVER A STACK. This was a bordered card with
+              two paragraphs in it — a heading and a sentence —
+              sitting under the board, which is exactly the shape
+              the owner ruled against: one line at a time, in the
+              game's palette, never stacking. It had been dressed in
+              the table's colours and left as two lines, which fixed
+              the colour and not the complaint.
+
+              And it says ONE thing at a time. On a plain run the
+              count is the news; at two, three, five, six, eight and
+              nine the WARNING is, and it already implies the run —
+              nobody reading "one more six and all three are void"
+              needs to be told separately that their sixes are
+              counting. */}
           {chain > 0 && (
-            <Card
-              style={{
-                marginTop: 10,
-                borderColor: GAME.controlEdge,
-                background: GAME.control,
-                color: GAME.ink,
-              }}
-            >
-              <BodyText style={{ margin: 0, fontWeight: 700, color: GAME.ink }}>
-                🎲 {t("ludo.chain.count", { n: chain })}
-              </BodyText>
-              <BodyText muted style={{ margin: "4px 0 0", color: GAME.inkMuted }}>
-                {chain === 2 || chain === 5 || chain === 8
-                  ? t("ludo.chain.careful")
-                  : chain === 3 || chain === 6 || chain === 9
-                  ? t("ludo.chain.onTheEdge")
-                  : t("ludo.chain.holding")}
-              </BodyText>
-            </Card>
+            <FlashLine keyed={chain} ms={4200}>
+              {chain === 2 || chain === 5 || chain === 8
+                ? t("ludo.chain.careful")
+                : chain === 3 || chain === 6 || chain === 9
+                ? t("ludo.chain.onTheEdge")
+                : `🎲 ${t("ludo.chain.count", { n: chain })}`}
+            </FlashLine>
           )}
+          {/* The run collapsing IS a rare event, so it announces
+             itself briefly and leaves — in the table's ink, not the
+             app's brown. */}
           {last?.chain_void && (
-            <BodyText role="status" style={{ margin: "8px 0 0", fontWeight: 700, color: C.brown, textAlign: "center" }}>
+            <FlashLine keyed={JSON.stringify(last)} ms={3600}>
               {t("ludo.chain.voided")}
-            </BodyText>
+            </FlashLine>
           )}
 
           {/* ── Choosing between the pair and the single, when a goti

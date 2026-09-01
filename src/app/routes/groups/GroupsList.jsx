@@ -3,7 +3,7 @@
    and a door to start one (Icons only; the RPC enforces it too).
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -11,8 +11,10 @@ import { useSession } from "../../lib/session.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
-import { fetchMyGroups, fetchMyGroupInvites, respondInvite } from "./groupsStore.js";
+import { fetchMyGroups, fetchMyGroupInvites, respondInvite, cachedGroups } from "./groupsStore.js";
 import { useToast, useToastThenGo, useFresh } from "../../lib/feedback.jsx";
+
+const SCROLL_KEY = "saathban.groups.scroll";
 
 export default function GroupsList() {
   const { lang, ts, meta, t } = useI18n();
@@ -20,7 +22,12 @@ export default function GroupsList() {
   const { profile } = useSession();
   const navigate = useNavigate();
 
-  const [groups, setGroups] = useState(null);
+  /* SEEDED FROM THE LAST VISIT, not from null. Remounting with null is
+     what made returning from a group look like landing on "Create a
+     group": no rows for ~600ms, and the create button is the only thing
+     under the heading. The fetch below still runs and still wins; this
+     only decides what is on screen while it does. */
+  const [groups, setGroups] = useState(() => cachedGroups());
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
@@ -39,6 +46,32 @@ export default function GroupsList() {
       setGroups([]);
     }
   };
+  /* SCROLL COMES BACK TOO. Measured before the fix: 246 going in, 0 on
+     return. Kept in module scope for the same reason as the rows — the
+     component that knew it has been destroyed by the time it matters.
+     Restored only once rows exist, or there is nothing to scroll to. */
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !groups || !groups.length) return;
+    restored.current = true;
+    const y = Number(sessionStorage.getItem(SCROLL_KEY) || 0);
+    if (y > 0) window.scrollTo(0, y);
+  }, [groups]);
+
+  /* SAVED WHEN THE PERSON LEAVES, not on every scroll event.
+
+     A scroll listener looked right and stored 0. Clicking a row starts a
+     navigation, and the browser fires a scroll reset to 0 BEFORE the
+     component unmounts — so the listener faithfully recorded that reset
+     over the position the person actually left at. Measured: 246 on
+     screen, "0" in storage.
+
+     The moment of leaving is unambiguous and is the only moment worth
+     recording, so the row records it. */
+  const rememberScroll = () => {
+    try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); } catch { /* fine */ }
+  };
+
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const answer = async (invite, accept) => {
@@ -95,7 +128,7 @@ export default function GroupsList() {
         groups.map((g) => (
           <Card key={g.id} {...fresh.props(g.id)}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-              <Link to={`/app/groups/${g.id}`} style={{ textDecoration: "none" }}>
+              <Link to={`/app/groups/${g.id}`} onClick={rememberScroll} style={{ textDecoration: "none" }}>
                 <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(23), fontWeight: 700, color: C.green, margin: 0 }}>{g.name}</h2>
               </Link>
               {g.isCreator && <Pill tone="brown">{s.creatorBadge}</Pill>}

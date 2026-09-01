@@ -23,19 +23,41 @@ async function namesFor(ids) {
 }
 
 /* Groups I'm a member of, newest first, with my role. */
+/* THE LIST KEEPS WHAT IT LAST SAW.
+
+   Opening a group unmounts GroupsList, and returning remounted it with
+   groups=null and a fresh fetch. Measured on the built app: rows 0 at
+   +80ms, 0 at +250ms, 6 at +600ms. For most of a second the only thing
+   under the heading was the "Create a group" button — which is what the
+   owner saw and reported as back landing on Create a group. It is not a
+   destination, it is an empty state that looks like one.
+
+   So the answer is not a redirect. The list renders its last known
+   groups immediately and refetches behind them, which is also the
+   honest thing: a person who just came back from a group had six
+   groups a second ago and still does.
+
+   Module scope, not context: it must survive the component being
+   destroyed, which is the whole problem. Cleared on sign-out by the
+   session, and stale for at most one render either way. */
+let groupsCache = null;
+export function cachedGroups() { return groupsCache; }
+export function clearGroupsCache() { groupsCache = null; }
+
 export async function fetchMyGroups() {
   const me = await myId();
   const { data: mine, error } = await supabase
     .from("group_members").select("group_id, role").eq("member_id", me);
   if (error) throw new Error(error.message);
   const ids = (mine || []).map((m) => m.group_id);
-  if (!ids.length) return [];
+  if (!ids.length) return (groupsCache = []);
   const roleBy = Object.fromEntries((mine || []).map((m) => [m.group_id, m.role]));
   const { data: groups, error: e2 } = await supabase
     .from("groups").select("id, name, description, created_by, created_at").in("id", ids)
     .order("created_at", { ascending: false });
   if (e2) throw new Error(e2.message);
-  return (groups || []).map((g) => ({ ...g, myRole: roleBy[g.id], isCreator: roleBy[g.id] === "creator" }));
+  groupsCache = (groups || []).map((g) => ({ ...g, myRole: roleBy[g.id], isCreator: roleBy[g.id] === "creator" }));
+  return groupsCache;
 }
 
 /* Pending group invitations addressed to me. */

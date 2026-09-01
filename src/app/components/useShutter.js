@@ -42,6 +42,35 @@ const ENOUGH_TO_SCROLL = 1.5;
    Passing the element rather than sniffing for one: a hook cannot see
    which of its callers is inside a fixed container, and guessing would
    be another absent-thing-reads-as-a-value. The caller knows. */
+/* ── NOT EVERY SCROLL IS A GESTURE ──
+
+   This hook reads scrolling as INTENT: down means give me the screen,
+   up means give me the bars. That is right for a thumb and wrong for
+   a scroll the app performed itself.
+
+   Changing tab does exactly that. The incoming pane is put back to
+   the position it was left at, and the shutter saw a jump of several
+   hundred pixels and believed it. Traced on the deployed build: the
+   bar sat still through the whole drag, then slid — 105, 48.8, 4.7 —
+   AFTER the tab had changed. The owner sees the bar misbehaving
+   during a slide, and it is the bar reacting to a scroll nobody made.
+
+   `quieten` covers the restore: positions still track, so the next
+   real gesture measures from where the page actually is, but the bar
+   does not change state. `reveal` is separate and deliberate — you
+   should ARRIVE at a tab with its navigation visible, wherever the
+   previous tab happened to be scrolled to. */
+let quietUntil = 0;
+const revealers = new Set();
+
+export function quietenShutter(ms = 450) {
+  quietUntil = Date.now() + ms;
+}
+
+export function revealBars() {
+  revealers.forEach((fn) => fn());
+}
+
 export default function useShutter(scrollerRef) {
   const [hidden, setHidden] = useState(false);
   const lastY = useRef(0);
@@ -65,6 +94,13 @@ export default function useShutter(scrollerRef) {
     const read = () => {
       frame = 0;
       const y = Math.max(0, posY());
+      /* Quiet: keep the numbers current so the next real gesture is
+         measured from here, and decide nothing. */
+      if (Date.now() < quietUntil) {
+        lastY.current = y;
+        anchor.current = y;
+        return;
+      }
       const dy = y - lastY.current;
 
       if (!tallEnough()) {
@@ -107,9 +143,20 @@ export default function useShutter(scrollerRef) {
        the world scrolled, the numbers were all available, and nothing
        ever fired. Reading and listening are two jobs; changing one of
        them is changing half a hook. */
+    /* Every mounted shutter answers a reveal — there are two, the
+       header's and the shell's, and a bar that comes back while the
+       header stays away is worse than neither moving. */
+    const onReveal = () => {
+      lastY.current = posY();
+      anchor.current = posY();
+      setHidden(false);
+    };
+    revealers.add(onReveal);
+
     const target = scrollerRef?.current || window;
     target.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      revealers.delete(onReveal);
       target.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };

@@ -83,6 +83,15 @@ html.sb-settling main {
   transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
+
+/* ACROSS A TAB CHANGE THE CHROME DOES NOT ANIMATE. The bars are shown at
+   the moment the tab lands; letting that 180ms transition run means the
+   bar slides up the screen while the new pane is still arriving, which
+   is two movements arguing. !important because the transition is an
+   inline style on those elements and a class cannot outrank one — narrow
+   and transient, on a class that exists for a quarter of a second. */
+html.sb-tabswitch [data-sb-bar],
+html.sb-tabswitch header { transition: none !important; }
 `;
 
 function ensureStyles() {

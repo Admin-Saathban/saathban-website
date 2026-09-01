@@ -45,6 +45,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "../lib/session.jsx";
+import { quietenShutter, revealBars } from "./useShutter.js";
 import HomeRoutes from "../routes/home/HomeRoutes.jsx";
 import GamesRoutes from "../routes/games/GamesRoutes.jsx";
 import OutdoorRoutes from "../routes/outdoor/OutdoorRoutes.jsx";
@@ -137,11 +138,32 @@ export default function TabPanes() {
 
   useEffect(() => {
     if (!active) return undefined;
+
+    /* THE ARRIVAL, IN ONE PLACE.
+
+       Quieten the shutter, because the restore below is a scroll the APP
+       performs and the shutter reads scrolling as intent. Traced on the
+       deployed build: the bar held still through the whole drag and then
+       slid — 105, 48.8, 4.7 — after the tab had already changed. That is
+       the bar obeying a gesture nobody made.
+
+       Reveal the bars, because you should arrive at a tab able to leave
+       it, wherever the previous tab happened to be scrolled to.
+
+       And hold the chrome still while both happen, so the bar does not
+       animate up the screen while the pane is still arriving — two
+       movements arguing is exactly what reads as jitter. */
+    quietenShutter(450);
+    revealBars();
+    const root = document.documentElement;
+    root.classList.add("sb-tabswitch");
+    const calm = window.setTimeout(() => root.classList.remove("sb-tabswitch"), 260);
+    const settle = () => { window.clearTimeout(calm); root.classList.remove("sb-tabswitch"); };
     /* No saved position means a first visit, and a new screen starts at
        the top — without this it would inherit the previous tab's scroll,
        because ScrollToTop stands down for tab switches. */
     const y = scrolls.current[active] ?? 0;
-    if (y === 0) { window.scrollTo(0, 0); return undefined; }
+    if (y === 0) { window.scrollTo(0, 0); return settle; }
 
     /* RESTORING TAKES MORE THAN A FRAME, and one frame is what my first
        version gave it. A pane coming back from display:none has no
@@ -161,7 +183,7 @@ export default function TabPanes() {
       raf = requestAnimationFrame(attempt);
     };
     raf = requestAnimationFrame(attempt);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelAnimationFrame(raf); settle(); };
   }, [active]);
 
   if (!visited.length) return null;

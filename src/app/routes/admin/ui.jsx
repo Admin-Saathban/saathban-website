@@ -9,7 +9,8 @@
    ════════════════════════════════════════════════ */
 
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
-import { STATUS_LABELS } from "./data.js";
+import { statusLabel } from "./data.js";
+import { useI18n } from "../../lib/i18n.jsx";
 
 // ─── Status chip ───
 // Each pipeline stage gets a distinct token pairing; the label always
@@ -36,6 +37,7 @@ const STATUS_STYLES = {
 };
 
 export function StatusChip({ status }) {
+  const { t } = useI18n();
   const s = STATUS_STYLES[status] || STATUS_STYLES.pending;
   return (
     <span
@@ -51,13 +53,14 @@ export function StatusChip({ status }) {
         whiteSpace: "nowrap",
       }}
     >
-      {STATUS_LABELS[status] || status}
+      {statusLabel(status, t)}
     </span>
   );
 }
 
 // ─── Red-flag badge — glyph + count/text, never colour alone ───
 export function FlagBadge({ count, label }) {
+  const { t } = useI18n();
   return (
     <span
       style={{
@@ -72,7 +75,7 @@ export function FlagBadge({ count, label }) {
         fontWeight: 700,
       }}
     >
-      ⚑ {label ?? `${count} flag${count === 1 ? "" : "s"}`}
+      ⚑ {label ?? t(count === 1 ? "admin.flagOne" : "admin.flagMany", { n: count })}
     </span>
   );
 }
@@ -179,6 +182,7 @@ export function AdminBtn({ kind = "outline", disabled, onClick, children, title 
 // Suspended/rejected render as a terminal note beside the track rather
 // than a step — they are exits, not stages.
 export function PipelineStepper({ status, pipeline }) {
+  const { t } = useI18n();
   const idx = pipeline.indexOf(status);
   const offTrack = idx === -1;
   return (
@@ -212,7 +216,7 @@ export function PipelineStepper({ status, pipeline }) {
               }}
             >
               {reached && !current ? "✓ " : ""}
-              {STATUS_LABELS[stage]}
+              {statusLabel(stage, t)}
             </div>
           </div>
         );

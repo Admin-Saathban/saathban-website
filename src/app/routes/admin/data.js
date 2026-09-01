@@ -16,14 +16,13 @@
 // Order matters: it drives the stepper and the "advance" action.
 export const PIPELINE = ["pending", "interviewing", "probation", "active"];
 
-export const STATUS_LABELS = {
-  pending: "Pending",
-  interviewing: "Interviewing",
-  probation: "Probation",
-  active: "Active",
-  suspended: "Suspended",
-  rejected: "Rejected",
-};
+/* The words live in locales/*.js under admin.status.*; resolve with
+   statusLabel(status, t) at the point of use. Kept as a key list so
+   nothing has to guess which statuses exist. */
+export const STATUSES = ["pending", "interviewing", "probation", "active", "suspended", "rejected"];
+
+export const statusLabel = (status, t) =>
+  (status && t(`admin.status.${status}`)) || status || "";
 
 // The forward move from each stage. Suspension/rejection are separate,
 // deliberate actions — never part of "advance".
@@ -35,38 +34,26 @@ export const NEXT_STATUS = {
 
 // ─── Reviewer red flags (SPEC.md: "surface these in the admin UI") ───
 // Keys are what gets stored in buddy_applications.reviewer_flags.
-export const RED_FLAGS = [
-  {
-    key: "specific_person_request",
-    label: "Asking to be matched with a specific named person",
-  },
-  {
-    key: "id_reluctance",
-    label: "Reluctance to provide ID or references",
-  },
-  {
-    key: "availability_mismatch",
-    label: "Availability inconsistent with stated job or study",
-  },
-  {
-    key: "off_platform_contact",
-    label: "Early attempt to move contact off-platform",
-  },
+/* Keys only — these are stored in buddy_applications.reviewer_flags,
+   so they must never change. The wording is admin.flag.* */
+export const RED_FLAG_KEYS = [
+  "specific_person_request",
+  "id_reluctance",
+  "availability_mismatch",
+  "off_platform_contact",
 ];
 
-export const RED_FLAG_LABELS = Object.fromEntries(
-  RED_FLAGS.map((f) => [f.key, f.label])
-);
+export const redFlagLabel = (key, t) => (key && t(`admin.flag.${key}`)) || key || "";
 
 // ─── Document request types ───
 // The document-request feature has no table yet; this list is the UI
 // contract for when it does.
-export const DOCUMENT_TYPES = [
-  "Police character certificate",
-  "Clearer CNIC photo",
-  "Proof of occupation or enrolment",
-  "Updated selfie",
-];
+/* Keys, not sentences: a document request stores which KIND was
+   asked for, and storing the English words would have made the
+   stored value change meaning the day somebody reworded it. */
+export const DOCUMENT_KEYS = ["police", "cnic", "occupation", "selfie"];
+
+export const documentLabel = (key, t) => (key && t(`admin.doc.${key}`)) || key || "";
 
 /* ─── Mock moderation reports ───
    Skeleton only — Community/Outdoor land at build steps 11–12 and there

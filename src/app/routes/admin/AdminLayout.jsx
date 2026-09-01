@@ -46,7 +46,7 @@ export default function AdminLayout() {
         .eq("status", "open");
       setOpenReportCount(count || 0);
     } catch (e) {
-      setLoadError(e.message || "Could not load applications.");
+      setLoadError(e.message || t("admin.loadFailed"));
       setApplications([]);
     }
   }, []);
@@ -185,7 +185,7 @@ export default function AdminLayout() {
               marginTop: 4,
             }}
           >
-            Admin
+            {t("admin.adminLabel")}
           </div>
         </div>
 

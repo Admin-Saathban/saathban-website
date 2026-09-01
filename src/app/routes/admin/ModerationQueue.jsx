@@ -5,7 +5,7 @@
    SPEC.md commits to a response target measured in HOURS, not days —
    so age is the loudest column and anything past 24 hours is visibly
    overdue. Every decision (resolve/dismiss) is audit-logged by the
-   0014 trigger; "Hide content" soft-hides a post or comment in place.
+   0014 trigger; t("admin.mod.hide") soft-hides a post or comment in place.
    Reported DMs are moderated from the snapshot the reporter's client
    took — admins have NO read path into DM threads (QUESTIONS.md C5).
 
@@ -21,13 +21,15 @@ import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 import ReportedMedia from "./ReportedMedia.jsx";
 import Icon from "../../components/Icon.jsx";
 
+/* KEYS, not words — resolved with t() where they are drawn, so the
+   map can stay at module scope where there is no translator. */
 const KIND_LABEL = {
-  post: "Community post",
-  comment: "Comment",
-  dm_message: "Direct message",
-  park_board: "Park board",
-  group: "Friend group",
-  group_post: "Group post",
+  post: "admin.mod.surface.post",
+  comment: "admin.mod.surface.comment",
+  dm_message: "admin.mod.surface.dm_message",
+  park_board: "admin.mod.surface.park_board",
+  group: "admin.mod.surface.group",
+  group_post: "admin.mod.surface.group_post",
 };
 
 const HIDE_TABLE = {
@@ -77,7 +79,7 @@ export default function ModerationQueue() {
         await fetchNames(rows.flatMap((r) => [r.reporter_id, r.target_author_id]))
       );
     } catch {
-      setError("The queue didn't load. Please try again in a moment.");
+      setError(t("admin.mod.loadFailed"));
       setReports([]);
     }
   }, []);
@@ -99,7 +101,7 @@ export default function ModerationQueue() {
       if (err) throw err;
       await load();
     } catch {
-      setError("That decision didn't save. Please try again.");
+      setError(t("admin.mod.saveFailed"));
     }
   };
 
@@ -118,10 +120,10 @@ export default function ModerationQueue() {
       if (err) throw err;
       setResolutionDraft((d) => ({
         ...d,
-        [report.id]: d[report.id] || "Content hidden.",
+        [report.id]: d[report.id] || t("admin.mod.hiddenNote"),
       }));
     } catch {
-      setError("Hiding failed — the content may already be gone.");
+      setError(t("admin.mod.hideFailed"));
     }
   };
 
@@ -160,7 +162,7 @@ export default function ModerationQueue() {
           }
         >
           {reports === null ? (
-            <p style={{ margin: 0, color: C.textMuted }} role="status">Loading…</p>
+            <p style={{ margin: 0, color: C.textMuted }} role="status">{t("admin.mod.loading")}</p>
           ) : open.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
@@ -197,7 +199,7 @@ export default function ModerationQueue() {
                           fontWeight: 700,
                         }}
                       >
-                        {KIND_LABEL[r.target_kind] || r.target_kind}
+                        {KIND_LABEL[r.target_kind] ? t(KIND_LABEL[r.target_kind]) : r.target_kind}
                       </span>
                       <span
                         style={{
@@ -207,11 +209,11 @@ export default function ModerationQueue() {
                         }}
                       >
                         {overdue ? "⚑ " : ""}
-                        {age}h old
-                        {overdue && " — past the response target"}
+                        {t("admin.mod.hoursOld", { n: age })}
+                        {overdue && t("admin.mod.overdue")}
                       </span>
                       <span style={{ color: C.textMuted, fontSize: 15 }}>
-                        · reported {fmtDateTime(r.created_at)}
+                        {t("admin.mod.reportedAt", { when: fmtDateTime(r.created_at) })}
                       </span>
                     </div>
 
@@ -232,15 +234,15 @@ export default function ModerationQueue() {
                     />
                     {!r.target_excerpt && !r.target_media_path && (
                       <p style={{ margin: "0 0 6px", fontStyle: "italic", color: C.textMuted }}>
-                        (nothing was captured with this report)
+                        {t("admin.mod.noExcerpt")}
                       </p>
                     )}
                     <p style={{ margin: "0 0 14px", fontSize: 16, color: C.textMuted }}>
-                      By <strong style={{ color: C.textMain }}>{nameOf(r.target_author_id)}</strong>
-                      {" · "}reported by {nameOf(r.reporter_id)}
+                      {t("admin.mod.by")} <strong style={{ color: C.textMain }}>{nameOf(r.target_author_id)}</strong>
+                      {" "}{t("admin.mod.reportedBy", { name: nameOf(r.reporter_id) })}
                       {r.reason && (
                         <>
-                          {" · "}reason:{" "}
+                          {" · "}{t("admin.mod.reasonLabel")}{" "}
                           <strong style={{ color: C.textMain }}>{r.reason}</strong>
                         </>
                       )}

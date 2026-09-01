@@ -45,7 +45,7 @@ export default function QuestionsQueue() {
       setError(null);
       setQuestions(await fetchQuestions());
     } catch (e) {
-      setError(e.message || "Could not load questions.");
+      setError(e.message || t("admin.questionsQueue.loadFailed"));
       setQuestions([]);
     }
   };
@@ -65,7 +65,7 @@ export default function QuestionsQueue() {
       await load();
       await reload();
     } catch (e) {
-      setError(e.message || "The reply didn't send. Please try again.");
+      setError(e.message || t("admin.questionsQueue.replyFailed"));
     } finally {
       setBusyId(null);
     }
@@ -115,7 +115,7 @@ export default function QuestionsQueue() {
           }
         >
           {questions === null ? (
-            <p style={{ margin: 0, color: C.textMuted }}>Loading…</p>
+            <p style={{ margin: 0, color: C.textMuted }}>{t("admin.questionsQueue.loading")}</p>
           ) : open.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
@@ -183,7 +183,7 @@ export default function QuestionsQueue() {
                   <strong>{q.subject}</strong>
                   <span style={{ color: C.textMuted }}>
                     {" — "}
-                    {q.asker_name} · answered {fmtDateTime(q.replied_at)}
+                    {q.asker_name}{" "}{t("admin.answeredAt", { when: fmtDateTime(q.replied_at) })}
                   </span>
                   <div style={{ color: C.textMuted, fontSize: 15, marginTop: 2 }}>
                     {q.reply}

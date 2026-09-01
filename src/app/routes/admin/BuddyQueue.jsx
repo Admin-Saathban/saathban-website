@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
-import { PIPELINE, STATUS_LABELS } from "./data.js";
+import { PIPELINE, statusLabel } from "./data.js";
 import { StatusChip, FlagBadge, fmtDate } from "./ui.jsx";
 
 const TABS = [...PIPELINE, "suspended", "rejected"];
@@ -27,7 +27,7 @@ export default function BuddyQueue() {
   const [tab, setTab] = useState("pending");
 
   const counts = Object.fromEntries(
-    TABS.map((t) => [t, applications.filter((a) => a.status === t).length])
+    TABS.map((st) => [st, applications.filter((a) => a.status === st).length])
   );
   const rows = applications
     .filter((a) => a.status === tab)
@@ -57,15 +57,15 @@ export default function BuddyQueue() {
           marginBottom: 22,
         }}
       >
-        {TABS.map((t, i) => {
-          const selected = t === tab;
+        {TABS.map((st, i) => {
+          const selected = st === tab;
           const isExit = i >= PIPELINE.length;
           return (
             <button
-              key={t}
+              key={st}
               type="button"
               aria-pressed={selected}
-              onClick={() => setTab(t)}
+              onClick={() => setTab(st)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -85,7 +85,7 @@ export default function BuddyQueue() {
             >
               {/* Non-colour marker for the selected tab (SPEC: never colour alone) */}
               {selected && <span aria-hidden="true">✓</span>}
-              {STATUS_LABELS[t]}
+              {statusLabel(st, t)}
               <span
                 style={{
                   minWidth: 26,
@@ -98,7 +98,7 @@ export default function BuddyQueue() {
                   fontWeight: 700,
                 }}
               >
-                {counts[t]}
+                {counts[st]}
               </span>
             </button>
           );
@@ -119,8 +119,8 @@ export default function BuddyQueue() {
           }}
         >
           {loading
-            ? "Loading applications…"
-            : `Nothing waiting under “${STATUS_LABELS[tab]}” right now.`}
+            ? t("admin.queue.loading")
+            : t("admin.queue.emptyTab", { status: statusLabel(tab, t) })}
         </div>
       ) : (
         <div
@@ -141,13 +141,13 @@ export default function BuddyQueue() {
             <thead>
               <tr>
                 {[
-                  "Applicant",
-                  "City",
-                  "Languages",
-                  "Applied",
-                  "References called",
-                  "Red flags",
-                  "Status",
+                  t("admin.queue.applicant"),
+                  t("admin.queue.city"),
+                  t("admin.queue.languages"),
+                  t("admin.queue.applied"),
+                  t("admin.queue.refsCalled"),
+                  t("admin.queue.redFlags"),
+                  t("admin.queue.status"),
                 ].map((h) => (
                   <th
                     key={h}
@@ -175,7 +175,7 @@ export default function BuddyQueue() {
                   <tr
                     key={a.id}
                     onClick={() => navigate(a.id)}
-                    onKeyDown={(e) => e.key === "Enter" && navigate(a.id)}
+                    onKeyDown={(e) => e.key === t("admin.queue.enter") && navigate(a.id)}
                     tabIndex={0}
                     style={{ cursor: "pointer" }}
                     className="adm-row"

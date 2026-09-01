@@ -27,9 +27,11 @@ import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import {
   PIPELINE,
   NEXT_STATUS,
-  STATUS_LABELS,
-  RED_FLAGS,
-  DOCUMENT_TYPES,
+  statusLabel,
+  RED_FLAG_KEYS,
+  redFlagLabel,
+  DOCUMENT_KEYS,
+  documentLabel,
 } from "./data.js";
 import { fetchAuditTrail } from "./api.js";
 import {
@@ -107,7 +109,7 @@ export default function BuddyApplication() {
       await fn();
       return true;
     } catch (e) {
-      setActionError(e.message || "That didn't save. Please try again.");
+      setActionError(e.message || t("admin.app.saveFailed"));
       return false;
     } finally {
       setBusy(false);
@@ -135,7 +137,7 @@ export default function BuddyApplication() {
           textDecoration: "none",
         }}
       >
-        ← Buddy review queue
+        {t("admin.app.backToQueue")}
       </Link>
 
       <div
@@ -178,7 +180,7 @@ export default function BuddyApplication() {
         )}
       </div>
       <p style={{ color: C.textMuted, margin: "0 0 18px" }}>
-        Applied {fmtDate(app.created_at)} · {app.city} · speaks{" "}
+        {t("admin.app.appliedOn", { when: fmtDate(app.created_at), city: app.city })}{" "}
         {app.languages.join(", ")}
       </p>
 
@@ -235,20 +237,20 @@ export default function BuddyApplication() {
                 gap: "16px 24px",
               }}
             >
-              <Field label="Legal name (as on CNIC)">{app.legal_name}</Field>
-              <Field label="CNIC number">{app.cnic_number}</Field>
-              <Field label="Date of birth">
-                {fmtDate(app.dob)} · age {ageFromDob(app.dob)}
+              <Field label={t("admin.app.legalName")}>{app.legal_name}</Field>
+              <Field label={t("admin.app.cnicNumber")}>{app.cnic_number}</Field>
+              <Field label={t("admin.app.dob")}>
+                {t("admin.app.dobAge", { when: fmtDate(app.dob), age: ageFromDob(app.dob) })}
               </Field>
-              <Field label="Phone">{app.phone}</Field>
+              <Field label={t("admin.app.phone")}>{app.phone}</Field>
               {/* Sensitive documents live in the PRIVATE buddy-documents
                   bucket. These placeholders become signed-URL image views
                   once uploads exist; the signed-URL fetch is where
                   app-level read logging will fire. Never a public URL. */}
-              <Field label="CNIC photo">
+              <Field label={t("admin.app.cnicPhoto")}>
                 <DocPlaceholder path={app.cnic_photo_path} />
               </Field>
-              <Field label="Selfie at signup">
+              <Field label={t("admin.app.selfie")}>
                 <DocPlaceholder path={app.selfie_path} />
               </Field>
             </div>
@@ -262,17 +264,17 @@ export default function BuddyApplication() {
                 gap: "16px 24px",
               }}
             >
-              <Field label="Occupation / institution">{app.occupation}</Field>
-              <Field label="City">{app.city}</Field>
-              <Field label="Reachable areas">{app.reachable_areas}</Field>
-              <Field label="Languages spoken — key matching field">
+              <Field label={t("admin.app.occupation")}>{app.occupation}</Field>
+              <Field label={t("admin.app.city")}>{app.city}</Field>
+              <Field label={t("admin.app.areas")}>{app.reachable_areas}</Field>
+              <Field label={t("admin.app.languages")}>
                 <strong>{app.languages.join(", ")}</strong>
               </Field>
-              <Field label="Weekly hours offered">{app.weekly_hours}</Field>
-              <Field label="Commitment">
-                {app.commitment_months} months
+              <Field label={t("admin.app.hours")}>{app.weekly_hours}</Field>
+              <Field label={t("admin.app.commitment")}>
+                {t("admin.app.commitMonths", { n: app.commitment_months })}
               </Field>
-              <Field label="Experience with seniors or caregiving" wide>
+              <Field label={t("admin.app.experience")} wide>
                 {app.experience}
               </Field>
             </div>
@@ -281,21 +283,21 @@ export default function BuddyApplication() {
           <Card title={t("admin.declarations")}>
             <ul style={{ margin: 0, paddingLeft: 22, lineHeight: 2 }}>
               <li>
-                Criminal record disclosed:{" "}
+                {t("admin.app.criminalRecord")}{" "}
                 <strong>
-                  {app.declared_criminal_record ? "Yes" : "None declared"}
+                  {app.declared_criminal_record ? t("admin.app.yes") : t("admin.app.noneDeclared")}
                 </strong>
                 {app.criminal_record_details && (
                   <> — {app.criminal_record_details}</>
                 )}
               </li>
               <li>
-                Consented to police character certificate:{" "}
-                <strong>{app.consented_character_certificate ? "Yes" : "No"}</strong>
+                {t("admin.app.consentedCert")}{" "}
+                <strong>{app.consented_character_certificate ? t("admin.app.yes") : t("admin.app.no")}</strong>
               </li>
               <li>
-                Accepted code of conduct:{" "}
-                <strong>{app.accepted_code_of_conduct ? "Yes" : "No"}</strong>
+                {t("admin.app.acceptedConduct")}{" "}
+                <strong>{app.accepted_code_of_conduct ? t("admin.app.yes") : t("admin.app.no")}</strong>
               </li>
             </ul>
           </Card>
@@ -310,13 +312,12 @@ export default function BuddyApplication() {
                   color: callsDone === 2 ? C.green : C.brown,
                 }}
               >
-                {callsDone} of {refs.length || 2} called
+                {t("admin.app.refsCalled", { done: callsDone, total: refs.length || 2 })}
               </span>
             }
           >
             <p style={{ margin: "0 0 16px", color: C.textMuted, fontSize: 16 }}>
-              Two non-family references, actually phoned. The collection is not
-              the safeguard — the call is.
+              {t("admin.app.refsExplainer")}
             </p>
             <div style={{ display: "grid", gap: 14 }}>
               {refs.map((r) => (
@@ -344,7 +345,7 @@ export default function BuddyApplication() {
                     </div>
                     {r.called_at ? (
                       <span style={{ color: C.green, fontWeight: 700 }}>
-                        ✓ Called {fmtDateTime(r.called_at)}
+                        {t("admin.app.calledOn", { when: fmtDateTime(r.called_at) })}
                       </span>
                     ) : (
                       <span style={{ color: C.brown, fontWeight: 700 }}>{t("admin.notCalled")}</span>
@@ -414,14 +415,14 @@ export default function BuddyApplication() {
                     >
                       <StatusChip status={p.status} />
                       <span style={{ color: C.textMuted, fontSize: 16 }}>
-                        Applied {fmtDate(p.created_at)}
+                        {t("admin.app.appliedShort", { when: fmtDate(p.created_at) })}
                         {p.decided_at && <> · decided {fmtDate(p.decided_at)}</>}
                       </span>
                       {p.reviewer_flags.map((f) => (
                         <FlagBadge
                           key={f}
                           label={
-                            RED_FLAGS.find((rf) => rf.key === f)?.label || f
+                            redFlagLabel(f, t)
                           }
                         />
                       ))}
@@ -439,12 +440,10 @@ export default function BuddyApplication() {
           <Card title={t("admin.auditTrail")}>
             {!isSuper ? (
               <p style={{ margin: 0, color: C.textMuted }}>
-                The audit trail is super-admin scope. Status changes are still
-                recorded automatically — a super-admin can review who moved
-                what, when, and why.
+                {t("admin.app.auditScope")}
               </p>
             ) : audit === null ? (
-              <p style={{ margin: 0, color: C.textMuted }}>Loading…</p>
+              <p style={{ margin: 0, color: C.textMuted }}>{t("admin.app.loading")}</p>
             ) : audit.length === 0 ? (
               <p style={{ margin: 0, color: C.textMuted }}>{t("admin.noEntries")}</p>
             ) : (
@@ -468,8 +467,8 @@ export default function BuddyApplication() {
                       {e.detail?.from && e.detail?.to && (
                         <>
                           {" "}
-                          {STATUS_LABELS[e.detail.from] || e.detail.from} →{" "}
-                          <strong>{STATUS_LABELS[e.detail.to] || e.detail.to}</strong>
+                          {statusLabel(e.detail.from, t)} →{" "}
+                          <strong>{statusLabel(e.detail.to, t)}</strong>
                         </>
                       )}
                       {e.reason && (
@@ -493,12 +492,12 @@ export default function BuddyApplication() {
                   disabled={busy || advanceBlockedByCalls}
                   title={
                     advanceBlockedByCalls
-                      ? "Both reference calls must be recorded before probation"
+                      ? t("admin.app.bothRefs")
                       : undefined
                   }
                   onClick={() => run(() => actions.setStatus(app.id, next))}
                 >
-                  Move to {STATUS_LABELS[next]}
+                  {t("admin.moveTo", { status: statusLabel(next, t) })}
                 </AdminBtn>
               )}
               {advanceBlockedByCalls && (
@@ -516,7 +515,7 @@ export default function BuddyApplication() {
                       actions.setStatus(
                         app.id,
                         "suspended",
-                        rejectNote.trim() || "Suspended from admin review."
+                        rejectNote.trim() || t("admin.app.suspendNote")
                       )
                     )
                   }
@@ -531,7 +530,7 @@ export default function BuddyApplication() {
                       actions.setStatus(
                         app.id,
                         "active",
-                        rejectNote.trim() || "Reinstated after review."
+                        rejectNote.trim() || t("admin.app.reinstateNote")
                       )
                     )
                   }
@@ -570,7 +569,8 @@ export default function BuddyApplication() {
           {/* ─── Red-flag checklist (SPEC.md, verbatim list) ─── */}
           <Card title={t("admin.redFlags")}>
             <div style={{ display: "grid", gap: 4 }}>
-              {RED_FLAGS.map((f) => {
+              {RED_FLAG_KEYS.map((key) => {
+                const f = { key, label: redFlagLabel(key, t) };
                 const on = app.reviewer_flags.includes(f.key);
                 return (
                   <label
@@ -608,8 +608,7 @@ export default function BuddyApplication() {
           {/* ─── Document requests (buddy_document_requests, 0010) ─── */}
           <Card title={t("admin.documents")}>
             <p style={{ margin: "0 0 12px", fontSize: 15, color: C.textMuted }}>
-              A request reaches the applicant as an in-app notification and is
-              audit-logged automatically.
+              {t("admin.app.docExplainer")}
             </p>
             {(app.document_requests || [])
               .slice()
@@ -641,7 +640,10 @@ export default function BuddyApplication() {
                           fontWeight: 700,
                         }}
                       >
-                        · {d.response_path ? "uploaded by applicant" : d.status}
+                        {/* the stored enum is a key, not a word to show */}
+                        · {d.response_path
+                            ? t("admin.app.uploadedByApplicant")
+                            : t(`admin.app.docStatus.${d.status}`) || d.status}
                       </span>
                     </span>
                     {d.status === "awaiting" && (
@@ -653,11 +655,11 @@ export default function BuddyApplication() {
                     )}
                   </div>
                   <div style={{ color: C.textMuted, fontSize: 15 }}>
-                    Requested {fmtDate(d.created_at)}
+                    {t("admin.app.requestedOn", { when: fmtDate(d.created_at) })}
                     {d.note && <> — {d.note}</>}
                     {d.responded_at && (
                       <>
-                        {" · "}response {fmtDate(d.responded_at)} —{" "}
+                        {" · "}{t("admin.app.responseOn", { when: fmtDate(d.responded_at) })}{" "}
                         <span style={{ wordBreak: "break-all" }}><Icon name="locked" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />{d.response_path}</span>
                       </>
                     )}
@@ -674,8 +676,11 @@ export default function BuddyApplication() {
                 style={inputStyle}
               />
               <datalist id="doc-type-suggestions">
-                {DOCUMENT_TYPES.map((t) => (
-                  <option key={t} value={t} />
+                {/* value is what gets stored, so it is the KEY's
+                    wording in the admin's own language — the list is a
+                    suggestion, not an enum. */}
+                {DOCUMENT_KEYS.map((k) => (
+                  <option key={k} value={documentLabel(k, t)} />
                 ))}
               </datalist>
               <input
@@ -754,6 +759,7 @@ export default function BuddyApplication() {
    uploads exist this becomes a signed-URL <img> fetched on demand —
    and the fetch is the moment app-level audit logging fires. */
 function DocPlaceholder({ path }) {
+  const { t } = useI18n();
   return (
     <div
       style={{
@@ -766,7 +772,7 @@ function DocPlaceholder({ path }) {
         lineHeight: 1.5,
       }}
     >
-      <Icon name="locked" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />Private bucket
+      <Icon name="locked" size={15} style={{ verticalAlign: "-2px", marginInlineEnd: 4 }} />{t("admin.app.privateBucket")}
       <div style={{ wordBreak: "break-all" }}>{path}</div>
     </div>
   );

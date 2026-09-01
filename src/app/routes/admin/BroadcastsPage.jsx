@@ -39,11 +39,16 @@ const AUDIENCES = [
   { value: "", labelKey: "admin.audienceEveryone" },
   ...Object.entries(ROLE_DISPLAY).map(([value, label]) => ({
     value,
-    label: `${label} accounts only`,
+    labelKey: "admin.broadcast.accountsOnly",
+    role: label,
   })),
 ];
 
-const audienceLabel = (a, t) => (a ? (a.labelKey ? t(a.labelKey) : a.label) : "");
+/* An entry may carry a plain key, or a key plus the role it names —
+   "{role} accounts only" is one string with a slot rather than three
+   near-identical sentences. */
+const audienceLabel = (a, t) =>
+  (a ? (a.labelKey ? t(a.labelKey, a.role ? { role: a.role } : undefined) : a.label) : "");
 
 export default function BroadcastsPage() {
   const { t } = useI18n();
@@ -77,7 +82,7 @@ export default function BroadcastsPage() {
       setReason("");
       setRole("");
     } catch (e) {
-      setError(e.message || "The broadcast didn't send. Please try again.");
+      setError(e.message || t("admin.broadcast.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -146,7 +151,7 @@ export default function BroadcastsPage() {
           </label>
 
           <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>
-            Title
+            {t("admin.broadcast.title")}
             <input
               type="text"
               value={title}
@@ -157,7 +162,7 @@ export default function BroadcastsPage() {
           </label>
 
           <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>
-            Message (optional)
+            {t("admin.broadcast.message")}
             <textarea
               rows={4}
               value={body}
@@ -168,7 +173,7 @@ export default function BroadcastsPage() {
           </label>
 
           <label style={{ display: "grid", gap: 6, fontSize: 16, fontWeight: 600 }}>
-            Reason (for the audit log — not shown to recipients)
+            {t("admin.broadcast.reason")}
             <input
               type="text"
               value={reason}

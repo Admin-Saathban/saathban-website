@@ -24,6 +24,7 @@
 import { useState } from "react";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import supabase from "../../lib/supabase.js";
+import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 
 const mmss = (n) => {
@@ -32,6 +33,7 @@ const mmss = (n) => {
 };
 
 export default function ReportedMedia({ bucket, path, kind }) {
+  const { t } = useI18n();
   const [url, setUrl] = useState(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -60,9 +62,9 @@ export default function ReportedMedia({ bucket, path, kind }) {
     <div style={box}>
       <p style={{ margin: "0 0 8px", fontSize: 15, color: C.textMuted, fontWeight: 700 }}>
         {kind === "audio"
-            ? <><Icon name="voice" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />Reported voice recording</>
-            : <><Icon name="photo" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />Reported image</>}
-        {bucket === "report-evidence" && " · copy handed over by the reporter"}
+            ? <><Icon name="voice" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("admin.media.voiceTitle")}</>
+            : <><Icon name="photo" size={16} style={{ verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("admin.media.imageTitle")}</>}
+        {bucket === "report-evidence" && t("admin.media.handedOver")}
       </p>
 
       {!url ? (
@@ -84,11 +86,11 @@ export default function ReportedMedia({ bucket, path, kind }) {
               cursor: busy ? "default" : "pointer",
             }}
           >
-            {busy ? "Opening…" : kind === "audio" ? "Listen to it" : "Look at it"}
+            {busy ? t("admin.media.opening") : kind === "audio" ? t("admin.media.listen") : t("admin.media.look")}
           </button>
           {failed && (
             <p role="alert" style={{ margin: "8px 0 0", color: C.brown, fontWeight: 700, fontSize: 15 }}>
-              That file could not be opened — it may have been deleted since the report.
+              {t("admin.media.failed")}
             </p>
           )}
         </>
@@ -99,7 +101,7 @@ export default function ReportedMedia({ bucket, path, kind }) {
            a two-minute job every time. */
         <audio src={url} controls preload="metadata" style={{ width: "100%" }} />
       ) : (
-        <img src={url} alt="Reported" style={{ maxWidth: "100%", borderRadius: 10, display: "block" }} />
+        <img src={url} alt={t("admin.media.alt")} style={{ maxWidth: "100%", borderRadius: 10, display: "block" }} />
       )}
     </div>
   );

@@ -155,28 +155,38 @@ export default function GamesHome() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
-  /* "WERE YOU GIVEN A CODE?" — the surface the owner named: it
-     opens and there is no way back out of it. It is a panel that
-     replaces the card it lives in rather than a sheet over the
-     page, so there was never even a scrim to tap. Back closes it
-     now and the games list is still underneath, unscrolled. */
-  useBackToClose(codeOpen, () => setCodeOpen(false));
   const [code, setCode] = useState("");
   const [codeMsg, setCodeMsg] = useState("");
   // The table standing in the way, when someone tries for a second.
   const [blockedBy, setBlockedBy] = useState(null);
   const [pastOpen, setPastOpen] = useState(false);
-  /* THE SAME SHAPE AS "Were you given a code?", eight lines up,
-     and it is worth naming the shape rather than the two
-     instances: a boolean panel whose TRIGGER IS RENDERED ONLY
-     WHILE IT IS CLOSED. Opening it takes the way out off the
-     screen, and with no history entry the back gesture leaves
-     the page instead of collapsing the list. Both at once is
-     exactly "it opens and there is no way to get back out of
-     it".
+  /* ── TWO PANELS, TWO HANDLERS, AND THAT IS NOW THE RIGHT SHAPE ──
 
-     An accordion is fine by contrast, because its header stays
-     put and the way out is where the way in was. */
+     Both are the same trap, and it is worth naming the trap rather
+     than the two instances: a boolean panel whose TRIGGER IS
+     RENDERED ONLY WHILE IT IS CLOSED. Opening it takes the way out
+     off the screen, and with no history entry the back gesture
+     leaves the page instead of collapsing it. Both at once is
+     exactly the owner's sentence — "it opens and there is no way
+     to get back out of it".
+
+     An accordion is fine by contrast: its header stays put, so the
+     way out is where the way in was. And a scan for the shape found
+     only these two in the whole app, so it is a TRAP, NOT A
+     CONVENTION — do not go looking for a pattern to follow here.
+
+     THESE WERE BRIEFLY ONE CALL. Both can be open at once, and for
+     a few hours useBackToClose instances did not nest: popstate is
+     a window event, so one back press ran every mounted handler
+     and left an orphaned entry for the next press to spend. One
+     handler closing both was the safe answer to that.
+
+     The hook records its depth now and acts only when history has
+     come back past its own entry, so two are correct again — and
+     better than one: back closes the panel you opened LAST and
+     leaves the other where it was, instead of collapsing both
+     because of a limitation that no longer exists. */
+  useBackToClose(codeOpen, () => setCodeOpen(false));
   useBackToClose(pastOpen, () => setPastOpen(false));
   const [streak, setStreak] = useState(0);
   /* §9: who is at each live table, keyed by session. */

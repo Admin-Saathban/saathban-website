@@ -29,7 +29,6 @@ import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
 import BoastSheet from "../BoastSheet.jsx";
-import useBackToClose from "../../../components/useBackToClose.js";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -158,14 +157,31 @@ export default function LudoCelebration({
      this person was not sitting at. */
   const watching = seats.length === 0;
   const [sheet, setSheet] = useState(false);
-  /* The boast sheet over the result, and ONLY that.
+  /* NO useBackToClose HERE, AND THAT IS THE FIX, NOT THE OVERSIGHT.
 
-     The result screen itself is deliberately not hooked up to
-     back: it is not an overlay somebody is stuck inside, it is
-     where the game ended, and it carries its own two doors
-     (play again, back to games). Making back dismiss it would
-     leave a person on a finished table with nothing on it. */
-  useBackToClose(sheet, () => setSheet(false));
+     I had one on `sheet`, for the boast sheet below — and BoastSheet
+     already registers its own. Two handlers for one panel, and they
+     do not nest: popstate is a WINDOW event, so a single back press
+     runs every mounted handler rather than the innermost one.
+
+     What that produced: opening the sheet pushed two history
+     entries, one back press popped one and fired both handlers,
+     both concluded they had been popped and neither removed the
+     other's entry — so the sheet closed and a person then had to
+     press back TWICE to leave the result screen. An orphaned entry
+     is a stuck screen with extra steps, which is the family of
+     defect this hook exists to remove.
+
+     THE RULE: the component that owns the panel owns its dismissal.
+     A parent must not register on behalf of a child that registers
+     for itself. (Found by the snakes lane, which hit it from the
+     other side.)
+
+     The result screen itself takes no handler either, for a
+     different reason: it is not an overlay somebody is stuck
+     inside, it is where the game ended, and it carries its own two
+     doors. Making back dismiss it would leave a person on a
+     finished table with nothing on it. */
 
   return (
     <div

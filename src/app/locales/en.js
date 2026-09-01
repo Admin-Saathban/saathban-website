@@ -3182,6 +3182,50 @@ const en = {
       done: "Done",
     },
   },
+  /* ── Snakes & Ladders (routes/games/snakes). The board redesign of
+     1 Sept: its own full-screen world, a setup room, and a table the
+     host sets. ── */
+  snakes: {
+    title: "Snakes & Ladders",
+    waitTurn: "Waiting for the others",
+    over: "The game is over",
+    color: {
+      yellow: "Yellow", blue: "Blue", red: "Red", green: "Green",
+      purple: "Purple", orange: "Orange", teal: "Teal", pink: "Pink",
+    },
+    setup: {
+      players: "How many are playing?",
+      /* An empty seat says this, with three dots moving beside it. */
+      waiting: "Waiting…",
+      you: "You",
+      fromCommunity: "Ask someone from Community",
+      sendLink: "Send a link",
+      fillBots: "Fill the rest with bots",
+      /* Not a button. game_start_if_full() begins the game the moment
+         the last seat fills, so this says what will happen rather
+         than pretending to cause it. */
+      startWhenFull: "Starts when the table is full",
+      seatsLeft: "{n} still to arrive",
+      back: "Back to the table",
+      leave: "Leave",
+      failed: "That did not save. Try again.",
+    },
+    rules: {
+      title: "House rules",
+      snakeCount: "Snakes on the board",
+      ladderCount: "Ladders on the board",
+      count: "{snakes} snakes and {ladders} ladders",
+      dragon: "One of the snakes is the dragon, from 97 all the way down to 26. It is always there.",
+      exact: "You must land exactly on 100. Roll too high and you stay where you are.",
+      walk: "Your piece walks square by square, so you can count the roll off the board.",
+      noChain: "No square has two things on it, so a ladder can never drop you onto a snake.",
+      hostOnly: "Only the person who made the table can change these.",
+    },
+    win: {
+      body: "reached 100.",
+      done: "Done",
+    },
+  },
   games: {
     collision: { line: "You already have a table open. Finish or leave it, and {game} is waiting." },
     /* Setting the table. Almost every string here is an aria-label —

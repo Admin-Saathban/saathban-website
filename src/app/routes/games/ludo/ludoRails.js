@@ -96,8 +96,16 @@ export async function legalFor(state, seat, seats, die) {
   return data || [];
 }
 
-export async function tick(sessionId) {
-  const { data, error } = await supabase.rpc("game_tick", { p_session: sessionId });
+/* `max` caps how many turns one call may play (0112). The board
+   passes 1 and becomes the pacemaker: one bot turn, shown, then
+   the next. Without it a single call can play three bots in a row
+   and the board only ever sees the position they left behind —
+   which is why bot gotis teleported and mine walked. */
+export async function tick(sessionId, max = null) {
+  const { data, error } = await supabase.rpc("game_tick", {
+    p_session: sessionId,
+    p_max: max,
+  });
   if (error) throw new Error(error.message);
   return data;
 }

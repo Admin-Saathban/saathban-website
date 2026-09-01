@@ -50,6 +50,14 @@ import { leaveSession } from "../../../lib/games.js";
 import { fetchChat } from "./ludoRails.js";
 import CollisionNote from "../CollisionNote.jsx";
 
+/* HOW LONG SOMEBODY ELSE'S THROW TAKES TO WATCH: the dice tumble
+   for 600ms and then there is a beat before the goti moves, which
+   is roughly what a person at a table does. BOT_GAP is that plus
+   room for the walk, so one bot's turn is finished being watched
+   before the next is asked for. */
+const BOT_BEAT = 1300;
+const BOT_GAP = 2600;
+
 const POLL_MS = 2500;
 
 const RULE_KEYS = [
@@ -148,6 +156,11 @@ export default function LudoSession() {
   }, [game?.state?.dice]);
   const [rolling, setRolling] = useState(false);
   const [tumble, setTumble] = useState([1, 1]);
+  /* Somebody else is throwing: { seat, die }. While this is set the
+     board is deliberately one move behind the server. */
+  const [botThrow, setBotThrow] = useState(null);
+  const shownMoveRef = useRef(undefined);
+  const botHoldRef = useRef(0);
   /* seat → the number it last threw; see lastDieBySeat below. */
   const lastDiceRef = useRef({});
 
@@ -197,10 +210,46 @@ export default function LudoSession() {
 
   const load = async () => {
     const g = await fetchSession(sessionId);
-    /* Read off every board that goes past, so a seat's face
-       survives the next player's turn. */
+    /* A BOT'S MOVE IS HELD BACK FOR ITS OWN THROW.
+
+       The board would otherwise show the finished position at the
+       same instant the die appears, so nobody ever sees a bot roll.
+       The new state waits in a ref while the dice tumble beside
+       that seat and a beat passes; then it is applied and the goti
+       walks, exactly as a person's move does.
+
+       Only for a move somebody else made, only once per move, and
+       never on the first sight of a table — arriving at a board is
+       not somebody's turn. */
     const mv = g?.state?.last;
+    const key = mv ? JSON.stringify(mv) : null;
+    const mover = mv?.seat;
+    const moverRow = mover != null ? (g.seats || []).find((x) => x.seat === mover) : null;
+    const mine = (g.seats || []).find((x) => x.profile_id === myId)?.seat;
+    /* Read off every board that goes past, so a seat's face
+       survives the next player's turn. Recorded BEFORE the hold, so
+       the die is on the plate while its owner is throwing it. */
     if (mv && mv.seat != null && mv.die) lastDiceRef.current[mv.seat] = mv.die;
+    const first = shownMoveRef.current === undefined;
+    if (first) shownMoveRef.current = key;
+    if (
+      !first &&
+      key &&
+      key !== shownMoveRef.current &&
+      moverRow &&
+      mover !== mine &&
+      g.status === "playing"
+    ) {
+      shownMoveRef.current = key;
+      setBotThrow({ seat: mover, die: mv.die || null });
+      window.clearTimeout(botHoldRef.current);
+      botHoldRef.current = window.setTimeout(() => {
+        setBotThrow(null);
+        setGame(g);
+      }, BOT_BEAT);
+      return g;
+    }
+    shownMoveRef.current = key;
     setGame(g);
     if (g?.status === "playing") ping();
     /* Ask until it is settled. The window only ever closes, so
@@ -225,6 +274,9 @@ export default function LudoSession() {
        not, or refuse to follow one it should. */
     rematchOnArrival.current = undefined;
     softClosed.current = false;
+    shownMoveRef.current = undefined;
+    window.clearTimeout(botHoldRef.current);
+    setBotThrow(null);
     load().catch(() => setError("ludo.errors.load"));
     timer = setInterval(async () => {
       try {
@@ -238,9 +290,26 @@ export default function LudoSession() {
           g?.status === "playing" &&
           g.turn_deadline &&
           new Date(g.turn_deadline).getTime() < Date.now() - 500;
-        if ((botTurn || lapsed) && Date.now() - lastTickRef.current > 3000) {
+        /* ONE TURN AT A TIME, AND SLOWLY ENOUGH TO WATCH.
+
+           This asked game_tick for everything it could play, and
+           game_tick loops until it reaches a human — so at a table
+           with three bots one call played three turns and the board
+           was handed the position they left behind. Three moves
+           collapsed into one state change, and a walk animation has
+           nothing to walk.
+
+           0112 lets the caller cap it. The board asks for ONE, which
+           makes it the pacemaker: the bot's move arrives on its own,
+           its dice are shown tumbling, and only then does the goti
+           walk. A turn you cannot watch is not a turn.
+
+           BOT_BEAT is the whole ceremony — the throw and the pause
+           after it — and the gap between ticks is that plus the
+           walk, so the next bot never interrupts the last one. */
+        if ((botTurn || lapsed) && Date.now() - lastTickRef.current > BOT_GAP) {
           lastTickRef.current = Date.now();
-          await tick(sessionId).catch(() => {});
+          await tick(sessionId, 1).catch(() => {});
           await load().catch(() => {});
         }
       } catch {
@@ -822,7 +891,11 @@ export default function LudoSession() {
 
   /* WHICH SEAT IS MID-THROW. Mine while I am rolling; a bot's
      while its own throw is being shown (see the bot beat). */
-  const rollingSeat = rolling ? mySeatRow?.seat ?? null : null;
+  const rollingSeat = rolling
+    ? mySeatRow?.seat ?? null
+    : botThrow
+    ? botThrow.seat
+    : null;
 
   const diceForSeat = (seat) => {
     if (seat !== game.current_seat || !dice) return [];

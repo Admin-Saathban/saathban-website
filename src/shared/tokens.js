@@ -405,10 +405,25 @@ export const GOOGLE_FONTS_URL =
    measures 4.28:1 and blue 3.79:1 against #1B1E22; both clear it, and
    both are paired with a label besides. */
 export const CHIP = {
+  /* THE HEADER CHIP IS SOLID, NOT A FILM. Picked from a live sampler.
+     A translucent white chip takes its colour from whatever is behind
+     it, which on a jet header is jet — so it read as a smudge rather
+     than a button. A solid step off the bar reads as a control. */
+  headerBed:    "#1E2226",
+  headerSize:   34,
+  headerRadius: 11,
   restLight: "rgba(14,107,92,0.08)",   // on a light surface
   restDark:  "rgba(255,255,255,0.14)", // on the dark chrome
   activeInk: "#FFFFFF",                // icon inside the accent-filled chip
-  bronze:    "#A8781F",                // the bell
+  /* The bell, dimensional: three stops down the vertical, a darker
+     stroke to hold the edge, and a lighter clapper so the two parts of
+     the shape do not merge into one blob at 20px. */
+  goldTop:   "#FFE9A8",
+  goldMid:   "#EFBE4E",
+  goldLow:   "#C4841B",
+  goldEdge:  "#9A6A10",
+  goldClap:  "#E8B44A",
+  bronze:    "#A8781F",                // the bell, where a flat colour is needed
   bronzeBed: "rgba(168,120,31,0.18)",
   blue:      "#2E7CC0",                // Messages
   blueBed:   "rgba(46,124,192,0.18)",

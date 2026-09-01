@@ -95,7 +95,7 @@ export default function NotificationsBell() {
           it. Bronze measures 4.28:1 on the dark chrome — non-text
           needs 3:1 (WCAG 1.4.11) — and it carries a count badge and
           an accessible name besides, so it is never colour alone. */}
-      <IconChip name="bell" size={22} tone="bronze" onDark />
+      <IconChip name="bell" size={20} tone="bronze" variant="header" onDark />
       {count > 0 && (
         <span
           aria-hidden="true"

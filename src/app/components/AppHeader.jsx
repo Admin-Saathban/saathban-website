@@ -307,7 +307,7 @@ export default function AppHeader() {
               flexShrink: 0,
             }}
           >
-            <IconChip name="more" size={22} onDark />
+            <IconChip name="more" size={20} variant="header" onDark />
           </button>
         </nav>
       </div>

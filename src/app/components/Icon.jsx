@@ -165,6 +165,35 @@ export default function Icon({
    Injected once, like the drag stylesheet, rather than rendered per
    icon: a page with nine bells does not need nine identical defs, and an
    id that appears twice is an id that stops resolving. */
+/* ── THE BELL IS DRAWN HERE, NOT BORROWED ──
+
+   Lucide's bell is one stroked path, and the owner picked a bell with
+   three things a single path cannot carry: a gradient down its body, a
+   clapper in its own colour, and a soft highlight where the light lands.
+   Fighting the library for that would mean colouring sub-paths by
+   nth-of-type, which breaks the first time the library redraws its icon.
+
+   So it is drawn. Still a drawn icon and still not an emoji — the point
+   of the icon rule was never the library, it was that a glyph should not
+   be handed to whoever made the font. */
+function GoldBell({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
+         style={{ flexShrink: 0, display: "block" }}>
+      <path
+        d="M12 3.2c-3.2 0-5.6 2.5-5.6 5.7v3.3l-1.7 3.3a.6.6 0 0 0 .5.9h13.6a.6.6 0 0 0 .5-.9l-1.7-3.3V8.9c0-3.2-2.4-5.7-5.6-5.7z"
+        fill="url(#sb-gold)" stroke={CHIP.goldEdge} strokeWidth="1.1" strokeLinejoin="round"
+      />
+      {/* the clapper, lighter so the two shapes stay separate at 20px */}
+      <path d="M9.7 18.1a2.4 2.4 0 0 0 4.6 0" fill="none"
+            stroke={CHIP.goldClap} strokeWidth="1.6" strokeLinecap="round" />
+      {/* where the light lands */}
+      <ellipse cx="9.5" cy="8.2" rx="1.5" ry="2.4" fill="#FFFFFF" opacity="0.42"
+               transform="rotate(-18 9.5 8.2)" />
+    </svg>
+  );
+}
+
 const GOLD_ID = "sb-gold-fill";
 
 function ensureGold() {
@@ -177,9 +206,9 @@ function ensureGold() {
   svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
   svg.innerHTML =
     '<defs><linearGradient id="sb-gold" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0%" stop-color="#F7DFA0"/>' +
-    '<stop offset="45%" stop-color="#E3B052"/>' +
-    '<stop offset="100%" stop-color="#A8781F"/>' +
+    '<stop offset="0%" stop-color="' + CHIP.goldTop + '"/>' +
+    '<stop offset="52%" stop-color="' + CHIP.goldMid + '"/>' +
+    '<stop offset="100%" stop-color="' + CHIP.goldLow + '"/>' +
     "</linearGradient></defs>";
   document.body.appendChild(svg);
 }
@@ -187,7 +216,8 @@ function ensureGold() {
 export function IconChip({
   name,
   size = 22,
-  tone = "ink",        // "ink" | "bronze" | "blue"
+  tone = "ink",          // "ink" | "bronze" | "blue"
+  variant = "bar",       // "bar" | "header"
   active = false,
   onDark = false,
   label,
@@ -195,10 +225,25 @@ export function IconChip({
   style,
   ...rest
 }) {
+  const header = variant === "header";
+  /* HEADER CHIPS ARE ALL THE SAME SOLID BED. Search, bell and More are
+     three of a kind — they act on the screen you are looking at — so
+     they look like three of a kind. The colour a bell or a bubble
+     carries belongs to the GLYPH, not to the chip under it; tinting the
+     bed as well made the header a row of coloured lozenges.
+
+     The bar is unchanged and deliberately different: there a chip
+     carries WHERE YOU ARE, so it is a film at rest and the accent when
+     active. */
   const bed =
-    active ? APP_COLORS.accent
-    : tone === "bronze" ? CHIP.bronzeBed
-    : tone === "blue" ? CHIP.blueBed
+    header ? CHIP.headerBed
+    : active ? APP_COLORS.accent
+    /* NO TONED BEDS IN THE BAR EITHER. Every tab gets the same film
+       at rest and the accent when it is the one you are on — that is
+       what makes the chip read as POSITION. Messages carried a blue bed
+       from the earlier treatment, so it looked selected on every screen
+       while a different tab was actually lit. Its colour lives in the
+       glyph now: a solid white bubble. */
     : onDark ? CHIP.restDark
     : CHIP.restLight;
 
@@ -223,10 +268,13 @@ export function IconChip({
 
      Everything else stays line-art. Two filled icons in a strip are two
      landmarks; five would be a pattern, and a pattern has no landmarks. */
-  const glyphFill =
-    tone === "blue" ? (active ? CHIP.activeInk : "#FFFFFF")
-    : tone === "bronze" ? `url(#sb-gold)`
-    : "none";
+  /* MESSAGES IS A SOLID WHITE BUBBLE — filled, and no outline at all.
+     An outlined bubble at 22px on a dark bar is mostly bar; the owner
+     picked the solid, and a solid shape with a stroke around it in the
+     same white is just a thicker solid. Active, the chip goes accent and
+     the white bubble sits on it. */
+  const solidWhite = tone === "blue";
+  const glyphFill = solidWhite ? "#FFFFFF" : "none";
 
   if (tone === "bronze") ensureGold();
 
@@ -237,9 +285,9 @@ export function IconChip({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: size + 16,
-        height: size + 16,
-        borderRadius: CHIP.radius,
+        width: header ? CHIP.headerSize : size + 16,
+        height: header ? CHIP.headerSize : size + 16,
+        borderRadius: header ? CHIP.headerRadius : CHIP.radius,
         background: bed,
         color: ink,
         /* The chip is the thing that moves, not the icon inside it —
@@ -251,7 +299,17 @@ export function IconChip({
       }}
       {...rest}
     >
-      <Icon name={name} size={size} label={label} fill={glyphFill} />
+      {tone === "bronze"
+        ? <GoldBell size={size} />
+        : <Icon
+            name={name}
+            size={size}
+            label={label}
+            fill={glyphFill}
+            /* No stroke on the solid bubble: a filled shape outlined in
+               its own colour is just a fatter filled shape. */
+            strokeWidth={solidWhite ? 0 : undefined}
+          />}
       {badge}
     </span>
   );

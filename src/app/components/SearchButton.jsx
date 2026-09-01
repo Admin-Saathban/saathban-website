@@ -31,7 +31,7 @@ export default function SearchButton() {
         cursor: "pointer",
       }}
     >
-      <IconChip name="search" size={22} onDark />
+      <IconChip name="search" size={20} variant="header" onDark />
     </button>
   );
 }

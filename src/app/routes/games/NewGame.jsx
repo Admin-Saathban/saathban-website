@@ -66,6 +66,7 @@ import { BodyText, GhostBtn } from "./ui.jsx";
 import RoomScreen from "./setup/RoomScreen.jsx";
 import { GameMotion } from "./GameUI.jsx";
 import { GAME } from "./gameSurface.js";
+import useBackToClose from "../../components/useBackToClose.js";
 
 /* The faces sheet. One tap seats someone and closes — this is a
    choice for ONE chair, so there is nothing to confirm and no
@@ -135,6 +136,11 @@ export default function NewGame() {
   const [blockedAll, setBlockedAll] = useState([]);
   /* Which chair is choosing a person, and who is sitting where. */
   const [sheetSeat, setSheetSeat] = useState(null);
+  /* The who-sits-here sheet. Back puts the setup room back
+     rather than throwing away a table somebody is still
+     building — which is the worse half of this defect here,
+     because the room holds unsaved choices. */
+  useBackToClose(sheetSeat != null, () => setSheetSeat(null));
   const [seated, setSeated] = useState({});
   /* The setup we were about to start when the gate stopped us, so
      clearing the gate resumes exactly that table rather than a

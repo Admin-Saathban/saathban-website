@@ -166,6 +166,18 @@ export default function GamesHome() {
   // The table standing in the way, when someone tries for a second.
   const [blockedBy, setBlockedBy] = useState(null);
   const [pastOpen, setPastOpen] = useState(false);
+  /* THE SAME SHAPE AS "Were you given a code?", eight lines up,
+     and it is worth naming the shape rather than the two
+     instances: a boolean panel whose TRIGGER IS RENDERED ONLY
+     WHILE IT IS CLOSED. Opening it takes the way out off the
+     screen, and with no history entry the back gesture leaves
+     the page instead of collapsing the list. Both at once is
+     exactly "it opens and there is no way to get back out of
+     it".
+
+     An accordion is fine by contrast, because its header stays
+     put and the way out is where the way in was. */
+  useBackToClose(pastOpen, () => setPastOpen(false));
   const [streak, setStreak] = useState(0);
   /* §9: who is at each live table, keyed by session. */
   const [peopleAt, setPeopleAt] = useState(new Map());

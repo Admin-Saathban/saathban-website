@@ -29,6 +29,7 @@ import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
 import BoastSheet from "../BoastSheet.jsx";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -157,6 +158,14 @@ export default function LudoCelebration({
      this person was not sitting at. */
   const watching = seats.length === 0;
   const [sheet, setSheet] = useState(false);
+  /* The boast sheet over the result, and ONLY that.
+
+     The result screen itself is deliberately not hooked up to
+     back: it is not an overlay somebody is stuck inside, it is
+     where the game ended, and it carries its own two doors
+     (play again, back to games). Making back dismiss it would
+     leave a person on a finished table with nothing on it. */
+  useBackToClose(sheet, () => setSheet(false));
 
   return (
     <div

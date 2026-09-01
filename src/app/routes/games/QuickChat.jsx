@@ -31,6 +31,7 @@ import { GAME, NO_SELECT } from "./gameSurface.js";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import { SEAT_COLORS } from "./seatColors.js";
+import useBackToClose from "../../components/useBackToClose.js";
 
 /* The presets, in the order LUDO_UI_SPEC §7 gives them. Warm first,
    teasing in the middle, courteous last — the shape of an actual
@@ -241,6 +242,9 @@ export function EmojiButton({ onSend, disabled, game }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const sending = useRef(false);
+  /* Back closes the quick-remark sheet rather than the table
+     underneath it. */
+  useBackToClose(open, () => setOpen(false));
 
   const say = (text) => {
     if (sending.current || !text) return;

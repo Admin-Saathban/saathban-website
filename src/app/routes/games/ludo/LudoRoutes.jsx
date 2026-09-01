@@ -11,7 +11,7 @@
 
 import { Navigate, Route, Routes } from "react-router-dom";
 import { APP_COLORS as C } from "../../../../shared/tokens.js";
-import { GAME } from "../gameSurface.js";
+import { GAME, SCENE_MOTION_CSS } from "../gameSurface.js";
 import LudoHome from "./LudoHome.jsx";
 import LudoSession from "./LudoSession.jsx";
 
@@ -37,6 +37,11 @@ import LudoSession from "./LudoSession.jsx";
 function PlayScreen({ children }) {
   return (
     <main
+      /* THE OTHER SIDE OF THE DOOR. The setup room is pine and this
+         is midnight; the board arriving out of the room over the
+         same 250ms is what makes them read as two places rather
+         than as one screen repainting. */
+      className="sb-scene-in"
       style={{
         /* GAMES_IMMERSION_SPEC §2: a game takes the whole screen and
            stops looking like Saathban. No cream, no app chrome — its
@@ -55,6 +60,7 @@ function PlayScreen({ children }) {
         flexDirection: "column",
       }}
     >
+      <style>{SCENE_MOTION_CSS}</style>
       {children}
     </main>
   );

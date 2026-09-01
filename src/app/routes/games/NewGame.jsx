@@ -57,8 +57,10 @@ import SeatSetup from "./setup/SeatSetup.jsx";
 import { Switch as RuleSwitchBase } from "./setup/SeatSetup.jsx";
 import ThemePicker from "./ThemePicker.jsx";
 import { DEFAULT_THEME } from "./themes.js";
-import { GamesScreen, BodyText, GhostBtn } from "./ui.jsx";
+import { BodyText, GhostBtn } from "./ui.jsx";
+import RoomScreen from "./setup/RoomScreen.jsx";
 import { GameMotion } from "./GameUI.jsx";
+import { GAME } from "./gameSurface.js";
 
 /* The faces sheet. One tap seats someone and closes — this is a
    choice for ONE chair, so there is nothing to confirm and no
@@ -206,6 +208,22 @@ export default function NewGame() {
      rather than by the shared setup component (§8.1). */
   const [autoOnlyMove, setAutoOnlyMove] = useState(true);
   const [undoOn, setUndoOn] = useState(true);
+  /* TEAMS, and an honest caveat. The owner has asked for the
+     switch to live here with the other house rules and it does:
+     the choice is made in the room, frozen with the rest of the
+     rules at the first roll, and stored on the table as
+     house_rules.teams.
+
+     WHAT IT DOES NOT DO YET is pair the seats in the RULES. The
+     engine decides a winner when one seat has four gotis home
+     (ludo_advance), and making a pair win together is a change to
+     the win condition in SQL, not a flag the board can read. So
+     the row says plainly that the rules are coming rather than
+     letting somebody set up a doubles game and find out at the
+     end that it was scored as singles. A switch that lies about
+     what a game is would be a worse thing to ship than a switch
+     that is early. */
+  const [teams, setTeams] = useState(false);
 
   const start = async (setup) => {
     if (busy || !game) return;
@@ -255,6 +273,9 @@ export default function NewGame() {
            tables opened their way; this is the other door into the same
            room. */
         house.turn_seconds = 30;
+        /* Written only when chosen, like the other two, so an old
+           table and a new one keep the same shape. */
+        if (teams) house.teams = true;
       }
       const id = await createSession(game.key, seats, house, title);
       try {
@@ -344,7 +365,7 @@ export default function NewGame() {
      growth this was meant to remove. */
   if (game === undefined || gamesFinished === null) {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+      <RoomScreen>
         <GameMotion />
         {/* Nothing shaped like anything. A grey block that becomes a
             room is two states; an empty table the room arrives onto
@@ -354,7 +375,7 @@ export default function NewGame() {
         <BodyText muted role="status" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>
           …
         </BodyText>
-      </GamesScreen>
+      </RoomScreen>
     );
   }
 
@@ -362,10 +383,10 @@ export default function NewGame() {
      resolves, which is what null-means-both produced. */
   if (game === null) {
     return (
-      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+      <RoomScreen>
         <GameMotion />
         <BodyText role="alert">{t("games.loadError")}</BodyText>
-      </GamesScreen>
+      </RoomScreen>
     );
   }
 
@@ -373,7 +394,7 @@ export default function NewGame() {
   const takenIds = Object.values(seated).map((p) => p.id);
 
   return (
-    <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+    <RoomScreen>
       <GameMotion />
       {/* THE ROOM ARRIVES RATHER THAN APPEARING.
 
@@ -390,21 +411,68 @@ export default function NewGame() {
           the panels that later open on top of it. The reduced-motion
           rule that governs those governs this. */}
       <div className="sb-game-panel" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
+      {/* THE WAY OUT. GamesScreen carried a back link; the room
+          has no app chrome at all now, so it has to carry its own
+          — and it is a door rather than a decision, exactly like
+          the one on the board. Backing out of setting a table
+          never asks anything: nothing has been made yet. */}
+      <button
+        type="button"
+        onClick={() => navigate("/app/games")}
+        aria-label={t("games.board.backHome")}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          border: `1px solid ${GAME.glassEdge}`,
+          background: GAME.glass,
+          color: GAME.ink,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          marginBottom: 10,
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M15 5 L8 12 L15 19"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
       <h1
         style={{
-          fontSize: ts(28),
+          fontSize: ts(34),
           fontWeight: 800,
-          color: C.brown,
+          color: "#F5EFE0",
           textAlign: "center",
-          // Nastaliq descends far below the baseline: give the heading the
-          // language's own line-height in RTL (a trimmed one clips into the
-          // line beneath), and room under it either way.
-          lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
-          margin: meta.dir === "rtl" ? "0 0 16px" : "0 0 10px",
+          // Nastaliq descends far below the baseline: give the heading
+          // the language's own line-height in RTL (a trimmed one clips
+          // into the line beneath).
+          lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.2,
+          margin: "0 0 4px",
         }}
       >
         {name}
       </h1>
+      {/* One line, and it is a promise rather than an instruction:
+          the room does not end in a lobby and nobody has to press
+          anything twice. */}
+      <p
+        style={{
+          margin: `0 0 ${meta.dir === "rtl" ? 20 : 18}px`,
+          textAlign: "center",
+          fontSize: ts(16),
+          color: "#9BA8C8",
+        }}
+      >
+        {t("games.setup.subtitle")}
+      </p>
 
       {/* A name is what makes a table findable a month later — "Sunday
           chai match" rather than the fourth of nine identical Ludos in
@@ -416,7 +484,7 @@ export default function NewGame() {
             display: "block",
             fontSize: ts(A11Y.minBodyPx),
             fontWeight: 600,
-            color: C.textMain,
+            color: GAME.ink,
             marginBottom: 6,
           }}
         >
@@ -435,10 +503,10 @@ export default function NewGame() {
             padding: "10px 14px",
             fontFamily: "inherit",
             fontSize: ts(A11Y.minBodyPx),
-            color: C.textMain,
-            background: C.white,
-            border: `2px solid ${C.warmGray}`,
-            borderRadius: 14,
+            color: GAME.ink,
+            background: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            borderRadius: 12,
             textAlign: "start",
           }}
         />
@@ -448,8 +516,8 @@ export default function NewGame() {
         <span
           style={{
             display: "block",
-            fontSize: ts(A11Y.minBodyPx),
-            color: C.textMuted,
+            fontSize: ts(15),
+            color: GAME.inkMuted,
             marginTop: 6,
           }}
         >
@@ -499,6 +567,15 @@ export default function NewGame() {
                 onToggle={() => setUndoOn((v) => !v)}
                 label={t("games.setup.undoOn")}
               />
+              {/* Only at a table with four chairs: two against two
+                  needs four people, and a switch that cannot apply
+                  is a question with no answer. */}
+              <RuleSwitch
+                on={teams}
+                onToggle={() => setTeams((v) => !v)}
+                label={t("games.setup.teams")}
+                hint={t("games.setup.teamsNote")}
+              />
             </>
           ) : null
         }
@@ -522,6 +599,6 @@ export default function NewGame() {
         />
       )}
       </div>
-    </GamesScreen>
+    </RoomScreen>
   );
 }

@@ -626,13 +626,44 @@ function buildBed(c, key) {
    REMEMBERS the wish — browsers refuse audio until somebody has
    touched the page, so unlockSound() below starts what was asked
    for the moment that happens. */
+/* A STOP THAT SURVIVES A DOORWAY.
+
+   The setup room and the table are two React screens, so leaving
+   one for the other always runs the outgoing screen's cleanup
+   BEFORE the incoming screen's effect. Both ask for the same bed;
+   the room's stopAmbience fired, the table's startAmbience found no
+   bed playing and built a new one, and the music broke across the
+   one transition it was specified to carry.
+
+   Measured: four oscillators started in the room, EIGHT after Start
+   — same key, same tone, torn in half at the door.
+
+   So a stop is deferred by a beat. If anything asks for the same
+   bed inside that beat, the stop is simply cancelled and the
+   oscillators that were already running go on running. Leaving the
+   game world entirely still stops it, because nothing asks again.
+
+   350ms is chosen against the thing it has to survive — a React
+   unmount and mount, which is one frame — with room to spare, and
+   it is far below the 700ms the fade itself takes, so a real stop
+   is not perceptibly later than it was. */
+let bedStopTimer = null;
+
 export function startAmbience(gameKey) {
   bedWanted = gameKey || null;
   if (!gameKey) return stopAmbience();
   if (!unlocked || !ctx) return;
   if (!prefs.music) return;
-  if (bed && bed.key === gameKey) return;
-  stopAmbience();
+  if (bed && bed.key === gameKey) {
+    /* Somebody has walked through a door and wants the same tone on
+       the other side of it. Call off the stop. */
+    if (bedStopTimer) {
+      clearTimeout(bedStopTimer);
+      bedStopTimer = null;
+    }
+    return;
+  }
+  stopAmbience({ now: true });
   const c = ensureCtx();
   if (!c) return;
   bed = buildBed(c, gameKey);
@@ -643,7 +674,23 @@ export function startAmbience(gameKey) {
   bed.out.gain.linearRampToValueAtTime(1, c.currentTime + 1.6);
 }
 
-export function stopAmbience() {
+/* `now` is for the one caller that genuinely means immediately:
+   startAmbience, swapping one game's tone for another's. Everything
+   else — a screen unmounting, the switch going off — goes through
+   the beat, so a handover cannot tear the bed in half. */
+export function stopAmbience(opts = {}) {
+  if (!opts.now) {
+    if (bedStopTimer) clearTimeout(bedStopTimer);
+    bedStopTimer = setTimeout(() => {
+      bedStopTimer = null;
+      stopAmbience({ now: true });
+    }, 350);
+    return;
+  }
+  if (bedStopTimer) {
+    clearTimeout(bedStopTimer);
+    bedStopTimer = null;
+  }
   if (!bed || !ctx) { bed = null; return; }
   const b = bed;
   bed = null;
@@ -661,7 +708,7 @@ export function stopAmbience() {
 /* Called when the music preference changes, so the bed follows it
    without anyone leaving the table. */
 function syncBedToPrefs() {
-  if (!prefs.music) stopAmbience();
+  if (!prefs.music) stopAmbience({ now: true });
   else if (bedWanted) startAmbience(bedWanted);
 }
 

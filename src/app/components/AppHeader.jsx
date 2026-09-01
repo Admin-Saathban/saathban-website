@@ -43,7 +43,15 @@ import useShutter from "./useShutter.js";
    headers stacked is what lifting this into the shell would otherwise
    have produced on that one route. */
 const NO_HEADER = ["/app/auth", "/app/g/", "/app/join/", "/app/community/messages"];
-const isLudoTable = (p) => /^\/app\/games\/ludo\/[^/]+/.test(p);
+/* THE GAME WORLD. A ludo session at /app/games/ludo/<id>, and the
+   setup room at /app/games/new/<game> that opens onto it — both
+   are full-screen, both have the game's own ground under them,
+   and the Saathban wordmark sitting over either one is the thing
+   that makes a game read as a page inside an app.
+
+   The list at /app/games/ludo keeps its header. */
+const isGameWorld = (p) =>
+  /^\/app\/games\/ludo\/[^/]+/.test(p) || /^\/app\/games\/new\/[^/]+/.test(p);
 
 export default function AppHeader() {
   const { t, meta } = useI18n();
@@ -162,7 +170,7 @@ export default function AppHeader() {
      Signed out is the one case that genuinely returns null — there is no
      profile to render, and rendering it would read role off nothing. */
   const hideHere =
-    NO_HEADER.some((q) => pathname.startsWith(q)) || isLudoTable(pathname);
+    NO_HEADER.some((q) => pathname.startsWith(q)) || isGameWorld(pathname);
 
   const backArrow = meta.dir === "rtl" ? "→" : "←";
   /* "default" is the first entry in this tab's history: nothing to go

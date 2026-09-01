@@ -2910,6 +2910,11 @@ const en = {
     },
 
     setup: {
+      subtitle: "Set your table, then it opens by itself",
+      diceOneCard: "One die — classic",
+      diceTwoCard: "Two dice — the Desi table",
+      teams: "Play in teams (2 against 2)",
+      teamsNote: "Seats across the board are partners. Coming to the rules soon — the choice is remembered on the table.",
       /* D1 — naming a table. "(optional)" is in the LABEL, not buried
          in help text, because the fastest way to make an optional
          field feel required is to leave people guessing. The hint

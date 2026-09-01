@@ -44,9 +44,18 @@ import { MotionStyles } from "./motion.jsx";
 
 const HIDDEN_PREFIXES = ["/app/auth", "/app/admin", "/app/g/", "/app/join/"];
 
-/* A ludo session is /app/games/ludo/<id> — the list at
-   /app/games/ludo keeps its bar. */
-const isLudoTable = (path) => /^\/app\/games\/ludo\/[^/]+/.test(path);
+/* THE GAME WORLD, where the app's furniture does not follow you.
+
+   A ludo session is /app/games/ludo/<id> — the list at
+   /app/games/ludo keeps its bar. The setup room at
+   /app/games/new/<game> is the same world one screen earlier: it
+   is full-screen, it has the game's own ground under it, and a
+   row of app tabs across the bottom of it was the single loudest
+   reminder that you were still inside Saathban rather than at a
+   table. */
+const isGameWorld = (path) =>
+  /^\/app\/games\/ludo\/[^/]+/.test(path) ||
+  /^\/app\/games\/new\/[^/]+/.test(path);
 
 export default function AppShellBar() {
   const { profile } = useSession();
@@ -90,7 +99,7 @@ export default function AppShellBar() {
     !role ||
     onboarding ||
     HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) ||
-    isLudoTable(pathname);
+    isGameWorld(pathname);
 
   /* SWIPE BETWEEN THE TABS, from the same list the bar renders — never
      a second copy of the order. Two lists that must agree are two lists

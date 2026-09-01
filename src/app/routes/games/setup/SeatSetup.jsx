@@ -34,6 +34,25 @@
    ════════════════════════════════════════════════ */
 
 import { GAME } from "../gameSurface.js";
+
+/* THE ROOM'S GREEN, and the grey it is not.
+
+   This is the owner's #1FA83C — the same green as your own chat
+   bubbles and the Send beside them — and inside the setup room it
+   is the ONLY bright colour: what is chosen wears it, Start wears
+   it, nothing else does. That is why the room reads at a glance
+   even though it is six choices deep.
+
+   Every control in here was brass a commit ago, which was right
+   when the room was plum and the board had a gold trim ring. Both
+   of those are gone. */
+const GREEN = "#1FA83C";
+const OFF = "#4A5058";
+/* Frosted, at two weights: a row you read through, and a chip that
+   sits on one. */
+const GLASS = "rgba(255,255,255,0.07)";
+const CHIP = "rgba(255,255,255,0.10)";
+const EDGE = "rgba(255,255,255,0.18)";
 import { useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
@@ -86,8 +105,8 @@ function ColourGoti({ colour, chosen, taken, onPick, label }) {
         minWidth: 44,
         minHeight: 44,
         borderRadius: "50%",
-        border: chosen ? `3px solid ${GAME.accentFlat}` : "3px solid transparent",
-        background: chosen ? "#F1F7EE" : "transparent",
+        border: chosen ? `3px solid ${GREEN}` : "3px solid transparent",
+        background: chosen ? "rgba(31,168,60,0.16)" : "transparent",
         padding: 0,
         cursor: taken ? "default" : "pointer",
         /* Taken elsewhere: faded AND struck through by the disabled
@@ -162,8 +181,12 @@ function FillChoice({ value, onChange, t, ts, botsAllowed = true, canPostOpen = 
               width: 48,
               height: 48,
               borderRadius: 14,
-              border: on ? `3px solid ${GAME.accentFlat}` : `1.5px solid ${GAME.pillEdge}`,
-              background: on ? "rgba(240,196,98,0.20)" : GAME.pill,
+              /* Two pixels of green, and the chip underneath does not
+                 change colour: a selected chip that also fills in
+                 makes the four of them read as four different kinds
+                 of thing rather than one choice with one answer. */
+              border: on ? `2px solid ${GREEN}` : `1px solid ${EDGE}`,
+              background: CHIP,
               fontSize: ts(22),
               cursor: "pointer",
               display: "grid",
@@ -178,38 +201,62 @@ function FillChoice({ value, onChange, t, ts, botsAllowed = true, canPostOpen = 
   );
 }
 
-/* One die toy, or two side by side. Tap to choose. */
-function DiceToy({ count, chosen, onPick, t }) {
+/* ONE DIE OR TWO, as two cards side by side.
+
+   The dice drawn on them are the table's own — ivory body, ivory
+   edge, round dark pips — because the whole point of choosing here
+   is that you are choosing the object you will be tapping for the
+   next twenty minutes, and a differently-drawn die would be a
+   picture of the choice rather than the choice.
+
+   Each card says what it is. There used to be ONE caption under
+   both, which meant the screen described whichever card you had
+   already picked and said nothing about the other one — the
+   information was on the wrong side of the decision. */
+function DiceToy({ count, chosen, onPick, t, ts }) {
   const pips = count === 1 ? [[0, 0]] : [[-1, -1], [1, 1]];
   return (
     <button
       type="button"
       onClick={onPick}
       aria-pressed={chosen}
-      aria-label={count === 2 ? t("ludo.rules.diceTwo") : t("ludo.rules.diceOne")}
-      className={chosen ? "sb-glow" : undefined}
+      aria-label={t(count === 2 ? "games.setup.diceTwoCard" : "games.setup.diceOneCard")}
       style={{
         flex: 1,
-        minHeight: 84,
-        borderRadius: 20,
-        border: chosen ? `3px solid ${GAME.accentFlat}` : `1.5px solid ${GAME.pillEdge}`,
-        background: chosen ? "rgba(240,196,98,0.20)" : GAME.pill,
+        minHeight: 110,
+        borderRadius: 16,
+        border: chosen ? `2.5px solid ${GREEN}` : `1px solid ${EDGE}`,
+        background: GLASS,
         cursor: "pointer",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
+        padding: "10px 8px",
       }}
     >
-      {Array.from({ length: count }).map((_, i) => (
-        <svg key={i} width={40} height={40} viewBox="0 0 40 40" aria-hidden="true">
-          <rect x="2" y="2" width="36" height="36" rx="9" fill="#fffdf7" stroke={C.brown} strokeWidth="2.5" />
-          <rect x="6" y="5" width="12" height="6" rx="3" fill="#ffffff" opacity="0.9" />
-          {pips.map(([px, py], k) => (
-            <circle key={k} cx={20 + px * 8} cy={20 + py * 8} r="4" fill={C.brown} />
-          ))}
-        </svg>
-      ))}
+      <span style={{ display: "flex", gap: 6 }} aria-hidden="true">
+        {Array.from({ length: count }).map((_, i) => (
+          <svg key={i} width={36} height={36} viewBox="0 0 36 36">
+            <rect x="1" y="1" width="34" height="34" rx="8.5" fill="#F8F2E4" stroke="#D8CCAE" strokeWidth="2" />
+            {pips.map(([px, py], k) => (
+              <circle key={k} cx={18 + px * 7} cy={18 + py * 7} r="3.6" fill="#2B2B2B" />
+            ))}
+          </svg>
+        ))}
+      </span>
+      <span
+        style={{
+          fontSize: ts(14),
+          fontWeight: 700,
+          color: chosen ? GAME.ink : GAME.inkMuted,
+          textAlign: "center",
+          lineHeight: 1.3,
+        }}
+      >
+        {t(count === 2 ? "games.setup.diceTwoCard" : "games.setup.diceOneCard")}
+      </span>
     </button>
   );
 }
@@ -220,7 +267,7 @@ function DiceToy({ count, chosen, onPick, t }) {
    the moment one of them is tweaked. */
 /* Exported so each game can build its OWN rule rows with it (§8.1)
    without a second hand-drawn switch drifting away from this one. */
-export function Switch({ on, onToggle, label, ts }) {
+export function Switch({ on, onToggle, label, hint, ts }) {
   return (
     <button
       type="button"
@@ -234,10 +281,14 @@ export function Switch({ on, onToggle, label, ts }) {
         width: "100%",
         minHeight: A11Y.minTapTargetPx,
         padding: "12px 14px",
-        marginBottom: 12,
-        borderRadius: 16,
-        border: `2px solid ${on ? GAME.accentFlat : GAME.pillEdge}`,
-        background: on ? "rgba(240,196,98,0.20)" : GAME.pill,
+        marginBottom: 10,
+        borderRadius: 14,
+        /* The row does not change colour with the switch. A row
+           that fills in when it is on turns a list of settings
+           into a list of highlights, and the knob has already
+           said it. */
+        border: `1px solid ${EDGE}`,
+        background: GLASS,
         cursor: "pointer",
         textAlign: "start",
       }}
@@ -249,7 +300,7 @@ export function Switch({ on, onToggle, label, ts }) {
           width: 52,
           height: 30,
           borderRadius: 15,
-          background: on ? GAME.accentFlat : "rgba(255,255,255,0.22)",
+          background: on ? GREEN : OFF,
           position: "relative",
           transition: "background 160ms",
         }}
@@ -262,14 +313,21 @@ export function Switch({ on, onToggle, label, ts }) {
             width: 24,
             height: 24,
             borderRadius: "50%",
-            background: GAME.pill,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            background: "#FFFFFF",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
             transition: "inset-inline-start 160ms",
           }}
         />
       </span>
-      <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
-        {label}
+      <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: GAME.ink }}>
+          {label}
+        </span>
+        {/* Only when there is something a person could not work out
+            from the label. Most rules have no hint at all. */}
+        {hint && (
+          <span style={{ fontSize: ts(14), color: GAME.inkMuted, lineHeight: 1.35 }}>{hint}</span>
+        )}
       </span>
     </button>
   );
@@ -371,9 +429,9 @@ export default function SeatSetup({
                 alignItems: "center",
                 gap: 10,
                 padding: "8px 10px",
-                borderRadius: 18,
-                background: GAME.pill,
-                border: `1.5px solid ${C.warmGray}`,
+                borderRadius: 14,
+                background: GLASS,
+                border: `1px solid ${EDGE}`,
                 flexWrap: "wrap",
               }}
             >
@@ -419,8 +477,8 @@ export default function SeatSetup({
                     minHeight: A11Y.minTapTargetPx,
                     padding: "0 12px 0 6px",
                     borderRadius: 50,
-                    border: `2px solid ${GAME.accentFlat}`,
-                    background: "#EEF3E8",
+                    border: `2px solid ${GREEN}`,
+                    background: CHIP,
                     fontFamily: "inherit",
                     fontSize: ts(17),
                     fontWeight: 700,
@@ -480,12 +538,12 @@ export default function SeatSetup({
                     width: 44,
                     height: 44,
                     borderRadius: "50%",
-                    border: `1.5px solid ${C.warmGray}`,
-                    background: GAME.pill,
+                    border: `1px solid ${EDGE}`,
+                    background: CHIP,
                     fontSize: ts(24),
                     lineHeight: 1,
                     cursor: "pointer",
-                    color: C.brown,
+                    color: GAME.ink,
                   }}
                 >
                   −
@@ -505,9 +563,9 @@ export default function SeatSetup({
               width: 56,
               height: 56,
               borderRadius: "50%",
-              border: `3px solid ${C.green}`,
-              background: "#EEF3E8",
-              color: C.green,
+              border: `2px solid ${GREEN}`,
+              background: CHIP,
+              color: GAME.ink,
               fontSize: ts(30),
               lineHeight: 1,
               fontWeight: 700,
@@ -522,14 +580,10 @@ export default function SeatSetup({
       {/* ── The dice ── */}
       {showDice && (
         <>
-      <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-        <DiceToy count={1} chosen={diceCount === 1} onPick={() => setDiceCount(1)} t={t} />
-        <DiceToy count={2} chosen={diceCount === 2} onPick={() => setDiceCount(2)} t={t} />
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <DiceToy count={1} chosen={diceCount === 1} onPick={() => setDiceCount(1)} t={t} ts={ts} />
+        <DiceToy count={2} chosen={diceCount === 2} onPick={() => setDiceCount(2)} t={t} ts={ts} />
       </div>
-      {/* The one caption on the screen. */}
-      <p style={{ margin: "0 0 20px", fontSize: ts(A11Y.minBodyPx), color: GAME.inkMuted, textAlign: "center" }}>
-        {diceCount === 2 ? t("games.setup.diceCaption") : t("games.setup.diceCaptionOne")}
-      </p>
 
         </>
       )}
@@ -562,21 +616,23 @@ export default function SeatSetup({
         }
         style={{
           display: "block",
-          margin: "0 auto",
-          width: 132,
-          height: 132,
+          margin: "8px auto 0",
+          width: 120,
+          height: 120,
           borderRadius: "50%",
-          /* Brass. Green is Saathban and nothing inside a game
-             wears it — this is the one thing you press in the room,
-             so it is the same brass as the die on the board. */
-          border: `1px solid ${GAME.accentEdge}`,
-          background: GAME.accent,
-          color: GAME.accentInk,
+          /* GREEN, and it is the room's own green rather than the
+             app's. It was brass, on the reasoning that nothing
+             inside a game may wear Saathban's colour — still true,
+             and #1FA83C is not Saathban's. It is the one thing you
+             press in here and the only round thing on the screen. */
+          border: "none",
+          background: GREEN,
+          color: "#FFFFFF",
           fontFamily: "inherit",
           fontSize: ts(24),
           fontWeight: 800,
           cursor: busy ? "default" : "pointer",
-          boxShadow: "0 6px 0 rgba(0,0,0,0.16)",
+          boxShadow: "0 10px 24px rgba(0,0,0,0.45), 0 3px 8px rgba(0,0,0,0.35)",
           opacity: busy ? 0.6 : 1,
         }}
       >

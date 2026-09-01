@@ -51,10 +51,13 @@ import OutdoorRoutes from "../routes/outdoor/OutdoorRoutes.jsx";
 import GroupsRoutes from "../routes/groups/GroupsRoutes.jsx";
 import CommunityRoutes from "../routes/community/CommunityRoutes.jsx";
 
-/* A ludo table is its own immersive screen and is NOT the games tab — it
-   is declared before games/* in AppRoot for the same reason. If the pane
-   claimed it, the table would render inside a hidden tab. */
-const isLudoTable = (p) => /^\/app\/games\/ludo\/[^/]+/.test(p);
+/* THE GAME WORLD is not the games tab: a ludo table, and the setup
+   room that opens onto it. Both are declared before games/* in AppRoot
+   for the same reason. If the pane claimed either, it would render
+   inside a hidden tab — with the tab underneath it still mounted,
+   still holding its header and its scroll. */
+const isGameWorld = (p) =>
+  /^\/app\/games\/ludo\/[^/]+/.test(p) || /^\/app\/games\/new\/[^/]+/.test(p);
 
 /* `path` is relative to /app, because AppRoot is itself mounted at
    /app/* and these re-create the routes it used to declare. */
@@ -77,7 +80,11 @@ const PANES = [
    one. Exported because AppRoot has to ask the same question — the two
    must never both render a tab. */
 export function paneFor(pathname) {
-  if (isLudoTable(pathname)) return null;
+  /* A ludo table and the setup room that opens onto it are not
+     tabs. They are full-screen worlds with no app chrome, and a
+     pane would keep the Games tab mounted underneath — its
+     header, its scroll position, its bar. */
+  if (isGameWorld(pathname)) return null;
   let best = null;
   for (const p of PANES) {
     if (pathname === p.base || pathname.startsWith(p.base + "/")) {

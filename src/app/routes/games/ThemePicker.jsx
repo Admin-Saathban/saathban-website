@@ -21,6 +21,7 @@
    two other signals.
    ════════════════════════════════════════════════ */
 
+import { GAME } from "./gameSurface.js";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { THEMES, THEME_ORDER, themeUnlocked, tablesUntil } from "./themes.js";
@@ -110,9 +111,14 @@ export default function ThemePicker({ value, onPick, gamesFinished = 0 }) {
                 minHeight: A11Y.minTapTargetPx + 26,
                 minWidth: 74,
                 padding: "8px 6px",
-                borderRadius: 16,
-                border: chosen ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
-                background: chosen ? "#EEF3E8" : C.white,
+                borderRadius: 14,
+                /* THE LAST WHITE THINGS IN THE ROOM. Six white
+                   cards in a row across a pine ground read as the
+                   app's list of settings arriving in the middle of
+                   a game — which is exactly what they were. Glass,
+                   and the room's green for the chosen one. */
+                border: chosen ? "2px solid #1FA83C" : "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(255,255,255,0.07)",
                 fontFamily: "inherit",
                 cursor: open ? "pointer" : "default",
                 /* Dimmed, not hidden — and never so dim that the name
@@ -121,12 +127,12 @@ export default function ThemePicker({ value, onPick, gamesFinished = 0 }) {
               }}
             >
               <Swatch theme={theme} />
-              <span style={{ fontSize: ts(15), fontWeight: 700, color: C.textMain }}>
+              <span style={{ fontSize: ts(15), fontWeight: 700, color: GAME.ink }}>
                 {chosen ? "✓ " : ""}
                 {name}
               </span>
               {!open && (
-                <span style={{ fontSize: ts(13), color: C.textMuted, lineHeight: 1.3 }}>
+                <span style={{ fontSize: ts(13), color: GAME.inkMuted, lineHeight: 1.3 }}>
                   {lockLine}
                 </span>
               )}

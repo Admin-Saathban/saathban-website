@@ -151,3 +151,36 @@ export const NO_SELECT = {
   WebkitUserSelect: "none",
   WebkitTouchCallout: "none",
 };
+
+/* ── THE DOOR BETWEEN THE TWO ROOMS ─────────────────────────────
+
+   The setup room is pine and the table is midnight: two places,
+   not two states of one. A scene change that happens instantly is
+   not a scene change, it is a repaint — 250ms is long enough for
+   the eye to register that somewhere ended and somewhere else
+   began, and short enough that nobody waiting to play is made to
+   wait for it.
+
+   Defined ONCE, here, because it is worn by two screens that
+   import nothing else from each other. Two copies of a duration
+   are two durations that eventually disagree, and a room fading
+   out over 250ms onto a board fading in over 300 is a stutter
+   nobody could name.
+
+   Reduced motion drops it entirely: the correct static version of
+   a transition is arriving, which is what happens.
+
+   THE MUSIC DOES NOT BREAK ACROSS IT. Both screens ask for the
+   same bed by game key and startAmbience returns early when the
+   bed already playing has that key, so the room's tone carries
+   into the match rather than stopping and starting again. ────── */
+export const SCENE_MOTION_CSS = `
+  @keyframes sb-scene-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .sb-scene-in { animation: sb-scene-in 250ms cubic-bezier(.2,.8,.3,1) both; }
+  @media (prefers-reduced-motion: reduce) {
+    .sb-scene-in { animation: none !important; }
+  }
+`;

@@ -1,212 +1,317 @@
-/* In-game chat — collapsible under the board so the game stays the
-   star. Stickers reuse the people lane's warm set, rendered large
-   when a message is emoji-only. Participants-only at the database. */
+/* ════════════════════════════════════════════════
+   The table's chat, as a sheet that rises from the bottom edge.
 
-import { GAME } from "../gameSurface.js";
-import { useEffect, useRef, useState } from "react";
-import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
+   IT OPENS FROM THE PARTICLE on your own circle, and from nowhere
+   else. It used to be a full-width "💬 Table talk" bar sitting under
+   the board — about seventy pixels of the one thing on the screen
+   that matters — with a second Emoji pill beside it. Both are gone.
+   Emoji live inside this keyboard now, which is where a person looks
+   for them.
+
+   Midnight, the same gradient as the table, with NO line along its
+   top edge: a hairline there reads as the seam of a dialog, and this
+   is meant to read as the table folding up to meet you.
+
+   YOUR bubbles are green and sit right; THEIRS are frosted glass and
+   sit left, with their name above in their own seat colour — which is
+   the one place in this game where colour tells you who is speaking,
+   and it is safe because the side of the screen says it too.
+
+   Anybody muted from their profile card simply does not appear here.
+   They are not told, and nothing marks the gap.
+   ════════════════════════════════════════════════ */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
-import { BodyText, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
+import { GAME, NO_SELECT } from "../gameSurface.js";
+import { GameMotion } from "../GameUI.jsx";
 import { isStickerBody } from "../../people/peopleStore.js";
-import StickerPicker from "../../../assets/stickers/StickerPicker.jsx";
-import { Sticker, parseStickerRef, stickerRef } from "../../../assets/stickers/stickers.jsx";
+import { Sticker, parseStickerRef } from "../../../assets/stickers/stickers.jsx";
 import { SEAT_COLORS } from "./board.js";
 import { fetchChat, sendChat } from "./ludoRails.js";
+import { readMutes } from "../tableMutes.js";
+import { playSound } from "../../../lib/sound.js";
 
 const POLL_MS = 4000;
+const GREEN = "#1FA83C";
 
-export default function ChatPanel({ sessionId, myId, seats }) {
+/* The quick row inside the keyboard. Warm, ordinary, and short: a
+   grid of forty faces is a decision, and this is meant to be a
+   reflex. */
+const QUICK = ["👏", "😂", "😮", "🙏", "🎉", "😅", "❤️", "🤞"];
+
+export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSent }) {
   const { t, ts } = useI18n();
-  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
-  const [stickersOpen, setStickersOpen] = useState(false);
   const endRef = useRef(null);
+  const [mutes, setMutes] = useState({});
 
   const seatOf = (profileId) => seats.find((s) => s.profile_id === profileId);
 
   useEffect(() => {
+    if (!open) return undefined;
+    setMutes(readMutes(sessionId));
     let timer;
     const load = () => fetchChat(sessionId).then(setMessages).catch(() => {});
     load();
     timer = setInterval(load, POLL_MS);
     return () => clearInterval(timer);
-  }, [sessionId]);
+  }, [sessionId, open]);
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length, open]);
 
+  const shown = useMemo(
+    () => messages.filter((m) => m.sender_id === myId || !mutes[m.sender_id]?.chat),
+    [messages, mutes, myId]
+  );
+
   const send = async (body) => {
-    const text = body.trim();
+    const text = (body || "").trim();
     if (!text) return;
+    setDraft("");
+    /* THE WHOOSH, before the round trip. A send sound that waits for
+       the server arrives after the message is already on screen, and
+       a sound that lags what it describes reads as a second event. */
+    playSound("chatSend");
     try {
       await sendChat(sessionId, text);
-      setDraft("");
-      setStickersOpen(false);
       setMessages(await fetchChat(sessionId));
+      onSent?.(text);
     } catch {
       /* transient; the poll reconciles */
     }
   };
 
-  return (
-    <div style={{ marginTop: 16 }}>
-      <GhostBtn
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        style={{ width: "100%", justifyContent: "center" }}
-      >
-        💬 {t("ludo.chat.toggle")} {messages.length > 0 ? `(${messages.length})` : ""}
-      </GhostBtn>
+  if (!open) return null;
 
-      {open && (
-        <div
+  return (
+    <>
+      <GameMotion />
+      {/* The veil. Tapping it closes — backing out of a chat should
+          never be a decision. */}
+      <div
+        className="sb-veil-in"
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 70,
+          background: "rgba(0,0,0,0.45)",
+        }}
+        aria-hidden="true"
+      />
+      <section
+        className="sb-panel-in"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("ludo.chat.toggle")}
+        style={{
+          ...NO_SELECT,
+          position: "fixed",
+          insetInline: 0,
+          bottom: 0,
+          zIndex: 71,
+          maxHeight: "76dvh",
+          display: "flex",
+          flexDirection: "column",
+          background: GAME.panel,
+          /* NO TOP EDGE LINE. */
+          border: "none",
+          borderRadius: "18px 18px 0 0",
+          boxShadow: GAME.panelShadow,
+          padding: "10px 12px calc(12px + env(safe-area-inset-bottom))",
+        }}
+      >
+        {/* A grab bar rather than a border: it says "this pulls down"
+            and costs no line across the top. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("ludo.chat.close")}
           style={{
-            border: `1.5px solid ${C.warmGray}`,
-            borderRadius: 16,
-            background: "rgba(255,255,255,0.6)",
-            padding: 12,
-            marginTop: 8,
+            alignSelf: "center",
+            width: 64,
+            height: 24,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "0 0 auto",
           }}
         >
-          <div style={{ maxHeight: "30vh", overflowY: "auto", marginBottom: 10 }}>
-            {messages.length === 0 && <BodyText muted>{t("ludo.chat.empty")}</BodyText>}
-            {messages.map((m) => {
-              const seat = seatOf(m.sender_id);
-              const mine = m.sender_id === myId;
-              const svgSticker = parseStickerRef(m.body);
-              const sticker = !svgSticker && isStickerBody(m.body);
-              return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: mine ? "flex-end" : "flex-start",
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ maxWidth: "85%", textAlign: mine ? "end" : "start" }}>
-                    {!mine && (
-                      <BodyText muted style={{ margin: 0, fontSize: ts(15) }}>
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            display: "inline-block",
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            background: seat ? SEAT_COLORS[seat.seat] : C.warmGray,
-                            marginInlineEnd: 6,
-                          }}
-                        />
-                        {seat?.name || t("ludo.seat.someone")}
-                      </BodyText>
-                    )}
-                    {svgSticker ? (
-                      <Sticker id={svgSticker} size={96} style={{ maxWidth: "100%" }} />
-                    ) : (
-                      <div
-                        style={{
-                          display: "inline-block",
-                          padding: sticker ? "2px 6px" : "8px 14px",
-                          borderRadius: 14,
-                          /* MY OWN MESSAGE, IN THE GAME'S PALETTE.
+          <span
+            style={{
+              width: 44,
+              height: 4,
+              borderRadius: 2,
+              background: "rgba(255,255,255,0.28)",
+            }}
+          />
+        </button>
 
-                             Lane 38 is right that a solid accent
-                             bubble is wrong, and their reason is the
-                             one that holds: a chat is a column of
-                             your own messages, so an accent bubble
-                             makes half the screen the accent and it
-                             stops meaning anything where Send needs
-                             it. tokens.js says green marks the thing
-                             you are meant to do next and nothing
-                             else.
-
-                             Their token is not the answer HERE
-                             though. C.mine is a pale wash for the
-                             app's cream chats; this chat sits on a
-                             dark game table, where the owner's rule
-                             is that nothing may wear Saathban's
-                             colours at all. So mine is a lifted plum
-                             panel and theirs is a recessed one —
-                             same distinction, this room's materials.
-
-                             The distinction is also not carried by
-                             colour alone: mine sit right, theirs
-                             left, and that is what actually tells
-                             them apart. */
-                          background: sticker
-                            ? "transparent"
-                            : mine
-                            ? "rgba(255,255,255,0.16)"
-                            : "rgba(0,0,0,0.26)",
-                          border: sticker
-                            ? "none"
-                            : `1px solid ${mine ? GAME.pillEdge : "rgba(255,255,255,0.10)"}`,
-                          color: GAME.ink,
-                          fontSize: sticker ? ts(44) : ts(A11Y.minBodyPx),
-                          lineHeight: sticker ? 1.1 : 1.5,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {m.body}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            <div ref={endRef} />
-          </div>
-
-          {stickersOpen && (
-            <div style={{ marginBottom: 10 }}>
-              <StickerPicker
-                label={t("ludo.chat.stickers")}
-                onPick={(id) => send(stickerRef(id))}
-              />
-            </div>
+        <div
+          style={{
+            flex: "1 1 auto",
+            minHeight: 90,
+            overflowY: "auto",
+            padding: "4px 2px 10px",
+            userSelect: "text",
+            WebkitUserSelect: "text",
+          }}
+        >
+          {shown.length === 0 && (
+            <p style={{ margin: "8px 0", color: GAME.inkMuted, fontSize: ts(A11Y.minBodyPx) }}>
+              {t("ludo.chat.empty")}
+            </p>
           )}
+          {shown.map((m) => {
+            const seat = seatOf(m.sender_id);
+            const mine = m.sender_id === myId;
+            const svgSticker = parseStickerRef(m.body);
+            const sticker = !svgSticker && isStickerBody(m.body);
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: mine ? "flex-end" : "flex-start",
+                  marginBottom: 8,
+                }}
+              >
+                {/* THEIR NAME, IN THEIR SEAT COLOUR. Never yours: a
+                    label over your own bubble tells you something you
+                    already know, and the column of green down the
+                    right-hand side is already saying it. */}
+                {!mine && (
+                  <span
+                    style={{
+                      fontSize: ts(13),
+                      fontWeight: 800,
+                      color: seat ? SEAT_COLORS[seat.seat] : GAME.inkMuted,
+                      margin: "0 0 2px 4px",
+                    }}
+                  >
+                    {seat?.name || t("ludo.seat.someone")}
+                  </span>
+                )}
+                {svgSticker ? (
+                  <Sticker id={svgSticker} size={96} style={{ maxWidth: "100%" }} />
+                ) : (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      maxWidth: "85%",
+                      padding: sticker ? "2px 6px" : "9px 14px",
+                      borderRadius: 16,
+                      background: sticker ? "transparent" : mine ? GREEN : GAME.glassStrong,
+                      border: sticker || mine ? "none" : `1px solid ${GAME.glassEdge}`,
+                      color: "#FFFFFF",
+                      fontSize: sticker ? ts(44) : ts(A11Y.minBodyPx),
+                      lineHeight: sticker ? 1.1 : 1.5,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {m.body}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div ref={endRef} />
+        </div>
+
+        {/* THE KEYBOARD AREA. The emoji row lives here, above the
+            field, because that is where a phone's own keyboard puts
+            them and because it is the only place they still exist. */}
+        <div style={{ flex: "0 0 auto" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              overflowX: "auto",
+              padding: "2px 0 8px",
+            }}
+          >
+            {QUICK.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => send(e)}
+                aria-label={e}
+                style={{
+                  flex: "0 0 auto",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  border: `1px solid ${GAME.glassEdge}`,
+                  background: GAME.glass,
+                  fontSize: ts(22),
+                  lineHeight: 1,
+                  cursor: "pointer",
+                }}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
               send(draft);
             }}
-            style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+            style={{ display: "flex", gap: 8, alignItems: "center" }}
           >
-            <GhostBtn
-              onClick={() => setStickersOpen((o) => !o)}
-              aria-expanded={stickersOpen}
-              aria-label={t("ludo.chat.stickers")}
-              style={{ padding: "0 12px", fontSize: ts(22) }}
-            >
-              😊
-            </GhostBtn>
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={t("ludo.chat.placeholder")}
               aria-label={t("ludo.chat.placeholder")}
               style={{
-                flex: "1 1 140px",
+                flex: "1 1 auto",
+                minWidth: 0,
                 minHeight: A11Y.minTapTargetPx,
                 padding: "0 14px",
-                borderRadius: 50,
-                border: `1.5px solid ${C.warmGray}`,
-                background: C.white,
+                borderRadius: 24,
+                border: "none",
+                background: "#FFFFFF",
                 fontSize: ts(A11Y.minBodyPx),
                 fontFamily: "inherit",
-                color: C.textMain,
+                color: "#1A1A1A",
               }}
             />
-            <PrimaryBtn type="submit" disabled={!draft.trim()} style={{ minHeight: A11Y.minTapTargetPx }}>
+            <button
+              type="submit"
+              disabled={!draft.trim()}
+              style={{
+                flex: "0 0 auto",
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 20px",
+                borderRadius: 24,
+                border: "none",
+                /* The same green as your own bubbles: the button is
+                   the thing that makes one. */
+                background: GREEN,
+                color: "#FFFFFF",
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 800,
+                opacity: draft.trim() ? 1 : 0.45,
+                cursor: draft.trim() ? "pointer" : "default",
+              }}
+            >
               {t("ludo.chat.sendCta")}
-            </PrimaryBtn>
+            </button>
           </form>
         </div>
-      )}
-    </div>
+      </section>
+    </>
   );
 }

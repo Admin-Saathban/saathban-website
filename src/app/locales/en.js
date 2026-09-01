@@ -2599,6 +2599,31 @@ const en = {
 
   // ─── Ludo (routes/games/ludo/) ───
   ludo: {
+    back: "Back to Games",
+    /* A player's card, opened from their circle at the table. */
+    card: {
+      mine: "Your card",
+      nameLabel: "Your name at this table",
+      save: "Save",
+      saved: "Saved",
+      changePhoto: "Change your photo",
+      photoTooBig: "That photo is a little large — try another.",
+      chat: "Chat from them",
+      emoji: "Their emoji",
+      sounds: "Their sounds",
+      on: "On",
+      muted: "Muted",
+      report: "Report to Saathban",
+      reported: "Reported — thank you",
+      reportNote: "Someone at Saathban will look at this within hours.",
+      botNote: "The computer is playing this seat.",
+      colour: {
+        yellow: "Yellow",
+        blue: "Blue",
+        red: "Red",
+        green: "Green",
+      },
+    },
     title: "Ludo",
     home: {
       intro: "The old favourite — two to four players, bots happily fill empty seats, and the house rules are yours to set.",
@@ -2659,6 +2684,7 @@ const en = {
       failed: "That did not go through.",
     },
     seat: {
+      profileTap: "{who} — open their card",
       botHasSeat: "BOT",
       bot: "Bot",
       someone: "A player",
@@ -2729,6 +2755,8 @@ const en = {
       rematchCta: "Play again — same seats, same rules",
     },
     chat: {
+      open: "Table talk",
+      close: "Close",
       toggle: "Table talk",
       empty: "No messages yet — say salaam!",
       placeholder: "Write a message…",

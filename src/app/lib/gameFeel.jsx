@@ -355,12 +355,20 @@ export const GAME_MOTION_CSS = `
   0%, 100% { opacity: 0.35; }
   50%      { opacity: 1; }
 }
+/* THE ARROW AT THE DICE BREATHES — it scales up and down and
+   stays where it is. It used to hop, which on a table where the
+   dice are now the roll control read as the dice being knocked
+   rather than as something pointing at them. A breath is
+   continuous and has no impact in it, so a person can look away
+   from it and it is still saying the same thing when they look
+   back.
+
+   transform-origin at the bottom, so it grows out of the tip
+   rather than around its own middle: the tip is the end that is
+   doing the pointing and it must not move. */
 @keyframes saath-die-bounce {
-  0%, 100%  { transform: translateY(-2px); }
-  35%       { transform: translateY(-9px); }
-  55%       { transform: translateY(0); }
-  70%       { transform: translateY(-4px); }
-  85%       { transform: translateY(0); }
+  0%, 100%  { transform: scale(0.86); }
+  50%       { transform: scale(1.16); }
 }
 @keyframes saath-cell-flash {
   0%   { opacity: 0.85; }
@@ -383,7 +391,10 @@ export const GAME_MOTION_CSS = `
    reduced motion it stops bouncing and stays put — the arrow is the
    instruction, the bounce is only emphasis, and suppressing the whole
    thing would take away the answer along with the animation. */
-.sb-die-arrow { animation: saath-die-bounce 1.25s ease-in-out infinite; }
+.sb-die-arrow {
+  transform-origin: 50% 100%;
+  animation: saath-die-bounce 1.5s ease-in-out infinite;
+}
 /* A capture: the square flashes and fades. */
 /* Rendered by routes/games/ludo/LudoBoard.jsx, not by anything in
    this file — so a grep here finds the definition and no consumer,

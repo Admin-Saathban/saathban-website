@@ -33,14 +33,21 @@ import { stopAllSound, resumeSound, startAmbience, stopAmbience } from "../../..
 import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
-import Die, { DieFace } from "./Dice.jsx";
+import PlayerCard from "./PlayerCard.jsx";
 import SeatPlates from "./SeatPlates.jsx";
 import ChatPanel from "./ChatPanel.jsx";
-import QuickChat, { EmojiButton, ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
+/* EmojiButton and QuickChat are gone from this screen. Emoji live
+   inside the chat's own keyboard now, and the chat opens from the
+   particle on your own circle — the row of pills under the board
+   was costing about seventy pixels of the only thing on the screen
+   that matters. The bubbles stay: a remark still floats by its
+   speaker's corner. */
+import { ChatBubbles, BUBBLE_MS } from "../QuickChat.jsx";
+import { readMutes } from "../tableMutes.js";
 import LudoCelebration from "./LudoCelebration.jsx";
 import { screenCorner } from "./SeatPlates.jsx";
 import { leaveSession } from "../../../lib/games.js";
-import { sendChat, fetchChat } from "./ludoRails.js";
+import { fetchChat } from "./ludoRails.js";
 import CollisionNote from "../CollisionNote.jsx";
 
 const POLL_MS = 2500;
@@ -325,6 +332,12 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
+  /* The chat sheet, and whose card is open. Both are opened from
+     the circles at the corners: a person's circle opens their card,
+     the particle on your own opens the chat. */
+  const [chatOpen, setChatOpen] = useState(false);
+  const [cardSeat, setCardSeat] = useState(null);
+  const [unread, setUnread] = useState(0);
   /* 3, 2, 1, then 0 — which means "over, show the greeting". */
   const [countdown, setCountdown] = useState(null);
   /* Did this screen watch the game leave the lobby? */
@@ -401,11 +414,25 @@ export default function LudoSession() {
         }
         primed = true;
         if (fresh.length) {
-          const add = fresh.slice(-3).map((m) => ({
+          /* MUTED PEOPLE DO NOT FLOAT. A card's "their emoji"
+             switch has to reach the bubbles as well as the sheet,
+             or muting somebody would silence them in the place
+             nobody was looking and leave them shouting over the
+             board. Read live rather than cached: a mute set
+             mid-game applies to the next line, not the next
+             session. */
+          const muted = readMutes(game.id);
+          const heard = fresh.filter(
+            (m) => m.sender_id === myId || !muted[m.sender_id]?.emoji
+          );
+          const others = heard.filter((m) => m.sender_id !== myId).length;
+          if (others) setUnread((n) => n + others);
+          const add = heard.slice(-3).map((m) => ({
             id: m.id,
             text: m.body,
             seat: (game.seats || []).find((x) => x.profile_id === m.sender_id)?.seat ?? 0,
           }));
+          if (!add.length) return;
           setBubbles((b) => [...b, ...add]);
           setTimeout(() => {
             setBubbles((b) => b.filter((x) => !add.some((a) => a.id === x.id)));
@@ -424,17 +451,13 @@ export default function LudoSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.id, game?.seats?.length]);
 
-  const sayQuick = async (text) => {
-    // Mine appears at once; the poll will simply find it already seen.
+  /* Mine appears at once; the poll will simply find it already seen. */
+  const bubbleLocally = (text) => {
     const mine = { id: `local-${Date.now()}`, text, seat: mySeatRow?.seat ?? 0 };
     setBubbles((b) => [...b, mine]);
     setTimeout(() => setBubbles((b) => b.filter((x) => x.id !== mine.id)), BUBBLE_MS);
-    try {
-      await sendChat(game.id, text);
-    } catch {
-      /* said out loud locally either way — the panel shows the truth */
-    }
   };
+
 
   const act = async (fn) => {
     setBusy(true);
@@ -879,7 +902,16 @@ export default function LudoSession() {
           }
         : undefined,
     pendingBySeat,
-    spareDie: diceCount === 2,
+    /* A PERSON'S CIRCLE OPENS THEIR CARD; a bot's or an empty
+       chair's opens the seat, which is the host's to manage. A bot
+       has no profile and a profile is not a chair, so the two never
+       compete for the same tap. */
+    onOpenProfile: (seat) => setCardSeat(seat),
+    onOpenChat: () => {
+      setUnread(0);
+      setChatOpen(true);
+    },
+    unread,
     onToggleSpare:
       editable && iAmHost
         ? () =>
@@ -1018,7 +1050,28 @@ export default function LudoSession() {
             the reasoning does not stop being true at 721px. Still a
             44px target, still labelled for a screen reader, still
             opens the same warm confirm. */}
-        {playing && mySeatRow && (
+        {/* THE BUG: THE DOOR WAS ONLY THERE DURING PLAY.
+
+            `playing` is game.status === "playing", and the host now
+            arrives at the board BEFORE that — they wait on it while
+            the seats fill, which is the flow the owner ruled. In
+            that state this rendered nothing at all, so the bar held
+            a sound button and a gap where the way out should be. A
+            control that is absent is indistinguishable from one that
+            is dead, and "tapping it does nothing" is what an absent
+            control looks like when you know it is supposed to be
+            there.
+
+            The other half of the report — "and the game continues in
+            the background" — is the behaviour, not the bug: the
+            table stays yours and resumes exactly where it was. That
+            is what the door is FOR. Giving up the seat is a
+            different act with a different control and its own
+            confirm.
+
+            atTable, so it is there whenever there is a board to
+            leave. */}
+        {atTable && (
           <button
             type="button"
             /* BACKING OUT NEVER FORCES A CHOICE. This asked "are
@@ -1658,45 +1711,66 @@ export default function LudoSession() {
         />
       )}
 
-      {/* Chat travels with every phase */}
-      {mySeatRow && (
+      {/* THE PILL ROW IS GONE FROM THE TABLE. It held Emoji, Chat
+          and — on a table that had not started — Leave, and it took
+          a row's height off the board on every screen. Emoji now
+          live in the chat's keyboard, chat opens from the particle
+          on your own circle, and leaving is the door in the bar.
+
+          What survives is the ONE explicit quit: giving up your
+          seat, which is a decision about the table rather than
+          about which screen you are looking at, and which still
+          gets asked as one. It only appears before the game has
+          started, where it is a table you are dissolving rather
+          than a game you are walking out of. */}
+      {mySeatRow && !playing && game.status !== "finished" && (
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            gap: 8,
-            /* ONE ROW during play. Wrapping is what turned three pills
-               into three stacked rows and took roughly 200px off the
-               board; off the play screen it may wrap as it always
-               did. Leave is not here any more — it is in the bar. */
-            flexWrap: playing ? "nowrap" : "wrap",
-            margin: playing ? "8px 0 0" : "12px 0 0",
+            margin: "10px 0 0",
             flex: "0 0 auto",
           }}
         >
-          {/* The game's own pills, not the app's white ones. */}
-          <EmojiButton onSend={sayQuick} disabled={game.status === "finished"} game />
-          <QuickChat onSend={sayQuick} disabled={game.status === "finished"} game />
-          {!playing && game.status !== "finished" && (
-            <GamePill onClick={() => setLeaveAsk(true)}>
-              {t("ludo.ceremony.leaveCta")}
-            </GamePill>
-          )}
-        </div>
-      )}
-      {/* THE THREAD STANDS DOWN ON A SHORT SCREEN. Its trigger is a
-          full-width bar costing about 70px, and on a 667px phone that
-          is 70px taken from the only thing on the screen that matters.
-          Quick phrases and emoji stay — they are the two taps people
-          actually use mid-game — and the full thread is a tap away
-          again the moment the game ends or the screen is taller. */}
-      {mySeatRow && !playing && (
-        <div style={{ flex: "0 0 auto" }}>
-          <ChatPanel sessionId={game.id} myId={myId} seats={seats} />
+          <GamePill onClick={() => setLeaveAsk(true)}>
+            {t("ludo.ceremony.leaveCta")}
+          </GamePill>
         </div>
       )}
 
       </div>
+
+      {/* THE CHAT, opened by the particle on your own circle. It
+          travels with every phase of the table, so a remark before
+          the game starts and one after it ends land in the same
+          thread. */}
+      {mySeatRow && (
+        <ChatPanel
+          sessionId={game.id}
+          myId={myId}
+          seats={seats}
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          onSent={bubbleLocally}
+        />
+      )}
+
+      {/* A PLAYER'S CARD. Yours is your photo, your name and the
+          colour you were dealt; anybody else's is how much of them
+          reaches you. */}
+      {cardSeat != null && (
+        <PlayerCard
+          sessionId={game.id}
+          seat={cardSeat}
+          row={seats.find((x) => x.seat === cardSeat)}
+          isMe={seats.find((x) => x.seat === cardSeat)?.profile_id === myId}
+          myProfileId={myId}
+          myName={profile?.full_name}
+          myAvatarPath={profile?.avatar_url}
+          onClose={() => setCardSeat(null)}
+          onNameChanged={load}
+        />
+      )}
 
       {/* Leaving is a decision, so it is asked as one — warmly, and
           with the seat's fate stated rather than implied. */}

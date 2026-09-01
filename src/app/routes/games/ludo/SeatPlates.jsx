@@ -1,47 +1,49 @@
 /* ════════════════════════════════════════════════
-   The players, sitting at the table — LUDO_UI_SPEC.md §1–§3.
+   The players, sitting at the table.
 
-   Each plate goes OUTSIDE the board, at the corner of the yard that
-   belongs to that seat — so once the board rotates to your point of
-   view (your yard nearest you, bottom-left), your own plate follows it
-   down to the bottom-left too. You always sit in the same place.
+   A PLAYER IS A CIRCLE. That is the whole of it, and it is a
+   deliberate demolition: what stood here was a lozenge holding an
+   avatar, a name chip, a turn line, a "thinking…" line, a bot badge, a
+   waiting badge and a dice tray, and at 390px those seven things
+   fought each other for about a hundred and sixty pixels. Two of the
+   owner's live bugs came straight out of that crowding — a name chip
+   reading "BOT" over a seat its owner was sitting in, and "thinking…"
+   laid across an opponent's face.
 
-   THE COUNTDOWN LIVES ON THE PERSON. A ring sweeps round the active
-   player's avatar as their turn runs out, and there is no separate
-   timer bar anywhere on the page (§2). Three reasons, all from the
-   spec: you always know whose turn it is because the clock is drawn on
-   them, it costs no vertical space on a phone, and it reads at a
-   glance for somebody who cannot parse a number quickly.
+   So: YOUR OWN circle at the bottom-left, teal, with the chat particle
+   on its shoulder and your dice beside it. Everyone else's circle in
+   their seat colour at their corner, their name in small text
+   underneath. Nothing else.
 
-   The ring is driven by a prop that changes once a second, NOT by a
-   CSS animation. That is why §10's "reduced-motion: rings still show
-   progress" costs nothing here — there is no animation to suppress,
-   so a person who asked for less motion still gets the whole clock.
+   Each plate still goes OUTSIDE the board at the corner of the yard
+   that belongs to that seat, so once the board rotates to your point
+   of view your own circle follows it down to the bottom-left. You
+   always sit in the same place.
 
-   Whose turn it is is said five ways: the ring, a heavy border, the
-   plate's raised weight, the word under the name, and a quiet
-   "thinking…" while the table waits. Never the glow alone (§10).
+   THE TURN IS SAID BY THE DICE, NOT BY THE PERSON. A small arrow
+   breathes at the dice of whoever is to play, and there is no glow, no
+   frame and no coloured box round anybody's plate — the owner's other
+   live bug was a red frame round the red seat, which read as an error
+   state rather than as a turn. The countdown still sweeps as a thin
+   arc outside the active circle: a turn that runs out is played by a
+   bot, and taking away the only warning that it is about to happen
+   would be removing a clock, not a decoration.
 
-   A plate carries that player's OWN DIE, beside their face — the
-   spec settles this: dice sit next to their owner, never in the
-   board's middle (§3). The active player's die is bright and carries
-   a BOUNCING ARROW so a first-time player is never left wondering
-   what to do next (§4); everyone else's is dimmed and inert. Only
-   your own die is a button, so the table never invites a tap it will
-   refuse.
+   A player's OWN dice sit beside them, never in the board's middle,
+   and they ARE the roll control. There is no roll bar anywhere.
    ════════════════════════════════════════════════ */
 
-import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
+import { A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
-import { GAME } from "../gameSurface.js";
+import { GAME, NO_SELECT } from "../gameSurface.js";
 /* The seat→corner geometry lives in a plain module so a test can
      import it without a browser — see seatCorners.js for why it needs
      one. screenCorner is re-exported here because callers have always
      imported it from this file. */
 export { screenCorner } from "./seatCorners.js";
 import { screenCorner as cornerFor } from "./seatCorners.js";
-import Die, { DieFace } from "./Dice.jsx";
+import Die from "./Dice.jsx";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -49,26 +51,110 @@ function initialOf(name) {
   return [...s][0].toUpperCase();
 }
 
-/* ── The avatar, wrapped in its turn ring ──────────────────────────
-   `remaining` is 0..1 — the share of the turn still left. The ring
-   EMPTIES clockwise as the turn runs down, so a full ring means a
-   whole turn in hand and a bare one means seconds.
+/* ── THE CHAT PARTICLE ─────────────────────────────────────────────
+   A frosted chip on the upper-right edge of your own circle, carrying
+   a speech bubble with three dots in it.
 
-   The ring only exists while it is that player's turn: a ring drawn
-   on everyone would be four clocks, three of them lying. */
-function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact }) {
-  const { t, ts } = useI18n();
-  const size = compact ? (isTurn ? 48 : 38) : isTurn ? 60 : 44;
-  const r = size / 2 - 3;
-  const circumference = 2 * Math.PI * r;
+   It was a solid white circle with an emoji in it, sitting in a row
+   of pills under the board beside an Emoji button. Both are gone: a
+   solid disc on a dark table reads as a notification badge, and emoji
+   now live inside the chat's own keyboard where they belong. Frosted
+   glass is what the rest of this table is made of. */
+function ChatParticle({ onOpen, label, unread }) {
+  if (!onOpen) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        /* The circle underneath opens a profile card. Without this,
+           asking to chat would also ask who you are. */
+        e.stopPropagation();
+        onOpen();
+      }}
+      aria-label={label}
+      style={{
+        ...NO_SELECT,
+        position: "absolute",
+        top: -7,
+        insetInlineEnd: -9,
+        width: 26,
+        height: 26,
+        borderRadius: 9,
+        border: `1px solid ${GAME.glassEdge}`,
+        background: GAME.glassStrong,
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        padding: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+      }}
+    >
+      {/* DRAWN, NOT TYPED. 💬 is a different object on every platform
+          and a blank box on some of them — the door control in the bar
+          had exactly that problem and was redrawn for exactly this
+          reason. */}
+      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+        <path
+          d="M2 4.2A2.2 2.2 0 0 1 4.2 2h7.6A2.2 2.2 0 0 1 14 4.2v5.1a2.2 2.2 0 0 1-2.2 2.2H6.6L3.4 14v-2.5H4.2A2.2 2.2 0 0 1 2 9.3Z"
+          fill="#FFFFFF"
+        />
+        <circle cx="5.4" cy="6.75" r="0.95" fill={GAME.panelFlat} />
+        <circle cx="8" cy="6.75" r="0.95" fill={GAME.panelFlat} />
+        <circle cx="10.6" cy="6.75" r="0.95" fill={GAME.panelFlat} />
+      </svg>
+      {unread > 0 && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: -4,
+            insetInlineStart: -4,
+            minWidth: 14,
+            height: 14,
+            borderRadius: 7,
+            background: "#1FA83C",
+            color: "#FFFFFF",
+            fontSize: 10,
+            fontWeight: 800,
+            lineHeight: "14px",
+            padding: "0 3px",
+          }}
+        >
+          {unread > 9 ? "9+" : unread}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/* ── The circle ────────────────────────────────────────────────────
+   44px, flat colour, dark ink, a deep drop shadow and no border. It
+   used to carry a 2px white ring and a gloss; both are gone — a matte
+   disc with a shadow under it reads as a counter laid on the table,
+   which a ringed glossy one does not.
+
+   `remaining` is 0..1, the share of the turn still left. The arc
+   EMPTIES clockwise, and it only exists while it is that player's
+   turn: an arc drawn on everyone would be four clocks, three of them
+   lying. It sits OUTSIDE the circle so the circle itself stays a
+   circle only. */
+function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, size = 44 }) {
+  const { ts } = useI18n();
+  const arcR = size / 2 + 4;
+  const box = arcR * 2 + 6;
+  const circumference = 2 * Math.PI * arcR;
   const left = Math.max(0, Math.min(1, remaining ?? 1));
-  /* Under about a fifth of the turn the ring changes COLOUR and the
+  /* Under about a fifth of the turn the arc changes COLOUR and the
      seconds are said out loud in the label — never colour alone. */
   const urgent = isTurn && left <= 0.2;
 
   return (
     <span
       style={{
+        ...NO_SELECT,
         position: "relative",
         flexShrink: 0,
         width: size,
@@ -80,28 +166,36 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact 
     >
       {isTurn && remaining != null && (
         <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
+          width={box}
+          height={box}
+          viewBox={`0 0 ${box} ${box}`}
           role="timer"
           aria-label={label}
-          style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            marginLeft: -box / 2,
+            marginTop: -box / 2,
+            transform: "rotate(-90deg)",
+            pointerEvents: "none",
+          }}
         >
           <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
+            cx={box / 2}
+            cy={box / 2}
+            r={arcR}
             fill="none"
-            stroke="#DCD2C2"
-            strokeWidth={5}
+            stroke="rgba(255,255,255,0.14)"
+            strokeWidth={3}
           />
           <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
+            cx={box / 2}
+            cy={box / 2}
+            r={arcR}
             fill="none"
-            stroke={urgent ? C.brown : C.green}
-            strokeWidth={5}
+            stroke={urgent ? "#E85141" : GAME.gold}
+            strokeWidth={3}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - left)}
@@ -111,8 +205,8 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact 
       <span
         aria-hidden="true"
         style={{
-          width: size - 20,
-          height: size - 20,
+          width: size,
+          height: size,
           borderRadius: "50%",
           background: colour,
           color: ink,
@@ -120,11 +214,9 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact 
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 800,
-          fontSize: ts(isTurn ? 21 : 18),
-          border: `2px solid ${C.white}`,
-          /* The active player is brighter and larger; everyone else
-             recedes (§2). Dimming is never the ONLY signal. */
-          opacity: isTurn ? 1 : 0.72,
+          fontSize: ts(Math.round(size * 0.45)),
+          /* MATTE, and deep. No border, no gloss, no gradient. */
+          boxShadow: "0 6px 14px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.4)",
         }}
       >
         {initialOf(name)}
@@ -133,18 +225,18 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact 
         <span
           aria-hidden="true"
           style={{
-            position: "absolute",
-            bottom: -6,
             /* The last-seconds numeral is an ACCESSIBILITY CUE, not a
-               decoration: it exists so the ring turning colour is never
+               decoration: it exists so the arc turning colour is never
                the only warning that a turn is running out. A 12px
-               warning helps nobody who needed warning (§10). */
+               warning helps nobody who needed warning. */
+            position: "absolute",
+            bottom: -10,
             fontSize: ts(A11Y.minBodyPx),
             fontWeight: 800,
-            color: C.brown,
-            background: C.white,
+            color: GAME.ink,
+            background: "rgba(0,0,0,0.55)",
             borderRadius: 8,
-            padding: "0 4px",
+            padding: "0 5px",
             lineHeight: 1.3,
           }}
         >
@@ -155,149 +247,140 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, compact 
   );
 }
 
-/* ── One die at a corner ───────────────────────────────────────────
-   Bright and arrow-cued when it is that player's turn, dim and inert
-   otherwise. Only your own die is a button — tapping someone else's
-   does nothing at all, which is the point. */
-function SeatDie({ value, spent, active, mine, canRoll, colour, onRoll, label, rolling }) {
-  const { ts } = useI18n();
-  const live = active && mine && canRoll;
-  const body = (
+/* ── The dice beside a player ──────────────────────────────────────
+   Ivory, matte, with a soft square corner and classic round dark
+   pips. Only your own are a button: tapping somebody else's does
+   nothing at all, which is the point.
+
+   The breathing arrow points at the dice of whoever is to play. It is
+   the ONLY turn signal on this table — no glow, no frame, no coloured
+   box round a plate. Under reduced motion it stops breathing and stays
+   put: the arrow is the instruction, the breath is only emphasis. */
+function SeatDice({
+  dice,
+  diceCount,
+  isTurn,
+  isMe,
+  canRoll,
+  onRoll,
+  onPickDie,
+  rolling,
+  onToggleSpare,
+}) {
+  const { t } = useI18n();
+  const rolled = dice && dice.length > 0;
+  const empties = rolled ? 0 : Math.max(1, Math.min(2, diceCount));
+  const live = isTurn && isMe && canRoll && !rolled;
+
+  const faces = rolled
+    ? dice.map((d, i) => (
+        <Die
+          key={i}
+          value={d.v}
+          size={38}
+          state={d.state}
+          dim={!isTurn}
+          label={
+            d.state === "used"
+              ? t("ludo.dice.used", { n: d.v })
+              : d.state === "wasted"
+              ? t("ludo.dice.wasted", { n: d.v })
+              : t("ludo.dice.pick", { n: d.v })
+          }
+          onClick={isMe && onPickDie && d.state === "ready" ? () => onPickDie(i) : undefined}
+        />
+      ))
+    : Array.from({ length: empties }).map((_, i) => (
+        <Die
+          key={`e${i}`}
+          value={null}
+          size={38}
+          state={rolling && isMe && i === 0 ? "rolling" : "ready"}
+          dim={!isTurn}
+          label={live ? t("ludo.turn.rollCta") : undefined}
+          onClick={live ? onRoll : undefined}
+        />
+      ));
+
+  return (
     <span
       style={{
+        ...NO_SELECT,
         position: "relative",
         display: "inline-flex",
+        gap: 4,
+        flexShrink: 0,
         alignItems: "center",
-        justifyContent: "center",
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        /* White, always. A die is a white object with dark pips; a
-           grey one reads as a disabled control rather than a die
-           somebody has already thrown. */
-        background: "#FFFFFF",
-        border: `2px solid ${active ? colour : "#CFC4AE"}`,
-        boxShadow: active ? `0 3px 10px ${colour}44` : "0 1px 3px rgba(74,58,34,0.18)",
-        opacity: active ? 1 : value ? 0.82 : 0.95,
       }}
     >
-      {value ? (
-        <span
+      {faces}
+      {/* One die or two, while the table can still be changed. The
+          badge sits on the LAST die and stops the tap there, because
+          the die under it is the roll button. */}
+      {onToggleSpare && !rolled && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSpare();
+          }}
+          aria-label={t(diceCount === 2 ? "ludo.table.oneDie" : "ludo.table.twoDice")}
           style={{
-            lineHeight: 0,
-            animation: rolling ? "saath-tumble 0.42s linear infinite" : undefined,
+            position: "absolute",
+            insetInlineEnd: -6,
+            bottom: -6,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            border: "none",
+            padding: 0,
+            background: GAME.accentFlat,
+            color: GAME.accentInk,
+            fontSize: 14,
+            fontWeight: 900,
+            lineHeight: "22px",
+            cursor: "pointer",
           }}
         >
-          <DieFace value={value} size={34} ink={spent ? "#8A7F6B" : "#2F2A24"} />
-        </span>
-      ) : (
-        /* A blank face rather than 🎲 — the emoji renders as a
-           different object on every platform, and on the machine this
-           was verified on it drew a pale grey cube that read as
-           "nothing here".
-
-           GHOSTED, not blank, and not a guess either. Three versions
-           of this got it wrong in different directions: a hardcoded
-           `|| 1` claimed a number nobody rolled; then a truly empty
-           face fixed the lie and produced a plain white square that
-           read as an empty card rather than a die. Faint pips at a
-           quarter opacity are unmistakably a die and claim nothing —
-           the eye reads them as the texture of an object, not as a
-           score. Brighter for the person about to throw it, where
-           they also hint at what the button does. */
-        <span aria-hidden="true" style={{ lineHeight: 0, opacity: active ? 0.3 : 0.22 }}>
-          <DieFace value={5} size={34} ink="#2F2A24" />
-        </span>
+          {diceCount === 2 ? "−" : "+"}
+        </button>
       )}
-      {/* The tick sits OUTSIDE the face, on the corner, so it never
-          sits on top of the pips it is describing. */}
-      {spent && (
+      {isTurn && (
         <span
+          className="sb-die-arrow"
           aria-hidden="true"
           style={{
             position: "absolute",
-            right: -5,
-            bottom: -5,
-            width: 18,
-            height: 18,
-            borderRadius: 9,
-            background: C.green,
-            color: C.cream,
-            fontSize: 12,
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+            top: -17,
+            left: "50%",
+            marginLeft: -8,
+            width: 16,
+            height: 14,
+            lineHeight: 0,
+            filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
           }}
         >
-          ✓
+          <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true">
+            <path d="M8 14 L0.6 1.2 A1 1 0 0 1 1.6 0 h12.8 a1 1 0 0 1 1 1.2 Z" fill={GAME.gold} />
+          </svg>
         </span>
       )}
     </span>
   );
-
-  if (!live) {
-    return (
-      <span aria-hidden={!value} title={value ? String(value) : undefined} style={{ display: "inline-flex" }}>
-        {body}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onRoll}
-      aria-label={label}
-      style={{
-        position: "relative",
-        background: "none",
-        border: "none",
-        padding: 0,
-        cursor: "pointer",
-        minHeight: A11Y.minTapTargetPx,
-        minWidth: A11Y.minTapTargetPx,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {body}
-      {/* THE BOUNCING ARROW (§4). The spec is relentless about this
-          and so are we: when it is your turn and you have not rolled,
-          something on this screen is pointing at the thing to press.
-          It stops bouncing under reduced motion but does not vanish —
-          the arrow is the instruction, the bounce is only emphasis. */}
-      <span
-        className="sb-die-arrow"
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          top: -18,
-          fontSize: ts(19),
-          color: colour,
-          fontWeight: 900,
-          lineHeight: 1,
-          filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))",
-        }}
-      >
-        ▼
-      </span>
-    </button>
-  );
 }
 
-
-function SeatTap({ onTap, seat, row, children }) {
-  const { t } = useI18n();
+/* Tapping a person opens their card; tapping a bot or an empty chair
+   opens the seat, which is the host's to manage. A bot has no profile
+   and a profile is not a chair. */
+function SeatTap({ onTap, label, children }) {
   if (!onTap) return children;
-  const who = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
   return (
     <button
       type="button"
-      onClick={() => onTap(seat)}
-      aria-label={t("ludo.table.seatTap", { who })}
+      onClick={onTap}
+      aria-label={label}
       style={{
+        ...NO_SELECT,
         border: "none",
         background: "transparent",
         padding: 0,
@@ -305,96 +388,59 @@ function SeatTap({ onTap, seat, row, children }) {
         display: "inline-flex",
         cursor: "pointer",
         borderRadius: "50%",
-        /* A dashed ring says "this can be changed" without adding a
-           word to a screen that is trying to be a board. */
-        outline: `2px dashed ${GAME.controlEdge}`,
-        outlineOffset: 2,
       }}
     >
       {children}
     </button>
   );
 }
+
 function Plate({
-  seat, row, isTurn, isMe, align, dice, onRoll, canRoll, onPickDie,
-  remaining, seconds, rolling, compact,
-  /* §8: tapping the seat itself. Given only while the table is
-     soft, so a plate mid-game is exactly what it always was. */
+  seat,
+  row,
+  isTurn,
+  isMe,
+  align,
+  dice,
+  onRoll,
+  canRoll,
+  onPickDie,
+  remaining,
+  seconds,
+  rolling,
+  compact,
+  /* The host's seat management, offered on bot and empty chairs. */
   onTapSeat,
-  /* Someone has been asked to this seat and has not answered yet.
-     { name } — the waiting is IN THE SEAT, which is the whole
-     point: a table that says who it is holding a place for is a
-     table, and a list of pending invitations somewhere else is
-     paperwork. */
+  /* A person's card, offered on anybody who is a person. */
+  onOpenProfile,
+  /* Your own chat, on your own shoulder. */
+  onOpenChat,
+  unread,
   pending,
-  /* One die or two, on my own plate only. */
-  spareDie,
   onToggleSpare,
-  /* How many dice this table plays with. A TWO-DICE TABLE HAS TO
-     LOOK LIKE ONE before anybody rolls: until now the difference
-     appeared only in the instant between a roll and a move, so a
-     person who chose two dice had no way of telling whether it
-     had taken. */
   diceCount = 1,
 }) {
   const { t, ts } = useI18n();
   const name = row?.is_bot ? t("ludo.seat.bot") : row?.name || t("ludo.seat.someone");
-  const colour = SEAT_COLORS[seat];
-  /* A SEAT THE BOT HAS TAKEN OVER.
+  const isPerson = !!row && !row.is_bot;
+  /* A SEAT THE BOT HAS TAKEN OVER. Presence is only 'active' or
+     'away', and a seat goes 'away' both when somebody deliberately
+     leaves and when they miss three turns — a dead battery, a train
+     tunnel, a grandchild wanting the phone. So the line says the thing
+     that is true in both cases and accuses nobody of walking out. */
+  const takenOver = isPerson && row?.presence === "away";
+  const size = isMe ? 46 : compact ? 38 : 42;
 
-     TONIGHT.md wants the leaver's plate to say so. The data cannot
-     quite say "left", though: presence is only 'active' or 'away',
-     and a seat goes 'away' both when somebody deliberately leaves and
-     when they miss three turns — a dead battery, a train tunnel, a
-     grandchild wanting the phone. The badge therefore says the thing
-     that is true in BOTH cases and accuses nobody of walking out: the
-     bot has this seat now. */
-  const takenOver = !row?.is_bot && row?.presence === "away";
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: align === "end" ? "row-reverse" : "row",
-        alignItems: "center",
-        gap: compact ? 7 : 9,
-        minWidth: 0,
-        /* Shrinkable: the name gives way before anything is pushed
-           off the screen. The dice do not shrink — they are what a
-           player is trying to read. */
-        flex: "0 1 auto",
-        overflow: "hidden",
-        padding: compact ? "2px 6px" : "6px 8px",
-        borderRadius: 16,
-        /* A soft lozenge of the seat's own colour on the table,
-           rather than a page-coloured card. Dark enough that light
-           text sits on it, bright enough to be the thing your eye
-           goes to first. */
-        /* NO FRAME. The reference marks the active player with the
-           die beside them lighting up, not with a coloured box
-           around their whole plate — which on the red seat drew a
-           red rectangle round two dice and a face, and read as an
-           error state. The ring on the avatar and the lit tray say
-           it instead, and the plate stays quiet. */
-        background: "transparent",
-        border: "2px solid transparent",
-        boxShadow: "none",
-      }}
-    >
-      {/* THE SEAT IS THE BUTTON (§8). Wrapping the avatar rather
-          than the whole plate is deliberate: the plate already
-          contains buttons — the dice — and a button inside a
-          button is invalid, un-tappable on some browsers and
-          unreadable to a screen reader. The face is also the
-          thing a person points at when they mean that seat. */}
-      <SeatTap onTap={onTapSeat} seat={seat} row={row}>
+  const circle = (
+    <span style={{ position: "relative", display: "inline-flex" }}>
       <Avatar
-        compact={compact}
         name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
-        colour={colour}
-        ink={SEAT_INK[seat]}
+        colour={isMe ? GAME.you : SEAT_COLORS[seat]}
+        ink={isMe ? GAME.youInk : SEAT_INK[seat]}
         isTurn={isTurn}
         remaining={remaining}
         seconds={seconds}
+        size={size}
         label={
           seconds == null
             ? t("ludo.seat.turn")
@@ -403,306 +449,146 @@ function Plate({
             : t("ludo.ring.theirs", { name, n: seconds })
         }
       />
-      </SeatTap>
+      {isMe && (
+        <ChatParticle
+          onOpen={onOpenChat}
+          unread={unread}
+          label={t("ludo.chat.open")}
+        />
+      )}
+    </span>
+  );
 
-      <span
+  const tapped = (
+    <SeatTap
+      onTap={
+        isPerson && onOpenProfile
+          ? () => onOpenProfile(seat)
+          : onTapSeat
+          ? () => onTapSeat(seat)
+          : null
+      }
+      label={
+        isMe
+          ? t("ludo.card.mine")
+          : isPerson
+          ? t("ludo.seat.profileTap", { who: name })
+          : t("ludo.table.seatTap", { who: name })
+      }
+    >
+      {circle}
+    </SeatTap>
+  );
+
+  /* YOU: circle and dice, side by side, nothing written. You know who
+     you are, and the sixty pixels a name chip costs are pixels the
+     dice and the board want more. */
+  if (isMe) {
+    return (
+      <div
         style={{
-          /* POSITIONED, so the spans inside that hide themselves
-             with position:absolute clip against THIS column
-             instead of escaping to whatever is positioned further
-             up the tree. Without it "thinking…" — a span meant to
-             be one clipped pixel — was being laid over the
-             opponent's face. */
-          position: "relative",
-          minWidth: 0,
-          textAlign: align === "end" ? "end" : "start",
+          ...NO_SELECT,
           display: "flex",
-          flexDirection: "column",
-          gap: 0,
-          lineHeight: 1.15,
+          flexDirection: align === "end" ? "row-reverse" : "row",
+          alignItems: "center",
+          gap: 12,
+          minWidth: 0,
         }}
       >
-        <span
-          dir="auto"
-          style={
-            /* Crowded: my own name steps aside for my own turn line,
-               and again for the spare die (§8) — at 390px the avatar,
-               the name, a spare and a roll die do not fit, and a name
-               ellipsed to "T…" is worse than one read aloud. */
-            /* Crowded: my own name steps aside for my own turn line.
-               Off-screen rather than removed — the name is still read
-               aloud, it just stops competing for 60px the dice and the
-               instruction need more. */
-            isMe && ((dice && dice.length > 1) || onToggleSpare)
-              ? {
-                  position: "absolute",
-                  width: 1,
-                  height: 1,
-                  overflow: "hidden",
-                  clip: "rect(0 0 0 0)",
-                  whiteSpace: "nowrap",
-                }
-              : {
-                  display: "inline-block",
-                  /* A chip, the way the recording labels its
-                     players — not loose text lying on the table. */
-                  background: "rgba(0,0,0,0.30)",
-                  borderRadius: 9,
-                  padding: "1px 7px",
-                  maxWidth: "100%",
-                  fontSize: ts(15),
-                  fontWeight: 700,
-                  /* Everything is on the table now, so everything is
-                     light. The cream card that used to justify dark
-                     ink here is gone. */
-                  color: GAME.ink,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }
-          }
-        >
-          {/* A seat kept for somebody carries THEIR name, not the
-              name of the bot minding it (§8). */}
-          {pending || name}
-          {isMe ? ` (${t("ludo.seat.you")})` : ""}
-        </span>
-        {/* §8: "waiting happens on the board, with 'waiting for
-            {name}' in the seat". A bot is holding the place and
-            playing it, so the game does not stall while somebody
-            decides — but the seat says whose it is meant to be. */}
-        {pending && (
-          <span
-            style={{
-              display: "inline-flex",
-              alignSelf: align === "end" ? "flex-end" : "flex-start",
-              alignItems: "center",
-              marginTop: 2,
-              padding: "1px 7px",
-              borderRadius: 8,
-              background: "rgba(255,255,255,0.16)",
-              color: GAME.ink,
-              fontSize: ts(13),
-              fontWeight: 800,
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            /* One word on the plate, the whole sentence to a screen
-               reader — the space is short, the meaning is not. */
-            aria-label={t("ludo.table.waitingFor", { name: pending })}
-          >
-            {t("ludo.table.waiting")}
-          </span>
-        )}
-        {takenOver && (
-          <span
-            style={{
-              display: "inline-flex",
-              alignSelf: align === "end" ? "flex-end" : "flex-start",
-              alignItems: "center",
-              marginTop: 2,
-              padding: "1px 7px",
-              borderRadius: 8,
-              background: "rgba(255,255,255,0.16)",
-              color: GAME.ink,
-              fontSize: ts(13),
-              fontWeight: 800,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {t("ludo.seat.botHasSeat")}
-          </span>
-        )}
-        {/* Only when it says something. "Seat 2" under a seat that is
-            simply sitting there is a label nobody reads, and the room
-            it costs is room the board needs (§1). Whose turn it is
-            stays said by the ring, the border and the arrow (§10 —
-            never colour alone), and here in words at the floor size. */}
-        {isTurn && (
-          <span
-            style={
-              /* CROWDED, so the words move rather than being clipped.
-                 On my own two-dice plate the avatar, the turn line and
-                 two dice do not fit at 390px, and "your turn" was
-                 rendering as "y… t…", which is worse than absent.
-
-                 It goes off-screen, not away, and §10's rule that
-                 whose-turn is said in WORDS is still kept twice over:
-                 the ring's own aria-label reads "Your turn — 12
-                 seconds left", and the instruction under the board
-                 says "Tap a die, then tap the goti it should move" in
-                 full width, light on the table. The dice stay,
-                 because they are the thing being read. */
-              /* ON MY OWN PLATE, NEVER INLINE. The side-by-side
-                 against the reference showed it still clipping to
-                 "you… turn" over the die with only ONE die in hand —
-                 my earlier guard only caught the two-dice case, which
-                 was the case I happened to be looking at.
-
-                 There is no width for it and there does not need to
-                 be: the instruction sits directly under the board at
-                 full width saying what to do, the ring sweeps, the
-                 avatar brightens and the die carries the arrow. This
-                 stays in the accessibility tree. */
-              compact || isMe
-                ? {
-              position: "absolute",
-              width: 1,
-              height: 1,
-              overflow: "hidden",
-              clip: "rect(0 0 0 0)",
-              whiteSpace: "nowrap",
-            }
-                : {
-                    display: "block",
-                    fontSize: ts(A11Y.minBodyPx),
-                    color: colour,
-                    fontWeight: 700,
-                  }
-            }
-          >
-            {isMe ? t("ludo.seat.yourTurn") : t("ludo.seat.turn")}
-          </span>
-        )}
-        {/* Someone is deciding. Three dots that settle, not a spinner:
-            a spinner says "the app is busy", this says "they are
-            thinking", which is a different and truer thing. */}
-        {isTurn && !isMe && (
-          <span
-            className={compact ? undefined : "sb-think"}
-            style={
-              compact
-                ? {
-              position: "absolute",
-              width: 1,
-              height: 1,
-              overflow: "hidden",
-              clip: "rect(0 0 0 0)",
-              whiteSpace: "nowrap",
-            }
-                : { display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, letterSpacing: "0.06em" }
-            }
-          >
-            {t("ludo.ceremony.thinking")}
-          </span>
-        )}
-      </span>
-
-      {/* This player's own dice, beside their face (§3). In two-dice
-          mode both sit here together, and this is also where you
-          CHOOSE which one to spend — the choice used to live in the
-          board's middle tray, which the spec removed. */}
-      {/* A seat with no dice in hand still shows a die — dim, at rest,
-          nothing to tap (§3: "opponents' dice are visible but dim").
-          Without this an opponent who has not rolled renders as an
-          avatar and two lines of text, which is what made a bot seat
-          read as a plain "Bot / Seat 2" row rather than a place at the
-          table. It also matters for §10: with no die and no ring, the
-          only thing saying "not your turn" was the words. */}
-      {(!dice || dice.length === 0) && !isMe && (
-        <span style={{ display: "flex", flexShrink: 0, alignItems: "center" }} aria-hidden="true">
-          <SeatDie value={null} spent={false} active={false} mine={false} colour={colour} />
-        </span>
-      )}
-
-      {/* THE TRAY. In the recording the die sits in a rounded
-          holder beside its player, dark when it is not their go
-          and lit gold when it is — which is how the board says
-          whose turn it is without drawing anything around the
-          person. */}
-      {dice && dice.length > 0 && (
+        {tapped}
+        <SeatDice
+          dice={dice}
+          diceCount={diceCount}
+          isTurn={isTurn}
+          isMe
+          canRoll={canRoll}
+          onRoll={onRoll}
+          onPickDie={onPickDie}
+          rolling={rolling}
+          onToggleSpare={onToggleSpare}
+        />
+        {/* Said to a screen reader, never drawn. The arrow at the dice
+            is the visible half of this. */}
         <span
           style={{
-            display: "flex",
-            gap: 2,
-            flexShrink: 0,
-            alignItems: "center",
-            padding: "3px 4px",
-            borderRadius: 10,
-            background: isTurn ? "rgba(240,196,98,0.22)" : "rgba(0,0,0,0.22)",
-            border: `1px solid ${isTurn ? "#E3B052" : "rgba(255,255,255,0.10)"}`,
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
           }}
         >
-          {dice.map((d, i) => (
-            <Die
-              key={i}
-              value={d.v}
-              size={40}
-              state={d.state}
-              label={
-                d.state === "used"
-                  ? t("ludo.dice.used", { n: d.v })
-                  : d.state === "wasted"
-                  ? t("ludo.dice.wasted", { n: d.v })
-                  : t("ludo.dice.pick", { n: d.v })
-              }
-              onClick={isMe && onPickDie && d.state === "ready" ? () => onPickDie(i) : undefined}
-            />
-          ))}
+          {isTurn ? t("ludo.seat.yourTurn") : ""}
         </span>
-      )}
-      {/* Nothing rolled yet: the empty die is the roll button, and only
-          for the person whose turn it is. */}
+      </div>
+    );
+  }
 
-      {/* Nothing rolled yet: an empty die per die this table
-          plays with. TWO dice at a two-dice table, before anybody
-          touches anything — which is the whole of the owner's
-          complaint that a two-dice table looked exactly like a
-          one-die table. Both are the roll button. */}
-      {/* Nothing rolled yet: one empty die per die this table
-          plays with, and they ARE the roll button. The last one
-          wears the +/− while the table can still be changed. */}
-      {dice && dice.length === 0 && isTurn && (
-        <span style={{ display: "flex", gap: 3, flexShrink: 0, alignItems: "center" }}>
-          {Array.from({ length: Math.max(1, Math.min(2, diceCount)) }).map((_, i, all) => (
-            <span key={i} style={{ position: "relative", display: "inline-flex" }}>
-              <SeatDie
-                value={null}
-                active={isTurn}
-                mine={isMe}
-                canRoll={canRoll}
-                colour={colour}
-                onRoll={onRoll}
-                rolling={rolling && isMe && i === 0}
-                label={t("ludo.turn.rollCta")}
-              />
-              {onToggleSpare && i === all.length - 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    /* The die under this badge is the roll button.
-                       Without stopping here, changing the dice would
-                       also throw them. */
-                    e.stopPropagation();
-                    onToggleSpare();
-                  }}
-                  aria-label={t(diceCount === 2 ? "ludo.table.oneDie" : "ludo.table.twoDice")}
-                  style={{
-                    position: "absolute",
-                    right: -4,
-                    bottom: -4,
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    border: "none",
-                    padding: 0,
-                    /* Brass, not green. Green is Saathban's and
-                       nothing inside a game may wear it. */
-                    background: GAME.accentFlat,
-                    color: GAME.accentInk,
-                    fontSize: 14,
-                    fontWeight: 900,
-                    lineHeight: "22px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {diceCount === 2 ? "\u2212" : "+"}
-                </button>
-              )}
-            </span>
-          ))}
+  /* EVERYONE ELSE: circle, dice beside it, name underneath. */
+  return (
+    <div
+      style={{
+        ...NO_SELECT,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: align === "end" ? "flex-end" : "flex-start",
+        gap: 3,
+        minWidth: 0,
+        maxWidth: "100%",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: align === "end" ? "row-reverse" : "row",
+          alignItems: "center",
+          gap: 8,
+          minWidth: 0,
+        }}
+      >
+        {tapped}
+        <SeatDice
+          dice={dice}
+          diceCount={diceCount}
+          isTurn={isTurn}
+          isMe={false}
+          canRoll={false}
+          rolling={false}
+        />
+      </div>
+      <span
+        dir="auto"
+        style={{
+          fontSize: ts(13),
+          fontWeight: 700,
+          color: GAME.ink,
+          maxWidth: 118,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          textShadow: "0 1px 3px rgba(0,0,0,0.7)",
+        }}
+      >
+        {/* A seat kept for somebody carries THEIR name, not the name
+            of the bot minding it. */}
+        {pending || name}
+      </span>
+      {/* One short line, and only when there is one to say. */}
+      {(pending || takenOver) && (
+        <span
+          style={{
+            fontSize: ts(12),
+            fontWeight: 700,
+            color: GAME.inkMuted,
+            maxWidth: 118,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          aria-label={pending ? t("ludo.table.waitingFor", { name: pending }) : undefined}
+        >
+          {pending ? t("ludo.table.waiting") : t("ludo.seat.botHasSeat")}
         </span>
       )}
     </div>
@@ -711,8 +597,7 @@ function Plate({
 
 /* `where` is "top" or "bottom": the row of plates above or below the
    board. On a phone the board is the full width, so the corners live
-   in a row of their own rather than floating over it — the spec's
-   "opponent strip above, you below" (§1) is the same arrangement. */
+   in a row of their own rather than floating over it. */
 export default function SeatPlates({
   where,
   seats,
@@ -720,7 +605,7 @@ export default function SeatPlates({
   spin,
   currentSeat,
   myId,
-  /* diceFor(seat) → [{ v, spent }] | [] */
+  /* diceFor(seat) → [{ v, state }] | [] */
   diceFor,
   onRoll,
   canRoll,
@@ -731,15 +616,16 @@ export default function SeatPlates({
   /* Short screens (roughly <720px tall): the plate gives its height
      back to the board without giving up anything it says. */
   compact,
-  /* The turn clock, for the ring. `secondsLeft` counts down and
-     `turnSeconds` is the whole turn, so the ring can show a share
-     rather than a number. Omit both and no ring is drawn. */
+  /* The turn clock, for the arc. `secondsLeft` counts down and
+     `turnSeconds` is the whole turn, so the arc can show a share
+     rather than a number. Omit both and no arc is drawn. */
   secondsLeft,
   turnSeconds,
-  /* §8, all three only while the table is soft. */
   onTapSeat,
+  onOpenProfile,
+  onOpenChat,
+  unread,
   pendingBySeat,
-  spareDie,
   onToggleSpare,
   diceCount = 1,
 }) {
@@ -763,21 +649,15 @@ export default function SeatPlates({
         boxSizing: "border-box",
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "center",
+        alignItems: where === "top" ? "flex-start" : "flex-end",
         gap: 8,
         width: "100%",
         maxWidth: "min(560px, 100%)",
-        overflow: "hidden",
-        /* Tight to the board. The reference screenshots put the
-           avatars within a few pixels of the board's edge, and that
-           closeness is what makes them read as sitting AT it. */
-        margin: compact
-          ? where === "top"
-            ? "0 auto 2px"
-            : "2px auto 0"
-          : where === "top"
-          ? "0 auto 4px"
-          : "4px auto 0",
+        /* Tight to the board: the reference puts the players within a
+           few pixels of its edge, and that closeness is what makes
+           them read as sitting AT it. */
+        margin: where === "top" ? "0 auto 6px" : "6px auto 0",
+        paddingInline: 6,
       }}
     >
       {plates.map((seat, i) => (
@@ -806,9 +686,11 @@ export default function SeatPlates({
               remaining={seat === currentSeat ? remaining : null}
               seconds={seat === currentSeat ? secondsLeft : null}
               onTapSeat={onTapSeat}
+              onOpenProfile={onOpenProfile}
+              onOpenChat={onOpenChat}
+              unread={unread}
               diceCount={diceCount}
               pending={pendingBySeat ? pendingBySeat[seat] : null}
-              spareDie={spareDie}
               onToggleSpare={
                 onToggleSpare && seats.find((s) => s.seat === seat)?.profile_id === myId
                   ? onToggleSpare

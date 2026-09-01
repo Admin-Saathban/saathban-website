@@ -52,6 +52,7 @@ import { inviteToSeat, fetchGames } from "../../lib/games.js";
 import { useSession } from "../../lib/session.jsx";
 import { playedTogether, playedWhen } from "./playedTogether.js";
 import Icon from "../../components/Icon.jsx";
+import useBackToClose from "../../components/useBackToClose";
 
 /* GLYPHS ONLY. The games themselves come from the registry.
 
@@ -75,6 +76,7 @@ import Icon from "../../components/Icon.jsx";
 const GLYPH = { ludo: "dice", snakes: "snakes" };
 
 export default function PlaySomethingSheet({ person, onClose }) {
+  useBackToClose(true, onClose);
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();

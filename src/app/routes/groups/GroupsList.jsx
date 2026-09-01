@@ -15,6 +15,7 @@ import { Screen, H1, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "
 import { STRINGS } from "./groupsCopy.js";
 import { fetchMyGroups, fetchMyGroupInvites, respondInvite, cachedGroups, archivedGroups, setGroupPref } from "./groupsStore.js";
 import { useToast, useToastThenGo, useFresh } from "../../lib/feedback.jsx";
+import useBackToClose from "../../components/useBackToClose";
 
 const SCROLL_KEY = "saathban.groups.scroll";
 
@@ -39,6 +40,7 @@ export default function GroupsList() {
   const { toast } = useToast();
   const toastThenGo = useToastThenGo();
   const fresh = useFresh();
+  useBackToClose(!!sheetFor, () => setSheetFor(null));
 
   const load = async () => {
     try {

@@ -16,6 +16,7 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { BADGES } from "./homeMock.js";
 import { useSession } from "../../lib/session.jsx";
+import useBackToClose from "../../components/useBackToClose";
 import {
   shareScoreToCommunity,
   shareScoreWithPeople,
@@ -83,12 +84,14 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
   const [busy, setBusy] = useState(null);
   const [link, setLink] = useState("");
 
+  /* Escape and back both live in the hook now. The listener that
+     was here answered any Escape on the page, including one meant
+     for a sheet on top of this one. */
+  useBackToClose(true, onClose);
+
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   const circleEmpty = circleMembers.length === 0;
 

@@ -16,6 +16,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
 import { MotionStyles, MOTION } from "../../lib/motion.jsx";
 import DiscardDialog from "./DiscardDialog.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 import { useSession } from "../../lib/session.jsx";
 import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE, HEART } from "./communityCopy.js";
 import {
@@ -473,8 +474,9 @@ function PostCard({
      sentence somebody was part way through. Cancelling keeps them on
      the feed with the post intact, which is the smaller loss of the
      two that were on offer. */
-  /* NO BACK HANDLER HERE FOR THE MOMENT, deliberately, and it is
-     coming back.
+  /* RESTORED. It was out for one commit, and the note is worth keeping
+     because the reason it came out is the reason the hook is built the
+     way it is now.
 
      I added one and it broke the thing it was protecting. This editor
      opens FROM the post menu, and that menu closes by unmounting;
@@ -486,15 +488,22 @@ function PostCard({
      the textarea is never present at any sample; with it out, it is
      there at +45ms.
 
-     Lane 2 is fixing the hook at the root (cleanup only reclaims an
-     entry that is still the top one) and will restore this line as
-     useBackToClose(editing, askCancelEdit) — with a discard prompt,
-     because back closing the editor silently still threw away the
-     sentence, which was the other half of why this mattered.
+     The hook no longer churns history per surface: there is ONE entry
+     for however many are open, so a sheet closing as another opens
+     hands the entry over instead of destroying one the replacement has
+     already claimed. Nothing here has to know that.
 
-     Removed rather than worked around. I had a 150ms arming delay that
-     tested green, and a timing patch that outlives the bug it was
-     written for is how one vocabulary becomes two. */
+     Removed rather than worked around, which was the right call — a
+     150ms arming delay tested green and would have outlived the bug it
+     was written for. */
+  const askCancelEdit = () => {
+    /* Back ASKS when the words have changed. Cancelling silently was
+       better than navigating away and losing both, but only because
+       those were the two things on offer. */
+    if (draft.trim() !== (post.body || "").trim()) setConfirmEdit(true);
+    else onEditCancel();
+  };
+  useBackToClose(editing, askCancelEdit);
 
   /* §7 — post-audio is private, so the card signs its own URL. Done
      here rather than for the whole feed so that a list of forty posts
@@ -519,6 +528,7 @@ function PostCard({
   const [stickersOpen, setStickersOpen] = useState(false);
   const [commentReporting, setCommentReporting] = useState(null); // comment id
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmEdit, setConfirmEdit] = useState(false);
 
   /* §3 — DOUBLE-TAP TO HEART.
 
@@ -559,6 +569,8 @@ function PostCard({
     const h = setTimeout(() => setPop(null), MOTION.heartPop + 60);
     return () => clearTimeout(h);
   }, [pop]);
+  useBackToClose(commentsOpen, () => askCloseComments());
+
   const askCloseComments = () => {
     if (commentBody.trim()) setConfirmDiscard(true);
     else setCommentsOpen(false);
@@ -709,6 +721,12 @@ function PostCard({
           editing happens here. */}
       {editing ? (
         <div style={{ margin: "10px 0 12px" }}>
+          {confirmEdit && (
+            <DiscardDialog
+              onKeep={() => setConfirmEdit(false)}
+              onDiscard={() => { setConfirmEdit(false); onEditCancel(); }}
+            />
+          )}
           <label
             htmlFor={`edit-${post.id}`}
             style={{ display: "block", fontSize: ts(16), fontWeight: 700, color: C.textMain, marginBottom: 6 }}

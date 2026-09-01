@@ -43,6 +43,7 @@ import { VoiceRecorder, VoicePlayer } from "../people/VoiceNote.jsx";
 /* PostComposer only — see the block at the foot of this file. */
 import { createPost } from "./communityData.js";
 import { useToast } from "../../lib/feedback.jsx";
+import useBackToClose from "../../components/useBackToClose";
 
 /* ── The row that lives in the feed ── */
 export function ComposerRow({ onOpen }) {
@@ -125,6 +126,10 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
   const hasDraft = () => !!body.trim() || !!file || !!voice;
 
   const askClose = () => { if (hasDraft()) setConfirmDiscard(true); else { reset(); onClose(); } };
+
+  /* Back ASKS. It does not discard, and it does not leave the
+     screen underneath — both of which it did before. */
+  useBackToClose(open, askClose);
 
   /* Only fetched when the picker is actually opened — a list of names
      loaded for a post that mentions nobody is a query nobody asked

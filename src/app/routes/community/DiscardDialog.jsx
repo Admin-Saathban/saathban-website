@@ -24,9 +24,15 @@
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
+import useBackToClose from "../../components/useBackToClose";
 
 export default function DiscardDialog({ onKeep, onDiscard }) {
   const { t, ts } = useI18n();
+  /* KEEP, never discard: back is the gesture people make by
+     accident, so it must resolve to the reversible answer. This
+     sits inside the composer, which registers its own — one press
+     closes this question and leaves the draft open behind it. */
+  useBackToClose(true, onKeep);
   return (
     <div
       onClick={onKeep}

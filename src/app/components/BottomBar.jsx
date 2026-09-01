@@ -29,6 +29,7 @@ import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { barItems } from "./navItems.js";
 import { IconChip } from "./Icon.jsx";
+import { useUnreadChats } from "../routes/messages/messagesData.js";
 
 /* NASTALIQ NEEDS THE ROOM AND ENGLISH DOES NOT MIND HAVING IT.
 
@@ -101,6 +102,16 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
   }, []);
   const { t, ts } = useI18n();
   const items = barItems(role, { buddyActive });
+  /* CHATS WITH SOMETHING UNREAD, not messages. Lane 3 computes it and I
+     render it — one store behind useSyncExternalStore, so this costs a
+     cached integer per render of the bar rather than a query.
+
+     Their reasoning, which I agree with: a badge answers "how many
+     conversations want me". A message count says 47 because one person
+     wrote a lot, which is a number about their evening rather than the
+     readers day. It is also the same boolean the Chats list shows, so
+     the badge and the list cannot disagree. */
+  const unread = useUnreadChats();
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
 
   /* Every item is shaped the same whether it navigates or opens a
@@ -161,6 +172,7 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
         name={item.icon}
         size={22}
         tone={item.tone || "ink"}
+        count={item.icon === "messages" ? unread : 0}
         active={active}
         onDark
       />

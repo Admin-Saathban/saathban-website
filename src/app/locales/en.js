@@ -18,6 +18,11 @@
 
 const en = {
   common: {
+    /* Shown where a read FAILED, in place of the empty state that
+       screen would otherwise draw. "Nobody here yet" and "we could not
+       load this" are different facts and only one of them is about the
+       person reading it. */
+    loadError: "That didn't load just now. Please try again in a moment.",
     loading: "One moment…",
     back: "Back",
     appName: "Saathban",

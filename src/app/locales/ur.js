@@ -30,6 +30,7 @@ const TODO = (english) => `[UR] ${english}`;
 
 const ur = {
   common: {
+    loadError: "یہ ابھی نہیں کھل سکا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
     loading: "ایک لمحہ…",
     back: "واپس",
     appName: "ساتھ بن",

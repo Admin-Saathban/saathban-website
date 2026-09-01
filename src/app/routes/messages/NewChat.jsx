@@ -41,7 +41,11 @@ export default function NewChat() {
     let alive = true;
     fetchMyPeople()
       .then((rows) => { if (alive) setPeople(rows || []); })
-      .catch(() => { if (alive) setPeople([]); });
+      /* NOT AN EMPTY LIST. A read that was refused is not a person
+         with nobody to write to, and telling them it is closes a door
+         that is actually open. The rows stay null so the empty state
+         never draws; the error says what happened. */
+      .catch((e) => { if (alive) { setPeople([]); setError(t("common.loadError")); } });
     return () => { alive = false; };
   }, []);
 
@@ -60,6 +64,24 @@ export default function NewChat() {
 
   if (people === null) {
     return <p role="status" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>{t("common.loading")}</p>;
+  }
+
+  /* BEFORE THE DOOR, and the order is the whole fix.
+
+     Setting error was not enough: the empty-state return below fires
+     first, so a refused read still showed "nobody is connected to you
+     yet" and the error line further down was never reached. The state
+     was correct, the render was correct, and one early return between
+     them meant it never ran — which is the same shape three lanes have
+     each hit today, and I wrote this one an hour after describing it.
+
+     A permissions failure must never read as an empty life. */
+  if (error) {
+    return (
+      <p role="alert" style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.brown, padding: "8px 2px" }}>
+        ⚠ {error}
+      </p>
+    );
   }
 
   if (!people.length) {

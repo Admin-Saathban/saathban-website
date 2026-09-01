@@ -114,6 +114,10 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
   const [pickPeople, setPickPeople] = useState(false);
   const [tagged, setTagged] = useState([]);
   const [people, setPeople] = useState(null);
+  /* Kept apart from the list. "We could not load this" and "you are
+     connected to nobody" are different facts, and only one of them is
+     about the person. */
+  const [peopleError, setPeopleError] = useState("");
   /* §7 — one minute, and only the poster ever records. Replies to a
      voice post are text and stickers; there is deliberately no
      recorder on the comment box. */
@@ -136,7 +140,9 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
      for. */
   useEffect(() => {
     if (!pickPeople || people !== null) return;
-    fetchMyPeople().then(setPeople).catch(() => setPeople([]));
+    fetchMyPeople()
+      .then((rows) => { setPeople(rows || []); setPeopleError(""); })
+      .catch(() => { setPeople([]); setPeopleError(t("common.loadError")); });
   }, [pickPeople, people]);
 
   if (!open) return null;
@@ -443,6 +449,11 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 14, background: C.white, border: `1.5px solid ${C.warmGray}` }}>
               {people === null ? (
                 <p style={{ margin: 0, color: C.textMuted, fontSize: ts(16) }}>···</p>
+              ) : peopleError ? (
+                /* A REFUSED READ MUST NOT READ AS AN EMPTY LIFE.
+                   "You are connected to nobody" is a thing this screen
+                   is allowed to say only when it is true. */
+                <p role="alert" style={{ margin: 0, color: C.brown, fontSize: ts(16), fontWeight: 700 }}>⚠ {peopleError}</p>
               ) : people.length === 0 ? (
                 <p style={{ margin: 0, color: C.textMuted, fontSize: ts(16) }}>{t("posts.withNobody")}</p>
               ) : (

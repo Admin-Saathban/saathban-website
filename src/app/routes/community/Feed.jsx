@@ -517,6 +517,9 @@ function PostCard({
   }, [post.audio_path]);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState(null); // null = not loaded
+  /* Separate from the list, because "nothing was said yet" invites a
+     reply and "we could not fetch this" does not. */
+  const [commentsError, setCommentsError] = useState("");
   const [commentAuthors, setCommentAuthors] = useState({});
   const [commentBody, setCommentBody] = useState("");
   /* §7 — replies to a post are text AND stickers, and never voice:
@@ -622,6 +625,7 @@ function PostCard({
         setCommentAuthors(await fetchAuthors(rows.map((r) => r.author_id)));
       } catch {
         setComments([]);
+        setCommentsError(t("common.loadError"));
       }
     }
   };
@@ -1046,6 +1050,12 @@ function PostCard({
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", background: C.comment }}>
               {comments === null ? (
                 <BodyText muted role="status">…</BodyText>
+              ) : commentsError ? (
+                /* "Be the first to say something" is an invitation. It
+                   is the wrong thing to show somebody whose comments
+                   simply did not arrive — they would be answering a
+                   conversation they cannot see. */
+                <BodyText role="alert" style={{ color: C.brown, fontWeight: 700 }}>⚠ {commentsError}</BodyText>
               ) : comments.length === 0 ? (
                 <BodyText muted>{t("community.feed.noComments")}</BodyText>
               ) : (

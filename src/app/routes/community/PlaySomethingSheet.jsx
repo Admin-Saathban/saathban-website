@@ -96,7 +96,12 @@ export default function PlaySomethingSheet({ person, onClose }) {
          not a name and not a kind: it is whether a second person can sit
          down, which is the only thing this sheet is for. */
       .then((rows) => { if (alive) setGames((rows || []).filter((g) => g.enabled && (g.max_seats || 0) >= 2)); })
-      .catch(() => { if (alive) setGames([]); });
+      /* A failure here used to read as "there are no games", which is
+         a statement about the app rather than about the request that
+         failed. The shared-games map below keeps its empty fallback on
+         purpose: that one is enrichment, and an empty map degrades
+         honestly without claiming anything. */
+      .catch((e) => { if (alive) { setGames([]); setError(t("common.loadError")); } });
     playedTogether(profile?.id, person?.id)
       .then((m) => { if (alive) setShared(m); })
       .catch(() => { if (alive) setShared(new Map()); });

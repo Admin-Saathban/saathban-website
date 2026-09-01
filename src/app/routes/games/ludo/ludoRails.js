@@ -150,13 +150,25 @@ export async function fetchSession(sessionId) {
 
   const ids = (seats || []).map((s) => s.profile_id).filter(Boolean);
   let names = new Map();
+  /* THE FACE, not just the name. safe_profiles has exposed
+     avatar_url since 0082 and this adapter had never named it, so
+     every circle at every table drew an initial — including for
+     somebody who had just uploaded a photo of themselves. Exactly
+     the failure the comment on `title` below warns about: the
+     rails select what they select, and a field reaches the board
+     only if it is mapped here.
+
+     It is a PATH into a private bucket, not a URL; signing it is
+     the caller's job (gameAvatar.jsx). */
+  let faces = new Map();
   if (ids.length) {
     const { data: profiles, error: pErr } = await supabase
       .from("safe_profiles")
-      .select("id, full_name")
+      .select("id, full_name, avatar_url")
       .in("id", ids);
     if (pErr) throw new Error(pErr.message);
     names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+    faces = new Map((profiles || []).map((p) => [p.id, p.avatar_url]));
   }
 
   /* NOW 30, because the SERVER now says 30.
@@ -224,6 +236,7 @@ export async function fetchSession(sessionId) {
       is_bot: s.is_bot,
       presence: s.presence,
       name: s.is_bot ? null : names.get(s.profile_id) || null,
+      avatar: s.is_bot ? null : faces.get(s.profile_id) || null,
     })),
   };
 }

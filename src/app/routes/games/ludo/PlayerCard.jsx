@@ -33,6 +33,7 @@ import { GameMotion } from "../GameUI.jsx";
 import { SEAT_COLORS, SEAT_INK, SEAT_COLOR_NAMES } from "../seatColors.js";
 import { MUTE_KINDS, readMutes, setMuted } from "../tableMutes.js";
 import { signedAvatarUrl, uploadAvatar, ACCEPTED, MAX_BYTES } from "../../profile/avatar.js";
+import { useSignedAvatar } from "../gameAvatar.jsx";
 import { updateMyProfile } from "../../profile/data.js";
 import { fileReport } from "../../community/communityData.js";
 
@@ -156,13 +157,19 @@ export default function PlayerCard({
     setMutes(readMutes(sessionId));
   }, [sessionId]);
 
+  /* THEIR face, from the seat. Mine comes from my own profile and
+     can change while the card is open — a fresh upload replaces it
+     — so it stays in state; theirs is read straight off the table
+     and cannot change under us. */
+  const theirPhoto = useSignedAvatar(isMe ? null : row?.avatar || null);
+
   useEffect(() => {
     let alive = true;
-    if (myAvatarPath) signedAvatarUrl(myAvatarPath).then((u) => alive && setPhoto(u));
+    if (isMe && myAvatarPath) signedAvatarUrl(myAvatarPath).then((u) => alive && setPhoto(u));
     return () => {
       alive = false;
     };
-  }, [myAvatarPath]);
+  }, [isMe, myAvatarPath]);
 
   const pickPhoto = async (file) => {
     if (!file) return;
@@ -307,9 +314,9 @@ export default function PlayerCard({
                 boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
               }}
             >
-              {photo ? (
+              {(isMe ? photo : theirPhoto) ? (
                 <img
-                  src={photo}
+                  src={isMe ? photo : theirPhoto}
                   alt=""
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />

@@ -44,6 +44,7 @@ import { GAME, NO_SELECT } from "../gameSurface.js";
 export { screenCorner } from "./seatCorners.js";
 import { screenCorner as cornerFor } from "./seatCorners.js";
 import Die from "./Dice.jsx";
+import { useSignedAvatar, AvatarPhoto } from "../gameAvatar.jsx";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -162,7 +163,7 @@ function ChatParticle({ onOpen, label, unread }) {
    turn: an arc drawn on everyone would be four clocks, three of them
    lying. It sits OUTSIDE the circle so the circle itself stays a
    circle only. */
-function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, size = 44 }) {
+function Avatar({ name, photo, colour, ink, isTurn, remaining, seconds, label, size = 52 }) {
   const { ts } = useI18n();
   const arcR = size / 2 + 4;
   const box = arcR * 2 + 6;
@@ -226,6 +227,7 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, size = 4
       <span
         aria-hidden="true"
         style={{
+          position: "relative",
           width: size,
           height: size,
           borderRadius: "50%",
@@ -236,11 +238,16 @@ function Avatar({ name, colour, ink, isTurn, remaining, seconds, label, size = 4
           justifyContent: "center",
           fontWeight: 800,
           fontSize: ts(Math.round(size * 0.45)),
+          overflow: "hidden",
           /* MATTE, and deep. No border, no gloss, no gradient. */
           boxShadow: "0 6px 14px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.4)",
         }}
       >
         {initialOf(name)}
+        {/* Over the initial rather than instead of it, so nothing
+            moves when the signed URL arrives and anybody without a
+            photo keeps a circle that looks deliberate. */}
+        <AvatarPhoto src={photo} />
       </span>
       {isTurn && urgent && (
         <span
@@ -440,12 +447,22 @@ function Plate({
      tunnel, a grandchild wanting the phone. So the line says the thing
      that is true in both cases and accuses nobody of walking out. */
   const takenOver = isPerson && row?.presence === "away";
-  const size = isMe ? 46 : compact ? 38 : 42;
+  /* Signed here rather than in Avatar so the hook runs on every
+     plate whether or not that seat has a face — a hook behind a
+     condition is a hook that changes count between renders. */
+  const photo = useSignedAvatar(row?.avatar || null);
+  /* A FIFTH BIGGER, all round. 44/42/38 were sized against a
+     board that has since grown and a plate that has since lost
+     its name chip, its turn line and its badges — the circles were
+     the only thing left and they were still sized as one element
+     among seven. */
+  const size = isMe ? 52 : compact ? 46 : 50;
 
   const circle = (
     <span style={{ position: "relative", display: "inline-flex" }}>
       <Avatar
         name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
+        photo={photo}
         colour={isMe ? GAME.you : SEAT_COLORS[seat]}
         ink={isMe ? GAME.youInk : SEAT_INK[seat]}
         isTurn={isTurn}
@@ -491,53 +508,21 @@ function Plate({
     </SeatTap>
   );
 
-  /* YOU: circle and dice, side by side, nothing written. You know who
-     you are, and the sixty pixels a name chip costs are pixels the
-     dice and the board want more. */
-  if (isMe) {
-    return (
-      <div
-        style={{
-          ...NO_SELECT,
-          display: "flex",
-          flexDirection: align === "end" ? "row-reverse" : "row",
-          alignItems: "center",
-          gap: 12,
-          minWidth: 0,
-        }}
-      >
-        {tapped}
-        <SeatDice
-          dice={dice}
-          diceCount={diceCount}
-          isTurn={isTurn}
-          isMe
-          canRoll={canRoll}
-          onRoll={onRoll}
-          onPickDie={onPickDie}
-          rolling={rolling}
-          tumbleFaces={tumbleFaces}
-          lastValue={lastValue}
-        />
-        {/* Said to a screen reader, never drawn. The arrow at the dice
-            is the visible half of this. */}
-        <span
-          style={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {isTurn ? t("ludo.seat.yourTurn") : ""}
-        </span>
-      </div>
-    );
-  }
+  /* ONE SHAPE FOR EVERY PLAYER.
 
-  /* EVERYONE ELSE: circle, dice beside it, name underneath. */
+     There were two: yours was a circle and dice with nothing under
+     them, on the reasoning that you know who you are and the sixty
+     pixels a name costs are pixels the board wants more. Standing
+     at the table it reads as the one seat that has not been dealt
+     in — three people with names and a nameless disc in the corner.
+
+     So it is one branch. The differences that remain are the ones
+     that mean something: the particle is on your own shoulder, only
+     your dice are a button, and your label says you.
+
+     It also stops the two from drifting: they were meant to look
+     alike and the only thing keeping them alike was me remembering
+     to change both. */
   return (
     <div
       style={{
@@ -555,7 +540,7 @@ function Plate({
           display: "flex",
           flexDirection: align === "end" ? "row-reverse" : "row",
           alignItems: "center",
-          gap: 8,
+          gap: isMe ? 12 : 8,
           minWidth: 0,
         }}
       >
@@ -564,8 +549,10 @@ function Plate({
           dice={dice}
           diceCount={diceCount}
           isTurn={isTurn}
-          isMe={false}
-          canRoll={false}
+          isMe={isMe}
+          canRoll={isMe ? canRoll : false}
+          onRoll={isMe ? onRoll : undefined}
+          onPickDie={isMe ? onPickDie : undefined}
           rolling={rolling}
           tumbleFaces={tumbleFaces}
           lastValue={lastValue}
@@ -584,12 +571,14 @@ function Plate({
           textShadow: "0 1px 3px rgba(0,0,0,0.7)",
         }}
       >
-        {/* A seat kept for somebody carries THEIR name, not the name
-            of the bot minding it. */}
-        {pending || name}
+        {/* Your own name if the table knows it, and "you" if it does
+            not — never an empty label, because an empty one is the
+            gap this item is about. A seat kept for somebody carries
+            THEIR name, not the name of the bot minding it. */}
+        {isMe ? row?.name || t("ludo.seat.you") : pending || name}
       </span>
       {/* One short line, and only when there is one to say. */}
-      {(pending || takenOver) && (
+      {!isMe && (pending || takenOver) && (
         <span
           style={{
             fontSize: ts(12),
@@ -605,6 +594,20 @@ function Plate({
           {pending ? t("ludo.table.waiting") : t("ludo.seat.botHasSeat")}
         </span>
       )}
+      {/* Said to a screen reader, never drawn: the arrow at the dice
+          is the visible half of this. */}
+      <span
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {isMe && isTurn ? t("ludo.seat.yourTurn") : ""}
+      </span>
     </div>
   );
 }

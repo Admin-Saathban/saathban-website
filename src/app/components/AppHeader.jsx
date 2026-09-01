@@ -17,6 +17,7 @@
    appears only where there is something to go back to.
    ════════════════════════════════════════════════ */
 
+import { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
@@ -57,6 +58,88 @@ export default function AppHeader() {
   const { open: notifOpen, closeDrawer: closeNotif } = useDrawer(NOTIFICATIONS_DRAWER_ID);
   /* Both bars move together, so the frame behaves as one thing (§5). */
   const shuttered = useShutter() && !notifOpen;
+
+  /* ── THE STATUS BAR FOLLOWS THE CONTENT (Android) ──
+
+     Chrome on Android paints its status strip from the theme-color meta
+     and honours changes to it at runtime, which is why Facebook's strip
+     looks like part of the app rather than a lid on it: theirs is jet
+     while their header is up and page-coloured the moment it goes.
+     Ours was a constant, so the strip stayed jet over a sage page and
+     read as a band.
+
+     IT READS THE PAGE RATHER THAN BEING TOLD ABOUT IT. The obvious
+     version is a list of routes that have a dark header — and that list
+     would be wrong the first time another lane adds or removes one. The
+     Messages world already draws its own dark header that this
+     component knows nothing about, and hard-coding it would have been
+     the fourth list in this app that has to agree with something else.
+
+     So it asks what is actually painted at the top of the viewport: the
+     topmost element at y=1 that has a real background. If that is dark,
+     the strip matches it and the chrome continues into the status bar.
+     If it is not — the bars have shuttered, or the route has no header
+     — the strip takes the ground and melts into the page.
+
+     After a frame, because this runs on the render that flips the
+     shutter and the transform has not landed yet; asked too early it
+     reads the header that is still on its way out. */
+  useEffect(() => {
+    let raf = 0;
+    const paint = () => {
+      let tag = document.querySelector('meta[name="theme-color"]');
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute("name", "theme-color");
+        document.head.appendChild(tag);
+      }
+      let colour = C.ground;
+      const el = document.elementFromPoint(Math.round(window.innerWidth / 2), 1);
+      for (let n = el; n; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+          const m = bg.match(/\d+/g);
+          if (m) {
+            const [r, g, b] = m.map(Number);
+            /* Dark enough to be chrome rather than page. The ground is
+               239,243,238 and the jet is 15,17,19 — nothing in this
+               palette sits between them, so the midpoint is safe. */
+            if ((r + g + b) / 3 < 128) colour = "#0F1113";
+          }
+          break;
+        }
+      }
+      if (tag.getAttribute("content") !== colour) tag.setAttribute("content", colour);
+    };
+    /* READ TWICE, AND THIS IS THE WHOLE BUG THE FIRST VERSION HAD.
+
+       A frame is not long enough. The shutter is a 180ms transform, so
+       two frames after the state flips the header is still most of the
+       way across y=1 — the read caught the header ON ITS WAY OUT and
+       wrote jet for a bar that was leaving. Combined with the mount
+       case below it produced an exactly inverted strip: page-coloured
+       while the header was up, jet once it had gone.
+
+       So: once after a frame, which is right for a route change where
+       nothing animates, and again after the transition has finished. */
+    const settle = window.setTimeout(paint, 260);
+    raf = window.requestAnimationFrame(() => { raf = window.requestAnimationFrame(paint); });
+    return () => { window.cancelAnimationFrame(raf); window.clearTimeout(settle); };
+  /* [shuttered, pathname] only. My first version also listed hideHere,
+     which is declared fifty lines BELOW this — a ReferenceError out of
+     the temporal dead zone, and the build passed because that is a
+     runtime error. It was also redundant: hideHere is derived from
+     pathname, so pathname already covers it. Second time this week. */
+    /* `profile` is in here because this component renders NOTHING until
+       the session arrives. The first run happened against a page with
+       no header in it at all, read the body, and wrote the ground — and
+       since neither the path nor the shutter then changed, it never ran
+       again. The strip stayed page-coloured under a jet header for the
+       whole session.
+
+       A dependency list is a claim about what the effect reads. This
+       one reads the DOM, so it has to list what changes the DOM. */
+  }, [shuttered, pathname, profile]);
 
   const home = profile ? roleHomePath(profile.role) : "/app";
   /* A way back on every inner page, except the admin shell, which has

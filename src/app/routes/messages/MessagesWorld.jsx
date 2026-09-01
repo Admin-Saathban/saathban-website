@@ -136,6 +136,7 @@ export default function MessagesWorld() {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
+  const rootRef = useRef(null);
   const { state } = useLocation();
   const [confirmLeave, setConfirmLeave] = useState(false);
 
@@ -163,8 +164,40 @@ export default function MessagesWorld() {
      slow interval. No socket, no heartbeat storm — see 0076. */
   useEffect(() => {
     if (!profile?.id) return undefined;
-    touchPresence();
-    const t2 = setInterval(touchPresence, 90_000);
+
+    /* MOUNTED IS NOT THE SAME AS OPEN, and it stopped being the same
+       when visited tabs began staying mounted. This interval used to
+       clear on unmount, which was a fair proxy for "the person left
+       Messages" — the world is now held aside with display:none and
+       never unmounts, so the heartbeat would go on saying somebody is
+       here for the rest of the session.
+
+       That is not a wasted request, it is a false statement about a
+       person: isAbout() calls anyone seen in the last three minutes
+       present, and presence drives the reconnect row and the dots on
+       Chats. Somebody who opened Messages once at breakfast would read
+       as around all day, to everyone.
+
+       offsetParent is null exactly when an ancestor is display:none,
+       which is how the shell holds a tab aside, and document.hidden
+       covers the phone going in a pocket. Presence is a claim about
+       attention, so it is only made while there is attention. */
+    /* A BOX, NOT offsetParent. offsetParent is null for any
+       position:fixed element whatever its visibility, and this world is
+       fixed — so the first version of this gate reported "not here"
+       with the world open on screen and would have stopped presence
+       working altogether. Caught by counting touch_presence requests:
+       zero while the world was plainly visible.
+
+       A display:none ancestor collapses the rect to 0x0, which is true
+       of fixed elements too. */
+    const here = () => {
+      if (document.hidden) return false;
+      const r = rootRef.current?.getBoundingClientRect();
+      return !!r && r.width > 0 && r.height > 0;
+    };
+    if (here()) touchPresence();
+    const t2 = setInterval(() => { if (here()) touchPresence(); }, 90_000);
     return () => clearInterval(t2);
   }, [profile?.id]);
 
@@ -192,6 +225,7 @@ export default function MessagesWorld() {
   return (
     <div
       dir={meta.dir}
+      ref={rootRef}
       data-world="messages"
       style={{
         position: "fixed",

@@ -13,6 +13,7 @@
    business as much as the thread's.
    ════════════════════════════════════════════════ */
 
+import { useSyncExternalStore } from "react";
 import supabase from "../../lib/supabase.js";
 
 /* Presence is "was she about in the last few minutes", not a channel.
@@ -280,4 +281,87 @@ export function markDriftedSeen(now = Date.now()) {
 
 export function hushDriftedRow(now = Date.now()) {
   try { localStorage.setItem(HUSH_KEY, String(now)); } catch { /* fine */ }
+}
+
+/* ════════════════════════════════════════════════
+   The unread count behind the Messages tab badge.
+
+   CHATS, NOT MESSAGES, and that is the semantic choice rather than the
+   cheap one. A badge answers "how many conversations want me" — which
+   is what a person is deciding about when they glance at a tab. Counting
+   messages says 47 because one person wrote a lot, which is a number
+   about somebody else's evening rather than about the reader's day.
+
+   It is also the number Chats already shows: unread is a boolean per
+   thread there (line ~110), so the badge and the list cannot disagree.
+
+   ONE STORE, MANY SUBSCRIBERS. The bar is mounted app-wide and renders
+   constantly, so the hook does no work per render: useSyncExternalStore
+   hands back a cached integer and only the store ever fetches.
+
+   It refreshes on a slow interval, on focus, and on saath:chats-read —
+   which ChatsList and the thread can dispatch when they mark something
+   read, so the badge clears at the moment a person reads rather than up
+   to a minute later.
+   ════════════════════════════════════════════════ */
+
+let unreadCount = 0;
+let unreadTimer = null;
+const unreadSubs = new Set();
+
+async function readUnreadChats() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return 0;
+    const { data: reqs } = await supabase
+      .from("dm_requests")
+      .select("id")
+      .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      .eq("status", "accepted");
+    const ids = (reqs || []).map((r) => r.id);
+    if (!ids.length) return 0;
+    /* Distinct threads, not rows: the count is conversations. */
+    const { data: msgs } = await supabase
+      .from("dm_messages")
+      .select("request_id")
+      .in("request_id", ids)
+      .neq("sender_id", user.id)
+      .is("read_at", null);
+    return new Set((msgs || []).map((m) => m.request_id)).size;
+  } catch {
+    /* A badge is not worth breaking a bar over. Keep the last number. */
+    return unreadCount;
+  }
+}
+
+async function refreshUnread() {
+  const next = await readUnreadChats();
+  if (next === unreadCount) return;          /* no needless re-render */
+  unreadCount = next;
+  for (const fn of unreadSubs) fn();
+}
+
+export function refreshUnreadChats() { refreshUnread(); }
+
+function subscribeUnread(cb) {
+  unreadSubs.add(cb);
+  if (unreadSubs.size === 1) {
+    refreshUnread();
+    unreadTimer = setInterval(refreshUnread, 60_000);
+    window.addEventListener("focus", refreshUnread);
+    window.addEventListener("saath:chats-read", refreshUnread);
+  }
+  return () => {
+    unreadSubs.delete(cb);
+    if (unreadSubs.size === 0) {
+      clearInterval(unreadTimer);
+      unreadTimer = null;
+      window.removeEventListener("focus", refreshUnread);
+      window.removeEventListener("saath:chats-read", refreshUnread);
+    }
+  };
+}
+
+export function useUnreadChats() {
+  return useSyncExternalStore(subscribeUnread, () => unreadCount, () => 0);
 }

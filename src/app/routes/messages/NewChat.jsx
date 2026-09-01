@@ -35,6 +35,7 @@ export default function NewChat() {
   const [people, setPeople] = useState(null);   /* null = loading */
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -79,8 +80,40 @@ export default function NewChat() {
         {t("msg.newChat.pick")}
       </h2>
 
+      {/* SEARCH, which is the third path the owner asked for and the one
+          that did not exist. "Find someone to write to" pointed at this
+          same screen, so two of the three controls were one control
+          wearing two labels — and neither of them searched anything.
+
+          Shown only past a handful of people: a search box above three
+          names is furniture, and it is the kind that makes a screen read
+          as a placeholder. */}
+      {people.length > 5 && (
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("msg.newChat.search")}
+          aria-label={t("msg.newChat.search")}
+          style={{
+            width: "100%", boxSizing: "border-box",
+            minHeight: A11Y.minTapTargetPx, marginBottom: 12,
+            fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit",
+            color: C.textMain, background: C.surface,
+            border: `1px solid ${C.warmGray}`, borderRadius: 12, padding: "10px 14px",
+          }}
+        />
+      )}
+
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {people.map((p) => (
+        {people
+          .filter((p) => {
+            const needle = q.trim().toLowerCase();
+            if (!needle) return true;
+            return (p.full_name || "").toLowerCase().includes(needle)
+              || (p.city || "").toLowerCase().includes(needle);
+          })
+          .map((p) => (
           <li key={p.id}>
             <button
               type="button"

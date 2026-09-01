@@ -3157,6 +3157,13 @@ const en = {
     },
 
     setup: {
+      timer: "How long is a turn?",
+      timerHint: "When it runs out, a bot plays that turn so nobody is left waiting.",
+      timerSecs: "{n}s",
+      timerRelaxed: "Relaxed",
+      remember: "Keep these rules?",
+      rememberOnce: "Just this table",
+      rememberAlways: "All my tables",
       defaultTitle: "{game} with {host}",
       subtitle: "Set your table, then it opens by itself",
       diceOneCard: "One die — classic",

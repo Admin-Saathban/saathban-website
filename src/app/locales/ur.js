@@ -2953,6 +2953,13 @@ const ur = {
     },
 
     setup: {
+      timer: "ایک باری کتنی لمبی؟",
+      timerHint: "وقت ختم ہو جائے تو وہ باری بوٹ کھیل دیتا ہے، کوئی انتظار میں نہیں رہتا۔",
+      timerSecs: "{n} سیکنڈ",
+      timerRelaxed: "آرام سے",
+      remember: "یہ قواعد یاد رکھیں؟",
+      rememberOnce: "صرف یہ میز",
+      rememberAlways: "میری سب میزیں",
       defaultTitle: "{host} کے ساتھ {game}",
       subtitle: "میز سجائیے، پھر یہ خود کھل جائے گی",
       diceOneCard: "ایک نرد — روایتی",

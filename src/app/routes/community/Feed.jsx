@@ -1558,9 +1558,21 @@ export default function Feed({ composer = true, embedded = false }) {
           await load();
         });
       } else if (kind === "delete") {
-        await deleteOwnPost(target.id);
-        await load();
+        /* RESPONSIVENESS.md rule 2. This awaited the delete AND a full
+           feed reload before anything moved — the same shape as the
+           pin measurement (373ms → 6ms), and worse here, because the
+           person is watching the thing they asked to remove sit there.
+           The card goes now; the request follows; a refusal puts it
+           back exactly as it was. */
+        const prior = posts;
+        setPosts((ps) => (ps || []).filter((x) => x.id !== target.id));
         showToast(t("feedback.postDeleted"));
+        deleteOwnPost(target.id)
+          .then(() => load())
+          .catch(() => {
+            setPosts(prior);
+            raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+          });
       } else if (kind === "dm") {
         try {
           await sendDmRequest(target.author_id);
@@ -2145,7 +2157,12 @@ export default function Feed({ composer = true, embedded = false }) {
                        succeeded by here, and on a slow connection the
                        reload is seconds of silence after the fact. */
                     showToast(t("feedback.postUpdated"));
-                    await load();
+                    /* Not awaited: the caller keeps the button on
+                       "Saving…" until this resolves, so awaiting the
+                       reconcile held the editor open for a second
+                       round trip after the words were already saved
+                       and on screen. */
+                    load();
                   } catch {
                     raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
                   }

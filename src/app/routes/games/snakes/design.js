@@ -98,14 +98,33 @@ export function buildBoard({ snakes = DEFAULTS.snakes, ladders = DEFAULTS.ladder
   for (const s of snakeList) jumps[s.from] = s.to;
   for (const l of ladderList) jumps[l.from] = l.to;
 
-  return { snakes: snakeList, ladders: ladderList, jumps, counts: { snakes: nS, ladders: nL } };
+  const board = { snakes: snakeList, ladders: ladderList, jumps, counts: { snakes: nS, ladders: nL } };
+
+  /* THROWN, NOT LOGGED. The pools are static, so a fault here is a
+     typo in this file and every board the app can build is wrong —
+     there is no partial failure to degrade into. A thrown error is
+     seen the first time anyone opens the setup room; a console
+     warning is seen by nobody, and the alternative to both is a board
+     that quietly eats a player. */
+  const problems = problemsWith(board);
+  if (problems.length) {
+    throw new Error(`snakes: the board pools are not legal — ${problems.join("; ")}`);
+  }
+
+  return board;
 }
 
 /* The same checks board.js runs, minus the fixed-count ones that a
    configurable board cannot satisfy. Kept because the pools are
    hand-written and a typo in one of them is a board that eats a
-   player — and it is called on every build rather than in a test,
-   since the board is now assembled at run time. */
+   player.
+
+   This comment used to claim it was "called on every build rather
+   than in a test". It was not called by anything at all — exported,
+   correct, and never once run, which is the exact failure this lane
+   has been finding in other people's code all week, written by me,
+   about my own check, in a comment asserting the opposite. buildBoard
+   calls it now, which is what makes the sentence true. */
 export function problemsWith(board) {
   const out = [];
   const seen = new Map();

@@ -35,6 +35,7 @@ import { DEFAULTS, LIMITS, PLAYERS, boardFor, seatColorIdx, freeColors } from ".
 import { colorOf } from "./skins.js";
 import { DAMASK_CSS } from "./SnakesBoard.jsx";
 import Icon from "../../../components/Icon.jsx";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 const PLUM = "#9A4A8E";
 const GLASS = "rgba(255,255,255,.07)";
@@ -144,6 +145,18 @@ function Row({ children, onClick, as = "div" }) {
 /* ══ HOUSE RULES, on their own screen ════════════════════════════ */
 function HouseRules({ board, snakes, ladders, onSnakes, onLadders, canEdit, onBack, busy }) {
   const { t, ts } = useI18n();
+
+  /* THE OTHER SHAPE OF OPEN SURFACE, and the one no audit for
+     role="dialog" can see: this is not a sheet over the setup room,
+     it REPLACES it. A boolean decides which of two screens renders,
+     the trigger only exists while it is closed, and there is no
+     dialog, no scrim and no menu anywhere in it.
+
+     So back had no entry to spend and did what it does — left the
+     game world altogether, from a screen whose entire visible
+     affordance is a back arrow that goes somewhere else. Mounted only
+     while open, so the hook takes true. */
+  useBackToClose(true, onBack);
   return (
     <div style={{ ...roomStyle, padding: "14px 16px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
       <style>{CSS}</style>

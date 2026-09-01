@@ -122,6 +122,14 @@ const CROWN_D =
 
 /* Six directions on a ring, deliberately not eight: an odd scatter
    reads as a burst, a regular one reads as a compass rose. */
+/* Eighteen directions for a celebration, six for an impact. A burst
+   wants to look thrown rather than aimed, so the reach varies with
+   the index below rather than every piece flying the same distance. */
+const CONFETTI = Array.from({ length: 18 }, (_, i) => {
+  const a = (i / 18) * Math.PI * 2 + 0.21;
+  return [Math.cos(a), Math.sin(a)];
+});
+
 const SPARKS = Array.from({ length: 6 }, (_, i) => {
   const a = (i / 6) * Math.PI * 2 + 0.35;
   return [Math.cos(a), Math.sin(a)];
@@ -460,7 +468,7 @@ const FLIGHT_MS = ARC_MS;
    did not walk there. It shakes once, where it landed, so the person
    whose goti it was sees what happened rather than merely finding it
    missing later. */
-function useCaptured(pieces) {
+function useCaptured(pieces, onTaken) {
   const [hit, setHit] = useState(() => new Map());
   const prevRef = useRef(null);
   const key = JSON.stringify(pieces);
@@ -480,6 +488,11 @@ function useCaptured(pieces) {
       })
     );
     if (!sent.size) return undefined;
+    /* WHOSE goti it was. The move payload says a capture happened
+       and never who lost the piece, so the only place that answer
+       exists is here, in the diff between two boards. The strip
+       under the board wants it in words. */
+    onTaken?.([...new Set([...sent.keys()].map((k) => Number(k.split(":")[0])))]);
     setHit(sent);
     const id = window.setTimeout(() => setHit(new Map()), 700);
     return () => window.clearTimeout(id);
@@ -490,6 +503,8 @@ function useCaptured(pieces) {
 }
 
 function useWalk(pieces, isSilent) {
+  /* One thud per flight, fired from inside a frame loop. */
+  const thudded = useRef(false);
   const [shown, setShown] = useState(pieces);
   /* Pieces currently flying home, key "seat:index" → interpolated
      [col, row]. A captured goti is NOT on the track any more, so its
@@ -641,6 +656,7 @@ function useWalk(pieces, isSilent) {
     });
 
     const started = performance.now();
+    thudded.current = false;
     let raf = 0;
     let lastStep = -1;
     const crossed = [];
@@ -686,6 +702,14 @@ function useWalk(pieces, isSilent) {
 
       /* ── The taken goti: flinch, then fly ── */
       if (returners.length) {
+        /* THE LANDING. A goti sent home is put down hard at the END
+           of its flight, not at the start — the capture's own
+           falling fourth already marks the moment of contact, and a
+           second sound there would be one event with two noises. */
+        if (!thudded.current && elapsed >= SHAKE_MS + ARC_MS - 90) {
+          thudded.current = true;
+          playSound("thud");
+        }
         if (elapsed < SHAKE_MS) {
           /* It has not left yet. It is still on the square it was
              taken on, having a moment about it. */
@@ -1242,6 +1266,9 @@ export default function LudoBoard({
   /* isSilent(seat) → that player's sounds are muted for this
      viewer, at this table. */
   isSilent,
+  /* onCapture(seats) — whose gotis were just sent home. Read off
+     the board, because nothing in the move payload says. */
+  onCapture,
 }) {
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
@@ -1277,7 +1304,7 @@ export default function LudoBoard({
   /* Fed the TRUTH, not the walked positions: a captured goti snaps
      home rather than strolling back, so the shake has to key off the
      real board or it would fire a beat late. */
-  const captured = useCaptured(live);
+  const captured = useCaptured(live, onCapture);
   const pairsMoved = state?.pairs_moved || {};
   const spin = povRotation(mySeat);
 
@@ -1725,25 +1752,38 @@ export default function LudoBoard({
                       pointerEvents="none"
                       aria-hidden="true"
                     />
-                    {/* A PUFF OF CONFETTI. The ring alone said
-                        "something happened here"; six little stars
-                        thrown off it say what kind of something. It
-                        is the capture's own sparkle at half the
-                        reach and in gold rather than white, because
-                        this is the good version of the same
-                        moment. Reduced motion removes it with every
-                        other .sb-spark. */}
-                    {SPARKS.map(([dx, dy], k) => (
+                    {/* CONFETTI, IN THIS PLAYER'S OWN COLOUR.
+
+                        It was six small gold stars at a quarter of a
+                        cell — the capture's sparkle, halved. The
+                        owner's verdict on getting a goti home was
+                        that it barely registers, and half of a
+                        capture is precisely a thing that barely
+                        registers.
+
+                        Eighteen pieces now, thrown further, in the
+                        seat's own colour with its light tone and
+                        white through it — so somebody watching from
+                        across the table knows WHOSE moment it was
+                        without reading anything. Reduced motion
+                        removes it with every other .sb-spark. */}
+                    {CONFETTI.map(([dx, dy], k) => (
                       <path
                         key={`hs-${seat}-${i}-${k}`}
                         className="sb-spark"
                         d={sparkPath(
-                          cx + dx * CELL * (0.24 + ((k * 7) % 5) * 0.05),
-                          cy + dy * CELL * (0.24 + ((k * 7) % 5) * 0.05),
-                          CELL * (0.07 + ((k * 3) % 4) * 0.02)
+                          cx + dx * CELL * (0.34 + ((k * 7) % 6) * 0.09),
+                          cy + dy * CELL * (0.34 + ((k * 7) % 6) * 0.09),
+                          CELL * (0.07 + ((k * 3) % 4) * 0.03)
                         )}
-                        fill={k % 3 === 0 ? "#FFFFFF" : "#F3CE5E"}
-                        style={{ animationDelay: `${k * 30}ms` }}
+                        fill={
+                          k % 4 === 0
+                            ? "#FFFFFF"
+                            : k % 4 === 1
+                            ? SEAT_LIGHT[seat]
+                            : SEAT_COLORS[seat]
+                        }
+                        style={{ animationDelay: `${k * 22}ms` }}
                         pointerEvents="none"
                         aria-hidden="true"
                       />

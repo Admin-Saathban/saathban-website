@@ -2315,6 +2315,7 @@ const en = {
       cta: "New chat",
       pick: "Who would you like to write to?",
       nobodyYet: "When you and somebody are connected, they appear here and you can write to them. Out & about and Groups are good places to meet people.",
+      search: "Search the people you know",
     },
     title: "Messages",
     back: "Back",
@@ -2329,7 +2330,11 @@ const en = {
     unreadAria: "Unread",
     emptyTitle: "No conversations yet",
     emptyBody: "When you write to someone, or they write to you, it will be here.",
-    emptyCta: "Find someone to write to",
+    /* Was "Find someone to write to", which pointed at the same screen
+       as "New chat" — one door wearing two names. Each label now says
+       which of the two it is. */
+    emptyCta: "Write to someone you know",
+    emptyInvite: "Invite someone new",
     noMatches: "Nobody by that name",
     preview: {
       new: "Say hello",
@@ -2759,6 +2764,11 @@ const en = {
 
   // ─── Ludo (routes/games/ludo/) ───
   ludo: {
+    /* The two things in a game of ludo worth saying out loud. */
+    moment: {
+      took: "{who} took one of {whose} gotis",
+      home: "{who} got a goti home!",
+    },
     back: "Back to Games",
     /* A player's card, opened from their circle at the table. */
     card: {

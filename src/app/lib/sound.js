@@ -418,24 +418,47 @@ function sYourTurn(c, t0) {
    moment; winning is the end of the game. If they sounded alike
    the second would stop meaning anything. */
 function sHome(c, t0) {
-  tone(c, t0, { freq: 523.25, dur: 0.16, type: "triangle", peak: 0.16, cutoff: 4000 });
-  tone(c, t0 + 0.09, { freq: 659.25, dur: 0.2, type: "triangle", peak: 0.15, cutoff: 4000 });
-  tone(c, t0 + 0.17, { freq: 1046.5, dur: 0.34, type: "sine", peak: 0.11, cutoff: 6000 });
-  /* the puff: a short breath of air, swept down, so the chime has
-     something physical under it rather than floating */
-  hit(c, t0 + 0.02, { dur: 0.22, peak: 0.1, band: 3200, sweepTo: 900, q: 0.8 });
+  /* FOUR NOTES CLIMBING, not three — the owner's word for the old
+     one was that getting a goti home barely registers, and a
+     three-note figure at a sixth of the volume of the win was
+     exactly that. It rises further, lands on an octave and holds
+     it, and has a bell on top. Still smaller than winning: that is
+     the end of the game and this is a good moment inside one. */
+  tone(c, t0, { freq: 523.25, dur: 0.16, type: "triangle", peak: 0.2, cutoff: 4200 });
+  tone(c, t0 + 0.085, { freq: 659.25, dur: 0.18, type: "triangle", peak: 0.2, cutoff: 4200 });
+  tone(c, t0 + 0.17, { freq: 783.99, dur: 0.2, type: "triangle", peak: 0.19, cutoff: 4600 });
+  tone(c, t0 + 0.26, { freq: 1046.5, dur: 0.6, type: "triangle", peak: 0.22, cutoff: 6000 });
+  tone(c, t0 + 0.28, { freq: 2093.0, dur: 0.42, type: "sine", peak: 0.07, cutoff: 8000 });
+  /* the puff of air the confetti goes out on */
+  hit(c, t0 + 0.02, { dur: 0.26, peak: 0.13, band: 3400, sweepTo: 900, q: 0.8 });
 }
 
-/* A MESSAGE LEAVING. About two hundred milliseconds of air moving
-   away from you — a band of noise sweeping UP and thinning out,
-   which is the shape every "sent" sound has had since the first
-   one, because it is what a thing departing actually sounds like.
+/* A MESSAGE LEAVING. Two hundred milliseconds of air, sweeping
+   DOWNWARD.
 
-   No pitch in it at all. A note would make it an event; this is
-   meant to be felt and not noticed. */
+   It swept UP before, which is the shape of something arriving,
+   and the owner's verdict was that it did not sound right. He is
+   describing a real thing: a rising sweep is a whistle and reads
+   as attention being called; a falling one is a breath and reads
+   as something going away from you. Same two hundred milliseconds,
+   the other direction, and it stopped being a noise and started
+   being a send.
+
+   Quiet enough to sit under conversation, and no pitch in it at
+   all — a note would make it an event. */
 function sChatSend(c, t0) {
-  hit(c, t0, { dur: 0.2, peak: 0.13, band: 700, sweepTo: 4200, q: 0.6, type: "bandpass" });
-  hit(c, t0 + 0.03, { dur: 0.14, peak: 0.05, band: 1800, sweepTo: 6000, q: 0.5 });
+  hit(c, t0, { dur: 0.2, peak: 0.11, band: 4200, sweepTo: 700, q: 0.7, type: "bandpass" });
+  hit(c, t0 + 0.02, { dur: 0.16, peak: 0.045, band: 2600, sweepTo: 500, q: 0.5 });
+}
+
+/* A GOTI SENT HOME LANDING. Short, low, and physical — the sound
+   of a piece being put down hard rather than a sound effect about
+   losing. It plays under the capture's own falling fourth, at the
+   far end of the flight rather than at the start, because that is
+   when the thing actually touches down. */
+function sThud(c, t0) {
+  tone(c, t0, { freq: 132, to: 62, dur: 0.16, type: "sine", peak: 0.2, cutoff: 500 });
+  hit(c, t0, { dur: 0.09, peak: 0.14, band: 260, q: 0.9 });
 }
 
 /* A press. Almost subliminal — it exists so a tap on a die or a goti
@@ -457,6 +480,7 @@ const VOICES = {
   yourTurn: sYourTurn,
   home: sHome,
   chatSend: sChatSend,
+  thud: sThud,
   tap: sTap,
 };
 
@@ -573,51 +597,136 @@ export function playHopRun(count, spacingMs = 190) {
    should be the thing you notice stopping, not the thing you notice
    starting. */
 
-const ROOTS = { ludo: 110, snakes: 98, carrom: 123.47, daily_puzzle: 130.81 };
+/* ── ONE TRACK PER GAME ────────────────────────────────────────
+
+   It was a DRONE — three triangles a fifth apart through a slow
+   filter sweep, the same for every game with only the root note
+   changed. A room tone. It did the job it was written for and the
+   owner has asked for something else: music with a step in it.
+
+   LUDO IS A LIGHT MARCH. A 230ms pulse, which is about 260 to the
+   minute and reads as walking rather than hurrying; a soft drum on
+   the beat; a plucked line over the top in a major key. Forward,
+   never frantic, and it must survive twenty minutes without
+   becoming something you want to turn off — so the top line moves
+   through a small set of notes rather than repeating one phrase at
+   you.
+
+   SNAKES IS A WARM LOOP with no drum at all: plucked santoor-ish
+   phrases every 430ms, family evening, nothing driving it.
+
+   BOTH ARE SCHEDULED AHEAD ON THE AUDIO CLOCK, not with setTimeout
+   — a timer that fires late makes a march limp, and a phone with a
+   game on it has plenty of reasons to fire a timer late. One
+   interval tops the schedule up every couple of seconds; WebAudio
+   plays what has been booked, exactly when it was booked.
+
+   The whole thing hangs off one gain that ramps in and out, so
+   nothing here has to know about the mute or the slider. ── */
+
 let bed = null;
 let bedWanted = null; // a game key we should be playing once unlocked
 
+/* One plucked note: a short pitched envelope through a lowpass,
+   which is a santoor if you keep the attack fast and the tail
+   short. */
+function pluck(c, at, freq, into, { peak = 0.05, dur = 0.42, cutoff = 2600 } = {}) {
+  const o = c.createOscillator();
+  o.type = "triangle";
+  o.frequency.value = freq;
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(cutoff, at);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(200, cutoff * 0.28), at + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(lp); lp.connect(g); g.connect(into);
+  o.start(at);
+  o.stop(at + dur + 0.03);
+}
+
+/* The soft drum under the march: a low body with a breath of air
+   on it, and nothing bright — a click here would turn a march into
+   a metronome. */
+function beat(c, at, into, level) {
+  const o = c.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(150, at);
+  o.frequency.exponentialRampToValueAtTime(74, at + 0.1);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(level, at + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.13);
+  o.connect(g); g.connect(into);
+  o.start(at);
+  o.stop(at + 0.16);
+}
+
+/* D major, low and quiet, under everything. */
+const MARCH_BASS = [146.83, 146.83, 110.0, 110.0, 123.47, 123.47, 98.0, 98.0];
+/* The line over the top: D E F# A B A F# E, which climbs and comes
+   home. Two bars of it, then two bars of rest, so it breathes. */
+const MARCH_TOP = [
+  587.33, 659.25, 739.99, 880.0, 987.77, 880.0, 739.99, 659.25,
+  null, null, 587.33, null, 493.88, null, 587.33, null,
+];
+/* Snakes: a pentatonic phrase that wanders and returns. */
+const SANTOOR = [
+  392.0, 440.0, 523.25, 587.33, 523.25, 440.0, 392.0, 349.23,
+  392.0, 523.25, 587.33, 659.25, 587.33, 523.25, 440.0, 392.0,
+];
+
 function buildBed(c, key) {
-  const root = ROOTS[key] || 110;
   const out = c.createGain();
   out.gain.value = 0;
   const warm = c.createBiquadFilter();
   warm.type = "lowpass";
-  warm.frequency.value = 520;
+  warm.frequency.value = 3200;
   warm.Q.value = 0.4;
   out.connect(warm);
   warm.connect(master);
 
-  /* Two voices a fifth apart, each very slightly detuned against
-     itself, which is what stops a synth drone sounding like a test
-     tone. */
-  const oscs = [];
-  for (const [mult, level, cents] of [[1, 0.055, -4], [1.5, 0.032, 5], [2, 0.016, -9]]) {
-    const o = c.createOscillator();
-    o.type = "triangle";
-    o.frequency.value = root * mult;
-    o.detune.value = cents;
-    const g = c.createGain();
-    g.gain.value = level;
-    o.connect(g);
-    g.connect(out);
-    o.start();
-    oscs.push(o);
-  }
+  const march = key !== "snakes";
+  const step = march ? 0.23 : 0.43;
+  const notes = march ? MARCH_TOP : SANTOOR;
+  const bass = march ? MARCH_BASS : null;
 
-  /* The slow sweep. Twenty-three seconds is chosen to not line up
-     with anything a person does — a cycle that matched the turn
-     clock would start to feel like a countdown. */
-  const lfo = c.createOscillator();
-  lfo.frequency.value = 1 / 23;
-  const lfoAmt = c.createGain();
-  lfoAmt.gain.value = 130;
-  lfo.connect(lfoAmt);
-  lfoAmt.connect(warm.frequency);
-  lfo.start();
-  oscs.push(lfo);
+  /* Booked to here, on the audio clock. */
+  let at = c.currentTime + 0.08;
+  let n = 0;
 
-  return { out, oscs, key };
+  const book = () => {
+    /* Two seconds of music ahead at all times. */
+    const until = c.currentTime + 2;
+    while (at < until) {
+      const i = n % notes.length;
+      const f = notes[i];
+      if (f) pluck(c, at, f, out, march
+        ? { peak: 0.035, dur: 0.34, cutoff: 3000 }
+        : { peak: 0.045, dur: 0.7, cutoff: 2400 });
+      if (march) {
+        if (n % 2 === 0) beat(c, at, out, 0.05);
+        const b = bass[(n / 2 | 0) % bass.length];
+        if (n % 2 === 0) pluck(c, at, b, out, { peak: 0.03, dur: 0.5, cutoff: 700 });
+      }
+      at += step;
+      n += 1;
+    }
+  };
+  book();
+  const timer = setInterval(book, 900);
+
+  /* stop() is what stopAmbience calls; there are no oscillators to
+     hold on to because every note owns its own and disposes of it. */
+  return {
+    out,
+    key,
+    stop() {
+      clearInterval(timer);
+    },
+  };
 }
 
 /* Start, or change which game is playing. Safe to call repeatedly:
@@ -699,7 +808,10 @@ export function stopAmbience(opts = {}) {
     b.out.gain.cancelScheduledValues(t);
     b.out.gain.setValueAtTime(b.out.gain.value, t);
     b.out.gain.linearRampToValueAtTime(0, t + 0.7);
-    for (const o of b.oscs) o.stop(t + 0.8);
+    /* Every note owns and disposes of its own oscillator, so there
+       is no list to stop — only the scheduler to call off. Anything
+       already booked plays out under the fade. */
+    b.stop();
   } catch {
     /* a context that has gone away has stopped it for us */
   }

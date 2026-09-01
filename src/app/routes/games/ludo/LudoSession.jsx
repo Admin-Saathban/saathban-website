@@ -178,6 +178,37 @@ export default function LudoSession() {
   /* Somebody else is throwing: { seat, die }. While this is set the
      board is deliberately one move behind the server. */
   const [botThrow, setBotThrow] = useState(null);
+  /* THE MOMENT, IN WORDS. One line, named, and it leaves.
+
+     A capture and a goti reaching home are the two things in this
+     game that are worth saying out loud, and both used to pass in
+     silence — a piece simply appeared back in its yard, or
+     stopped being on the board. The strip has room for exactly one
+     line and these are the two that earn it. */
+  const [moment, setMoment] = useState(null);
+  /* seat number -> the name to say. seatName takes a row. */
+  const whoAt = (seat) =>
+    seatName((game?.seats || []).find((x) => x.seat === seat), t);
+
+  /* A GOTI REACHED HOME. 0113 puts it on the move record, so this
+     is the engine's own answer rather than a piece count the client
+     re-derived and could disagree about.
+
+     Read off game.state rather than the `state` and `last` consts,
+     which are declared several hundred lines below: a hook cannot
+     reach forward, and doing it blanks the whole board with a
+     temporal dead zone error. Second time in this file — there is a
+     comment about the first one still standing further down. */
+  const homeKey = game?.state?.last?.home ? JSON.stringify(game.state.last) : null;
+  useEffect(() => {
+    if (!homeKey || game?.state?.last?.seat == null) return;
+    setMoment({
+      key: homeKey,
+      text: t("ludo.moment.home", { who: whoAt(game.state.last.seat) }),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeKey]);
+
   const shownMoveRef = useRef(undefined);
   const botHoldRef = useRef(0);
   /* True while a move is waiting for its throw to finish. Nothing
@@ -1499,6 +1530,17 @@ export default function LudoSession() {
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
             isSilent={isSilent}
+            onCapture={(seats) => {
+              const taker = game.current_seat;
+              const victim = seats.find((x) => x !== taker) ?? seats[0];
+              setMoment({
+                key: `cap-${Date.now()}`,
+                text: t("ludo.moment.took", {
+                  who: whoAt(taker),
+                  whose: whoAt(victim),
+                }),
+              });
+            }}
             state={state}
             seatsInPlay={game.target_seats}
             options={isMyTurn && hasDice ? options : []}
@@ -1683,7 +1725,14 @@ export default function LudoSession() {
               so it wins and the commentary stands down, rather
               than both being shown and the board losing the
               height twice. */}
-          {playing && awaySeats.length > 0 && (
+          {/* The two moments that earn the line, before anything
+              else that wants it. */}
+          {moment && (
+            <FlashLine keyed={moment.key} ms={2800}>
+              {moment.text}
+            </FlashLine>
+          )}
+          {!moment && playing && awaySeats.length > 0 && (
             <FlashLine keyed={awaySeats.map((r) => r.seat).join(",")} ms={5200}>
               {t("ludo.table.botTookOver", {
                 names: awaySeats.map((r) => r.name || t("ludo.seat.someone")).join(", "),

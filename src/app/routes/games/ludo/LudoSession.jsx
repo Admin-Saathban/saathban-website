@@ -1402,6 +1402,57 @@ export default function LudoSession() {
           </div>
           </div>
 
+          {/* ── THE MESSAGE STRIP ────────────────────────────────
+
+                 EVERY LINE UNDER THE BOARD IS AN OVERLAY, and the
+                 strip that holds them is a fixed height that is
+                 there whether or not anything is being said.
+
+                 This is the whole of the board shaking. A message
+                 appearing added a line to the column; the board's
+                 slot is flex:1 and gets what is left, so the board
+                 was re-measured a few pixels smaller and redrawn —
+                 every time somebody rolled a six. It looked like a
+                 shake because it WAS one: the board really did
+                 change size, twice, a second apart.
+
+                 Reserving the space once and floating the contents
+                 in it means nothing that appears or disappears can
+                 move anything. The strip is usually empty, and an
+                 empty strip costs the board 58px exactly once.
+
+                 Not pinned over the table, because on a 667px phone
+                 there is no table under the board to pin to — it
+                 would land on the players. Reserved, then floated
+                 inside the reservation.
+
+                 pointer-events pass through it, so a line drifting
+                 over a control cannot eat a tap; the one thing in
+                 here that IS a control takes them back. ── */}
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 auto",
+              width: "100%",
+              height: playing ? 58 : undefined,
+              margin: playing ? "2px 0 0" : "0 0 10px",
+            }}
+          >
+          <div
+            style={
+              playing
+                ? {
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }
+                : undefined
+            }
+          >
           <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               {/* Whose turn is said by the ring, the bouncing arrow and
@@ -1530,12 +1581,13 @@ export default function LudoSession() {
               disabled={busy}
               style={{
                 width: "100%",
-                minHeight: 52,
-                marginTop: 8,
+                minHeight: 44,
                 borderColor: GAME.controlEdge,
                 background: GAME.control,
                 color: GAME.ink,
                 flex: "0 0 auto",
+                /* The strip lets taps through; this takes them. */
+                pointerEvents: "auto",
               }}
             >
               ↩ {t("ludo.undo.cta")}
@@ -1595,6 +1647,9 @@ export default function LudoSession() {
               {t("ludo.chain.voided")}
             </FlashLine>
           )}
+
+          </div>
+          </div>
 
           {/* ── Choosing between the pair and the single, when a goti
                  standing in a jota could do either ── */}

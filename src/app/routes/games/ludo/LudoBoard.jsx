@@ -445,8 +445,13 @@ function wantsLessMotion() {
    140ms a cell is the cadence the eye can count at, which is the whole
    reason the table is given per-hop timing rather than a duration for
    the move as a whole. */
-const STEP_MS = 140;   // one cell
-const HOP_MS = 140;    // the lift that goes with it
+const STEP_MS = 120;   // one cell
+const HOP_MS = 120;    // the lift that goes with it
+/* How high a goti rises between two squares, in board units. A cell
+   is 40, so this is about a sixth of a square — enough to read as a
+   step and not so much that a goti crossing eight squares looks like
+   it is bouncing over them. */
+const LIFT = 6.5;
 const SHAKE_MS = 200;  // a taken goti flinches before it travels
 const ARC_MS = 600;    // and then goes home the long way
 /* How long a captured goti takes to get home. It travels in a straight
@@ -521,9 +526,46 @@ function useWalk(pieces, isSilent) {
   /* Cells where an opponent went past within a square of somebody —
      the near miss nobody notices until it is pointed out. */
   const [closeCalls, setCloseCalls] = useState([]);
-  /* "seat:i" → the cell number it just hopped onto. The VALUE has to
-     change every hop, because that is what restarts the lift. */
-  const [hops, setHops] = useState(() => new Map());
+  /* ── THE WALK DOES NOT GO THROUGH REACT ───────────────────────
+
+     THIS IS THE LAG THE OWNER KEEPS DESCRIBING, and it survived a
+     whole round of work on everything around it.
+
+     What was here: every 140ms the loop called setShown with a new
+     board, setHops with a new Map and setTrail with a new array,
+     and the goti was drawn AT A CELL — so it did not travel between
+     squares at all. It teleported one square, eight times a second.
+     A CSS lift was restarted on each arrival by changing a React
+     `key`, which does not animate a moving thing, it DESTROYS the
+     old DOM node and builds a new one. Eight times a second.
+
+     Eight positions a second is not slow code, it is 8fps, and the
+     eye reads 8fps as stutter no matter how fast the machine is.
+     That is the whole of "gotis still crawl and stutter" — the
+     board was never dropping frames, it was only ever drawing eight
+     of them.
+
+     So the position is written straight onto the DOM node, every
+     frame the display will give, from inside the rAF loop. React
+     renders each walking goti ONCE, at the square it started on,
+     and does not hear about it again until it arrives. `transform`
+     is never passed as a prop, so a re-render for something else
+     (the trail, a poll, a chat bubble) cannot wipe what the frame
+     loop wrote — React only touches style properties it owns.
+
+     Per-cell timing is unchanged and still exact: the tick sound
+     and the trail fire on the integer boundary, and the goti eases
+     across each square and lifts over it in between. */
+  const nodes = useRef(new Map());
+  const bindPiece = (id) => (el) => {
+    if (el) nodes.current.set(id, el);
+    else nodes.current.delete(id);
+  };
+  const clearOffsets = () => {
+    nodes.current.forEach((el) => {
+      if (el) el.style.transform = "";
+    });
+  };
   /* NO SEPARATE FLINCH STATE. It used to be a second Set describing
      the same gotis as `flights`, and two states describing one thing
      can disagree — which they did. The phase rides inside the flight
@@ -550,7 +592,7 @@ function useWalk(pieces, isSilent) {
       setTrail([]);
       setArrivedHome(new Set());
       setCloseCalls([]);
-      setHops(new Map());
+      clearOffsets();
       return undefined;
     }
 
@@ -655,6 +697,21 @@ function useWalk(pieces, isSilent) {
       return { key: `${s2}:${i}`, a, b, c: [mx + px * bow, my + py * bow] };
     });
 
+    /* THE WALKERS ARE DRAWN WHERE THEY SET OFF, once, and moved by
+       the loop from there. Everything that is not walking is already
+       at its final square in `base`. */
+    setShown(base);
+
+    /* Each walker's path, precomputed: the cell it will stand on at
+       every step of the way. Done once rather than per frame — this
+       is sixty lookups a second otherwise, for an answer that cannot
+       change while the move is in the air. */
+    const paths = walkers.map(([s2, i, fromP, toP]) => {
+      const cells = [];
+      for (let p = fromP; p <= toP; p++) cells.push(cellFor(s2, p, i));
+      return { id: `${s2}:${i}`, seat: s2, cells, span: toP - fromP };
+    });
+
     const started = performance.now();
     thudded.current = false;
     let raf = 0;
@@ -664,39 +721,51 @@ function useWalk(pieces, isSilent) {
     const frame = (now) => {
       const elapsed = now - started;
 
-      /* ── The walkers, one cell at a time ── */
-      const stepNow = Math.min(steps, Math.floor(elapsed / STEP_MS));
+      /* ── The walkers, every frame, between the cells ── */
+      /* Where each one is, as a real number of squares travelled. */
+      const travelled = elapsed / STEP_MS;
+      paths.forEach((w) => {
+        const el = nodes.current.get(w.id);
+        if (!el) return;
+        const done = Math.min(w.span, Math.floor(travelled));
+        /* Smoothstep across each square: it leaves and arrives
+           gently and covers the middle quickly, which is what a
+           counted step looks like. Linear reads as a slide. */
+        const raw = done >= w.span ? 1 : Math.min(1, Math.max(0, travelled - done));
+        const f = raw * raw * (3 - 2 * raw);
+        const a = w.cells[done];
+        const b = w.cells[Math.min(w.span, done + 1)];
+        const from = w.cells[0];
+        const x = (a[0] + (b[0] - a[0]) * f - from[0]) * CELL;
+        const y = (a[1] + (b[1] - a[1]) * f - from[1]) * CELL;
+        /* The lift lives in the same transform as the travel, so
+           there is one thing writing to this node and no second
+           animation to fall out of step with. */
+        const lift = done >= w.span ? 0 : -Math.sin(Math.PI * raw) * LIFT;
+        el.style.transform = `translate(${x.toFixed(2)}px, ${(y + lift).toFixed(2)}px)`;
+      });
+
+      /* ── And once per square, the things that are per-square ── */
+      const stepNow = Math.min(steps, Math.floor(travelled));
       if (stepNow !== lastStep) {
         lastStep = stepNow;
-        const next = base.map((r) => [...r]);
-        const hopping = new Map();
-        walkers.forEach(([s2, i, fromP, toP]) => {
-          const at = Math.min(toP, fromP + stepNow);
-          next[s2][i] = at;
-          if (at > fromP) {
-            crossed.push(cellFor(s2, at, i));
-            /* The hop counter restarts the lift animation on each new
-               cell. Without a value that CHANGES, the animation plays
-               once on the first square and the rest of the move
-               slides. */
-            if (at < toP || stepNow <= steps) hopping.set(`${s2}:${i}`, at);
+        let ticker = null;
+        paths.forEach((w) => {
+          const at = Math.min(w.span, stepNow);
+          if (at > 0) {
+            crossed.push(w.cells[at]);
+            if (ticker == null) ticker = w.seat;
           }
         });
-        setShown(next);
-        setHops(hopping);
         if (crossed.length) setTrail([...crossed]);
         /* ONE TICK PER CELL, ON THE CELL. Played here rather than
            scheduled beside the move, because a scheduled run drifts
            away from a walk that is on a different clock — which is
            exactly what it was doing. Silent under reduced motion
            for free: the walk returns before this ever runs, so
-           there are no hops to tick for. */
-        if (stepNow > 0) {
-          const mover = hopping.keys().next().value;
-          const seat = mover != null ? Number(String(mover).split(":")[0]) : null;
-          if (!(isSilent && seat != null && isSilent(seat))) {
-            playSound("hop", { step: stepNow - 1, of: steps });
-          }
+           there are no cells to tick for. */
+        if (stepNow > 0 && !(isSilent && ticker != null && isSilent(ticker))) {
+          playSound("hop", { step: stepNow - 1, of: steps });
         }
       }
 
@@ -739,9 +808,15 @@ function useWalk(pieces, isSilent) {
       }
 
       if (elapsed >= totalMs) {
+        /* THE OFFSETS COME OFF IN THE SAME BREATH as the true board
+           goes on. If React drew the goti at its destination while
+           the node still carried the last frame's translate, the
+           piece would jump a square forward and back — so the
+           transform is cleared FIRST, and the render that follows
+           puts the goti exactly where the loop left it. */
+        clearOffsets();
         setShown(pieces);
         setFlights(new Map());
-        setHops(new Map());
         /* The celebration starts when the goti ARRIVES, not when the
            move began — it has to be on the square to be cheered. */
         if (home.size) {
@@ -764,11 +839,15 @@ function useWalk(pieces, isSilent) {
 
     return () => {
       cancelAnimationFrame(raf);
+      /* A move interrupted mid-walk — a rematch, a leave, a second
+         move arriving — must not leave a goti sitting at an offset
+         nothing is going to clear. */
+      clearOffsets();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { shown, flights, trail, arrivedHome, closeCalls, hops };
+  return { shown, flights, trail, arrivedHome, closeCalls, bindPiece };
 }
 
 /* ── THE GROUND ───────────────────────────────────────────────
@@ -1273,7 +1352,7 @@ export default function LudoBoard({
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
-  const { shown: pieces, flights, trail, arrivedHome, closeCalls, hops } = useWalk(live, isSilent);
+  const { shown: pieces, flights, trail, arrivedHome, closeCalls, bindPiece } = useWalk(live, isSilent);
   /* THE TABLE SHAKES ON THE EDGE OF A RUN.
 
      Not a celebration — the opposite. ludo_chain_stands is
@@ -1701,18 +1780,23 @@ export default function LudoBoard({
                     strokeWidth={3}
                   />
                 )}
-                {/* THE HOP. A key that changes every cell is what
-                    restarts the lift — a CSS animation on an element
-                    React merely re-positions plays once and then the
-                    rest of the move slides. Wrapped rather than
-                    applied to the Pawn itself so the class has
-                    somewhere to live that nothing else owns.
+                {/* WHAT THE WALK MOVES. The frame loop writes this
+                    node's transform directly sixty times a second
+                    (see useWalk); React never passes a transform of
+                    its own, which is precisely why the two do not
+                    fight — React only rewrites style properties it
+                    set itself.
+
+                    It used to carry a `key` that changed on every
+                    square, to restart a CSS lift. That is not an
+                    animation restarting, it is a DOM node being
+                    destroyed and rebuilt, eight times a second, for
+                    every goti on the move.
 
                     The home column gets a slight inward tilt, per
                     §3: the goti leans into the turn it is making. */}
                 <g
-                  key={`hop-${hops.get(`${seat}:${i}`) ?? "still"}`}
-                  className={hops.has(`${seat}:${i}`) ? "sb-hop" : undefined}
+                  ref={bindPiece(`${seat}:${i}`)}
                   style={p >= 52 && p < 57 ? { transformBox: "fill-box", transformOrigin: "50% 100%" } : undefined}
                 >
                 <Pawn

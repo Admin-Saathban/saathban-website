@@ -12,43 +12,46 @@
    import it, and nothing in here may leak outward — a dark surface in
    the rest of the app would be a bug, not a theme.
 
-   Deep and warm rather than neon: a very dark aubergine that reads as
-   lacquer under a light. The board sits on it and casts a shadow onto
-   it, which is what makes a board look like an object on a table
-   rather than a picture on a page.
+   MIDNIGHT, not aubergine. The board's zones are the deep rich set
+   now — a #B01709 red and a #0E8A2C green — and a warm plum under
+   them tinted both toward brown. A blue-black ground is neutral to
+   all four and lets the white track be the brightest thing on the
+   screen, which is the whole hierarchy.
+
+   The board sits on it and casts a shadow onto it, which is what
+   makes a board look like an object on a table rather than a
+   picture on a page.
    ════════════════════════════════════════════════ */
 
 export const GAME = {
-  /* The table itself, and a slightly lifted centre so the surface has
-     a light on it rather than being a flat rectangle of dark. */
-  /* A WARM LIT TABLE. This was #241019 — so dark it read as
-     near-black, and the board floated in it like a slide on a
-     light box. The reference sits on a plum table with a light
-     over it: still dark enough that the board is the brightest
-     thing on the screen, warm enough to be a room. */
-  surface: "#432845",
-  /* The lit table. The two repeating layers on top are a weave,
-     not a pattern: at 3% white on a dark ground they are barely
-     nameable, and they exist so the space a square board cannot
-     fill on a tall phone reads as more table rather than as a
-     gap. Judged by eye against the reference, which fills the
-     same slack the same way. */
-  surfaceLift:
-    "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.05) 0 1.2px, transparent 1.6px) 0 0/26px 26px, " +
-    "radial-gradient(circle at 62% 68%, rgba(255,255,255,0.04) 0 1.2px, transparent 1.6px) 0 0/34px 34px, " +
-    "radial-gradient(120% 80% at 50% 20%, #5E3A5C 0%, #472B49 58%, #34203A 100%)",
+  /* THE TABLE, as the owner designed it in the live designer: a
+     midnight blue-black, lit from behind the top of the board and
+     falling away to almost nothing at the edges. It was plum; the
+     board's four colours are now the DEEP RICH set, and a warm
+     purple under a red and a green zone was tinting both.
 
+     The dots are a DAMASK, not a grid: the same 24px lattice laid
+     down twice with the second offset half a step, which is what
+     makes a repeat read as cloth rather than as graph paper. At
+     4.5% white they are barely nameable, and they exist so the
+     space a square board cannot fill on a tall phone reads as more
+     table rather than as a gap. */
+  surface: "#060A14",
+  surfaceLift:
+    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 0 0/24px 24px, " +
+    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 12px 12px/24px 24px, " +
+    "radial-gradient(125% 88% at 50% 4%, #17203A 0%, #101A30 46%, #0A1020 74%, #060A14 100%)",
   /* Text on that surface. Warm rather than pure white — pure white on
      a dark ground glares, and these are old eyes. */
   ink: "#F6EBE2",
-  inkMuted: "#C8AEB8",
+  inkMuted: "#A8B4CC",
 
   /* Chrome that has to sit on the table without becoming furniture. */
   control: "rgba(255,255,255,0.10)",
   controlEdge: "rgba(255,255,255,0.18)",
 
   /* The shadow the board casts onto the table. */
-  boardShadow: "0 14px 34px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4)",
+  boardShadow: "0 18px 46px rgba(0,0,0,0.72), 0 6px 14px rgba(0,0,0,0.55)",
 
   /* THE ONE MARGIN. GAMES_IMMERSION_SPEC §2 asks for edge to edge
      with EVEN margins on both sides, and the bug it is fixing was
@@ -65,16 +68,16 @@ export const GAME = {
      app's furniture is not a game, it is the app with the lights
      off.
 
-     Read off the reference's own sheets rather than invented. Its
-     emoji panel is a magenta-plum body with a GOLD edge; its
-     selected tab is gold; its secondary buttons are muted plum
-     pills with light text; and gold is the only bright colour on
-     the screen, which is why the eye goes to it. Our tokens
-     already wear brass rings and the board already has a timber
-     frame, so gold is not a new idea here — it is the one the
-     board was already using and the chrome had not caught up to.
+     Brass for the one thing you are meant to press, midnight for
+     everything that opens over the table, glass for everything
+     that sits on one, teal for you. GOLD IS NOW RATIONED: the
+     crown at the centre of the board and the halo on a goti you
+     may move, and nothing else — it used to edge every panel, and
+     a colour that is everywhere cannot point at anything.
 
-     No green anywhere. Green is Saathban. ══════════════════════ */
+     Saathban's green appears exactly once inside a game, on your
+     own chat bubbles and the Send beside them, because that is
+     the one place the owner asked for it. Nowhere else. ════════ */
 
   /* PRIMARY ACTION — the one thing you are meant to press. Brass,
      lit from the top, with dark ink because gold takes dark text
@@ -88,17 +91,21 @@ export const GAME = {
      button. */
   accentPressed: "linear-gradient(180deg, #C2892C 0%, #E3B052 100%)",
 
-  /* PANELS — sheets, dialogs, the code box. Magenta-plum, lifted
-     off the table rather than punched out of it, with the gold
-     edge the reference puts round everything it wants read as a
-     panel. */
-  panel: "linear-gradient(180deg, #6B3566 0%, #552A53 100%)",
-  panelFlat: "#5E2E5A",
-  panelEdge: "#C8963F",
-  panelShadow: "0 -10px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset",
+  /* PANELS — the chat, both profile cards, every sheet. The same
+     midnight gradient as the table, one shade lighter at the top,
+     so a sheet reads as the table folding up rather than as a
+     second design arriving over it. The gold edge is gone with
+     the rationing above; a hairline of white is enough to say
+     where the panel starts, and the chat is specified with no top
+     line at all. */
+  panel: "linear-gradient(180deg, #17203A 0%, #060A14 100%)",
+  panelFlat: "#111A2E",
+  panelEdge: "rgba(255,255,255,0.14)",
+  panelShadow: "0 -14px 48px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,255,255,0.06) inset",
 
-  /* SECONDARY — Emoji, Chat, Back, and every row inside a sheet.
-     Plum pills that belong to the table, never the app's white. */
+  /* SECONDARY — the door, the sound button, every row inside a
+     sheet. Glass pills that belong to the table, never the app's
+     white. */
   pill: "rgba(255,255,255,0.13)",
   pillEdge: "rgba(255,255,255,0.22)",
   pillPressed: "rgba(0,0,0,0.22)",
@@ -107,6 +114,29 @@ export const GAME = {
      movement, short enough that a person waiting to play does not
      wait for it. Reduced-motion drops it to nothing. */
   motionMs: 190,
+
+  /* THE PERSON COLOUR. Your own circle, Save on your own card,
+     and any toggle that is ON. Deliberately none of the four seat
+     colours and deliberately not Saathban's green: it means YOU,
+     and a colour that also means a seat would say something about
+     which seat. */
+  you: "#2AB8A0",
+  youInk: "#03302A",
+  /* Muted, for a toggle that is off. Grey, never a red. */
+  off: "rgba(255,255,255,0.22)",
+  /* The one destructive row on a profile card. */
+  report: "#8F1B2A",
+  /* Frosted glass — the chat particle, and every row on a
+     profile card. */
+  glass: "rgba(255,255,255,0.07)",
+  glassStrong: "rgba(255,255,255,0.16)",
+  glassEdge: "rgba(255,255,255,0.18)",
+  /* GOLD. Only three things wear it: the crown at the centre of
+     the board, the halo on a goti you may move, and nothing
+     else. The board's frame is timber and has no gold ring. */
+  gold: "#F3CE5E",
+  goldDeep: "#B98A1E",
+  goldEdge: "#9A7420",
 };
 
 /* Chrome inside a game is not text to be selected. Long-pressing a

@@ -140,6 +140,30 @@ export const START_ABS = [0, 13, 26, 39];
    reads the LIVE function square by square and asserts they agree. */
 export const SAFE_ABS = [0, 8, 13, 21, 26, 34, 39, 47];
 
+/* THE PRE-HOME CELL of each seat — the star square a goti passes
+   three steps before it turns off the ring into its own home
+   column.
+
+   NOT A NEW LIST. Every one of these is already in SAFE_ABS: the
+   eight stops are four STARTS and four PRE-HOMES, and which is
+   which is the only thing that was never written down. The board
+   marks them differently — the opening cell is tinted and the
+   pre-home is plain white — so it has to be able to tell them
+   apart, and deriving it from START_ABS means it comes from the
+   marked board exactly as the starts do.
+
+   47 = 52 - 5, i.e. five squares from the end of the lap: three
+   more on the ring, then the tip, then the column.
+
+   The assertion is not decoration. If the ring is ever re-phased
+   again, a pre-home that has wandered off the safe list would
+   otherwise draw a star where the engine will not protect you,
+   which is the one kind of wrong this board must never be. */
+export const PRE_HOME_ABS = START_ABS.map((a) => (a + 47) % TRACK.length);
+if (PRE_HOME_ABS.some((a) => !SAFE_ABS.includes(a))) {
+  throw new Error("ludo board: a pre-home cell is not a safe square");
+}
+
 /* Kept as the old name so nothing that imported it breaks silently. */
 export const STAR_ABS = SAFE_ABS;
 

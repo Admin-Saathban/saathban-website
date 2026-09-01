@@ -27,6 +27,7 @@ import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from 
 import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import BoardThumb from "./BoardThumb.jsx";
 import OneTableGate from "./OneTableGate.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 
 function gameName(g, lang) {
   return lang === "ur" ? g.name_ur : g.name_en;
@@ -154,6 +155,12 @@ export default function GamesHome() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
+  /* "WERE YOU GIVEN A CODE?" — the surface the owner named: it
+     opens and there is no way back out of it. It is a panel that
+     replaces the card it lives in rather than a sheet over the
+     page, so there was never even a scrim to tap. Back closes it
+     now and the games list is still underneath, unscrolled. */
+  useBackToClose(codeOpen, () => setCodeOpen(false));
   const [code, setCode] = useState("");
   const [codeMsg, setCodeMsg] = useState("");
   // The table standing in the way, when someone tries for a second.

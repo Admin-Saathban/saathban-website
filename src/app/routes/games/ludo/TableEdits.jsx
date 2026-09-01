@@ -27,6 +27,7 @@ import { SEAT_COLOR_NAMES } from "../seatColors.js";
 import { reformTable, takeSeat, inviteToSeat, fetchAskable } from "./ludoRails.js";
 import ShareTableButton from "../ShareTableButton.jsx";
 import { createShare } from "../../community/communityData.js";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 /* One row in the sheet. 56px, full width, no icon-only anything —
    the same floor the rest of the app keeps (A11Y). */
@@ -244,6 +245,13 @@ function HouseRules({ sessionId, rules, onChanged }) {
    except the table-size row, which is about the seat in the truest
    way available: how many of them there are. */
 export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAmHost, myId, rules = null, joinCode = null, soft = true, onClose, onChanged }) {
+  /* BACK CLOSES THIS, and back is what an Android hand reaches for.
+     Without a history entry the gesture navigates off the screen
+     underneath instead — which is the owner's "things open and never
+     close", and the reason he also ends up somewhere he did not ask
+     to be. components/useBackToClose.js, from another lane's audit
+     of all 23 overlays in the app. */
+  useBackToClose(true, onClose);
   const { t, ts } = useI18n();
   const { profile } = useSession();
   /* Icons post; everyone else reads. Organisations too, which is the

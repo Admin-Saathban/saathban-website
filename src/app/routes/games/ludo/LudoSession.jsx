@@ -34,7 +34,7 @@ import { tableIsSoft, reformTable, fetchSeatInvites, seen } from "./ludoRails.js
 import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
 import { GAME, NO_SELECT } from "../gameSurface.js";
-import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine } from "../GameUI.jsx";
+import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine, useBackToClose } from "../GameUI.jsx";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import GameSettings from "./GameSettings.jsx";
@@ -421,6 +421,14 @@ export default function LudoSession() {
     window.clearTimeout(botHoldRef.current);
     holdingRef.current = false;
     setBotThrow(null);
+    /* The plates' remembered faces, the bot pacemaker's clock and
+       the presence throttle. All three are per-table and all three
+       used to survive into the next one — see the note on the
+       second reset effect below for why that matters and why it is
+       in two pieces. */
+    lastDiceRef.current = {};
+    lastTickRef.current = 0;
+    lastSeenPing.current = 0;
     load().catch(() => setError("ludo.errors.load"));
     timer = setInterval(async () => {
       try {
@@ -516,6 +524,10 @@ export default function LudoSession() {
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /* The leaving question answers to back as well. It is the one
+     panel on this screen where a stray back press would do the
+     very thing the panel exists to ask about. */
+  useBackToClose(leaveAsk, () => setLeaveAsk(false));
 
   /* THE WHOLE SCREEN, FOR AS LONG AS THIS TABLE IS OPEN.
 
@@ -545,6 +557,40 @@ export default function LudoSession() {
   const [bubbles, setBubbles] = useState([]);
   const seenChat = useRef(new Set());
   const startedOnce = useRef(false);
+
+  /* ── WHAT A SECOND TABLE USED TO INHERIT FROM THE FIRST ─────────
+
+     React keeps this component MOUNTED when only the :sessionId
+     param changes — which is exactly what a rematch is — so every
+     ref in this file survives the end of a game unless something
+     clears it. Several did not, and each one made the second table
+     behave unlike the first:
+
+     · startedOnce / wasLobby — the two flags guarding the count-in.
+       Both stayed true, so the second game was never counted in: no
+       "3, 2, 1", no greeting, the board simply began.
+     · seenChat — every chat id ever seen on this screen, growing
+       for as long as the tab is open and consulted on every poll.
+     · bubbles / ceremony — the last table's remarks and its dimming
+       overlay, carried over the new one's opening.
+
+     WHY THIS IS A SECOND EFFECT rather than four more lines in the
+     one above. Those refs are declared here, three hundred lines
+     BELOW the poll effect, and reaching upward for a const that is
+     defined further down this file is the exact shape of the
+     temporal-dead-zone fault that has blanked this board twice —
+     both times with a passing build, both times only caught by
+     opening a table. It is safe in an effect BODY and not safe in a
+     dependency array, and a rule with an exception in it is a rule
+     that gets broken at four in the morning. So: the reset lives
+     below what it resets, and nothing reaches up. */
+  useEffect(() => {
+    startedOnce.current = false;
+    wasLobby.current = false;
+    seenChat.current = new Set();
+    setBubbles([]);
+    setCeremony(null);
+  }, [sessionId]);
 
   /* "Setting the table…" while the seats are still filling, and
      "Khelte hain!" the moment play begins — once, not on every poll. */

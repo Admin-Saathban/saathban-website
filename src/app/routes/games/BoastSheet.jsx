@@ -37,6 +37,7 @@ import { renderBoastCard, blobToUrl } from "./boastCard.js";
 import { boastToPeople } from "../../lib/games.js";
 import { createPost } from "../community/communityData.js";
 import { fetchMyGroups, addPost } from "../groups/groupsStore.js";
+import useBackToClose from "../../components/useBackToClose.js";
 
 /* The public page a shared link points at. Absolute, because it is
    going into somebody else's WhatsApp. */
@@ -85,6 +86,13 @@ function Row({ onClick, disabled, glyph, label, note, done }) {
 }
 
 export default function BoastSheet({ open, onClose, sessionId, players, pieces, seatsInPlay }) {
+  /* BACK CLOSES THIS, and back is what an Android hand reaches for.
+     Without a history entry the gesture navigates off the screen
+     underneath instead — which is the owner's "things open and never
+     close", and the reason he also ends up somewhere he did not ask
+     to be. components/useBackToClose.js, from another lane's audit
+     of all 23 overlays in the app. */
+  useBackToClose(open, onClose);
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const [card, setCard] = useState(null); // { blob, url }

@@ -32,6 +32,7 @@ import { SEAT_COLORS } from "./board.js";
 import { fetchChat, sendChat } from "./ludoRails.js";
 import { readMutes } from "../tableMutes.js";
 import { playSound } from "../../../lib/sound.js";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 const POLL_MS = 4000;
 const GREEN = "#1FA83C";
@@ -42,6 +43,13 @@ const GREEN = "#1FA83C";
 const QUICK = ["👏", "😂", "😮", "🙏", "🎉", "😅", "❤️", "🤞"];
 
 export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSent }) {
+  /* BACK CLOSES THIS, and back is what an Android hand reaches for.
+     Without a history entry the gesture navigates off the screen
+     underneath instead — which is the owner's "things open and never
+     close", and the reason he also ends up somewhere he did not ask
+     to be. components/useBackToClose.js, from another lane's audit
+     of all 23 overlays in the app. */
+  useBackToClose(open, onClose);
   const { t, ts } = useI18n();
   const [messages, setMessages] = useState([]);
   /* MINE, ALREADY SAID, NOT YET ACKNOWLEDGED.

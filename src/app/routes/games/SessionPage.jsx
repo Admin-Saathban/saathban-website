@@ -404,31 +404,55 @@ export default function SessionPage() {
   if (session.status === "cancelled") {
     return (
       <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>
+        {/* LEAVING, IN THE GAME'S OWN LANGUAGE.
+
+            This was the app's white card with a two-pixel brown
+            border, a Saathban-green primary and a ghost button —
+            a page from the settings screen laid on a game table at
+            the one moment somebody is deciding something. Ludo's
+            own leaving panel was brought over to midnight a round
+            ago and this one, on the generic board, was missed.
+
+            STAYING IS THE CONFIRMING ACTION, so staying wears the
+            teal; leaving is quiet. A game should not put its
+            brightest control under the word that ends the game. */}
         {confirmLeave && (
-        <Card style={{ borderColor: C.brown, borderWidth: 2 }}>
-          <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 6px" }}>
+        <div
+          style={{
+            padding: "18px 16px",
+            borderRadius: 18,
+            background: GAME.panel,
+            border: `1px solid ${GAME.panelEdge}`,
+            boxShadow: "0 14px 40px rgba(0,0,0,0.5)",
+          }}
+        >
+          <p style={{ fontSize: ts(21), fontWeight: 700, margin: "0 0 6px", color: GAME.ink }}>
             {t("games.ceremony.leaveTitle")}
           </p>
-          <BodyText muted style={{ marginBottom: 12 }}>
+          <p style={{ margin: "0 0 16px", fontSize: ts(17), lineHeight: 1.5, color: GAME.inkMuted }}>
             {session.status === "active"
               ? t("games.ceremony.leaveInPlay")
               : t("games.ceremony.leaveLobby")}
-          </BodyText>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <PrimaryBtn onClick={() => setConfirmLeave(false)}>
+          </p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <GameBtn
+              onClick={() => setConfirmLeave(false)}
+              style={{ flex: "1 1 0", minHeight: 52 }}
+            >
               {t("games.ceremony.stay")}
-            </PrimaryBtn>
-            <GhostBtn
+            </GameBtn>
+            <GamePill
               disabled={busy}
               onClick={() => {
                 setConfirmLeave(false);
                 leaveTable();
               }}
+              style={{ flex: "1 1 0", minHeight: 52, justifyContent: "center" }}
             >
               {t("games.ceremony.leaveConfirm")}
-            </GhostBtn>
+            </GamePill>
           </div>
-        </Card>
+        </div>
       )}
 
       {started && (

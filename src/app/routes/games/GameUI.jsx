@@ -170,49 +170,21 @@ export function GameMotion() {
   );
 }
 
-/* ── ANYTHING THAT OPENS OVER THE TABLE CAN BE CLOSED ──────────
+/* ANYTHING THAT OPENS OVER THE TABLE CAN BE CLOSED, and the hook
+   that does it is the APP'S, not this lane's.
 
-   The owner's report was that the settings sheet is "almost
-   impossible to close", and the sheet did have a veil and a drag
-   handle. What it did not have was a way out that a person on an
-   Android phone would REACH FOR: their hand goes to the back
-   gesture, and a back gesture in a single-page app is a route
-   change — so the one instinct everybody has took them off the
-   table entirely instead of shutting the sheet.
+   I wrote a second one here first. Another lane had already
+   audited all 23 overlay surfaces in the app, found that 22 of
+   them held their open state in a plain useState and so could not
+   be dismissed with the Android back gesture, and shipped
+   components/useBackToClose.js. Two hooks pushing history entries
+   with the same intent and slightly different bookkeeping is how a
+   person ends up pressing back twice, so mine is deleted and every
+   sheet in the game world uses theirs.
 
-   So an open sheet is a history entry. Back pops it and the sheet
-   closes; the board stays. Escape does the same for a keyboard.
-
-   THE ENTRY IS REMOVED BY WHOEVER DID NOT USE IT. Closing by ✕,
-   by veil or by swipe calls history.back() itself, so the stack
-   does not silently grow one entry per open — and the `popped`
-   flag is what stops that call from firing a second close when
-   the pop it caused arrives. */
-export function useBackToClose(open, onClose) {
-  useEffect(() => {
-    if (!open) return undefined;
-    let popped = false;
-    const tag = { sbSheet: Date.now() };
-    window.history.pushState(tag, "");
-    const onPop = () => {
-      popped = true;
-      onClose?.();
-    };
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    window.addEventListener("popstate", onPop);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      window.removeEventListener("keydown", onKey);
-      /* Closed by something other than the back gesture, so our
-         entry is still on the stack and has to come off. */
-      if (!popped) window.history.back();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-}
+   Re-exported from here so a games file has one place to import
+   its chrome from. */
+export { default as useBackToClose } from "../../components/useBackToClose.js";
 
 /* A sheet's grab handle, which is also a swipe-down to close.
 

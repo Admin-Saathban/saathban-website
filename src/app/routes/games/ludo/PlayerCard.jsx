@@ -37,6 +37,7 @@ import { useSignedAvatar } from "../gameAvatar.jsx";
 import SampleAvatar, { sampleFor, SAMPLE_COUNT } from "../sampleAvatars.jsx";
 import { updateMyProfile } from "../../profile/data.js";
 import { fileReport } from "../../community/communityData.js";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -141,6 +142,13 @@ export default function PlayerCard({
   onClose,
   onNameChanged,
 }) {
+  /* BACK CLOSES THIS, and back is what an Android hand reaches for.
+     Without a history entry the gesture navigates off the screen
+     underneath instead — which is the owner's "things open and never
+     close", and the reason he also ends up somewhere he did not ask
+     to be. components/useBackToClose.js, from another lane's audit
+     of all 23 overlays in the app. */
+  useBackToClose(true, onClose);
   const { t, ts } = useI18n();
   const [name, setName] = useState(myName || "");
   const [photo, setPhoto] = useState(null);

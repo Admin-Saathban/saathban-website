@@ -43,7 +43,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
-import { touchPresence } from "./messagesData.js";
+import { touchPresence, WORLD } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
 import { BAR_HEIGHT } from "../../components/BottomBar.jsx";
 import { hasUnsentDraft } from "./draftGuard.js";
@@ -361,7 +361,7 @@ export default function MessagesWorld() {
             than instead of it, and the destination is a route inside
             this world. */}
         <NavLink
-          to="new"
+          to={`${WORLD}/new`}
           style={({ isActive }) => ({
             display: "inline-flex",
             alignItems: "center",
@@ -426,10 +426,30 @@ export default function MessagesWorld() {
           transition: "margin-top 180ms ease-out",
         }}
       >
-        <WorldTab to="" end icon="messages" label={t("msg.tab.chats")} />
-        <WorldTab to="requests" icon="letter" label={t("msg.tab.requests")} badge={pending} />
-        <WorldTab to="invite" icon="add" label={t("people.list.inviteCta")} />
-        <WorldTab to="menu" icon="settings" label={t("msg.tab.menu")} />
+        {/* ABSOLUTE, NOT RELATIVE — and this was not a tidiness
+            preference, it was the navigation quietly coming apart.
+
+            The world is mounted on a splat route, so a relative "to"
+            resolves against the WHOLE current path, not the world root.
+            On the index that looks right. One level in, it is not:
+            standing on Invite, the four tabs pointed at
+
+              …/messages/invite            (Chats, i.e. itself)
+              …/messages/invite/requests
+              …/messages/invite/invite
+              …/messages/invite/menu
+
+            — three addresses that do not exist and one that goes
+            nowhere. The bar stayed on screen looking like a way out
+            while every door in it was painted on. That is the owner's
+            "I just get lost": he was not misreading the screen, he was
+            reading a navigation bar that had stopped being true.
+
+            An absolute path cannot drift with the location. */}
+        <WorldTab to={WORLD} end icon="messages" label={t("msg.tab.chats")} />
+        <WorldTab to={`${WORLD}/requests`} icon="letter" label={t("msg.tab.requests")} badge={pending} />
+        <WorldTab to={`${WORLD}/invite`} icon="add" label={t("people.list.inviteCta")} />
+        <WorldTab to={`${WORLD}/menu`} icon="settings" label={t("msg.tab.menu")} />
       </nav>
 
       <main ref={worldScroller} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>

@@ -19,6 +19,16 @@ import supabase from "../../lib/supabase.js";
 /* Presence is "was she about in the last few minutes", not a channel.
    Three minutes is long enough to survive a screen locking briefly and
    short enough that "about" means it. */
+/* THE WORLD'S ADDRESS, said once.
+
+   The Messages world is mounted on a splat route, which means a
+   RELATIVE <Link to="..."> inside it resolves against wherever the
+   reader is standing, not against the world root. Every relative link
+   in here was therefore correct only on the one screen it was written
+   on and wrong on every other. Nothing threw; the links simply pointed
+   at addresses that do not exist. */
+export const WORLD = "/app/community/messages";
+
 export const PRESENT_MS = 3 * 60 * 1000;
 
 export function isAbout(person, now = Date.now()) {
@@ -44,7 +54,52 @@ export async function touchPresence() {
    is the one a person taps to find out, which is the tap the preview
    existed to save.
    ─────────────────────────────────────────────────────────────── */
+/* ── THE LIST IS HELD, NOT REFETCHED ──────────────────────────
+
+   Owner, on tapping a message notification and backing out again:
+   "I just get lost."
+
+   He was not lost in the thread. He was lost on the way back. The
+   chats list mounted with chats = null, drew a "···" placeholder,
+   fetched over the network, then redrew — so the screen he returned
+   to was not the screen he had left. It was blank first, then a
+   different arrangement of the same rows, scrolled to the top.
+
+   Backing out of a conversation is not a fresh visit. It is a return
+   to a screen that never really went away, so what it showed is kept
+   here at module scope, outliving the component: the rows are drawn
+   again on the first frame, from memory, with no spinner and no
+   network wait. The refresh still happens, quietly, behind the rows
+   that are already there — so the list is current without ever being
+   empty.
+
+   Module scope and not React state because the component UNMOUNTS on
+   the way into the thread; anything held inside it is gone by the
+   time he comes back, which is exactly the bug. ── */
+
+let chatsCache = null;      // last successful fetchChats result
+let chatsCacheFor = null;   // whose — so a different account never inherits it
+let chatsScrollY = 0;       // where the list was standing
+
+export function cachedChats(myId) {
+  return chatsCacheFor && myId && chatsCacheFor === myId ? chatsCache : null;
+}
+export function rememberChatsScroll(y) { chatsScrollY = y; }
+export function rememberedChatsScroll() { return chatsScrollY; }
+/* Signing out must not leave one person's conversations in memory for
+   whoever signs in next on the same phone. */
+export function forgetChatsCache() { chatsCache = null; chatsCacheFor = null; chatsScrollY = 0; }
+
 export async function fetchChats(myId) {
+  const rows = await buildChats(myId);
+  /* Written only on success. A failed refresh must leave the rows he is
+     looking at exactly where they are, not blank the screen. */
+  chatsCache = rows;
+  chatsCacheFor = myId;
+  return rows;
+}
+
+async function buildChats(myId) {
   const { data: reqs, error } = await supabase
     .from("dm_requests")
     .select("id, requester_id, recipient_id, status, created_at")

@@ -16,7 +16,7 @@
    nothing is the one a person taps to find out what it was.
    ════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -29,6 +29,10 @@ import {
   driftedRowAllowed,
   markDriftedSeen,
   hushDriftedRow,
+  cachedChats,
+  rememberChatsScroll,
+  rememberedChatsScroll,
+  WORLD,
 } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
 import SayHelloSheet from "./SayHelloSheet.jsx";
@@ -38,7 +42,11 @@ export default function ChatsList() {
   const { profile } = useSession();
   const myId = profile?.id;
 
-  const [chats, setChats] = useState(null);
+  /* SEEDED FROM MEMORY, not from null. null means "we have never
+     looked" and draws a placeholder; on a return from a conversation
+     we HAVE looked, moments ago, and the rows should simply still be
+     there. This is the whole of the instant back. */
+  const [chats, setChats] = useState(() => cachedChats(myId));
   const [q, setQ] = useState("");
   const [hello, setHello] = useState(null);   // the person the sheet is for
   const [showDrifted, setShowDrifted] = useState(false);
@@ -48,11 +56,36 @@ export default function ChatsList() {
     try {
       setChats(await fetchChats(myId));
     } catch {
-      setChats([]);
+      /* Only blank on a failure with nothing to show. If rows are on
+         screen, a dropped refresh must not take them away. */
+      setChats((prev) => prev ?? []);
     }
   }, [myId]);
 
   useEffect(() => { load(); }, [load]);
+
+  /* WHERE HE WAS STANDING.
+
+     Restored before paint (useLayoutEffect) so the list never appears
+     at the top and then jumps — a jump is its own kind of lost. Only
+     when there are already rows to stand on: with no seeded rows the
+     page has no height yet and the scroll would be discarded.
+
+     The window scrolls, not this element, so the position is read and
+     written on the window. */
+  useLayoutEffect(() => {
+    if (!chats) return;
+    const y = rememberedChatsScroll();
+    if (y > 0) window.scrollTo(0, y);
+    // Once, on the mount that has rows — not on every later refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chats === null]);
+
+  /* Saved at the moment of leaving rather than on scroll: the browser
+     fires a scroll reset of its own before unmount, so a scroll
+     listener faithfully records 0 and hands back the top of the list.
+     A tap on a row is the last honest reading there is. */
+  const leaving = () => rememberChatsScroll(window.scrollY || 0);
 
   const open = useMemo(() => (chats || []).filter((c) => !c.archived), [chats]);
 
@@ -79,8 +112,15 @@ export default function ChatsList() {
 
   const now = Date.now();
 
+  /* A search box over an empty list is furniture, and furniture is
+     what made this screen read as a placeholder. It appears once there
+     are conversations to search. Kept while typing, so a search that
+     matches nothing does not delete the field mid-word. */
+  const searchable = open.length > 0 || q !== "";
+
   return (
     <>
+      {searchable && (
       <input
         type="search"
         value={q}
@@ -101,6 +141,7 @@ export default function ChatsList() {
           marginBottom: 14,
         }}
       />
+      )}
 
       {/* ── §9 the faces you have drifted from ── */}
       {showDrifted && drifted.length > 0 && (
@@ -171,23 +212,56 @@ export default function ChatsList() {
               <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px" }}>
                 {t("msg.emptyBody")}
               </p>
-              <Link
-                to="new"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  minHeight: A11Y.minTapTargetPx,
-                  padding: "0 24px",
-                  borderRadius: 50,
-                  background: C.green,
-                  color: C.cream,
-                  fontSize: ts(A11Y.minBodyPx),
-                  fontWeight: 700,
-                  textDecoration: "none",
-                }}
-              >
-                {t("msg.emptyCta")}
-              </Link>
+              {/* TWO DOORS, NOT ONE WITH A VAGUE NAME.
+
+                  This was a single button reading "Find someone to write
+                  to" that went to the same picker as "New chat" — so the
+                  owner met one destination under two names and read both
+                  as placeholders. Worse, when the list is empty the
+                  reason may be that he knows nobody here yet, and the
+                  picker he was sent to would have been empty as well.
+
+                  So: write to someone already connected, or invite
+                  somebody who isn't here. Each says which it is. */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <Link
+                  to={`${WORLD}/new`}
+                  className="sb-press"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    minHeight: A11Y.minTapTargetPx,
+                    padding: "0 24px",
+                    borderRadius: 50,
+                    background: C.green,
+                    color: C.cream,
+                    fontSize: ts(A11Y.minBodyPx),
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  {t("msg.emptyCta")}
+                </Link>
+                <Link
+                  to={`${WORLD}/invite`}
+                  className="sb-press"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    minHeight: A11Y.minTapTargetPx,
+                    padding: "0 24px",
+                    borderRadius: 50,
+                    background: "transparent",
+                    border: `1px solid ${C.green}`,
+                    color: C.green,
+                    fontSize: ts(A11Y.minBodyPx),
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  {t("msg.emptyInvite")}
+                </Link>
+              </div>
             </>
           )}
         </div>
@@ -199,7 +273,9 @@ export default function ChatsList() {
             return (
               <li key={c.requestId}>
                 <Link
-                  to={`with/${c.otherId}`}
+                  to={`${WORLD}/with/${c.otherId}`}
+                  onClick={leaving}
+                  className="sb-press"
                   style={{
                     display: "flex",
                     alignItems: "center",

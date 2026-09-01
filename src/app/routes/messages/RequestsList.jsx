@@ -37,7 +37,7 @@ import {
   fileReport,
   blockOrMute,
 } from "../community/communityData.js";
-import { friendsInCommon } from "./messagesData.js";
+import { friendsInCommon, WORLD } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
 
 export default function RequestsList({ onCount }) {
@@ -124,7 +124,7 @@ export default function RequestsList({ onCount }) {
           {t("msg.req.emptyBody")}
         </p>
         <Link
-          to="../invite"
+          to={`${WORLD}/invite`}
           style={{
             display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx,
             padding: "0 24px", borderRadius: 50, background: C.green, color: C.cream,

@@ -12,10 +12,15 @@
    A die is a real object here, and a whole die is a tap target — so
    "roll" never asks for a precise finger.
 
-   STATE IS NEVER COLOUR ALONE. A die that has been used carries a ✓,
-   a die forfeited for want of a legal move carries a ✕, and the one
-   you have picked up carries a heavy ring. Dim-versus-bright is only
-   ever the second signal.
+   A SPENT DIE IS DIM, AND CARRIES NOTHING. It used to wear a ✓ for
+   used and a ✕ for a die with nowhere to go, and the ✕ reads as an
+   error — the owner saw one on his own board and took it for a
+   fault. Nothing went wrong: a five with no legal move is an
+   ordinary turn of ludo.
+
+   So a spent die simply drops to 45% and the message strip says
+   what happened in words, which it already did. Dim is not the
+   only signal — the sentence is.
    ════════════════════════════════════════════════ */
 
 const IVORY = "#F8F2E4";
@@ -92,7 +97,7 @@ export default function Die({
         borderRadius: (11 / 38) * size,
         padding: 2,
         border: state === "selected" ? "3px solid #F3CE5E" : "3px solid transparent",
-        opacity: spent ? 0.5 : 1,
+        opacity: spent ? 0.45 : 1,
         /* 600ms a turn, eased so it leaves fast and settles —
            linear at 420ms was what made it read as a shake. */
         animation:
@@ -120,31 +125,6 @@ export default function Die({
            within a turn. */
         <DieFace value={5} size={size} ink={PIP} faint />
       )}
-      {spent && (
-        /* Outside the face, on the corner, so it never sits on top of
-           the pips it is describing. */
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            insetInlineEnd: -5,
-            bottom: -5,
-            width: 18,
-            height: 18,
-            borderRadius: 9,
-            background: state === "used" ? "#1FA83C" : "#5E3C1B",
-            color: "#FFFFFF",
-            fontSize: 12,
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-          }}
-        >
-          {state === "used" ? "✓" : "✕"}
-        </span>
-      )}
     </span>
   );
 
@@ -164,7 +144,15 @@ export default function Die({
     <button
       type="button"
       className="sb-pressable"
-      onClick={onClick}
+      /* ON TOUCH-DOWN, NOT TOUCH-UP. A die that answers when your
+         finger LIFTS feels like a delay even when nothing is slow,
+         because the gap between pressing and releasing is a tenth
+         of a second you did not know you were spending. The
+         browser's own click follows and is suppressed. */
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onClick?.();
+      }}
       aria-label={label}
       aria-pressed={state === "selected"}
       style={{

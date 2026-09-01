@@ -34,6 +34,7 @@
    ════════════════════════════════════════════════ */
 
 import { A11Y } from "../../../../shared/tokens.js";
+import { useEffect, useState } from "react";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_INK } from "../seatColors.js";
 import { GAME, NO_SELECT } from "../gameSurface.js";
@@ -45,6 +46,24 @@ export { screenCorner } from "./seatCorners.js";
 import { screenCorner as cornerFor } from "./seatCorners.js";
 import Die from "./Dice.jsx";
 import { useSignedAvatar, AvatarPhoto } from "../gameAvatar.jsx";
+
+/* Seconds left until `deadline`, ticking once a second — and only
+   while there is a deadline to count to. */
+function useCountdown(deadline) {
+  const [left, setLeft] = useState(() => secondsTo(deadline));
+  useEffect(() => {
+    setLeft(secondsTo(deadline));
+    if (!deadline) return undefined;
+    const h = setInterval(() => setLeft(secondsTo(deadline)), 1000);
+    return () => clearInterval(h);
+  }, [deadline]);
+  return left;
+}
+
+function secondsTo(deadline) {
+  if (!deadline) return null;
+  return Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 1000));
+}
 
 function initialOf(name) {
   const s = (name || "").trim();
@@ -306,6 +325,18 @@ function SeatDice({
   lastValue,
 }) {
   const { t } = useI18n();
+  /* ONE PAIR ON THE TABLE, AND IT BELONGS TO WHOEVER IS PLAYING.
+
+     Every seat drew dice, so a four-handed game had four pairs on
+     screen at once and nothing about them said whose throw it was
+     — the owner's screenshot has his pair at the bottom and the
+     bot's at the top, both sitting there. Dice are not a badge a
+     player wears; they are the thing in somebody's hand.
+
+     So: nothing at all unless it is this seat's turn, or this seat
+     is mid-throw. Yours appear when the turn comes round to you
+     and go when it leaves. */
+  if (!isTurn && !rolling) return null;
   const rolled = dice && dice.length > 0;
   const empties = rolled ? 0 : Math.max(1, Math.min(2, diceCount));
   const live = isTurn && isMe && canRoll && !rolled;
@@ -638,10 +669,20 @@ export default function SeatPlates({
   /* Short screens (roughly <720px tall): the plate gives its height
      back to the board without giving up anything it says. */
   compact,
-  /* The turn clock, for the arc. `secondsLeft` counts down and
+  /* THE CLOCK TICKS HERE, NOT IN THE SESSION.
+
+     The session used to hold `now` and setNow it once a second,
+     which re-rendered the whole play screen — board, three hundred
+     SVG nodes and all — every second of every game, to move an arc
+     round one circle. Nothing else on that screen changes on a
+     one-second clock.
+
+     So it is given the deadline and does its own counting. When
+     nobody is on the clock there is no interval at all.
+
      `turnSeconds` is the whole turn, so the arc can show a share
-     rather than a number. Omit both and no arc is drawn. */
-  secondsLeft,
+     rather than a number. */
+  turnDeadline,
   turnSeconds,
   onTapSeat,
   onOpenProfile,
@@ -659,6 +700,7 @@ export default function SeatPlates({
   });
   if (plates.every((p) => p === null)) return null;
 
+  const secondsLeft = useCountdown(turnDeadline);
   const remaining =
     secondsLeft != null && turnSeconds
       ? Math.max(0, Math.min(1, secondsLeft / turnSeconds))

@@ -58,6 +58,26 @@ import CollisionNote from "../CollisionNote.jsx";
 const BOT_BEAT = 1300;
 const BOT_GAP = 2600;
 
+/* Everything the play screen draws from, as one string. If two
+   polls produce the same one, the second is not a render. */
+function sameBoard(a, b) {
+  if (!a || !b) return false;
+  return sig(a) === sig(b);
+}
+function sig(g) {
+  return JSON.stringify([
+    g.status,
+    g.current_seat,
+    g.winner_seat,
+    g.turn_deadline,
+    g.title,
+    g.rematch_id,
+    g.target_seats,
+    g.state,
+    (g.seats || []).map((x) => [x.seat, x.profile_id, x.is_bot, x.presence, x.name, x.avatar]),
+  ]);
+}
+
 const POLL_MS = 2500;
 
 const RULE_KEYS = [
@@ -121,7 +141,6 @@ export default function LudoSession() {
   const myId = profile?.id;
 
   const [game, setGame] = useState(null);
-  const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lastTickRef = useRef(0);
@@ -257,7 +276,17 @@ export default function LudoSession() {
       return g;
     }
     shownMoveRef.current = key;
-    setGame(g);
+    /* NOTHING CHANGED, SO NOTHING RE-RENDERS.
+
+       fetchSession builds a fresh object every 2.5 seconds whether
+       or not a single field differs, and setGame with a new object
+       is a re-render of the whole play screen. Most polls of most
+       games change nothing at all — somebody is thinking.
+
+       The signature is the fields the screen actually draws from.
+       Cheap to build, and it cannot go stale the way a hand-written
+       list of comparisons does, because it is one string. */
+    setGame((prev) => (prev && sameBoard(prev, g) ? prev : g));
     if (g?.status === "playing") ping();
     /* Ask until it is settled. The window only ever closes, so
        one 'no' is final and the polling stops paying for it. */
@@ -273,7 +302,6 @@ export default function LudoSession() {
 
   useEffect(() => {
     let timer;
-    let clock;
     /* A different table is a different arrival. React keeps this
        component mounted when only the :sessionId param changes, so
        without this the second table would inherit the first's memory
@@ -327,10 +355,8 @@ export default function LudoSession() {
         /* transient; the next poll retries */
       }
     }, POLL_MS);
-    clock = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(timer);
-      clearInterval(clock);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
@@ -556,8 +582,19 @@ export default function LudoSession() {
 
     try {
       /* Both, not either: the throw takes as long as the slower of
-         the animation and the answer. */
-      await Promise.all([act(() => roll(game.id)), floor]);
+         the animation and the answer.
+
+         NOT through act(), which set `busy` and greyed the whole
+         board for the length of the round trip. The dice are
+         already tumbling — that IS the response to the tap — and
+         there is nothing on the board a person could break by
+         touching it while the throw is in the air. */
+      await Promise.all([
+        roll(game.id).then(() => load()).catch((err) => {
+          setError(err.message || "ludo.errors.generic");
+        }),
+        floor,
+      ]);
     } finally {
       stopped = true;
       setRolling(false);
@@ -572,16 +609,67 @@ export default function LudoSession() {
      exact move, pair or single, that the goti was let go on. That is
      also why dropping is disabled while the jota question is open —
      the question would be answered twice, once by each hand. */
+  /* ── THE TAP MOVES THE GOTI. THE SERVER IS TOLD AFTERWARDS. ──
+
+     Every move used to go: setBusy(true), await the move RPC, await
+     a full refetch, and only then did the board have a new position
+     to walk to. Two round trips before the goti twitched, with the
+     board greyed out for both of them. On a phone on Pakistani
+     mobile data that is most of a second of nothing, every single
+     turn — and it is the largest part of what the owner means by
+     "tapping a goti does not move it at once".
+
+     The option the board hands back already carries `to`, the exact
+     square the server will put the piece on: it came FROM the
+     server (ludo_desi_legal) and the move RPC validates against the
+     same list. So the destination is not a guess — it is the
+     server's own answer, arriving early.
+
+     What is NOT applied locally is anything the option does not
+     state: a capture, the turn passing, an extra roll. Those arrive
+     with the real state a moment later and reconcile quietly, which
+     is the right way round — the piece the person is watching moves
+     now, and the consequences catch up.
+
+     If the server refuses, load() overwrites the guess with the
+     truth and the goti steps back. That has to be possible and it
+     has to be rare; it is rare because the option came from the
+     server in the first place. */
+  const sendMove = (piece, option, dieIndex = pickedDie) => {
+    setGame((g) => {
+      if (!g?.state?.pieces || g.current_seat == null) return g;
+      const seat = g.current_seat;
+      const pieces = g.state.pieces.map((row, s2) =>
+        s2 === seat ? row.map((p, i) => (i === piece ? option.to : p)) : row
+      );
+      /* The die is spent, so it stops being offered while the
+         answer is in flight. */
+      const dice = Array.isArray(g.state.dice)
+        ? g.state.dice.map((d, i) => (i === dieIndex ? { ...d, used: true } : d))
+        : g.state.dice;
+      return { ...g, state: { ...g.state, pieces, dice } };
+    });
+    /* No setBusy: the board stays live. A second tap during the
+       flight is answered by the options list, which the local state
+       has already emptied for that die. */
+    move(game.id, { piece, die: dieIndex, split: option.split })
+      .then(() => load())
+      .catch((err) => {
+        setError(err.message || "ludo.errors.generic");
+        load().catch(() => {});
+      });
+  };
+
   const dropPiece = (i, option) => {
-    if (!option || busy) return;
-    act(() => move(game.id, { piece: i, die: pickedDie, split: option.split }));
+    if (!option) return;
+    sendMove(i, option);
   };
 
   const tapPiece = (i) => {
     const mine = options.filter((o) => o.piece === i);
     if (!mine.length) return;
     if (mine.length === 1) {
-      act(() => move(game.id, { piece: i, die: pickedDie, split: mine[0].split }));
+      sendMove(i, mine[0]);
       return;
     }
     /* THE PAIR'S FIRST MOVE IS THE ONLY TIME INTENT IS AMBIGUOUS.
@@ -652,7 +740,7 @@ export default function LudoSession() {
     autoPlayed.current = key;
     const only = all[0];
     setAutoNote(true);
-    act(() => move(game.id, { piece: only.piece, die: only.die, split: only.split }));
+    sendMove(only.piece, only, only.die);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsByDie, myTurnNow, busy, rolling, chooser, autoMove, diceKey]);
 
@@ -934,9 +1022,8 @@ export default function LudoSession() {
      turn they were told they had lost. The two numbers differ on
      purpose. */
   const turnSeconds = Number(game.house_rules?.turn_seconds) || 60;
-  const secondsLeft = game.turn_deadline
-    ? Math.max(0, Math.ceil((new Date(game.turn_deadline).getTime() - now) / 1000))
-    : null;
+  /* The deadline, not the count. SeatPlates does the counting, so
+     nothing on this screen re-renders on a one-second clock. */
   const last = state.last;
   /* NARRATION IS OFF UNLESS ASKED FOR.
 
@@ -1292,7 +1379,7 @@ export default function LudoSession() {
             rollingSeat={rollingSeat}
             tumbleFaces={tumble}
             lastDieBySeat={lastDieBySeat}
-            secondsLeft={clockHeld ? null : secondsLeft}
+            turnDeadline={clockHeld ? null : game.turn_deadline}
             turnSeconds={turnSeconds}
             {...platePins}
             diceCount={diceCount}
@@ -1415,7 +1502,7 @@ export default function LudoSession() {
             currentSeat={game.current_seat}
             onPieceTap={tapPiece}
             onPieceDrop={dropPiece}
-            dragDisabled={!!chooser || busy}
+            dragDisabled={!!chooser}
           />
           </div>
           <p style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>
@@ -1439,7 +1526,7 @@ export default function LudoSession() {
             rollingSeat={rollingSeat}
             tumbleFaces={tumble}
             lastDieBySeat={lastDieBySeat}
-            secondsLeft={clockHeld ? null : secondsLeft}
+            turnDeadline={clockHeld ? null : game.turn_deadline}
             turnSeconds={turnSeconds}
             {...platePins}
             diceCount={diceCount}
@@ -1714,13 +1801,7 @@ export default function LudoSession() {
                 <PrimaryBtn
                   disabled={busy}
                   onClick={() =>
-                    act(() =>
-                      move(game.id, {
-                        piece: chooser.piece,
-                        die: pickedDie,
-                        split: chooser.opts.find((o) => o.kind === "pair").split,
-                      })
-                    )
+                    sendMove(chooser.piece, chooser.opts.find((o) => o.kind === "pair"))
                   }
                   style={{ width: "100%", minHeight: 64, fontSize: ts(20), marginBottom: 10 }}
                 >
@@ -1745,12 +1826,9 @@ export default function LudoSession() {
                           key={idx}
                           disabled={busy}
                           onClick={() =>
-                            act(() =>
-                              move(game.id, {
-                                piece: idx,
-                                die: pickedDie,
-                                split: options.find((o) => o.piece === idx && o.kind === "single").split,
-                              })
+                            sendMove(
+                              idx,
+                              options.find((o) => o.piece === idx && o.kind === "single")
                             )
                           }
                           style={{

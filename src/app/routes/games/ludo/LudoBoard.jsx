@@ -27,7 +27,7 @@
    it in de520c0.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { SEAT_LIGHT, SEAT_DEEP, SEAT_COLOR_NAMES } from "../seatColors.js";
 import { NO_SELECT } from "../gameSurface.js";
@@ -747,6 +747,467 @@ function useWalk(pieces, isSilent) {
   return { shown, flights, trail, arrivedHome, closeCalls, hops };
 }
 
+/* ── THE GROUND ───────────────────────────────────────────────
+
+   Everything on this board that does not change while a game is
+   played: the defs, the timber, the paper, four yards, fifty-two
+   track cells, the arrows, four home columns and the centre. Three
+   hundred-odd SVG nodes.
+
+   IT WAS BEING REBUILT ON EVERY RENDER OF THE SESSION — once a
+   second for the turn clock, every 2.5 seconds for the poll, and
+   once per 140ms cell for the whole length of every walk. React
+   then diffed three hundred nodes to discover that none of them
+   had changed. That is most of what "the game lags at every step"
+   was made of: nothing was slow, everything was constant.
+
+   It depends on ONE thing — which way the board is turned for the
+   player looking at it — so memo on that alone makes it render
+   once per table and never again.
+
+   The theme still reaches it: the cells paint from CSS variables
+   set on a div outside the SVG, which inherit rather than being
+   passed, so a themed table costs this nothing. ── */
+const BoardGround = memo(function BoardGround({ spin }) {
+  return (
+    <>
+          {/* ── The material ──────────────────────────────────────────
+               A ludo board is a physical object: printed card with a
+               sheen, cells pressed slightly into it, zones that catch
+               the light at their edge. None of that is decoration for
+               its own sake — depth is what tells you a cell is a place a
+               goti can stand and a yard is a container it sits inside.
+               All gradients and filters, no assets. ── */}
+          <defs>
+            {/* THE TIMBER. Body #9A6A33, edge #5E3C1B, lit from above
+                because every other light on this board comes from the
+                upper left. It is the board's ONLY edge: the gold trim
+                ring that used to run inside it is gone, and gold is
+                now rationed to the crown and the movable halo. */}
+            <linearGradient id="sb-timber" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#B98244" />
+              <stop offset="42%" stopColor="#9A6A33" />
+              <stop offset="100%" stopColor="#7A5224" />
+            </linearGradient>
+            {/* a track cell: light from above, pressed in at the top */}
+            {/* A track cell: light from above, pressed in at the top.
+
+                THE STOPS ARE THE THEME'S. Painted from --sb-table-cell
+                and --sb-table-cell-alt when a themed wrapper supplies
+                them, and from these literals when nothing does, so a
+                board outside a theme is unchanged. The variables are set
+                on a div around the board (LudoSession, 38b07df) and
+                inherit, so nothing is plumbed through props. Table
+                themes own the surface; seats own their own colours. */}
+            {/* BRIGHT WHITE, and flat. The warm off-white with a bevel
+                was the right answer for a cream table; on a midnight
+                one the board has to be the light in the room, and the
+                track's job is to be the brightest thing on it so four
+                deep zones and four saturated gotis all read against
+                it. The grid is carried by a visible #CFCFCF line
+                instead of by a value change in the fill, which is what
+                lets the fill go all the way to white.
+
+                The theme variables stay: a themed table still repaints
+                this, and both stops default to white so an unthemed
+                board is the specified one. */}
+            <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
+              <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FFFFFF)" />
+            </linearGradient>
+            {/* The recess itself: dark along the top and left inside
+                edges, the way a pressed groove catches light. */}
+            <linearGradient id="sb-recess" x1="0.1" y1="0" x2="0.35" y2="1">
+              <stop offset="0%" stopColor="#6B5A3E" stopOpacity="0.20" />
+              <stop offset="38%" stopColor="#6B5A3E" stopOpacity="0.04" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.55" />
+            </linearGradient>
+            {/* the gentle press: a soft dark line inside the top edge */}
+            <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
+              <feOffset dx="0" dy="0.7" in="SourceAlpha" result="o" />
+              <feGaussianBlur in="o" stdDeviation="0.7" result="b" />
+              <feComposite in="b" in2="SourceAlpha" operator="arithmetic"
+                k2="-1" k3="1" result="sh" />
+              <feColorMatrix in="sh" type="matrix"
+                values="0 0 0 0 0.36  0 0 0 0 0.29  0 0 0 0 0.18  0 0 0 0.30 0" result="tint" />
+              <feComposite in="tint" in2="SourceGraphic" operator="over" />
+            </filter>
+            {/* the whole board lifted a little off the page */}
+            <filter id="sb-lift" x="-8%" y="-8%" width="116%" height="116%">
+              <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4a3a22" floodOpacity="0.22" />
+            </filter>
+            {/* (The gold chips are gone. A stop is now the coloured cell
+                itself — see the track below. Nothing on this board is
+                goti-shaped except a goti.) */}
+            {/* Each zone as a lit surface: a real gradient from the
+                colour's own light end to its own deep end, rather than
+                white-over-colour-over-black. Mixing toward black greys a
+                hue out; mixing toward a deeper version of itself keeps
+                it saturated, which is the whole point of the brief. */}
+            {SEAT_COLORS.map((hex, seat) => (
+              <linearGradient key={seat} id={`sb-zone-${seat}`} x1="0.1" y1="0" x2="0.9" y2="1">
+                <stop offset="0%" stopColor={SEAT_LIGHT[seat]} />
+                <stop offset="45%" stopColor={hex} />
+                <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
+              </linearGradient>
+            ))}
+            {/* The same again for a single STOP cell, steeper so one
+                40-unit square still reads as domed. */}
+            {/* NEARLY FLAT. This ramped from light to deep across one
+                40-unit square, so a home column read as six separate
+                domes fading into each other rather than as one painted
+                lane. The reference paints its home columns in solid
+                colour and lets the frame and the tokens carry the
+                depth. A whisper of a ramp is left so the lane is not
+                perfectly dead, and the sheen above still crosses it. */}
+            {SEAT_COLORS.map((hex, seat) => (
+              <linearGradient key={`a${seat}`} id={`sb-arm-${seat}`} x1="0" y1="0" x2="0.35" y2="1">
+                <stop offset="0%" stopColor={hex} />
+                <stop offset="100%" stopColor={SEAT_DEEP[seat]} stopOpacity="0.55" />
+              </linearGradient>
+            ))}
+            {/* A SHEEN. One soft white pass over the top of a surface,
+                falling off before the middle — the single cheapest thing
+                that turns flat colour into moulded plastic, because it
+                is what a curved lit surface actually does. */}
+            <linearGradient id="sb-gloss" x1="0" y1="0" x2="0.15" y2="1">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
+              <stop offset="38%" stopColor="#FFFFFF" stopOpacity="0.07" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+            </linearGradient>
+            {/* The same idea at a fraction of the strength, for the
+                eight stops. A 40-unit square takes far less white than a
+                240-unit yard before it stops looking like a red cell and
+                starts looking like a pink one — and the stops are the
+                cells that most need to keep their colour, because the
+                colour IS the information. */}
+            <linearGradient id="sb-gloss-cell" x1="0" y1="0" x2="0.2" y2="1">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.20" />
+              <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.04" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.10" />
+            </linearGradient>
+            {/* The centre is the high point of the board — a pedestal
+                the four columns climb to — so it gets a dome of its own
+                rather than being four flat triangles. */}
+            <radialGradient id="sb-dome" cx="38%" cy="30%" r="78%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+              <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+            </radialGradient>
+            {/* Something raised casts a shadow. Used under the centre
+                and the yards, which are the two things on this board
+                that should read as sitting ON it. */}
+            <filter id="sb-raise" x="-25%" y="-25%" width="150%" height="150%">
+              <feDropShadow dx="0" dy="2.4" stdDeviation="3.2" floodColor="#3A2C16" floodOpacity="0.30" />
+            </filter>
+            {/* THE GOLD CROWN at the centre. The one place on the
+                board that keeps gold, with the halo on a movable
+                goti. */}
+            <linearGradient id="sb-crown" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#F3CE5E" />
+              <stop offset="100%" stopColor="#B98A1E" />
+            </linearGradient>
+            {/* A cell bevel: light along the top edge, shadow along the
+                bottom, so a track square is pressed into the board
+                rather than painted on it. */}
+            <linearGradient id="sb-bevel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
+              <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0" />
+              {/* lighter than it was: on a white cell the old 0.28 brown
+                  shadow put the tint back that §1 just took out */}
+              <stop offset="100%" stopColor="#7A6238" stopOpacity="0.13" />
+            </linearGradient>
+          </defs>
+
+          {/* THE TIMBER, as a FILLED shape under everything rather
+              than a line drawn around it. That is the whole reason no
+              white can poke past a corner: the wood is a solid
+              rounded rectangle and the paper is a smaller rounded
+              rectangle laid on top of it, so at every corner there is
+              wood behind the paper by construction. Drawn again at
+              the very end as a band, so it also laps over the outer
+              cells' edges. */}
+          <rect
+            x={-MARGIN}
+            y={-MARGIN}
+            width={SIZE + 2 * MARGIN}
+            height={SIZE + 2 * MARGIN}
+            rx={MARGIN + PAPER_R}
+            fill="url(#sb-timber)"
+          />
+          {/* the board's paper: bright white, corners rounded so the
+              timber closes round it */}
+          <rect
+            x={-1}
+            y={-1}
+            width={SIZE + 2}
+            height={SIZE + 2}
+            rx={PAPER_R}
+            fill="#FFFFFF"
+          />
+
+          {/* ── Yards: a 6×6 block of FLAT colour, a white plate,
+                 and four sunk sockets for the gotis to stand in.
+
+                 FLAT is the instruction and it is the right one. The
+                 zone used to be a gradient with a gloss pass and a
+                 bright rim — three layers of moulded-plastic
+                 shorthand — and on the deep rich set they turned a
+                 #B01709 red into something closer to a beach ball.
+                 Flat colour with one dark outline reads as printed
+                 card, which is what a ludo board is.
+
+                 The DEPTH moved to where depth belongs: the four
+                 sockets. A goti standing in a rimmed well on a white
+                 plate is unmistakably an object sitting in a place
+                 made for it, and it costs one circle each. ── */}
+          {YARD_ORIGIN.map(([c, r], seat) => (
+            <g key={`yard-${seat}`}>
+              <rect
+                x={c * CELL}
+                y={r * CELL}
+                width={6 * CELL}
+                height={6 * CELL}
+                rx={8}
+                fill={SEAT_COLORS[seat]}
+                stroke={SEAT_DEEP[seat]}
+                strokeWidth={2.5}
+              />
+              {/* the white plate the four gotis stand on */}
+              <rect
+                x={(c + 1) * CELL}
+                y={(r + 1) * CELL}
+                width={4 * CELL}
+                height={4 * CELL}
+                rx={10}
+                fill="rgba(255,255,255,0.9)"
+              />
+              {YARD_SPOTS.map(([sc, sr], i) => {
+                const x = (c + sc) * CELL;
+                const y = (r + sr) * CELL;
+                return (
+                  <g key={i}>
+                    {/* THE WELL. Wider than the goti standing in it,
+                        on purpose. At CELL*0.42 the rim sat entirely
+                        under a full-cell piece and not one pixel of
+                        it was ever visible — a socket you would have
+                        to read the source to know about. */}
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={CELL * 0.56}
+                      fill="rgba(0,0,0,0.18)"
+                      stroke={SEAT_DEEP[seat]}
+                      strokeWidth={2}
+                    />
+                    {/* the inner shadow ring: a well is darkest just
+                        inside its rim, and one more circle is the
+                        whole difference between a socket and a dot */}
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={CELL * 0.56 - 2.6}
+                      fill="none"
+                      stroke="#000000"
+                      strokeOpacity={0.16}
+                      strokeWidth={3}
+                    />
+                  </g>
+                );
+              })}
+            </g>
+          ))}
+          {/* ── The 52-square track ──
+
+                 Three kinds of cell, and the difference between them
+                 is the difference between two things a player must
+                 never confuse:
+
+                 THE OPENING CELL is where your gotis come out. It
+                 wears your colour at a third — enough to say whose
+                 door it is, pale enough that the star on it still
+                 reads — and carries a star in that colour.
+
+                 THE PRE-HOME CELL is the last star before you turn
+                 off the ring into your own column. PLAIN WHITE, with
+                 only the coloured star to name it: it is not your
+                 door, it is a stop that happens to be yours, and
+                 tinting it too would have made two cells on the same
+                 arm look like the same kind of place.
+
+                 ANY OTHER SAFE CELL gets a grey star. Our marked
+                 board yields none — its eight stops are exactly four
+                 openings and four pre-homes — so this branch draws
+                 nothing today. It is here because the alternative is
+                 a board that would silently stop marking a safe
+                 square if the geometry ever gained one, and an
+                 unmarked safe square is a promise nobody can see.
+
+                 Positions come from board.js, which came from the
+                 owner's marked board. Nothing here invents one. ── */}
+          {TRACK.map(([c, r], abs) => {
+            const isStart = STARTS.includes(abs);
+            const isSafe = SAFE_ABS.includes(abs);
+            const badgeSeat = isStart
+              ? STARTS.indexOf(abs)
+              : PRE_HOME_ABS.indexOf(abs);
+            const x = c * CELL;
+            const y = r * CELL;
+            return (
+              <g key={`t-${abs}`}>
+                <rect
+                  x={x + 0.5}
+                  y={y + 0.5}
+                  width={CELL - 1}
+                  height={CELL - 1}
+                  rx={3}
+                  fill="url(#sb-cell)"
+                  stroke="var(--sb-table-line, #CFCFCF)"
+                  strokeWidth={1}
+                />
+                {isStart && (
+                  <rect
+                    x={x + 0.5}
+                    y={y + 0.5}
+                    width={CELL - 1}
+                    height={CELL - 1}
+                    rx={3}
+                    fill={SEAT_COLORS[badgeSeat]}
+                    opacity={0.33}
+                    pointerEvents="none"
+                  />
+                )}
+                {isSafe && (
+                  /* Counter-rotated, so a five-pointed star is still
+                     point-up at every point of view. A star is not
+                     four-fold symmetric: left alone it would lie on
+                     its side for three players out of four. */
+                  <g
+                    transform={
+                      spin
+                        ? `rotate(${-spin} ${x + CELL / 2} ${y + CELL / 2})`
+                        : undefined
+                    }
+                    aria-hidden="true"
+                    pointerEvents="none"
+                  >
+                    <path
+                      d={starPath(x + CELL / 2, y + CELL / 2, CELL * 0.3)}
+                      fill={badgeSeat >= 0 ? SEAT_COLORS[badgeSeat] : "#B0B0B0"}
+                      stroke={badgeSeat >= 0 ? SEAT_DEEP[badgeSeat] : "#8A8A8A"}
+                      strokeWidth={1.2}
+                      strokeLinejoin="round"
+                    />
+                  </g>
+                )}
+              </g>
+            );
+          })}
+          {/* ── Which way you go ──
+                 Printed on the track like a real board's cloth, derived
+                 from the track itself so it can never point the wrong
+                 way after a geometry change. */}
+          {allArrows({ every: 3 }).map((a, i) => (
+            <Arrow key={`arw-${i}`} {...a} />
+          ))}
+
+          {/* ── Home columns: each arm's middle line, in the seat's
+                 MID tone — the same flat colour as its zone, so the
+                 run home and the yard it leads from are visibly one
+                 player's territory.
+
+                 Each cell keeps its own outline. A solid bar of
+                 colour hides how many squares are left, which is the
+                 one thing a player climbing it is counting. ── */}
+          {HOME_COLUMNS.map((cells, seat) =>
+            cells.map(([c, r], i) => (
+              <rect
+                key={`h-${seat}-${i}`}
+                x={c * CELL + 0.5}
+                y={r * CELL + 0.5}
+                width={CELL - 1}
+                height={CELL - 1}
+                rx={3}
+                fill={SEAT_COLORS[seat]}
+                stroke={SEAT_DEEP[seat]}
+                strokeWidth={1.6}
+              />
+            ))
+          )}
+          {/* ── The centre: the classic four triangles in the four
+                 MID tones, and a gold crown standing on them.
+
+                 The Saathban monogram used to sit here at half
+                 opacity. It was ours and it was quiet, but the
+                 centre of a ludo board is the one square every
+                 player is walking towards for the whole game, and
+                 what belongs at the end of that walk is the thing
+                 you are walking towards — not a maker's mark. A
+                 crown is what a board has always put there.
+
+                 Drawn LAST inside the group, so a goti that finishes
+                 on the middle sits over the crown rather than
+                 behind it. ── */}
+          <g>
+            {[
+              /* Wedge order follows the ring: top, right, bottom, left. */
+              [`${6 * CELL},${6 * CELL} ${9 * CELL},${6 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 0],
+              [`${9 * CELL},${6 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 1],
+              [`${6 * CELL},${9 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 2],
+              [`${6 * CELL},${6 * CELL} ${6 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 3],
+            ].map(([points, seat]) => (
+              <polygon
+                key={`c-${seat}`}
+                points={points}
+                fill={SEAT_COLORS[seat]}
+                stroke={SEAT_DEEP[seat]}
+                strokeWidth={1.4}
+              />
+            ))}
+            {/* the dark outline round the whole finish */}
+            <rect
+              x={6 * CELL}
+              y={6 * CELL}
+              width={3 * CELL}
+              height={3 * CELL}
+              rx={4}
+              fill="none"
+              stroke="#3A2A12"
+              strokeWidth={2.5}
+              pointerEvents="none"
+            />
+            {/* THE CROWN. Counter-rotated with the board so it is
+                upright for whoever is looking at it. */}
+            <g
+              transform={
+                `translate(${7.5 * CELL} ${7.5 * CELL})` +
+                (spin ? ` rotate(${-spin})` : "") +
+                ` scale(${CELL * 0.66}) translate(0 -0.14)`
+              }
+              aria-hidden="true"
+              pointerEvents="none"
+            >
+              {/* Its own shadow first, so the crown is standing on
+                  the wedges rather than printed across them. */}
+              <path
+                d={CROWN_D}
+                fill="#000000"
+                opacity={0.22}
+                transform="translate(0.05 0.07)"
+              />
+              <path
+                d={CROWN_D}
+                fill="url(#sb-crown)"
+                stroke="#9A7420"
+                strokeWidth={0.075}
+                strokeLinejoin="round"
+              />
+            </g>
+          </g>
+    </>
+  );
+});
+
 /* "Blue 3" — the name of one goti, for the screen reader and for
    the tooltip. Colour AND number, because either alone is
    ambiguous: four gotis share a colour, and four numbers are
@@ -964,439 +1425,7 @@ export default function LudoBoard({
           transform: spin ? `rotate(${spin}deg)` : undefined,
         }}
       >
-        {/* ── The material ──────────────────────────────────────────
-             A ludo board is a physical object: printed card with a
-             sheen, cells pressed slightly into it, zones that catch
-             the light at their edge. None of that is decoration for
-             its own sake — depth is what tells you a cell is a place a
-             goti can stand and a yard is a container it sits inside.
-             All gradients and filters, no assets. ── */}
-        <defs>
-          {/* THE TIMBER. Body #9A6A33, edge #5E3C1B, lit from above
-              because every other light on this board comes from the
-              upper left. It is the board's ONLY edge: the gold trim
-              ring that used to run inside it is gone, and gold is
-              now rationed to the crown and the movable halo. */}
-          <linearGradient id="sb-timber" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#B98244" />
-            <stop offset="42%" stopColor="#9A6A33" />
-            <stop offset="100%" stopColor="#7A5224" />
-          </linearGradient>
-          {/* a track cell: light from above, pressed in at the top */}
-          {/* A track cell: light from above, pressed in at the top.
-
-              THE STOPS ARE THE THEME'S. Painted from --sb-table-cell
-              and --sb-table-cell-alt when a themed wrapper supplies
-              them, and from these literals when nothing does, so a
-              board outside a theme is unchanged. The variables are set
-              on a div around the board (LudoSession, 38b07df) and
-              inherit, so nothing is plumbed through props. Table
-              themes own the surface; seats own their own colours. */}
-          {/* BRIGHT WHITE, and flat. The warm off-white with a bevel
-              was the right answer for a cream table; on a midnight
-              one the board has to be the light in the room, and the
-              track's job is to be the brightest thing on it so four
-              deep zones and four saturated gotis all read against
-              it. The grid is carried by a visible #CFCFCF line
-              instead of by a value change in the fill, which is what
-              lets the fill go all the way to white.
-
-              The theme variables stay: a themed table still repaints
-              this, and both stops default to white so an unthemed
-              board is the specified one. */}
-          <linearGradient id="sb-cell" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--sb-table-cell, #FFFFFF)" />
-            <stop offset="100%" stopColor="var(--sb-table-cell-alt, #FFFFFF)" />
-          </linearGradient>
-          {/* The recess itself: dark along the top and left inside
-              edges, the way a pressed groove catches light. */}
-          <linearGradient id="sb-recess" x1="0.1" y1="0" x2="0.35" y2="1">
-            <stop offset="0%" stopColor="#6B5A3E" stopOpacity="0.20" />
-            <stop offset="38%" stopColor="#6B5A3E" stopOpacity="0.04" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.55" />
-          </linearGradient>
-          {/* the gentle press: a soft dark line inside the top edge */}
-          <filter id="sb-inset" x="-20%" y="-20%" width="140%" height="140%">
-            <feOffset dx="0" dy="0.7" in="SourceAlpha" result="o" />
-            <feGaussianBlur in="o" stdDeviation="0.7" result="b" />
-            <feComposite in="b" in2="SourceAlpha" operator="arithmetic"
-              k2="-1" k3="1" result="sh" />
-            <feColorMatrix in="sh" type="matrix"
-              values="0 0 0 0 0.36  0 0 0 0 0.29  0 0 0 0 0.18  0 0 0 0.30 0" result="tint" />
-            <feComposite in="tint" in2="SourceGraphic" operator="over" />
-          </filter>
-          {/* the whole board lifted a little off the page */}
-          <filter id="sb-lift" x="-8%" y="-8%" width="116%" height="116%">
-            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4a3a22" floodOpacity="0.22" />
-          </filter>
-          {/* (The gold chips are gone. A stop is now the coloured cell
-              itself — see the track below. Nothing on this board is
-              goti-shaped except a goti.) */}
-          {/* Each zone as a lit surface: a real gradient from the
-              colour's own light end to its own deep end, rather than
-              white-over-colour-over-black. Mixing toward black greys a
-              hue out; mixing toward a deeper version of itself keeps
-              it saturated, which is the whole point of the brief. */}
-          {SEAT_COLORS.map((hex, seat) => (
-            <linearGradient key={seat} id={`sb-zone-${seat}`} x1="0.1" y1="0" x2="0.9" y2="1">
-              <stop offset="0%" stopColor={SEAT_LIGHT[seat]} />
-              <stop offset="45%" stopColor={hex} />
-              <stop offset="100%" stopColor={SEAT_DEEP[seat]} />
-            </linearGradient>
-          ))}
-          {/* The same again for a single STOP cell, steeper so one
-              40-unit square still reads as domed. */}
-          {/* NEARLY FLAT. This ramped from light to deep across one
-              40-unit square, so a home column read as six separate
-              domes fading into each other rather than as one painted
-              lane. The reference paints its home columns in solid
-              colour and lets the frame and the tokens carry the
-              depth. A whisper of a ramp is left so the lane is not
-              perfectly dead, and the sheen above still crosses it. */}
-          {SEAT_COLORS.map((hex, seat) => (
-            <linearGradient key={`a${seat}`} id={`sb-arm-${seat}`} x1="0" y1="0" x2="0.35" y2="1">
-              <stop offset="0%" stopColor={hex} />
-              <stop offset="100%" stopColor={SEAT_DEEP[seat]} stopOpacity="0.55" />
-            </linearGradient>
-          ))}
-          {/* A SHEEN. One soft white pass over the top of a surface,
-              falling off before the middle — the single cheapest thing
-              that turns flat colour into moulded plastic, because it
-              is what a curved lit surface actually does. */}
-          <linearGradient id="sb-gloss" x1="0" y1="0" x2="0.15" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.30" />
-            <stop offset="38%" stopColor="#FFFFFF" stopOpacity="0.07" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-          </linearGradient>
-          {/* The same idea at a fraction of the strength, for the
-              eight stops. A 40-unit square takes far less white than a
-              240-unit yard before it stops looking like a red cell and
-              starts looking like a pink one — and the stops are the
-              cells that most need to keep their colour, because the
-              colour IS the information. */}
-          <linearGradient id="sb-gloss-cell" x1="0" y1="0" x2="0.2" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.20" />
-            <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.04" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.10" />
-          </linearGradient>
-          {/* The centre is the high point of the board — a pedestal
-              the four columns climb to — so it gets a dome of its own
-              rather than being four flat triangles. */}
-          <radialGradient id="sb-dome" cx="38%" cy="30%" r="78%">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
-            <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
-          </radialGradient>
-          {/* Something raised casts a shadow. Used under the centre
-              and the yards, which are the two things on this board
-              that should read as sitting ON it. */}
-          <filter id="sb-raise" x="-25%" y="-25%" width="150%" height="150%">
-            <feDropShadow dx="0" dy="2.4" stdDeviation="3.2" floodColor="#3A2C16" floodOpacity="0.30" />
-          </filter>
-          {/* THE GOLD CROWN at the centre. The one place on the
-              board that keeps gold, with the halo on a movable
-              goti. */}
-          <linearGradient id="sb-crown" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F3CE5E" />
-            <stop offset="100%" stopColor="#B98A1E" />
-          </linearGradient>
-          {/* A cell bevel: light along the top edge, shadow along the
-              bottom, so a track square is pressed into the board
-              rather than painted on it. */}
-          <linearGradient id="sb-bevel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
-            <stop offset="45%" stopColor="#FFFFFF" stopOpacity="0" />
-            {/* lighter than it was: on a white cell the old 0.28 brown
-                shadow put the tint back that §1 just took out */}
-            <stop offset="100%" stopColor="#7A6238" stopOpacity="0.13" />
-          </linearGradient>
-        </defs>
-
-        {/* THE TIMBER, as a FILLED shape under everything rather
-            than a line drawn around it. That is the whole reason no
-            white can poke past a corner: the wood is a solid
-            rounded rectangle and the paper is a smaller rounded
-            rectangle laid on top of it, so at every corner there is
-            wood behind the paper by construction. Drawn again at
-            the very end as a band, so it also laps over the outer
-            cells' edges. */}
-        <rect
-          x={-MARGIN}
-          y={-MARGIN}
-          width={SIZE + 2 * MARGIN}
-          height={SIZE + 2 * MARGIN}
-          rx={MARGIN + PAPER_R}
-          fill="url(#sb-timber)"
-        />
-        {/* the board's paper: bright white, corners rounded so the
-            timber closes round it */}
-        <rect
-          x={-1}
-          y={-1}
-          width={SIZE + 2}
-          height={SIZE + 2}
-          rx={PAPER_R}
-          fill="#FFFFFF"
-        />
-
-        {/* ── Yards: a 6×6 block of FLAT colour, a white plate,
-               and four sunk sockets for the gotis to stand in.
-
-               FLAT is the instruction and it is the right one. The
-               zone used to be a gradient with a gloss pass and a
-               bright rim — three layers of moulded-plastic
-               shorthand — and on the deep rich set they turned a
-               #B01709 red into something closer to a beach ball.
-               Flat colour with one dark outline reads as printed
-               card, which is what a ludo board is.
-
-               The DEPTH moved to where depth belongs: the four
-               sockets. A goti standing in a rimmed well on a white
-               plate is unmistakably an object sitting in a place
-               made for it, and it costs one circle each. ── */}
-        {YARD_ORIGIN.map(([c, r], seat) => (
-          <g key={`yard-${seat}`}>
-            <rect
-              x={c * CELL}
-              y={r * CELL}
-              width={6 * CELL}
-              height={6 * CELL}
-              rx={8}
-              fill={SEAT_COLORS[seat]}
-              stroke={SEAT_DEEP[seat]}
-              strokeWidth={2.5}
-            />
-            {/* the white plate the four gotis stand on */}
-            <rect
-              x={(c + 1) * CELL}
-              y={(r + 1) * CELL}
-              width={4 * CELL}
-              height={4 * CELL}
-              rx={10}
-              fill="rgba(255,255,255,0.9)"
-            />
-            {YARD_SPOTS.map(([sc, sr], i) => {
-              const x = (c + sc) * CELL;
-              const y = (r + sr) * CELL;
-              return (
-                <g key={i}>
-                  {/* THE WELL. Wider than the goti standing in it,
-                      on purpose. At CELL*0.42 the rim sat entirely
-                      under a full-cell piece and not one pixel of
-                      it was ever visible — a socket you would have
-                      to read the source to know about. */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={CELL * 0.56}
-                    fill="rgba(0,0,0,0.18)"
-                    stroke={SEAT_DEEP[seat]}
-                    strokeWidth={2}
-                  />
-                  {/* the inner shadow ring: a well is darkest just
-                      inside its rim, and one more circle is the
-                      whole difference between a socket and a dot */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={CELL * 0.56 - 2.6}
-                    fill="none"
-                    stroke="#000000"
-                    strokeOpacity={0.16}
-                    strokeWidth={3}
-                  />
-                </g>
-              );
-            })}
-          </g>
-        ))}
-        {/* ── The 52-square track ──
-
-               Three kinds of cell, and the difference between them
-               is the difference between two things a player must
-               never confuse:
-
-               THE OPENING CELL is where your gotis come out. It
-               wears your colour at a third — enough to say whose
-               door it is, pale enough that the star on it still
-               reads — and carries a star in that colour.
-
-               THE PRE-HOME CELL is the last star before you turn
-               off the ring into your own column. PLAIN WHITE, with
-               only the coloured star to name it: it is not your
-               door, it is a stop that happens to be yours, and
-               tinting it too would have made two cells on the same
-               arm look like the same kind of place.
-
-               ANY OTHER SAFE CELL gets a grey star. Our marked
-               board yields none — its eight stops are exactly four
-               openings and four pre-homes — so this branch draws
-               nothing today. It is here because the alternative is
-               a board that would silently stop marking a safe
-               square if the geometry ever gained one, and an
-               unmarked safe square is a promise nobody can see.
-
-               Positions come from board.js, which came from the
-               owner's marked board. Nothing here invents one. ── */}
-        {TRACK.map(([c, r], abs) => {
-          const isStart = STARTS.includes(abs);
-          const isSafe = SAFE_ABS.includes(abs);
-          const badgeSeat = isStart
-            ? STARTS.indexOf(abs)
-            : PRE_HOME_ABS.indexOf(abs);
-          const x = c * CELL;
-          const y = r * CELL;
-          return (
-            <g key={`t-${abs}`}>
-              <rect
-                x={x + 0.5}
-                y={y + 0.5}
-                width={CELL - 1}
-                height={CELL - 1}
-                rx={3}
-                fill="url(#sb-cell)"
-                stroke="var(--sb-table-line, #CFCFCF)"
-                strokeWidth={1}
-              />
-              {isStart && (
-                <rect
-                  x={x + 0.5}
-                  y={y + 0.5}
-                  width={CELL - 1}
-                  height={CELL - 1}
-                  rx={3}
-                  fill={SEAT_COLORS[badgeSeat]}
-                  opacity={0.33}
-                  pointerEvents="none"
-                />
-              )}
-              {isSafe && (
-                /* Counter-rotated, so a five-pointed star is still
-                   point-up at every point of view. A star is not
-                   four-fold symmetric: left alone it would lie on
-                   its side for three players out of four. */
-                <g
-                  transform={
-                    spin
-                      ? `rotate(${-spin} ${x + CELL / 2} ${y + CELL / 2})`
-                      : undefined
-                  }
-                  aria-hidden="true"
-                  pointerEvents="none"
-                >
-                  <path
-                    d={starPath(x + CELL / 2, y + CELL / 2, CELL * 0.3)}
-                    fill={badgeSeat >= 0 ? SEAT_COLORS[badgeSeat] : "#B0B0B0"}
-                    stroke={badgeSeat >= 0 ? SEAT_DEEP[badgeSeat] : "#8A8A8A"}
-                    strokeWidth={1.2}
-                    strokeLinejoin="round"
-                  />
-                </g>
-              )}
-            </g>
-          );
-        })}
-        {/* ── Which way you go ──
-               Printed on the track like a real board's cloth, derived
-               from the track itself so it can never point the wrong
-               way after a geometry change. */}
-        {allArrows({ every: 3 }).map((a, i) => (
-          <Arrow key={`arw-${i}`} {...a} />
-        ))}
-
-        {/* ── Home columns: each arm's middle line, in the seat's
-               MID tone — the same flat colour as its zone, so the
-               run home and the yard it leads from are visibly one
-               player's territory.
-
-               Each cell keeps its own outline. A solid bar of
-               colour hides how many squares are left, which is the
-               one thing a player climbing it is counting. ── */}
-        {HOME_COLUMNS.map((cells, seat) =>
-          cells.map(([c, r], i) => (
-            <rect
-              key={`h-${seat}-${i}`}
-              x={c * CELL + 0.5}
-              y={r * CELL + 0.5}
-              width={CELL - 1}
-              height={CELL - 1}
-              rx={3}
-              fill={SEAT_COLORS[seat]}
-              stroke={SEAT_DEEP[seat]}
-              strokeWidth={1.6}
-            />
-          ))
-        )}
-        {/* ── The centre: the classic four triangles in the four
-               MID tones, and a gold crown standing on them.
-
-               The Saathban monogram used to sit here at half
-               opacity. It was ours and it was quiet, but the
-               centre of a ludo board is the one square every
-               player is walking towards for the whole game, and
-               what belongs at the end of that walk is the thing
-               you are walking towards — not a maker's mark. A
-               crown is what a board has always put there.
-
-               Drawn LAST inside the group, so a goti that finishes
-               on the middle sits over the crown rather than
-               behind it. ── */}
-        <g>
-          {[
-            /* Wedge order follows the ring: top, right, bottom, left. */
-            [`${6 * CELL},${6 * CELL} ${9 * CELL},${6 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 0],
-            [`${9 * CELL},${6 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 1],
-            [`${6 * CELL},${9 * CELL} ${9 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 2],
-            [`${6 * CELL},${6 * CELL} ${6 * CELL},${9 * CELL} ${7.5 * CELL},${7.5 * CELL}`, 3],
-          ].map(([points, seat]) => (
-            <polygon
-              key={`c-${seat}`}
-              points={points}
-              fill={SEAT_COLORS[seat]}
-              stroke={SEAT_DEEP[seat]}
-              strokeWidth={1.4}
-            />
-          ))}
-          {/* the dark outline round the whole finish */}
-          <rect
-            x={6 * CELL}
-            y={6 * CELL}
-            width={3 * CELL}
-            height={3 * CELL}
-            rx={4}
-            fill="none"
-            stroke="#3A2A12"
-            strokeWidth={2.5}
-            pointerEvents="none"
-          />
-          {/* THE CROWN. Counter-rotated with the board so it is
-              upright for whoever is looking at it. */}
-          <g
-            transform={
-              `translate(${7.5 * CELL} ${7.5 * CELL})` +
-              (spin ? ` rotate(${-spin})` : "") +
-              ` scale(${CELL * 0.66}) translate(0 -0.14)`
-            }
-            aria-hidden="true"
-            pointerEvents="none"
-          >
-            {/* Its own shadow first, so the crown is standing on
-                the wedges rather than printed across them. */}
-            <path
-              d={CROWN_D}
-              fill="#000000"
-              opacity={0.22}
-              transform="translate(0.05 0.07)"
-            />
-            <path
-              d={CROWN_D}
-              fill="url(#sb-crown)"
-              stroke="#9A7420"
-              strokeWidth={0.075}
-              strokeLinejoin="round"
-            />
-          </g>
-        </g>
+        <BoardGround spin={spin} />
         {/* ── A capture flashes the square ──
                The goti that was taken shakes as it lands back home,
                but the thing that HAPPENED happened here, and a player

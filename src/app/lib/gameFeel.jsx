@@ -316,13 +316,22 @@ export const GAME_MOTION_CSS = `
 
    Two full turns and a bit, an arc up and down, and it comes to
    rest square — 600ms, the length of the throw. */
+/* A DIE BEING THROWN — spinning IN PLACE with a small hop, which
+   is the owner's ruling and is also what a die on a table does. It
+   travelled six pixels left and eighteen up before this, and a die
+   that flies across the screen while its face changes is exactly
+   the thing he described: "instead of dice rolling it circles
+   moves". The pips looked like they were the ones travelling,
+   because they were.
+
+   Two full turns over 600ms, a hop of eight pixels at the top of
+   it, no sideways travel at all, coming to rest square. */
 @keyframes saath-tumble {
-  0%   { transform: translate(0, 0)       rotate(0deg)   scale(1); }
-  20%  { transform: translate(-6px, -14px) rotate(150deg) scale(1.08); }
-  45%  { transform: translate(5px, -18px)  rotate(370deg) scale(1.1); }
-  70%  { transform: translate(4px, -7px)   rotate(560deg) scale(1.04); }
-  88%  { transform: translate(0, 2px)      rotate(700deg) scale(0.97); }
-  100% { transform: translate(0, 0)        rotate(720deg) scale(1); }
+  0%   { transform: translateY(0)    rotate(0deg)   scale(1); }
+  25%  { transform: translateY(-8px) rotate(190deg) scale(1.06); }
+  55%  { transform: translateY(-6px) rotate(400deg) scale(1.06); }
+  80%  { transform: translateY(1px)  rotate(620deg) scale(0.98); }
+  100% { transform: translateY(0)    rotate(720deg) scale(1); }
 }
 @keyframes saath-nudge {
   0%, 100% { transform: translateX(0); }

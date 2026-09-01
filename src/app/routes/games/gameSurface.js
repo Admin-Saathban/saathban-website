@@ -25,7 +25,18 @@
 
 export const GAME = {
   /* THE TABLE, as the owner designed it in the live designer: a
-     near-black, even. It began at #17203A and the owner's verdict
+     near-black, and EVEN — a straight fall from top to bottom over
+     the whole screen rather than a radial bloom.
+
+     The colours were right and the SHAPE was not: a radial centred
+     at 50% 4% does most of its falling in the top third, so the band
+     above the board sat several steps lighter than the band below it
+     and the board looked like it was resting on a seam. Reported
+     twice as "bluish above, black below", which is exactly what a
+     bloom over the top of a dark screen looks like. A linear fall
+     has no centre to be lighter than.
+
+     It began at #17203A and the owner's verdict
      was that the top read BLUE and the bottom black — a bloom rather
      than a room. The top stop is #0C1322 now and the bottom is
      unchanged at #060A14, so the whole table is one dark and the
@@ -43,7 +54,7 @@ export const GAME = {
   surfaceLift:
     "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 0 0/24px 24px, " +
     "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 12px 12px/24px 24px, " +
-    "radial-gradient(125% 88% at 50% 4%, #0C1322 0%, #0A1020 46%, #080D18 74%, #060A14 100%)",
+    "linear-gradient(180deg, #0C1322 0%, #0A1020 34%, #080D18 68%, #060A14 100%)",
   /* Text on that surface. Warm rather than pure white — pure white on
      a dark ground glares, and these are old eyes. */
   ink: "#F6EBE2",

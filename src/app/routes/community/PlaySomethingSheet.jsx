@@ -16,8 +16,8 @@
    against a seat number with no row behind it yet (migration 0098).
 
    That difference must never turn into copy promising a game is about
-   to start: for carrom it would be false. Nothing user-facing here says
-   it — the sheet only names the three games — and it must stay that
+   to start: for a game that seats no bot it would be false. Nothing here says
+   it — the sheet only names the games on offer — and it must stay that
    way.
 
    WHAT IS NOT HERE, and it is the half the spec asks for that cannot be
@@ -25,7 +25,7 @@
    giving a reason where one exists ("You played this together in May").
    Nothing computes that: the games lane confirms there is finished-table
    history and a count-only helper for two people, but no "games you both
-   play" list and no first-played date. So this offers the three games
+   play" list and no first-played date. So this offers the games on offer
    plainly, in a fixed order, with no sub-lines — fewer claims rather
    than invented ones. The filter is a query somebody has to write.
 
@@ -56,7 +56,7 @@ import Icon from "../../components/Icon.jsx";
 /* GLYPHS ONLY. The games themselves come from the registry.
 
    This used to be a hardcoded list of three with `waits: true` written
-   against carrom by name. That is the trap games.js already warns about
+   against a game by name. That is the trap games.js already warns about
    one layer down — callers computing a game's behaviour from something
    other than the games table, and being silently wrong. Hardcoding the
    NAME is the same mistake with better odds: it happens to be right
@@ -72,7 +72,7 @@ import Icon from "../../components/Icon.jsx";
    Names come from the registry too, which carries both languages —
    people.thread.game_* only exists for the three that were known when
    that chooser was written. */
-const GLYPH = { ludo: "dice", carrom: "carrom", snakes: "snakes" };
+const GLYPH = { ludo: "dice", snakes: "snakes" };
 
 export default function PlaySomethingSheet({ person, onClose }) {
   const { t, ts, lang } = useI18n();
@@ -114,7 +114,7 @@ export default function PlaySomethingSheet({ person, onClose }) {
       const path = await openQuickTable(game);
       const id = String(path).split("/").pop();
       /* Seat 1 is the first seat that is not the host's — a bot's chair in
-         ludo and snakes, a seat number with no row behind it in carrom.
+         ludo and snakes, or a seat number with no row behind it yet.
          inviteToSeat takes both shapes since 0098; before that, tapping
          Carrom here threw "That seat is not free" because the function
          only knew how to take over a bot.

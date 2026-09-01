@@ -13,6 +13,25 @@ export function puzzleToday() {
 
 // ── Registry ────────────────────────────────────────────────────────
 
+/* RETIRED FROM THE PRODUCT, filtered in ONE place.
+
+   Carrom is cut. Its row stays in the games table on purpose — the
+   owner asked for the database to be reported and left alone this
+   round, and 17 sessions, 21 seats, 9 invites and a thousand moves
+   still point at it. Dropping the row would orphan every one of those
+   foreign keys.
+
+   So the exclusion lives HERE, in the one function every list already
+   asks. GamesHome, NewGame and the community Play sheet all read
+   fetchGames, so none of them needs to know a game was retired — which
+   is the whole point. The alternative is a name checked in five places
+   that must agree with each other and with the table, which is the
+   shape that put Daily Riddle in a two-player sheet.
+
+   When the row is finally disabled or removed, this set empties and
+   nothing else changes. */
+export const RETIRED_GAMES = new Set(["carrom"]);
+
 export async function fetchGames() {
   const { data, error } = await supabase
     .from("games")
@@ -25,7 +44,7 @@ export async function fetchGames() {
     .select("key, name_en, name_ur, tagline_en, tagline_ur, kind, min_seats, max_seats, enabled, timeout_style")
     .order("key");
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).filter((g) => !RETIRED_GAMES.has(g.key));
 }
 
 // ── Sessions ────────────────────────────────────────────────────────

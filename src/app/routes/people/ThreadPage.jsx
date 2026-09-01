@@ -46,10 +46,7 @@ import {
   chatAudioUrl,
 } from "./myPeopleStore.js";
 import { announceRead } from "../notifications/data.js";
-import CarromRailsController from "../games/carrom/CarromRailsController.jsx";
-import { startCarromInThread } from "../games/carrom/rails.js";
-import { createSession, inviteToGame } from "../../lib/games.js";
-import { STRINGS as CARROM } from "../games/carrom/carromCopy.js";
+import { createSession, inviteToGame, RETIRED_GAMES } from "../../lib/games.js";
 import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 import Icon from "../../components/Icon.jsx";
 import { registerDraftGuard } from "../messages/draftGuard.js";
@@ -78,7 +75,6 @@ export default function ThreadPage() {
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
-  const carrom = CARROM[lang] || CARROM.en;
 
   const [person, setPerson] = useState(null);
   const [requestId, setRequestId] = useState(null);
@@ -311,22 +307,21 @@ export default function ThreadPage() {
             : Date.now() - new Date(r.created_at).getTime() < 2 * 60 * 60 * 1000
         );
         if (live) {
-          pushToast(carrom.alreadySetUp, { tone: "info" });
+          pushToast(t("community.dm.gameOpenBoard"), { tone: "info" });
           setStarting(false);
           return;
         }
       }
-      /* Carrom renders inline in the thread; ludo and snakes get a
-         two-seat table with the other person invited, and the card
-         that lands here offers them the seat. */
-      const sessionId =
-        gameKey === "carrom"
-          ? await startCarromInThread(profileId)
-          : await (async () => {
-              const id = await createSession(gameKey, 2, {});
-              await inviteToGame(id, profileId);
-              return id;
-            })();
+      /* One path now. Every game gets a two-seat table with the other
+         person invited, and the card that lands here offers them the
+         seat. The carrom branch started a board that rendered inline in
+         the thread; with carrom retired there is no inline board and no
+         second way to start a game. */
+      const sessionId = await (async () => {
+        const id = await createSession(gameKey, 2, {});
+        await inviteToGame(id, profileId);
+        return id;
+      })();
       await sendDeep(requestId, myId, { gameSessionId: sessionId });
       await refresh(requestId);
     } catch {
@@ -536,7 +531,20 @@ export default function ThreadPage() {
             <h2 style={{ fontSize: ts(22), fontWeight: 800, color: C.brown, margin: "0 0 12px" }}>
               {t("people.thread.playWhich")}
             </h2>
-            {["ludo", "carrom", "snakes"].map((k) => (
+            {/* THE SECOND LIST, and the one that kept Carrom on screen.
+
+                Retiring a game filters fetchGames, so everything that
+                ASKS the registry followed. This chooser did not ask — it
+                was three names typed here — so it went on offering a game
+                the rest of the app had stopped having, in both languages.
+                Exactly the "list that has to agree with another list"
+                shape, and it agreed with nothing.
+
+                It reads RETIRED_GAMES now rather than fetching, because
+                this sheet must render before any network call — a chooser
+                that flickers in is worse than one that is briefly stale.
+                Same source, no request. */}
+            {["ludo", "carrom", "snakes"].filter((k) => !RETIRED_GAMES.has(k)).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -551,7 +559,7 @@ export default function ThreadPage() {
                 }}
               >
                 <span aria-hidden="true" style={{ fontSize: ts(26) }}>
-                  <Icon name={k === "ludo" ? "dice" : k === "carrom" ? "carrom" : "snakes"} size={26} />
+                  <Icon name={k === "ludo" ? "dice" : "snakes"} size={26} />
                 </span>
                 {gameName(k)}
               </button>
@@ -750,14 +758,27 @@ export default function ThreadPage() {
               );
             }
 
-            /* A game attachment renders the live board inline — full
-               width, the conversation continuing beneath. */
+            /* A game attachment is a DOOR to the table, not a board.
+
+               It used to render CarromRailsController inline — and for
+               every game, not only carrom: a ludo or snakes session
+               shared in a chat got a carrom board. With carrom retired
+               the component is gone, and the honest thing was already
+               sitting underneath it: the link to the table.
+
+               Sessions with a retired game_key still exist in the data,
+               so this must not assume the board can be drawn. */
             if (m.game_session_id) {
               return (
                 <div key={m.id} style={{ marginBottom: 10 }}>
-                  <CarromRailsController sessionId={m.game_session_id} />
-                  <BodyText muted style={{ margin: "8px 0 0", fontSize: ts(16) }}>
-                    {carrom.startedInChat}{" "}
+                  {/* community.dm.gameOpenBoard, which exists. My first
+                      pass wrote gameStartedInChat — a key I invented while
+                      rewriting this block, which would have rendered its
+                      own name on screen. Locales are another lane's file
+                      this round, so the fix had to be an existing string
+                      rather than a new one, and the existing one is
+                      better: it says what is here and offers the door. */}
+                  <BodyText muted style={{ margin: "0", fontSize: ts(16) }}>
                     <Link
                       to={`/app/games/s/${m.game_session_id}`}
                       style={{ color: C.green, fontWeight: 600 }}

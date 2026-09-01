@@ -53,7 +53,6 @@ import LudoBoard from "./ludo/LudoBoard.jsx";
 import QuickChat from "./QuickChat.jsx";
 /* Carrom has its own board on the rails; ludo has its own route.
    Everything else is the reference Race to 100 board below. */
-import CarromRailsController from "./carrom/CarromRailsController.jsx";
 import SnakesBoard from "./snakes/SnakesBoard.jsx";
 import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import { Navigate } from "react-router-dom";
@@ -628,11 +627,10 @@ export default function SessionPage() {
         />
       )}
 
-      {session.status !== "lobby" && session.game_key === "carrom" && (
-        <TablePresence session={session} chat={chat} profile={profile}>
-          <CarromRailsController sessionId={session.id} />
-        </TablePresence>
-      )}
+      {/* Carrom is retired. A session whose game_key is carrom can
+          still exist — the rows were left in place — so it falls
+          through to the ordinary board-less view rather than
+          crashing on a component that no longer exists. */}
 
       {session.status !== "lobby" && session.game_key !== "carrom" && (
         <TablePresence session={session} chat={chat} profile={profile}>

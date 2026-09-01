@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   "You tapped Carrom and you are looking at Ludo."
+   "You tapped one game and you are looking at another."
 
    GAMES_IMMERSION_SPEC §8.2 said: handle the one-game-at-a-time
    collision AT THE TABLE rather than as a prose interstitial. That
@@ -7,11 +7,11 @@
    already have, with no wall of text in the way.
 
    And it produced this, which is worse than the wall it replaced:
-   tapping Carrom, or Snakes & Ladders, silently opens your existing
+   tapping any game silently opens your existing
    LUDO table. Three buttons, one destination, nothing said. Measured on
-   the deployed build — all three games returned the identical session
+   the deployed build — every game returned the identical session
    URL. From the owner's chair that does not read as "you already have a
-   table", it reads as "Carrom is broken", and two of the three games
+   table", it reads as "that game is broken", and the other games
    look unreachable.
 
    Taking somebody to their existing table is the honest answer only if

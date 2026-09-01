@@ -270,11 +270,8 @@ export default function GamesHome() {
         ? t("games.home.nextFinished")
         : s.current_seat === s.my_seat
           ? t(
-              // Per game: carrom flicks a striker, ludo rolls and moves,
-              // dice games just roll — never "tap to roll" at a carrom board.
-              s.game_key === "carrom"
-                ? "games.home.nextYourTurnCarrom"
-                : s.game_key === "ludo"
+              // Per game: ludo rolls and moves, dice games just roll.
+              s.game_key === "ludo"
                   ? "games.home.nextYourTurnLudo"
                   : s.game_key === "snakes" || s.game_key === "race100"
                     ? "games.home.nextYourTurn"

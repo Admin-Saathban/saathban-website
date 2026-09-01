@@ -29,18 +29,6 @@ export default function BoardThumb({ gameKey, size = 64 }) {
     );
   }
 
-  if (gameKey === "carrom") {
-    return (
-      <svg viewBox="0 0 20 20" style={{ ...box, background: "#e8c99b" }} aria-hidden="true">
-        <rect x="0.6" y="0.6" width="18.8" height="18.8" rx="1.5" fill="none" stroke="#8a5a2b" strokeWidth="1.6" />
-        <circle cx="10" cy="10" r="4" fill="none" stroke="#b08246" strokeWidth="0.7" />
-        <circle cx="10" cy="10" r="1.5" fill="#B23A2E" />
-        {[[2.4, 2.4], [17.6, 2.4], [2.4, 17.6], [17.6, 17.6]].map(([x, y]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="#3b2a17" />
-        ))}
-      </svg>
-    );
-  }
 
   // snakes (and anything new): a warm grid with one snake, one ladder
   return (

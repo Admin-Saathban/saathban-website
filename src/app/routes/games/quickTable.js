@@ -28,7 +28,7 @@ import { createSession, startWithBots, fetchGames } from "../../lib/games.js";
 /* HOW MANY SEATS COMES FROM THE REGISTRY, not from a map keyed by
    the game's name.
 
-   This was { ludo: 4, snakes: 4, carrom: 2 } with a `|| 4`, which
+   This was a name-keyed map with a `|| 4` fallback, which
    is the trap games.js already warns about one layer down: a
    fourth game would have opened a four-seat table whatever its
    own max_seats said, and a two-player game would have been
@@ -72,18 +72,24 @@ function defaultHouseRules(gameKey) {
    FOR LUDO AND SNAKES, bots fill every seat that is not yours and
    the board is playable the moment it appears — §8's "dice ready".
 
-   FOR CARROM IT IS NOT, and this comment used to say otherwise.
-   Carrom's timeout_style is 'pass_turn': start_with_bots refuses
-   it outright, because a carrom table with a bot in it could never
-   finish. So tapping carrom opens a table that WAITS FOR A PERSON
-   — one seat, yours, and an invitation to send. That is not a
-   degraded ludo table, it is what carrom is.
+   THE CATCH BELOW IS KEPT, and it is no longer about carrom. It was
+   written because carrom's timeout_style is pass_turn and
+   start_with_bots refused it outright — a table that opened waiting
+   for a person rather than playable. Carrom is retired, so no game in
+   the registry takes that path today.
 
-   Do not write "the board is playable on arrival" anywhere a
-   person will read it without naming the game. Lane 38 quoted the
-   old version of this comment into their own file and had to
-   correct it there too; a confident sentence about behaviour the
-   code does not have travels further than the code does.
+   The guard stays anyway. Removing it would mean any future failure of
+   start_with_bots — a new pass_turn game, a server refusal, a network
+   blip — throws instead of leaving a table that still exists and can
+   still be joined. The games lane suggested the branch goes with the
+   game; the branch does, the safety does not, and what is left is
+   genuinely defensive rather than a named special case.
+
+   Do not write "the board is playable on arrival" anywhere a person
+   will read it without naming the game. Lane 38 quoted the old version
+   of this comment into their own file and had to correct it there too;
+   a confident sentence about behaviour the code does not have travels
+   further than the code does.
 
    Throws on failure rather than returning null: the caller is about
    to navigate, and navigating to a table that does not exist is
@@ -92,8 +98,8 @@ function defaultHouseRules(gameKey) {
    already fetched it), or a bare key when it does not — lane 38's
    "Play something" passes a key and must keep working. Given a
    key it reads the row rather than guessing, which costs one
-   small query on a tap and is the difference between carrom
-   opening with two chairs and opening with four. */
+   small query on a tap and is the difference between a two-seat
+   game opening with two chairs and opening with four. */
 export async function openQuickTable(gameOrKey) {
   let game = typeof gameOrKey === "string" ? null : gameOrKey;
   const gameKey = game ? game.key : gameOrKey;

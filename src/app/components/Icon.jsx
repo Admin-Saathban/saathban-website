@@ -92,7 +92,7 @@ const ICONS = {
   back: ArrowLeft, forward: ArrowRight, time: Clock, heart: Heart,
   like: ThumbsUp, person: CircleUser, people: Users, photo: Image,
   send: Send, locked: Lock, letter: Mail, warn: TriangleAlert,
-  tools: Wrench, rest: Bed, carrom: Target, document: FileText,
+  tools: Wrench, rest: Bed, document: FileText,
 };
 
 export default function Icon({

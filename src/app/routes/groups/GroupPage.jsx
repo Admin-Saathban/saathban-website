@@ -21,6 +21,7 @@ import {
   fetchConnections, inviteToGroup, removeMember, leaveGroup, reportTarget,
   amIGroupAdmin, pendingRequestCount, pinPost, unpinPost,
   amIMember, joinPublicGroup, requestToJoinGroup, fetchMyJoinRequest, dismissGroupSetup,
+  markGroupRead,
 } from "./groupsStore.js";
 import GroupCover from "./GroupCover.jsx";
 import Icon from "../../components/Icon.jsx";
@@ -34,6 +35,11 @@ export default function GroupPage() {
   const { profile } = useSession();
   const myId = profile?.id;
   const navigate = useNavigate();
+
+  /* Opening a group is what clears its signal — per person, and only
+     for the person who opened it. Fire-and-forget: a mark that lands
+     late costs a stale dot, while a mark that blocks costs the group. */
+  useEffect(() => { if (id) markGroupRead(id); }, [id]);
 
   const [group, setGroup] = useState(undefined); // undefined loading, null gone
   const [tab, setTab] = useState("feed");

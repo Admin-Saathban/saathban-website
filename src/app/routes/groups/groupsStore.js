@@ -41,22 +41,82 @@ async function namesFor(ids) {
    destroyed, which is the whole problem. Cleared on sign-out by the
    session, and stale for at most one render either way. */
 let groupsCache = null;
+let archivedCache = [];
 export function cachedGroups() { return groupsCache; }
+export function archivedGroups() { return archivedCache; }
 export function clearGroupsCache() { groupsCache = null; }
 
 export async function fetchMyGroups() {
   const me = await myId();
   const { data: mine, error } = await supabase
-    .from("group_members").select("group_id, role").eq("member_id", me);
+    .from("group_members")
+    .select("group_id, role, last_read_at, muted, pinned, archived")
+    .eq("member_id", me);
   if (error) throw new Error(error.message);
   const ids = (mine || []).map((m) => m.group_id);
   if (!ids.length) return (groupsCache = []);
-  const roleBy = Object.fromEntries((mine || []).map((m) => [m.group_id, m.role]));
+  const stateBy = Object.fromEntries((mine || []).map((m) => [m.group_id, m]));
   const { data: groups, error: e2 } = await supabase
-    .from("groups").select("id, name, description, created_by, created_at").in("id", ids)
-    .order("created_at", { ascending: false });
+    .from("groups").select("id, name, description, created_by, created_at").in("id", ids);
   if (e2) throw new Error(e2.message);
-  groupsCache = (groups || []).map((g) => ({ ...g, myRole: roleBy[g.id], isCreator: roleBy[g.id] === "creator" }));
+
+  /* WHAT HAPPENED SINCE YOU LAST LOOKED. One query for every group
+     rather than one per group — a list of ten should not be ten round
+     trips on a phone. Newest first so the first row seen per group is
+     also the one worth naming. */
+  const { data: posts } = await supabase
+    .from("group_posts")
+    .select("group_id, author_id, created_at")
+    .in("group_id", ids)
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(400);
+
+  const names = await namesFor([...new Set((posts || []).map((p) => p.author_id))]);
+  const activity = {};
+  for (const p of posts || []) {
+    const st = stateBy[p.group_id] || {};
+    const a = (activity[p.group_id] ||= { latest: null, unread: 0, who: null });
+    if (!a.latest) a.latest = p.created_at;
+    /* NULL last_read_at means never opened, and that counts as NO
+       unread rather than everything unread. Somebody six months in a
+       group should not meet a badge for six months of history on the
+       day this ships; the mark is set the first time they open it. */
+    if (st.last_read_at && p.created_at > st.last_read_at && p.author_id !== me) {
+      a.unread += 1;
+      if (!a.who) a.who = names[p.author_id]?.full_name || null;
+    }
+  }
+
+  const rows = (groups || []).map((g) => {
+    const st = stateBy[g.id] || {};
+    const a = activity[g.id] || {};
+    return {
+      ...g,
+      myRole: st.role,
+      isCreator: st.role === "creator",
+      muted: !!st.muted,
+      pinned: !!st.pinned,
+      archived: !!st.archived,
+      lastReadAt: st.last_read_at || null,
+      lastActivityAt: a.latest || g.created_at,
+      /* A muted group still shows its content and its one-line what;
+         it just carries no signal. That is the whole difference
+         between mute and archive. */
+      unread: st.muted ? 0 : (a.unread || 0),
+      unreadWho: st.muted ? null : (a.who || null),
+    };
+  });
+
+  /* ORDER: pinned first, then most recent activity. Never creation
+     order, never alphabetical — the list answers "what wants me", and
+     the answer changes through the day. */
+  rows.sort((x, y) =>
+    (y.pinned - x.pinned) ||
+    (new Date(y.lastActivityAt) - new Date(x.lastActivityAt))
+  );
+  groupsCache = rows.filter((g) => !g.archived);
+  archivedCache = rows.filter((g) => g.archived);
   return groupsCache;
 }
 
@@ -352,11 +412,20 @@ export async function setCoAdmin(groupId, memberId, make) {
 }
 
 /* ── §7.4 group settings ── */
+/* Through an RPC, not a table update. public.groups is updatable only
+   by admins (0026 "groups: admin moderates"), so an owner's UPDATE
+   matched zero rows and came back 204 with no error — the screen said
+   "Saved." and nothing had been written. 0113 adds the owner-scoped
+   function; same reason set_group_cover is one. */
 export async function updateGroup(groupId, fields) {
-  const { error } = await supabase
-    .from("groups")
-    .update(fields)
-    .eq("id", groupId);
+  const { error } = await supabase.rpc("update_group", {
+    p_group: groupId,
+    p_name: fields.name,
+    p_description: fields.description ?? null,
+    /* undefined would be sent as null, which the function reads as
+       "leave privacy alone" — right for a caller that omits it. */
+    p_privacy: fields.privacy ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 
@@ -535,4 +604,23 @@ export async function fetchFeedGroupPosts(limit = 40) {
     groupName: byId[r.group_id],
     authorName: names[r.author_id]?.full_name || "A member",
   }));
+}
+
+
+/* The three switches and the read mark. Both go through SECURITY
+   DEFINER functions (0104) so a person can only ever change their own
+   row — there is no member id to pass and none to get wrong. */
+export async function setGroupPref(groupId, key, on) {
+  const { error } = await supabase.rpc("set_group_pref", { p_group: groupId, p_key: key, p_on: on });
+  if (error) throw new Error(error.message);
+  groupsCache = null;
+}
+
+export async function markGroupRead(groupId) {
+  try {
+    await supabase.rpc("mark_group_read", { p_group: groupId });
+    groupsCache = null;
+  } catch {
+    /* a signal that clears late is better than a group that will not open */
+  }
 }

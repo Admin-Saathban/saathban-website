@@ -745,8 +745,21 @@ export default function LudoSession() {
      identical two moves running, so no real move is ever swallowed
      as "no change". */
   const ludoState = game?.state || {};
+  /* WHOSE SOUNDS THIS VIEWER HAS TURNED OFF. Read fresh on every
+     render rather than held in state: the switch is a tap away on
+     the card and it should apply to the next move, not the next
+     visit. localStorage reads are cheap and the list is four
+     people long at most. */
+  const isSilent = (seat) => {
+    const row = (game?.seats || []).find((x) => x.seat === seat);
+    const pid = row?.profile_id;
+    if (!pid || pid === myId) return false;
+    return readMutes(game.id)[pid]?.sounds === true;
+  };
+
   useGameFeel({
     gameKey: "ludo",
+    isSilent,
     lastMove: ludoState.last,
     eventKey: ludoState.last ? JSON.stringify([ludoState.last, ludoState.pieces]) : null,
     // this screen calls the active state "playing"; the hook speaks rails
@@ -1341,6 +1354,7 @@ export default function LudoSession() {
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
             marksBySeat={marksBySeat}
+            isSilent={isSilent}
             state={state}
             seatsInPlay={game.target_seats}
             options={isMyTurn && hasDice ? options : []}

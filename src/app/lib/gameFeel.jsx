@@ -130,7 +130,12 @@ export function soundsForMove(gameKey, m) {
 
 /* Play one move's whole sequence — the dice, the hops, and whatever
    the move turned out to be. Shared by both event sources below. */
-function soundMove(gameKey, body) {
+function soundMove(gameKey, body, silent) {
+  /* THEIR SOUNDS, MUTED. The switch is on their profile card and
+     it has to reach the speaker, not just the chat — a person you
+     have muted whose captures still bang out of the phone has not
+     been muted in any sense that matters. */
+  if (silent) return;
   const m = body || {};
   const steps = stepsOf(gameKey, m);
 
@@ -144,7 +149,21 @@ function soundMove(gameKey, body) {
       playSound(name, { delay: delay / 1000 });
     }
   }
-  if (steps > 0 && gameKey !== "carrom" && !m.pass && !m.skipped && !m.stuck) {
+  /* THE TICKS WERE PLAYING SOMEWHERE ELSE ON THE BOARD.
+
+     This scheduled a run of hops at 520ms with 190ms between
+     them. The ludo board walks its gotis at 140ms a cell and
+     starts the instant the new state lands — so the sound of the
+     move began half a second after the move did and drifted fifty
+     milliseconds further behind on every square. By the sixth cell
+     the tick was a full square out. Nobody had heard it against
+     the board because nothing ever put the two side by side.
+
+     A ludo hop is now played BY the hop: LudoBoard's walk fires a
+     tick on each new cell, so the two cannot come apart no matter
+     what either clock is set to. Snakes has no walking board of
+     its own and keeps the scheduled run. */
+  if (steps > 0 && gameKey === "snakes" && !m.pass && !m.skipped && !m.stuck) {
     window.setTimeout(() => playHopRun(steps, 190), 520);
   }
 }
@@ -173,6 +192,10 @@ export function useGameFeel({
   winnerSeat,
   mySeatNo,
   currentSeat,
+  /* isSilent(seat) → true when that player's sounds are muted for
+     this viewer, at this table. Optional; without it nothing is
+     muted, which is the right default. */
+  isSilent,
 }) {
   useSoundUnlock();
   const seenId = useRef(null);
@@ -199,7 +222,7 @@ export function useGameFeel({
 
     // Several at once (a poll after sleeping, a bot burst): sound only
     // the newest, so the table never sounds like it is panicking.
-    soundMove(gameKey, fresh[fresh.length - 1]?.move);
+    soundMove(gameKey, fresh[fresh.length - 1]?.move, isSilent?.(fresh[fresh.length - 1]?.seat));
   }, [moves, gameKey]);
 
   /* The ludo path: no log, so we watch a key that changes per move. */
@@ -210,7 +233,7 @@ export function useGameFeel({
     if (seenKey.current === eventKey) return;
     seenKey.current = eventKey;
     if (first) return;             // arriving at a table is not an event
-    soundMove(gameKey, lastMove);
+    soundMove(gameKey, lastMove, isSilent?.(lastMove?.seat));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventKey, gameKey]);
 

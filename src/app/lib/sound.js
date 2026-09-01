@@ -405,6 +405,39 @@ function sYourTurn(c, t0) {
   tone(c, t0 + 0.14, { freq: 1046.5, dur: 0.22, type: "sine", peak: 0.05, cutoff: 5200 });
 }
 
+/* A GOTI REACHING HOME. The one unambiguously good thing that can
+   happen to a piece, and until now it happened in silence.
+
+   Bright, short, and finished: a rising third with an octave on
+   top, and a soft puff of air under it that is the confetti. Half
+   a second in total — it will fire four times in a good game and
+   twice in a row when somebody runs two pieces in, so anything
+   longer would start to overlap itself.
+
+   DELIBERATELY SMALLER THAN sWin. Getting one goti home is a good
+   moment; winning is the end of the game. If they sounded alike
+   the second would stop meaning anything. */
+function sHome(c, t0) {
+  tone(c, t0, { freq: 523.25, dur: 0.16, type: "triangle", peak: 0.16, cutoff: 4000 });
+  tone(c, t0 + 0.09, { freq: 659.25, dur: 0.2, type: "triangle", peak: 0.15, cutoff: 4000 });
+  tone(c, t0 + 0.17, { freq: 1046.5, dur: 0.34, type: "sine", peak: 0.11, cutoff: 6000 });
+  /* the puff: a short breath of air, swept down, so the chime has
+     something physical under it rather than floating */
+  hit(c, t0 + 0.02, { dur: 0.22, peak: 0.1, band: 3200, sweepTo: 900, q: 0.8 });
+}
+
+/* A MESSAGE LEAVING. About two hundred milliseconds of air moving
+   away from you — a band of noise sweeping UP and thinning out,
+   which is the shape every "sent" sound has had since the first
+   one, because it is what a thing departing actually sounds like.
+
+   No pitch in it at all. A note would make it an event; this is
+   meant to be felt and not noticed. */
+function sChatSend(c, t0) {
+  hit(c, t0, { dur: 0.2, peak: 0.13, band: 700, sweepTo: 4200, q: 0.6, type: "bandpass" });
+  hit(c, t0 + 0.03, { dur: 0.14, peak: 0.05, band: 1800, sweepTo: 6000, q: 0.5 });
+}
+
 /* A press. Almost subliminal — it exists so a tap on a die or a goti
    feels like it landed on something solid. */
 function sTap(c, t0) {
@@ -422,6 +455,8 @@ const VOICES = {
   pocket: sPocket,
   win: sWin,
   yourTurn: sYourTurn,
+  home: sHome,
+  chatSend: sChatSend,
   tap: sTap,
 };
 

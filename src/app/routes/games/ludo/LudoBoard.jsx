@@ -32,6 +32,7 @@ import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { SEAT_LIGHT, SEAT_DEEP, SEAT_COLOR_NAMES } from "../seatColors.js";
 import { NO_SELECT } from "../gameSurface.js";
 import Pawn from "../Pawn.jsx";
+import { playSound } from "../../../lib/sound.js";
 import {
   TRACK,
   HOME_COLUMNS,
@@ -488,7 +489,7 @@ function useCaptured(pieces) {
   return hit;
 }
 
-function useWalk(pieces) {
+function useWalk(pieces, isSilent) {
   const [shown, setShown] = useState(pieces);
   /* Pieces currently flying home, key "seat:index" → interpolated
      [col, row]. A captured goti is NOT on the track any more, so its
@@ -668,6 +669,19 @@ function useWalk(pieces) {
         setShown(next);
         setHops(hopping);
         if (crossed.length) setTrail([...crossed]);
+        /* ONE TICK PER CELL, ON THE CELL. Played here rather than
+           scheduled beside the move, because a scheduled run drifts
+           away from a walk that is on a different clock — which is
+           exactly what it was doing. Silent under reduced motion
+           for free: the walk returns before this ever runs, so
+           there are no hops to tick for. */
+        if (stepNow > 0) {
+          const mover = hopping.keys().next().value;
+          const seat = mover != null ? Number(String(mover).split(":")[0]) : null;
+          if (!(isSilent && seat != null && isSilent(seat))) {
+            playSound("hop", { step: stepNow - 1, of: steps });
+          }
+        }
       }
 
       /* ── The taken goti: flinch, then fly ── */
@@ -708,6 +722,11 @@ function useWalk(pieces) {
            move began — it has to be on the square to be cheered. */
         if (home.size) {
           setArrivedHome(home);
+          /* The one unambiguously good thing that can happen to a
+             goti, and until now it happened in silence. */
+          const who = [...home][0];
+          const seat = who != null ? Number(String(who).split(":")[0]) : null;
+          if (!(isSilent && seat != null && isSilent(seat))) playSound("home");
           window.setTimeout(() => setArrivedHome(new Set()), 1500);
         }
         /* Let the trail linger a beat past the move, then clear it —
@@ -805,11 +824,14 @@ export default function LudoBoard({
      and a goti falls back to the mark it has always drawn, so a
      table where nobody has chosen looks exactly as it did. */
   marksBySeat = null,
+  /* isSilent(seat) → that player's sounds are muted for this
+     viewer, at this table. */
+  isSilent,
 }) {
   const rules = state?.rules || {};
   const showStars = (rules.safe_squares || "standard") === "standard";
   const live = state?.prov || state?.pieces || [];
-  const { shown: pieces, flights, trail, arrivedHome, closeCalls, hops } = useWalk(live);
+  const { shown: pieces, flights, trail, arrivedHome, closeCalls, hops } = useWalk(live, isSilent);
   /* THE TABLE SHAKES ON THE EDGE OF A RUN.
 
      Not a celebration — the opposite. ludo_chain_stands is
@@ -1699,17 +1721,42 @@ export default function LudoBoard({
                     can happen to a piece, and it used to happen in
                     total silence. */}
                 {arrivedHome.has(`${seat}:${i}`) && (
-                  <circle
-                    className="sb-home"
-                    cx={cx}
-                    cy={cy}
-                    r={13}
-                    fill="none"
-                    stroke="#FFD23F"
-                    strokeWidth={2.6}
-                    pointerEvents="none"
-                    aria-hidden="true"
-                  />
+                  <>
+                    <circle
+                      className="sb-home"
+                      cx={cx}
+                      cy={cy}
+                      r={13}
+                      fill="none"
+                      stroke="#F3CE5E"
+                      strokeWidth={2.6}
+                      pointerEvents="none"
+                      aria-hidden="true"
+                    />
+                    {/* A PUFF OF CONFETTI. The ring alone said
+                        "something happened here"; six little stars
+                        thrown off it say what kind of something. It
+                        is the capture's own sparkle at half the
+                        reach and in gold rather than white, because
+                        this is the good version of the same
+                        moment. Reduced motion removes it with every
+                        other .sb-spark. */}
+                    {SPARKS.map(([dx, dy], k) => (
+                      <path
+                        key={`hs-${seat}-${i}-${k}`}
+                        className="sb-spark"
+                        d={sparkPath(
+                          cx + dx * CELL * (0.24 + ((k * 7) % 5) * 0.05),
+                          cy + dy * CELL * (0.24 + ((k * 7) % 5) * 0.05),
+                          CELL * (0.07 + ((k * 3) % 4) * 0.02)
+                        )}
+                        fill={k % 3 === 0 ? "#FFFFFF" : "#F3CE5E"}
+                        style={{ animationDelay: `${k * 30}ms` }}
+                        pointerEvents="none"
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </>
                 )}
                 {/* THE HIT TARGET, and it is not decoration. With the
                     move list gone the goti IS the only way to move, so

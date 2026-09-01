@@ -111,7 +111,22 @@ html.sb-settling [data-sb-pane] {
 }
 html.sb-dragging [data-sb-pane][data-sb-into],
 html.sb-settling [data-sb-pane][data-sb-into] {
-  display: block !important;
+  /* OUT OF FLOW, and that is not a detail. Shown as a normal block the
+     incoming pane stacks BELOW the current one and doubles the page.
+     Measured during a drag: the document went 6304 to 7232 and
+     window.innerHeight went 844 to 1624, so the fixed bottom bar — which
+     resolves bottom:0 against that — was pushed 780px off the screen for
+     the whole gesture and snapped back at the end. That is the bar the
+     owner sees opening and closing while he swipes, and my own
+     incoming-pane work caused it.
+
+     Fixed and inset:0 covers the viewport, adds no height, and leaves
+     the page underneath exactly as tall as it was. */
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
   transform: translate3d(calc(var(--sb-side, 1) * 100vw + var(--sb-drag, 0px)), 0, 0);
 }
 html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }

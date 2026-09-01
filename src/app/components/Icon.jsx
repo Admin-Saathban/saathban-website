@@ -213,6 +213,56 @@ function ensureGold() {
   document.body.appendChild(svg);
 }
 
+/* ── THE UNREAD COUNT ──
+
+   Upper right of the chip, as picked. The colour is the app's error red
+   because unread is the one thing in this chrome that wants to be found
+   before anything else on the screen.
+
+   IT CARRIES A RING OF THE SURFACE IT SITS ON, and that is the whole
+   reason this is a component rather than three lines inline. Messages is
+   a SOLID WHITE bubble now — a red dot laid straight on it shares an
+   edge with the white and the two shapes fuse into one blob at 20px. A
+   two-pixel ring in the bar's own colour cuts the badge free of
+   whatever is under it, white bubble or gold bell alike.
+
+   Positioned with insetInlineEnd, so it mirrors in Urdu rather than
+   sitting over the glyph.
+
+   99+ because three digits do not fit and nobody needs the exact number
+   past a hundred — what they need is "a lot". */
+function ChipCount({ count, onDark }) {
+  const n = Number(count) || 0;
+  if (n <= 0) return null;
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: -3,
+        insetInlineEnd: -3,
+        minWidth: 17,
+        height: 17,
+        paddingInline: n > 9 ? 4 : 0,
+        boxSizing: "border-box",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 999,
+        background: APP_COLORS.error,
+        color: "#FFF7F5",
+        border: `2px solid ${onDark ? APP_COLORS.nav : APP_COLORS.surface}`,
+        fontSize: 10,
+        lineHeight: 1,
+        fontWeight: 800,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
+
 export function IconChip({
   name,
   size = 22,
@@ -222,6 +272,7 @@ export function IconChip({
   onDark = false,
   label,
   badge,
+  count = 0,
   style,
   ...rest
 }) {
@@ -311,6 +362,7 @@ export function IconChip({
             strokeWidth={solidWhite ? 0 : undefined}
           />}
       {badge}
+      <ChipCount count={count} onDark={onDark} />
     </span>
   );
 }

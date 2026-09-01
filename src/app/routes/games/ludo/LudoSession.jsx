@@ -949,14 +949,10 @@ export default function LudoSession() {
       setChatOpen(true);
     },
     unread,
-    onToggleSpare:
-      editable && iAmHost
-        ? () =>
-            act(async () => {
-              await reformTable(game.id, { houseRules: { dice_count: diceCount === 2 ? 1 : 2 } });
-              await load();
-            })
-        : undefined,
+    /* onToggleSpare is gone with the badge it drew. The dice count
+       is chosen in the setup room and frozen with the rest of the
+       house rules at the first roll — the board does not offer it
+       at all now, rather than offering it and then refusing. */
   };
 
   return (

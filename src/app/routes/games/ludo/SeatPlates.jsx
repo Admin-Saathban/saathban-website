@@ -286,7 +286,6 @@ function SeatDice({
   onRoll,
   onPickDie,
   rolling,
-  onToggleSpare,
 }) {
   const { t } = useI18n();
   const rolled = dice && dice.length > 0;
@@ -335,37 +334,12 @@ function SeatDice({
       }}
     >
       {faces}
-      {/* One die or two, while the table can still be changed. The
-          badge sits on the LAST die and stops the tap there, because
-          the die under it is the roll button. */}
-      {onToggleSpare && !rolled && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSpare();
-          }}
-          aria-label={t(diceCount === 2 ? "ludo.table.oneDie" : "ludo.table.twoDice")}
-          style={{
-            position: "absolute",
-            insetInlineEnd: -6,
-            bottom: -6,
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            border: "none",
-            padding: 0,
-            background: GAME.accentFlat,
-            color: GAME.accentInk,
-            fontSize: 14,
-            fontWeight: 900,
-            lineHeight: "22px",
-            cursor: "pointer",
-          }}
-        >
-          {diceCount === 2 ? "−" : "+"}
-        </button>
-      )}
+      {/* THE + IS GONE. One die or two is settled in the setup room
+          and frozen with the rest of the house rules; a badge on
+          the board offering to change it was a control that had
+          outlived the window it belonged to — and it sat on the
+          roll button, so the only thing it reliably did on a live
+          table was catch a thumb aiming at the dice. */}
       {isTurn && (
         <span
           className="sb-die-arrow"
@@ -438,7 +412,6 @@ function Plate({
   onOpenChat,
   unread,
   pending,
-  onToggleSpare,
   diceCount = 1,
 }) {
   const { t, ts } = useI18n();
@@ -526,7 +499,6 @@ function Plate({
           onRoll={onRoll}
           onPickDie={onPickDie}
           rolling={rolling}
-          onToggleSpare={onToggleSpare}
         />
         {/* Said to a screen reader, never drawn. The arrow at the dice
             is the visible half of this. */}
@@ -647,7 +619,6 @@ export default function SeatPlates({
   onOpenChat,
   unread,
   pendingBySeat,
-  onToggleSpare,
   diceCount = 1,
 }) {
   const wanted = where === "top" ? [0, 1] : [3, 2]; // TL,TR above · BL,BR below
@@ -712,11 +683,6 @@ export default function SeatPlates({
               unread={unread}
               diceCount={diceCount}
               pending={pendingBySeat ? pendingBySeat[seat] : null}
-              onToggleSpare={
-                onToggleSpare && seats.find((s) => s.seat === seat)?.profile_id === myId
-                  ? onToggleSpare
-                  : undefined
-              }
             />
           )}
         </div>

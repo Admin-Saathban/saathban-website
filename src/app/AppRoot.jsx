@@ -62,6 +62,7 @@ import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
+import TabPanes, { paneFor } from "./components/TabPanes.jsx";
 import AppHeader from "./components/AppHeader.jsx";
 /* NAVIGATION_SPEC §5 and §6 — four destinations the new bar and
    More rows point at. Every one of them was a live link to nothing
@@ -215,10 +216,31 @@ function MilestonesOrJourney() {
 
 function ScrollToTop() {
   const { pathname } = useLocation();
+  const last = useRef(pathname);
   useEffect(() => {
+    /* A TAB SWITCH IS NOT A NEW SCREEN. TabPanes keeps each tab's
+       position and puts it back; scrolling to the top here as well would
+       undo that a frame later, which is the whole feature undone by a
+       helper that does not know about it.
+
+       Everything else still starts at the top, INCLUDING going deeper
+       inside a tab — /app/groups to /app/groups/new is a new screen, and
+       only a change of PANE is a return to somewhere you have been. */
+    const from = paneFor(last.current);
+    const to = paneFor(pathname);
+    last.current = pathname;
+    if (from && to && from !== to) return;
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+/* <Routes> and the panes must never render the same subtree at once, or
+   every tab would exist twice — fetching twice, writing twice. paneFor
+   is the single answer to "is this path a tab", asked in both places. */
+function RoutesUnlessTab({ children }) {
+  const { pathname } = useLocation();
+  return paneFor(pathname) ? null : children;
 }
 
 export default function AppRoot() {
@@ -250,6 +272,10 @@ export default function AppRoot() {
             scroll exactly as it did when each screen carried its own. */}
         <AppHeader />
 
+        {/* Visited tabs stay mounted here; see TabPanes. */}
+        <TabPanes />
+
+        <RoutesUnlessTab>
         <Routes>
           <Route index element={<AppHome />} />
           {/* Join by link — deliberately OUTSIDE RequireAuth: a person
@@ -585,6 +611,7 @@ export default function AppRoot() {
           {/* Per-role dashboards land here in build step 6. */}
           <Route path="*" element={<AppHome />} />
         </Routes>
+        </RoutesUnlessTab>
 
         {/* THE BOTTOM BAR, mounted once for the whole app (§3). It
             decides for itself where it must not appear — see

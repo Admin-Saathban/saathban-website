@@ -286,11 +286,26 @@ function SeatDice({
   onRoll,
   onPickDie,
   rolling,
+  /* The faces churning WHILE a throw is in the air — two of them,
+     changing every few frames. Without these a tumbling die spins
+     a fixed number, which is the one thing a thrown die never
+     does. */
+  tumbleFaces,
+  /* The last number this seat actually threw. An idle die keeps
+     its face, the way a real one lies on the table showing what it
+     came up as — so the board is full of dice rather than of
+     placeholders, and only the very first throw of a table shows a
+     blank one. */
+  lastValue,
 }) {
   const { t } = useI18n();
   const rolled = dice && dice.length > 0;
   const empties = rolled ? 0 : Math.max(1, Math.min(2, diceCount));
   const live = isTurn && isMe && canRoll && !rolled;
+  /* EVERY die in the throw, not the first one. Two dice meant one
+     tumbling beside one sitting perfectly still, which reads as a
+     bug rather than as a throw. */
+  const throwing = !!rolling && !rolled;
 
   const faces = rolled
     ? dice.map((d, i) => (
@@ -313,9 +328,9 @@ function SeatDice({
     : Array.from({ length: empties }).map((_, i) => (
         <Die
           key={`e${i}`}
-          value={null}
+          value={throwing ? tumbleFaces?.[i] ?? null : lastValue ?? null}
           size={38}
-          state={rolling && isMe && i === 0 ? "rolling" : "ready"}
+          state={throwing ? "rolling" : "ready"}
           dim={!isTurn}
           label={live ? t("ludo.turn.rollCta") : undefined}
           onClick={live ? onRoll : undefined}
@@ -404,6 +419,8 @@ function Plate({
   seconds,
   rolling,
   compact,
+  tumbleFaces,
+  lastValue,
   /* The host's seat management, offered on bot and empty chairs. */
   onTapSeat,
   /* A person's card, offered on anybody who is a person. */
@@ -499,6 +516,8 @@ function Plate({
           onRoll={onRoll}
           onPickDie={onPickDie}
           rolling={rolling}
+          tumbleFaces={tumbleFaces}
+          lastValue={lastValue}
         />
         {/* Said to a screen reader, never drawn. The arrow at the dice
             is the visible half of this. */}
@@ -547,7 +566,9 @@ function Plate({
           isTurn={isTurn}
           isMe={false}
           canRoll={false}
-          rolling={false}
+          rolling={rolling}
+          tumbleFaces={tumbleFaces}
+          lastValue={lastValue}
         />
       </div>
       <span
@@ -606,6 +627,11 @@ export default function SeatPlates({
      to spend. Only ever offered on your own plate. */
   onPickDie,
   rolling,
+  /* Which seat is mid-throw, and the faces churning in it. */
+  rollingSeat,
+  tumbleFaces,
+  /* lastDieBySeat[seat] → the number that seat last threw. */
+  lastDieBySeat,
   /* Short screens (roughly <720px tall): the plate gives its height
      back to the board without giving up anything it says. */
   compact,
@@ -673,7 +699,9 @@ export default function SeatPlates({
               onRoll={onRoll}
               canRoll={!!canRoll && seat === currentSeat}
               onPickDie={onPickDie}
-              rolling={rolling}
+              rolling={rollingSeat === seat}
+              tumbleFaces={tumbleFaces}
+              lastValue={lastDieBySeat ? lastDieBySeat[seat] : null}
               compact={compact}
               remaining={seat === currentSeat ? remaining : null}
               seconds={seat === currentSeat ? secondsLeft : null}

@@ -155,6 +155,8 @@ export default function LudoSession() {
   }, [game?.state?.dice]);
   const [rolling, setRolling] = useState(false);
   const [tumble, setTumble] = useState([1, 1]);
+  /* seat → the number it last threw; see lastDieBySeat below. */
+  const lastDiceRef = useRef({});
 
   /* THE REMATCH THIS SCREEN HAS ALREADY SEEN.
 
@@ -232,6 +234,10 @@ export default function LudoSession() {
 
   const load = async () => {
     const g = await fetchSession(sessionId);
+    /* Read off every board that goes past, so a seat's face
+       survives the next player's turn. */
+    const mv = g?.state?.last;
+    if (mv && mv.seat != null && mv.die) lastDiceRef.current[mv.seat] = mv.die;
     setGame(g);
     if (g?.status === "playing") ping();
     /* Ask until it is settled. The window only ever closes, so
@@ -837,6 +843,24 @@ export default function LudoSession() {
      A die that is unspent but has nowhere legal to go reads as
      "wasted", not "ready": offering it as a choice would be inviting
      a tap that can only be refused. */
+  /* WHAT EACH SEAT LAST THREW.
+
+     The engine keeps only the LAST move on the table, so this is
+     accumulated as the moves go past rather than read off the
+     state: seat by seat, the number that seat came up with. An
+     idle die then shows a real face instead of a blank one, which
+     is what a die that has been thrown looks like lying on a
+     table.
+
+     A ref, not state: it changes on the same poll that changes the
+     board, and a second render for it would be a second render for
+     nothing. */
+  const lastDieBySeat = lastDiceRef.current;
+
+  /* WHICH SEAT IS MID-THROW. Mine while I am rolling; a bot's
+     while its own throw is being shown (see the bot beat). */
+  const rollingSeat = rolling ? mySeatRow?.seat ?? null : null;
+
   const diceForSeat = (seat) => {
     if (seat !== game.current_seat || !dice) return [];
     return dice.map((d, i) => ({
@@ -1219,7 +1243,9 @@ export default function LudoSession() {
             onRoll={doRoll}
             canRoll={isMyTurn && !hasDice && !busy && !rolling}
             onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
-            rolling={rolling}
+            rollingSeat={rollingSeat}
+            tumbleFaces={tumble}
+            lastDieBySeat={lastDieBySeat}
             secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
             {...platePins}
@@ -1365,7 +1391,9 @@ export default function LudoSession() {
             onRoll={doRoll}
             canRoll={isMyTurn && !hasDice && !busy && !rolling}
             onPickDie={isMyTurn && spendable > 1 && !busy ? setPickedDie : undefined}
-            rolling={rolling}
+            rollingSeat={rollingSeat}
+            tumbleFaces={tumble}
+            lastDieBySeat={lastDieBySeat}
             secondsLeft={clockHeld ? null : secondsLeft}
             turnSeconds={turnSeconds}
             {...platePins}

@@ -308,12 +308,21 @@ export function useGameFeel({
    token still arrives, the win still lands, the die still shows its
    face. Reduced motion means calmer, not less informed. */
 export const GAME_MOTION_CSS = `
+/* A DIE BEING THROWN. It used to rock — sixteen degrees each way
+   and back, twice, over 420ms, which reads as a shake rather than
+   a throw. A die that has been thrown TURNS: past a right angle,
+   more than once, travelling while it does it and losing energy as
+   it goes.
+
+   Two full turns and a bit, an arc up and down, and it comes to
+   rest square — 600ms, the length of the throw. */
 @keyframes saath-tumble {
-  0%   { transform: rotate(0deg)    translateY(0)    scale(1); }
-  25%  { transform: rotate(-16deg)  translateY(-5px) scale(1.05); }
-  50%  { transform: rotate(12deg)   translateY(0)    scale(0.97); }
-  75%  { transform: rotate(-8deg)   translateY(-3px) scale(1.03); }
-  100% { transform: rotate(0deg)    translateY(0)    scale(1); }
+  0%   { transform: translate(0, 0)       rotate(0deg)   scale(1); }
+  20%  { transform: translate(-6px, -14px) rotate(150deg) scale(1.08); }
+  45%  { transform: translate(5px, -18px)  rotate(370deg) scale(1.1); }
+  70%  { transform: translate(4px, -7px)   rotate(560deg) scale(1.04); }
+  88%  { transform: translate(0, 2px)      rotate(700deg) scale(0.97); }
+  100% { transform: translate(0, 0)        rotate(720deg) scale(1); }
 }
 @keyframes saath-nudge {
   0%, 100% { transform: translateX(0); }

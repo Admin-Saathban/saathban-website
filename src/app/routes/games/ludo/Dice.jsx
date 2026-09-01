@@ -52,7 +52,7 @@ export function DieFace({ value = 1, size = 38, ink = PIP, faint = false }) {
         strokeWidth={2}
       />
       {PIPS[v].map(([cx, cy], i) => (
-        <circle key={i} cx={at(cx)} cy={at(cy)} r={pip} fill={ink} opacity={faint ? 0.22 : 1} />
+        <circle key={i} cx={at(cx)} cy={at(cy)} r={pip} fill={ink} opacity={faint ? 0.26 : 1} />
       ))}
     </svg>
   );
@@ -64,8 +64,17 @@ export default function Die({
   value,
   size = 38,
   state = "ready", // ready | selected | used | wasted | rolling
-  /* Somebody else's turn: their dice are visible but recede. Never
-     the only signal — the arrow at the active player's dice is. */
+  /* Somebody else's turn. It used to fade the WHOLE die to 74%,
+     which on a midnight table turned an ivory object into a grey
+     one with slightly darker circles on it — the owner read that
+     as hollow, ring-style pips, and he was describing exactly what
+     was on the screen.
+
+     An idle die is a die. It keeps its ivory body and its solid
+     #2B2B2B pips at full strength; what recedes is the shadow it
+     casts, because an object nobody is about to pick up does not
+     lift off the table. Whose turn it is was never this control's
+     job — the breathing arrow says it. */
   dim = false,
   label,
   onClick,
@@ -83,20 +92,32 @@ export default function Die({
         borderRadius: (11 / 38) * size,
         padding: 2,
         border: state === "selected" ? "3px solid #F3CE5E" : "3px solid transparent",
-        opacity: spent ? 0.42 : dim ? 0.74 : 1,
-        animation: state === "rolling" ? "saath-tumble 0.42s linear infinite" : undefined,
+        opacity: spent ? 0.5 : 1,
+        /* 600ms a turn, eased so it leaves fast and settles —
+           linear at 420ms was what made it read as a shake. */
+        animation:
+          state === "rolling"
+            ? "saath-tumble 0.6s cubic-bezier(.22,.7,.36,1) infinite"
+            : undefined,
         /* Matte, and it sits on the table rather than glowing on it. */
-        filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
+        filter: dim
+          ? "drop-shadow(0 1px 3px rgba(0,0,0,0.35))"
+          : "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
       }}
     >
       {value ? (
-        <DieFace value={value} size={size} ink={spent ? "#8A8378" : PIP} />
+        <DieFace value={value} size={size} ink={PIP} />
       ) : (
-        /* GHOSTED, not blank, and not a guess either. A hardcoded
-           `|| 1` claimed a number nobody rolled; a truly empty face
-           fixed the lie and produced a plain ivory square that read as
-           an empty card. Faint pips are unmistakably a die and claim
-           nothing — the eye reads them as the texture of an object. */
+        /* NOTHING ROLLED YET, AND NOTHING TO CLAIM. A hardcoded
+           `|| 1` claimed a number nobody threw; a truly empty face
+           fixed the lie and produced a plain ivory square that read
+           as an empty card. Faint pips are unmistakably a die and
+           claim nothing.
+
+           This is now the ONLY faint thing on a die, and it is the
+           first roll of a table only — every seat that has thrown
+           keeps its last face, so the board fills with real dice
+           within a turn. */
         <DieFace value={5} size={size} ink={PIP} faint />
       )}
       {spent && (

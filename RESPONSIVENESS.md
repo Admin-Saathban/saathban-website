@@ -103,6 +103,25 @@ it `data-sb-swipe` and the tab drag will leave it alone.
 field is focused. Detected, not declared — no sheet has to opt in, because the
 sheet that forgets is the one that flickers.
 
+## A note on committing, in a shared checkout
+
+Lanes share one working tree and one index. `git commit -- <paths>` keeps
+YOUR commit clean, but it does not protect your files from anyone else — a
+bare `git commit` in another lane takes whatever is in the index, including
+what you have just staged.
+
+So do not stage at all. Commit straight by pathspec:
+
+```
+git commit -F- -- <paths>
+```
+
+This takes the working-tree content of exactly those files, puts nothing of
+yours in the shared index for anyone else to sweep up, and leaves their
+staged work alone. `git add` followed by a commit leaves a window open for
+as long as it takes to write the message — which is exactly how one lane's
+locale keys ended up inside another lane's commit this week.
+
 ## The measurement
 
 Do not report a latency fix without a number, and take it at two latencies.

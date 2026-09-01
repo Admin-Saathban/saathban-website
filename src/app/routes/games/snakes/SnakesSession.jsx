@@ -30,7 +30,7 @@ import useTokenWalk from "./useTokenWalk.js";
 import { boardFor, seatColorIdx } from "./design.js";
 import { colorOf } from "./skins.js";
 import ChatPanel from "../ludo/ChatPanel.jsx";
-import GameSettings from "../ludo/GameSettings.jsx";
+import SnakesSettings from "./SnakesSettings.jsx";
 import PlayerCard from "../ludo/PlayerCard.jsx";
 import Icon from "../../../components/Icon.jsx";
 
@@ -342,11 +342,13 @@ export default function SnakesSession() {
         />
       )}
       {settingsOpen && (
-        <GameSettings
-          rules={<SnakesRules board={board} t={t} />}
-          editable={false}
+        <SnakesSettings
+          board={board}
           onClose={() => setSettingsOpen(false)}
-          onLeave={async () => { await leaveSession(sessionId); navigate("/app/games"); }}
+          onLeave={async () => {
+            try { await leaveSession(sessionId); } catch { /* the door still opens */ }
+            navigate("/app/games");
+          }}
         />
       )}
       {cardSeat && (
@@ -368,16 +370,6 @@ export default function SnakesSession() {
         />
       )}
     </>
-  );
-}
-
-export function SnakesRules({ board, t }) {
-  return (
-    <ul style={{ margin: 0, paddingInlineStart: 20, lineHeight: 1.6 }}>
-      <li>{t("snakes.rules.count", { snakes: board.snakes.length, ladders: board.ladders.length })}</li>
-      <li>{t("snakes.rules.exact")}</li>
-      <li>{t("snakes.rules.dragon")}</li>
-    </ul>
   );
 }
 

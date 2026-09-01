@@ -3142,6 +3142,21 @@ const en = {
      1 Sept: its own full-screen world, a setup room, and a table the
      host sets. ── */
   snakes: {
+    settings: {
+      sound: "Sound",
+      soundOn: "Sound on",
+      effects: "Game sounds",
+      music: "Music",
+      table: "This table",
+      tableFixed: "The table was set before the game began and stays as it is now.",
+      rulebook: "Rulebook",
+      leave: "Leave the table",
+      /* Asked, because a bot takes the seat — a person who meant
+         "hide this for now" should not find that out later. */
+      leaveAsk: "A computer will play your turns and the table stays yours. Come back whenever you like.",
+      leaveYes: "Leave",
+      leaveNo: "Stay",
+    },
     title: "Snakes & Ladders",
     waitTurn: "Waiting for the others",
     over: "The game is over",

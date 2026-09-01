@@ -2939,6 +2939,19 @@ const ur = {
 
   // ─── Games shell + Daily Riddle (routes/games/) ───
   snakes: {
+    settings: {
+      sound: "آواز",
+      soundOn: "آواز چالو",
+      effects: "کھیل کی آوازیں",
+      music: "موسیقی",
+      table: "یہ میز",
+      tableFixed: "میز کھیل شروع ہونے سے پہلے طے ہوئی تھی اور اب ایسی ہی رہے گی۔",
+      rulebook: "قاعدے",
+      leave: "میز چھوڑ دیں",
+      leaveAsk: "آپ کی باریاں کمپیوٹر کھیلے گا اور میز آپ کی رہے گی۔ جب چاہیں واپس آ جائیں۔",
+      leaveYes: "چھوڑ دیں",
+      leaveNo: "رہنے دیں",
+    },
     title: "سانپ سیڑھی",
     waitTurn: "دوسروں کا انتظار",
     over: "کھیل ختم ہو گیا",

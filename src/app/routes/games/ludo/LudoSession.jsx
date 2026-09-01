@@ -523,6 +523,36 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
+  /* ── ABOVE `if (!game) return`, AND THAT IS THE WHOLE POINT ────
+
+     This sat next to the thing it controls, three hundred lines
+     down, which is past the early return this screen makes while
+     the table is still loading. So the first render ran N hooks and
+     the second ran N+1, React threw "rendered more hooks than
+     during the previous render", and the board came up blank.
+
+     Third time this file has blanked the board with a passing
+     build, and the third different way: a const read before its
+     declaration, twice, and now a hook below a return. All three
+     have the same cause — this component is two thousand lines
+     long, so "put it where it is used" and "put it where React
+     needs it" point in different directions. React wins. Every
+     hook in this file belongs above line 1092. */
+  const [hints, setHints] = useState(() => {
+    try {
+      return window.localStorage.getItem(HINTS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const putHints = (v) => {
+    setHints(v);
+    try {
+      window.localStorage.setItem(HINTS_KEY, v ? "1" : "0");
+    } catch {
+      /* private mode; the switch still works for this sitting */
+    }
+  };
   const [settingsOpen, setSettingsOpen] = useState(false);
   /* The leaving question answers to back as well. It is the one
      panel on this screen where a stray back press would do the
@@ -1222,21 +1252,6 @@ export default function LudoSession() {
      coached. Kept in localStorage rather than on the profile: it
      is a display setting, it must survive a signed-out reload, and
      it is not worth a round trip. */
-  const [hints, setHints] = useState(() => {
-    try {
-      return window.localStorage.getItem(HINTS_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-  const putHints = (v) => {
-    setHints(v);
-    try {
-      window.localStorage.setItem(HINTS_KEY, v ? "1" : "0");
-    } catch {
-      /* private mode; the switch still works for this sitting */
-    }
-  };
 
   /* §8 — WHAT MAY BE TAPPED, and by whom.
 
@@ -2013,7 +2028,20 @@ export default function LudoSession() {
               nobody reading "one more six and all three are void"
               needs to be told separately that their sixes are
               counting. */}
-          {chain > 0 && (
+          {/* THE WARNING ALWAYS; THE COUNT ONLY IF ASKED FOR.
+
+              Eighteen turns played with hints off, and the one
+              thing the table still said was "Six number 1" — a
+              scoreboard for a run that has not gone anywhere. The
+              die on the screen is already showing a six.
+
+              At two, three, five, six, eight and nine it stops
+              being a count and becomes a warning: ludo_chain_stands
+              voids the whole run at three, six and nine, so those
+              lines are telling somebody they are about to lose
+              moves they have already made. That is a result, and
+              results are never behind a switch. */}
+          {chain > 0 && (hints || chain % 3 === 2 || chain % 3 === 0) && (
             <FlashLine keyed={chain} ms={4200}>
               {chain === 2 || chain === 5 || chain === 8
                 ? t("ludo.chain.careful")

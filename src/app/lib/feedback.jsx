@@ -159,6 +159,54 @@ export function useAction(handler, opts = {}) {
   return [run, pending];
 }
 
+/* ─── useSaveState: a Save that settles ───
+
+   A Save button that still reads "Save" after saving leaves no way to
+   tell saved from unsaved. The confirmation line underneath is not
+   enough on its own: it fades, and it is not attached to the control
+   the person pressed. The button has to carry the state.
+
+     const { saved, markSaved } = useSaveState(form);
+     …
+     <Btn disabled={saving || saved}>
+       {saving ? t("feedback.saving") : saved ? t("feedback.savedState") : t("…save")}
+     </Btn>
+
+   `value` is whatever the form holds. `saved` is true only while the
+   form still holds exactly what was written, so the first edit puts
+   the button back to "Save" on its own — no screen has to remember to
+   clear a flag, which is how these drift apart in the first place. */
+
+const stableKey = (v) => {
+  const seen = new WeakSet();
+  const walk = (x) => {
+    if (x === null || typeof x !== "object") return x;
+    if (seen.has(x)) return null;
+    seen.add(x);
+    if (Array.isArray(x)) return x.map(walk);
+    /* Key order must not decide whether a form counts as edited. */
+    return Object.keys(x).sort().reduce((o, k) => { o[k] = walk(x[k]); return o; }, {});
+  };
+  try {
+    return JSON.stringify(walk(v));
+  } catch {
+    return null; // uncomparable value: never claims to be saved
+  }
+};
+
+export function useSaveState(value) {
+  const key = stableKey(value);
+  const [savedKey, setSavedKey] = useState(undefined);
+  const keyRef = useRef(key);
+  keyRef.current = key;
+  /* Reads the key at the moment the write succeeded, not at the
+     moment this callback was created. */
+  const markSaved = useCallback(() => setSavedKey(keyRef.current), []);
+  const forget = useCallback(() => setSavedKey(undefined), []);
+  const saved = savedKey !== undefined && key !== null && savedKey === key;
+  return useMemo(() => ({ saved, markSaved, forget }), [saved, markSaved, forget]);
+}
+
 /* Say it, then go. The host is app-wide, so the line survives the
    navigation and stays readable on the next screen — no racing a
    timer against an unmount (games lane's decline flow). */

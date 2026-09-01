@@ -94,9 +94,9 @@ export default function BuddyApplication() {
   if (!app) {
     return (
       <div>
-        <p>{loading ? "Loading…" : `No application with id “${id}”.`}</p>
+        <p>{loading ? t("admin.app.loading") : t("admin.app.notFound", { id })}</p>
         <Link to=".." style={{ color: C.green }}>
-          ← Back to the queue
+          {t("admin.app.backToTheQueue")}
         </Link>
       </div>
     );
@@ -187,7 +187,7 @@ export default function BuddyApplication() {
               fontWeight: 700,
             }}
           >
-            Attempt {priorAttempts.length + 1}
+            {t("admin.app.attemptN", { n: priorAttempts.length + 1 })}
           </span>
         )}
       </div>
@@ -515,8 +515,7 @@ export default function BuddyApplication() {
               )}
               {advanceBlockedByCalls && (
                 <p style={{ margin: 0, fontSize: 15, color: C.brown }}>
-                  Both reference calls must be recorded before this application
-                  can move to probation.
+                  {t("admin.app.refsBeforeProbation")}
                 </p>
               )}
               {app.status === "active" && (
@@ -568,7 +567,7 @@ export default function BuddyApplication() {
                       if (ok) setRejectNote("");
                     }}
                   >
-                    Reject
+                    {t("admin.app.reject")}
                   </AdminBtn>
                   <p style={{ margin: 0, fontSize: 15, color: C.textMuted }}>
                     A rejected applicant can reapply after 90 days. Permanent
@@ -753,10 +752,10 @@ export default function BuddyApplication() {
                       if (ok) setNotesDraft(null);
                     }}
                   >
-                    Save
+                    {t("feedback.saveCta")}
                   </AdminBtn>
                   <AdminBtn kind="ghost" disabled={busy} onClick={() => setNotesDraft(null)}>
-                    Cancel
+                    {t("feedback.cancelCta")}
                   </AdminBtn>
                 </div>
               </div>

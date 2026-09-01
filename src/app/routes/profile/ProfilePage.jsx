@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { useSaveState } from "../../lib/feedback.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { STRINGS } from "./strings.js";
 import { fetchMyProfile, updateMyProfile } from "./data.js";
@@ -66,6 +67,9 @@ export default function ProfilePage() {
   const [form, setForm] = useState(null); // null = loading
   const [role, setRole] = useState(null);
   const [status, setStatus] = useState("idle"); // idle | saving | saved
+  /* The button, not just the line underneath, has to say whether the
+     form is saved — and go back to Save the moment anything changes. */
+  const { saved, markSaved } = useSaveState(form);
   const [error, setError] = useState("");
   const [avatar, setAvatar] = useState(null);   // signed url, or null
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -133,6 +137,7 @@ export default function ProfilePage() {
       });
       await refreshProfile(); // so the rest of the app sees the new name
       setStatus("saved");
+      markSaved();
     } catch {
       setStatus("idle");
       setError(s.saveError);
@@ -302,7 +307,7 @@ export default function ProfilePage() {
 
             <button
               type="submit"
-              disabled={status === "saving"}
+              disabled={status === "saving" || saved}
               style={{
                 minHeight: 56,
                 width: "100%",
@@ -314,11 +319,11 @@ export default function ProfilePage() {
                 fontSize: ts(19),
                 fontWeight: 600,
                 fontFamily: "inherit",
-                cursor: status === "saving" ? "default" : "pointer",
-                opacity: status === "saving" ? 0.7 : 1,
+                cursor: status === "saving" || saved ? "default" : "pointer",
+                opacity: status === "saving" || saved ? 0.7 : 1,
               }}
             >
-              {status === "saving" ? s.saving : s.save}
+              {status === "saving" ? s.saving : saved ? t("feedback.savedState") : s.save}
             </button>
           </form>
         )}

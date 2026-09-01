@@ -33,6 +33,7 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
+import { useSaveState } from "../../lib/feedback.jsx";
 import { useParams, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -65,7 +66,10 @@ export default function GroupManage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState("invite_only");
-  const [saved, setSaved] = useState(false);
+  /* Derived, not remembered: three separate onChange handlers used to
+     each have to clear this flag, and a fourth field would have been
+     one more chance to forget. */
+  const { saved, markSaved } = useSaveState({ name, description, privacy });
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState(false);
   /* §7.3 is the one destructive control in this screen, so it is the
@@ -268,7 +272,7 @@ export default function GroupManage() {
         </label>
         <input
           value={name}
-          onChange={(e) => { setName(e.target.value); setSaved(false); }}
+          onChange={(e) => setName(e.target.value)}
           maxLength={80}
           dir={meta.dir}
           style={{ width: "100%", minHeight: A11Y.minTapTargetPx, fontSize: ts(A11Y.minBodyPx), marginBottom: 14 }}
@@ -278,7 +282,7 @@ export default function GroupManage() {
         </label>
         <textarea
           value={description}
-          onChange={(e) => { setDescription(e.target.value); setSaved(false); }}
+          onChange={(e) => setDescription(e.target.value)}
           rows={3}
           dir={meta.dir}
           style={{
@@ -300,7 +304,7 @@ export default function GroupManage() {
           <button
             key={key}
             type="button"
-            onClick={() => { setPrivacy(key); setSaved(false); }}
+            onClick={() => setPrivacy(key)}
             aria-pressed={privacy === key}
             style={{
               display: "block", width: "100%", textAlign: "start", marginBottom: 10,
@@ -318,7 +322,7 @@ export default function GroupManage() {
         ))}
 
         <PrimaryBtn
-          disabled={busy === "save" || !name.trim()}
+          disabled={busy === "save" || saved || !name.trim()}
           onClick={() =>
             act(async () => {
               await updateGroup(id, {
@@ -326,11 +330,15 @@ export default function GroupManage() {
                 description: description.trim() || null,
                 privacy,
               });
-              setSaved(true);
+              markSaved();
             }, "save")
           }
         >
-          {t("groups.manage.save")}
+          {busy === "save"
+            ? t("feedback.saving")
+            : saved
+              ? t("feedback.savedState")
+              : t("groups.manage.save")}
         </PrimaryBtn>
         {saved && (
           <BodyText muted style={{ margin: "10px 0 0" }}>{t("groups.manage.saved")}</BodyText>

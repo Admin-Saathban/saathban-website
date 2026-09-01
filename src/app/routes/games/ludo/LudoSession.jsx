@@ -161,6 +161,11 @@ export default function LudoSession() {
   const [botThrow, setBotThrow] = useState(null);
   const shownMoveRef = useRef(undefined);
   const botHoldRef = useRef(0);
+  /* True while a move is waiting for its throw to finish. Nothing
+     fetches or ticks past it: the board is deliberately one move
+     behind the server for that beat, and reading ahead is how the
+     held board gets thrown away. */
+  const holdingRef = useRef(false);
   /* seat → the number it last threw; see lastDieBySeat below. */
   const lastDiceRef = useRef({});
 
@@ -241,9 +246,11 @@ export default function LudoSession() {
       g.status === "playing"
     ) {
       shownMoveRef.current = key;
+      holdingRef.current = true;
       setBotThrow({ seat: mover, die: mv.die || null });
       window.clearTimeout(botHoldRef.current);
       botHoldRef.current = window.setTimeout(() => {
+        holdingRef.current = false;
         setBotThrow(null);
         setGame(g);
       }, BOT_BEAT);
@@ -276,10 +283,14 @@ export default function LudoSession() {
     softClosed.current = false;
     shownMoveRef.current = undefined;
     window.clearTimeout(botHoldRef.current);
+    holdingRef.current = false;
     setBotThrow(null);
     load().catch(() => setError("ludo.errors.load"));
     timer = setInterval(async () => {
       try {
+        /* Somebody else's move is on screen being thrown. Reading
+           ahead here is what discarded it. */
+        if (holdingRef.current) return;
         const g = await load();
         // The rails' tick plays bot seats immediately and lapsed human
         // seats after their clock — call it in both situations.

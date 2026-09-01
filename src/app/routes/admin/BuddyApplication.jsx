@@ -127,6 +127,18 @@ export default function BuddyApplication() {
 
   return (
     <div style={{ maxWidth: 1180 }}>
+      {/* The body is two columns on a desk and one on a phone. Without
+          this, minmax(0, 1fr) let the reading column shrink to a
+          sliver behind the 360px sidebar — the page did not overflow,
+          it just hid the application it exists to show. The reviewer
+          confirming calls from a phone is the normal case, not the
+          edge one. */}
+      <style>{`
+        @media (max-width: 900px) {
+          .sb-buddy-body { grid-template-columns: minmax(0, 1fr) !important; }
+        }
+      `}</style>
+
       {/* ─── Header ─── */}
       <Link
         to=".."
@@ -206,6 +218,7 @@ export default function BuddyApplication() {
 
       {/* ─── Two-column body ─── */}
       <div
+        className="sb-buddy-body"
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1fr) 360px",

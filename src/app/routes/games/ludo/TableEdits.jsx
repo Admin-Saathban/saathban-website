@@ -146,7 +146,10 @@ const RULES = [
   ["extra_roll_on_six", "ludo.rules.extraRoll", true],
   ["exact_home", "ludo.rules.exactHome", true],
   ["capture_before_home", "ludo.rules.captureFirst", false],
-  ["undo", "games.setup.undoOn", true],
+  /* NO UNDO ROW. Taking a move back is removed from ludo, so the
+     switch goes with it — a toggle left behind for a feature that
+     no longer exists is worse than either, because it promises
+     something and then nothing happens. */
   /* Off by default: the board narrates itself by moving. */
   ["narrate", "ludo.rules.narrate", false],
 ];

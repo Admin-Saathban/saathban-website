@@ -21,7 +21,15 @@ import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
-import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
+/* NO UNDO. `game_undo` and `game_undo_available` are still in the
+   database and are called from nowhere: the owner has removed
+   taking a move back from ludo, and a client that no longer
+   offers it must not keep asking the server whether it could.
+   The RPCs are left standing rather than dropped because a
+   migration that removes a function is the one kind that cannot
+   be rolled back cheaply, and nothing costs anything while no
+   caller exists. */
+import { fetchSession, startSession, roll, move, tick, rematch, legalFor } from "./ludoRails.js";
 import { tableIsSoft, reformTable, fetchSeatInvites, seen } from "./ludoRails.js";
 import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
@@ -30,8 +38,9 @@ import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine } from "../GameUI.j
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
 import GameSettings from "./GameSettings.jsx";
-import { stopAllSound, resumeSound, startAmbience, stopAmbience } from "../../../lib/sound.js";
+import { stopAllSound, resumeSound, startAmbience, stopAmbience, playSound } from "../../../lib/sound.js";
 import { themeOf, themeVars } from "../themes.js";
+import { useGameFullscreen } from "../fullscreen.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
 import PlayerCard from "./PlayerCard.jsx";
@@ -51,13 +60,23 @@ import { leaveSession } from "../../../lib/games.js";
 import { fetchChat } from "./ludoRails.js";
 import CollisionNote from "../CollisionNote.jsx";
 
-/* HOW LONG SOMEBODY ELSE'S THROW TAKES TO WATCH: the dice tumble
-   for 600ms and then there is a beat before the goti moves, which
-   is roughly what a person at a table does. BOT_GAP is that plus
-   room for the walk, so one bot's turn is finished being watched
-   before the next is asked for. */
-const BOT_BEAT = 1300;
-const BOT_GAP = 2600;
+/* HOW LONG SOMEBODY ELSE'S THROW TAKES TO WATCH.
+
+   A THROW IS 700ms OF CUBE, AND THE BEAT HAS TO CLEAR IT. The
+   dice animation loops every 700ms and only lands square at the
+   end of a loop, so a hold shorter than one full turn would stop
+   the cube mid-air and cut the settle. 1400 is two throws' worth
+   of clock for one throw's worth of turning: the die tumbles, it
+   comes down, and THEN there is the beat a person leaves before
+   reaching for a piece.
+
+   BOT_GAP is that plus room for the walk, so one bot's turn is
+   finished being watched before the next is asked for. */
+/* Where one person's "talk me through it" is remembered. */
+const HINTS_KEY = "sb-ludo-hints";
+
+const BOT_BEAT = 1400;
+const BOT_GAP = 3000;
 
 /* Everything the play screen draws from, as one string. If two
    polls produce the same one, the second is not a render. */
@@ -255,6 +274,8 @@ export default function LudoSession() {
 
   const shownMoveRef = useRef(undefined);
   const botHoldRef = useRef(0);
+  /* Whose sounds this viewer has silenced, reachable from `load`. */
+  const isSilentRef = useRef(null);
   /* True while a move is waiting for its throw to finish. Nothing
      fetches or ticks past it: the board is deliberately one move
      behind the server for that beat, and reading ahead is how the
@@ -342,6 +363,18 @@ export default function LudoSession() {
       shownMoveRef.current = key;
       holdingRef.current = true;
       setBotThrow({ seat: mover, die: mv.die || null });
+      /* THE SAME NOISE A PERSON'S THROW MAKES.
+
+         It made none. The dice sound existed and had exactly one
+         caller in the whole app — the PREVIEW BUTTON in sound
+         settings — so the one place a die is actually thrown was
+         silent, for bots and for people alike. Half of why a bot's
+         turn read as "the board just changed" is that nothing
+         announced it had begun.
+
+         Under this viewer's mute for that seat, like every other
+         sound a seat makes. */
+      if (!isSilentRef.current?.(mover)) playSound("dice");
       window.clearTimeout(botHoldRef.current);
       botHoldRef.current = window.setTimeout(() => {
         holdingRef.current = false;
@@ -483,6 +516,22 @@ export default function LudoSession() {
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  /* THE WHOLE SCREEN, FOR AS LONG AS THIS TABLE IS OPEN.
+
+     Every other piece of chrome was already gone from the play
+     screen — no app header, no page scroll, 100dvh — and the
+     owner's Android still showed the system status bar above the
+     game, which is the one thing layout cannot reach. Held from
+     mount to unmount, so it is released by leaving, by back, and
+     by opening any other screen; see fullscreen.js for what
+     happens when the browser says no.
+
+     Unconditional rather than tied to `playing`: a lobby is still
+     inside a table, and dropping out of fullscreen at the moment
+     the game starts would be the screen jumping under somebody
+     just as they were about to be counted in. */
+  useGameFullscreen(true);
   /* The chat sheet, and whose card is open. Both are opened from
      the circles at the corners: a person's circle opens their card,
      the particle on your own opens the chat. */
@@ -538,7 +587,10 @@ export default function LudoSession() {
         setTimeout(() => setCountdown(2), 800),
         setTimeout(() => setCountdown(1), 1600),
         setTimeout(() => setCountdown(0), 2400),
-        setTimeout(() => setCeremony(null), 3400),
+        /* The greeting holds for a second and a half after the
+           count reaches zero. It used to be one second, which is
+           not long enough to read two lines. */
+        setTimeout(() => setCeremony(null), 3900),
       ];
       return () => ticks.forEach(clearTimeout);
     }
@@ -644,6 +696,11 @@ export default function LudoSession() {
   const doRoll = async () => {
     if (rolling || busy) return;
     setRolling(true);
+    /* THE DICE LEAVE THE HAND HERE, not when the server answers.
+       The sound is part of the tap's response, and a noise that
+       waited on the network would be the lag all over again in
+       a form you could hear. */
+    playSound("dice");
 
     let stopped = false;
     const face = () => 1 + Math.floor(Math.random() * 6);
@@ -914,40 +971,12 @@ export default function LudoSession() {
      on its own, it pauses if you are still reading it, and it cannot
      carry an action, which is right, because there is nothing left to
      do about a move the table has already moved past. */
-  const [canUndo, setCanUndo] = useState(false);
-  const [undoNote, setUndoNote] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    if (!game?.id || game.status !== "playing") {
-      setCanUndo(false);
-      return undefined;
-    }
-    undoAvailable(game.id).then((a) => {
-      if (alive) setCanUndo(a?.can === true);
-    });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.id, game?.status, diceKey, game?.current_seat]);
-
-  const doUndo = async () => {
-    if (busy) return;
-    const r = await undoMove(game.id);
-    if (r?.ok) {
-      setCanUndo(false);
-      await load();
-      return;
-    }
-    /* Every refusal has a reason and every reason has a sentence. A
-       button that fails silently teaches people not to trust it. */
-    const why = r?.why || "error";
-    setUndoNote(
-      ["they_have_rolled", "not_your_move", "already_undone", "nothing_to_undo"].includes(why)
-        ? t(`ludo.undo.why.${why}`)
-        : t("ludo.undo.why.error")
-    );
-  };
+  /* UNDO IS GONE. It used to sit here: a probe on every roll asking
+     the server whether the last move could be taken back, a button
+     under the board, and a panel explaining each of the four ways
+     the answer could be no. Removed on the owner's ruling — with it
+     goes one RPC per roll per player, which the board was paying
+     for on every turn of every game. */
 
   /* §7: THE GAME TAKES ITS SOUND WITH IT WHEN IT GOES.
 
@@ -993,6 +1022,14 @@ export default function LudoSession() {
     if (!pid || pid === myId) return false;
     return readMutes(game.id)[pid]?.sounds === true;
   };
+  /* THROUGH A REF, DELIBERATELY. `load` is declared several hundred
+     lines above this and closes over whatever it names; reaching
+     for `isSilent` by name from up there is the exact shape of the
+     temporal-dead-zone fault that has blanked this board twice
+     (the build passes; opening a table is what catches it). A ref
+     is assigned during render and read during an effect, which is
+     an order that cannot invert. */
+  isSilentRef.current = isSilent;
 
   useGameFeel({
     gameKey: "ludo",
@@ -1117,6 +1154,43 @@ export default function LudoSession() {
      leaving, and the countdown. Those announce themselves once
      and leave. */
   const narrate = rules?.narrate === true;
+
+  /* ── MOVE HINTS, AND THEY ARE OFF ─────────────────────────────
+
+     "Tap the goti you'd like to move". "Tap a die, then tap the
+     goti it should move". "The 2 had nowhere to go, so it goes
+     unused". Three sentences teaching ludo to somebody who has
+     played it for sixty years, once per turn, for ever.
+
+     WHAT IS NOT A HINT, and therefore is not behind this switch:
+     whose turn it is, and what actually happened. A capture, a
+     goti reaching home and somebody winning are results — the
+     board changed and the person is owed a sentence saying why.
+     The line that says a bot has taken a seat stays too: that is
+     the table changing who you are playing, and hiding it would
+     be the game keeping something from you.
+
+     A PREFERENCE, NOT A HOUSE RULE. It is how one person likes to
+     be spoken to, so it belongs to them and not to the table —
+     the host does not get to decide whether everybody else is
+     coached. Kept in localStorage rather than on the profile: it
+     is a display setting, it must survive a signed-out reload, and
+     it is not worth a round trip. */
+  const [hints, setHints] = useState(() => {
+    try {
+      return window.localStorage.getItem(HINTS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const putHints = (v) => {
+    setHints(v);
+    try {
+      window.localStorage.setItem(HINTS_KEY, v ? "1" : "0");
+    } catch {
+      /* private mode; the switch still works for this sitting */
+    }
+  };
 
   /* §8 — WHAT MAY BE TAPPED, and by whom.
 
@@ -1478,6 +1552,31 @@ export default function LudoSession() {
 
           {/* "Setting the table…" and "Khelte hain!" — brief, warm,
               and never in the way of a tap. */}
+          {/* ── THE TABLE BEING SET ─────────────────────────────
+
+                 THE BOARD IS NEVER WASHED OUT. This drew a sheet of
+                 near-white at 80% over the whole board and put the
+                 greeting on it in thirty-pixel Saathban green with a
+                 grey line under — cream, green and grey, over a
+                 bleached board, on a midnight table. The owner said
+                 it looks like an error page, and an error page is
+                 exactly what a pale full-screen wash with large
+                 coloured type on it looks like.
+
+                 So the wash is gone entirely: the board stays at
+                 full strength and the greeting arrives as one small
+                 midnight panel over it, in the same surface as the
+                 chat, the profile cards and the settings sheet, with
+                 a bar of this player's own seat colour down its
+                 leading edge.
+
+                 THE COUNTDOWN KEEPS ITS DIM, and only its dim. The
+                 two moments are not the same: counting a table in is
+                 asking everyone to stop and look up, and the board
+                 going quiet under it is the point. But it dims to
+                 the table's own blue-black rather than to brown, and
+                 the ribbon that was Saathban green is gone with the
+                 rest of the app's colours. ── */}
           {ceremony === "start" && (
             <div
               role="status"
@@ -1491,7 +1590,7 @@ export default function LudoSession() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
-                background: countdown > 0 ? "#2f2a24bb" : "#fffdf5cc",
+                background: countdown > 0 ? "rgba(6,10,20,0.62)" : "transparent",
                 borderRadius: 20,
                 pointerEvents: "none",
                 textAlign: "center",
@@ -1505,14 +1604,15 @@ export default function LudoSession() {
                       at a gathering, which is what this moment is. */}
                   <div
                     style={{
-                      alignSelf: "stretch",
-                      background: C.green,
-                      color: C.cream,
-                      padding: "8px 0",
+                      background: GAME.panel,
+                      border: `1px solid ${GAME.panelEdge}`,
+                      color: GAME.ink,
+                      padding: "8px 18px",
+                      borderRadius: 999,
                       textAlign: "center",
                       fontSize: ts(A11Y.minBodyPx),
                       fontWeight: 700,
-                      boxShadow: "0 2px 10px rgba(74,58,34,0.25)",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
                     }}
                   >
                     {t("ludo.ceremony.countdownBanner")}
@@ -1525,21 +1625,59 @@ export default function LudoSession() {
                       fontSize: ts(64),
                       lineHeight: 1,
                       fontWeight: 800,
-                      color: C.green,
+                      color: GAME.ink,
+                      textShadow: "0 6px 24px rgba(0,0,0,0.6)",
                     }}
                   >
                     {countdown}
                   </p>
                 </>
               ) : (
-                <>
-                  <p style={{ margin: 0, fontFamily: meta.fonts.heading, fontSize: ts(30), fontWeight: 700, color: C.green }}>
-                    {t("ludo.ceremony.start")}
-                  </p>
-                  <p style={{ margin: 0, fontSize: ts(17), color: C.textMuted }}>
-                    {t("ludo.ceremony.startNote")}
-                  </p>
-                </>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    gap: 12,
+                    maxWidth: "86%",
+                    padding: "14px 18px 14px 14px",
+                    borderRadius: 18,
+                    background: GAME.panel,
+                    border: `1px solid ${GAME.panelEdge}`,
+                    boxShadow: "0 18px 44px rgba(0,0,0,0.58)",
+                    textAlign: "start",
+                  }}
+                >
+                  {/* YOUR colour, on the panel that welcomes YOU.
+                      A seat that has not been taken yet — a watcher,
+                      a table opened by link — gets the table's own
+                      gold rather than a fifth colour nobody owns. */}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      flex: "0 0 auto",
+                      width: 4,
+                      borderRadius: 2,
+                      background:
+                        mySeatRow?.seat != null ? SEAT_COLORS[mySeatRow.seat] : GAME.gold,
+                    }}
+                  />
+                  <div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontFamily: meta.fonts.heading,
+                        fontSize: ts(22),
+                        fontWeight: 700,
+                        color: GAME.ink,
+                      }}
+                    >
+                      {t("ludo.ceremony.start")}
+                    </p>
+                    <p style={{ margin: "2px 0 0", fontSize: ts(16), lineHeight: 1.4, color: GAME.inkMuted }}>
+                      {t("ludo.ceremony.startNote")}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -1788,44 +1926,21 @@ export default function LudoSession() {
 
               It says it once, when it becomes true, and then stops.
               Keyed on the dice, so a new roll says it again. */}
-          {isMyTurn && hasDice && (
+          {hints && isMyTurn && hasDice && (
             <FlashLine keyed={diceKey}>
               {spendable > 1 ? t("ludo.turn.pickDie") : t("ludo.turn.pickPiece")}
             </FlashLine>
           )}
-          {/* §7 puts undo beside the dice. It sits above the action
-              row rather than inside the seat plate, because the plate
-              belongs to the table's chrome and this belongs to the
-              person whose move it was. */}
-          {playing && canUndo && (
-            <GhostBtn
-              onClick={doUndo}
-              disabled={busy}
-              style={{
-                width: "100%",
-                minHeight: 44,
-                borderColor: GAME.controlEdge,
-                background: GAME.control,
-                color: GAME.ink,
-                flex: "0 0 auto",
-                /* The strip lets taps through; this takes them. */
-                pointerEvents: "auto",
-              }}
-            >
-              ↩ {t("ludo.undo.cta")}
-            </GhostBtn>
-          )}
-          <InfoPanel
-            open={!!undoNote}
-            body={undoNote || ""}
-            onClose={() => setUndoNote(null)}
-          />
+
           {autoNote && (
             <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: "#8FE3B0" }}>
               {t("ludo.turn.autoPlayed")}
             </BodyText>
           )}
-          {isMyTurn && deadDice.length > 0 && (
+          {/* "The 2 had nowhere to go, so it goes unused." A dim die
+              already says it, and a person who has played ludo does
+              not need the sentence. */}
+          {hints && isMyTurn && deadDice.length > 0 && (
             <BodyText muted role="status" style={{ margin: "6px 0 0", textAlign: "center", color: GAME.inkMuted }}>
               {t("ludo.dice.wastedNote", { n: deadDice.map((d) => d.v).join(", ") })}
             </BodyText>
@@ -2046,17 +2161,16 @@ export default function LudoSession() {
 
       {/* Leaving is a decision, so it is asked as one — warmly, and
           with the seat's fate stated rather than implied. */}
-      {/* The settings menu: sound, this table, the rulebook, and the
-          same way out. */}
+      {/* The settings menu: sound, how you like to be spoken to,
+          this table, and the rulebook. NO DOOR — leaving is the
+          button in the top bar, and it was in both places. */}
       {settingsOpen && (
         <GameSettings
           rules={rules}
           editable={editable}
           onClose={() => setSettingsOpen(false)}
-          onLeave={() => {
-            setSettingsOpen(false);
-            setLeaveAsk(true);
-          }}
+          hints={hints}
+          onHints={putHints}
         />
       )}
 

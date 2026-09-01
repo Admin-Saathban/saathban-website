@@ -226,7 +226,6 @@ export default function NewGame() {
      open a room. Somebody who plays the same five rules every
      Sunday should set them once. */
   const [autoOnlyMove, setAutoOnlyMove] = useState(true);
-  const [undoOn, setUndoOn] = useState(true);
   const [sixAgain, setSixAgain] = useState(true);
   const [jotaOn, setJotaOn] = useState(true);
   const [exactHome, setExactHome] = useState(true);
@@ -308,10 +307,11 @@ export default function NewGame() {
            as "on", so an old table and a new one behave the same and
            the row keeps the shape it already had. */
         if (autoOnlyMove === false) house.auto_only_move = false;
-        /* Same shape as auto-move: written only when OFF, because
-           client and server both read a missing key as on, so an old
-           table and a new one behave alike. */
-        if (undoOn === false) house.undo = false;
+        /* NO `undo` KEY. Undo is removed from ludo; a table created
+           now simply does not carry the rule. Tables created before
+           this still have it in their frozen rules and nothing reads
+           it, which is the harmless half of leaving old rows
+           alone. */
         /* Ludo's turn is 30 seconds, and it must be WRITTEN here rather
            than left to a default. The server's fallback is 60 —
            `coalesce((house_rules->>'turn_seconds')::int, 60)` in
@@ -684,11 +684,7 @@ export default function NewGame() {
                 onToggle={() => setAutoOnlyMove((v) => !v)}
                 label={t("games.setup.autoOnlyMove")}
               />
-              <RuleSwitch
-                on={undoOn}
-                onToggle={() => setUndoOn((v) => !v)}
-                label={t("games.setup.undoOn")}
-              />
+
               {/* Only at a table with four chairs: two against two
                   needs four people, and a switch that cannot apply
                   is a question with no answer. */}

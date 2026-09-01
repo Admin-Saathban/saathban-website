@@ -21,7 +21,11 @@ export const STRINGS = {
       inviteLine: (inviter, group) => `${inviter} invited you to ${group}.`,
       accept: "Join",
       decline: "No thanks",
-      creatorBadge: "You started this",
+      /* Background information, and it reads that way now: it was a
+         filled chip in the title row, competing with the group name
+         for the eye. Who started a group matters far less than what
+         the group is and what has just happened in it. */
+      creatorNote: "You started this group",
       /* The row signal and its sheet. A count rather than a bare dot:
          "3 new messages" is a different decision from "something
          happened", and a name is a better one still. */
@@ -101,7 +105,7 @@ export const STRINGS = {
       inviteLine: (inviter, group) => `${inviter} نے آپ کو ${group} میں بلایا ہے۔`,
       accept: "شامل ہوں",
       decline: "نہیں شکریہ",
-      creatorBadge: "یہ آپ نے شروع کیا",
+      creatorNote: "یہ گروپ آپ نے شروع کیا تھا",
       newCount: "{n} نئے پیغام",
       newFrom: "{name} نے کچھ لکھا",
       rowMenu: "اس گروپ کے لیے مزید",

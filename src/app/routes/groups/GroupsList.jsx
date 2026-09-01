@@ -11,7 +11,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
-import { Screen, H1, Card, BodyText, SectionLabel, Pill, PrimaryBtn, GhostBtn } from "./ui.jsx";
+import { Screen, H1, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import { STRINGS } from "./groupsCopy.js";
 import { fetchMyGroups, fetchMyGroupInvites, respondInvite, cachedGroups, archivedGroups, setGroupPref } from "./groupsStore.js";
 import { useToast, useToastThenGo, useFresh } from "../../lib/feedback.jsx";
@@ -166,7 +166,6 @@ export default function GroupsList() {
                   fontSize: ts(15), fontWeight: 800, textAlign: "center",
                 }}>{g.unread}</span>
               )}
-              {g.isCreator && <Pill tone="brown">{s.creatorBadge}</Pill>}
               <button
                 type="button"
                 aria-label={s.rowMenu}
@@ -186,6 +185,15 @@ export default function GroupsList() {
               </BodyText>
             )}
             {g.description && <BodyText muted style={{ margin: "6px 0 12px" }}>{g.description}</BodyText>}
+            {/* Ownership, said once and quietly, below everything that
+                matters more: the name, what is new, and the
+                description. Smaller than body text and muted, so it
+                reads as a footnote rather than a badge. */}
+            {g.isCreator && (
+              <BodyText muted style={{ margin: "0 0 12px", fontSize: ts(15) }}>
+                {s.creatorNote}
+              </BodyText>
+            )}
             <Link to={`/app/groups/${g.id}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 48, padding: "0 22px", borderRadius: 50, border: `2px solid ${C.green}`, color: C.green, background: C.white, fontSize: ts(18), fontWeight: 600, textDecoration: "none" }}>
               {s.openCta}
             </Link>

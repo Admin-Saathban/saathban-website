@@ -21,7 +21,7 @@
    Every control here is ≥48px tall and ≥18px text. Selection is always
    shown with a ✓ mark as well as colour. */
 
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -676,7 +676,100 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
   const prefs = useIconPrefs(iconId);
   const entries = dayEntries(prefs, date);
   const moodDone = isModuleDone("mood", log);
-  const [openId, setOpenId] = useState(moodDone ? null : "mood");
+  /* ── NOTHING CLOSES ITSELF WHEN YOU OPEN SOMETHING ELSE ──
+
+     This was one-open-at-a-time, and that is the whole jump. Opening a
+     lower entry closed the one above it and took its height out of the
+     page, so everything below rose. Measured on the deployed build:
+     tapping Movement while Mood was open moved Movement 360px up, out
+     from under the finger.
+
+     I first fixed it by measuring the tapped row and scrolling to
+     compensate. That is correct and it is not enough: near the top of
+     the page there is nowhere to scroll TO. It needed 360px of upward
+     scroll with 260px available, so it clamped and left exactly 100px
+     of jump — which the check caught, and which no amount of tuning
+     removes, because the page has run out of room rather than the
+     arithmetic being wrong.
+
+     So the collapse goes. An entry opens and closes on its own tap and
+     nothing else moves. Whatever is above stays exactly where it is,
+     which means the answer to "the screen must not move" is that there
+     is no longer anything to move.
+
+     It also happens to suit a log: filling one in, you can see what you
+     already answered instead of it folding away behind you. The
+     compensation below stays for the one case that still shifts —
+     closing an entry you are looking at. */
+  const [openIds, setOpenIds] = useState(() => (moodDone ? [] : ["mood"]));
+  const toggleOpen = (key) =>
+    setOpenIds((ids) => (ids.includes(key) ? ids.filter((k) => k !== key) : [...ids, key]));
+
+  /* ── THE ROW YOU TAPPED STAYS WHERE YOU TAPPED IT ──
+
+     One entry is open at a time, so opening a lower one CLOSES the one
+     above and takes its height out of the page. Everything below rises.
+
+     Measured on the deployed build, tapping Movement while Mood was
+     open: Movement went from 779 to 419 — it moved 360px up, out from
+     under the finger, in the frame after the tap. Sleep went from 697
+     to 337. scrollY did not change, so Chrome's scroll anchoring did
+     not compensate; that is not something to rely on and it did not
+     fire here.
+
+     What a person sees is the screen leaping upward as they tap, and
+     whatever they meant to read is somewhere else. On a screen built
+     for people who may already find small targets hard, the content
+     moving under the finger is close to the worst thing an interface
+     can do.
+
+     So the tapped button is measured before the change and the page is
+     scrolled by exactly the amount it moved. In a LAYOUT effect, which
+     runs after the DOM changes and before the browser paints — so the
+     correction is never seen, the row simply does not move. The button
+     element itself is the anchor: React keeps the same DOM node across
+     this re-render, so there is no ref map to maintain. */
+  /* ── FINISHING FEELS LIKE FINISHING ──
+
+     Completing the day said nothing at all. The last entry closed like
+     any other and the screen simply sat there, so the one moment worth
+     marking passed in silence — and `logDoneChip` had been sitting in
+     both locale files with no consumer anywhere in the app.
+
+     Two things, and neither interrupts. A line that appears IN PLACE at
+     the moment the last entry is answered, and a quiet standing state
+     that says the day is done whenever the card is opened again. No
+     modal: a person who has just finished should not have to dismiss
+     something to prove it.
+
+     It fires on the TRANSITION, not on the state, so it does not
+     reappear every time an already-finished log is opened. And it
+     leaves on its own after a few seconds rather than needing a tap.
+
+     POINTS ARE NOT MENTIONED HERE. Whatever the scoring turns out to
+     be, this moment is about the day being written down. */
+  const allDone = entries.length > 0 && entries.every((m) => isEntryDone(m, log));
+  const wasDone = useRef(allDone);
+  const [justFinished, setJustFinished] = useState(false);
+  useEffect(() => {
+    if (allDone && !wasDone.current) {
+      setJustFinished(true);
+      const t = window.setTimeout(() => setJustFinished(false), 6000);
+      wasDone.current = allDone;
+      return () => window.clearTimeout(t);
+    }
+    wasDone.current = allDone;
+    return undefined;
+  }, [allDone]);
+
+  const pinned = useRef(null);
+  useLayoutEffect(() => {
+    const a = pinned.current;
+    pinned.current = null;
+    if (!a || !a.el.isConnected) return;
+    const delta = a.el.getBoundingClientRect().top - a.top;
+    if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
+  }, [openIds]);
   const dateIso = date
     ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
     : "";
@@ -705,10 +798,32 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
         <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "14px 0 4px", lineHeight: 1.5 }}>{t("home.log.settled")}</p>
       )}
 
+      {allDone && (
+        <div
+          role="status"
+          style={{
+            marginTop: 14,
+            padding: justFinished ? "14px 16px" : "10px 16px",
+            borderRadius: 16,
+            background: C.selected,
+            borderInlineStart: `4px solid ${C.green}`,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: ts(justFinished ? 20 : A11Y.minBodyPx), fontWeight: 700, color: C.green, lineHeight: 1.35 }}>
+            {justFinished ? t("home.log.justDone") : t("home.log.allDoneChip")}
+          </p>
+          {justFinished && (
+            <p style={{ margin: "6px 0 0", fontSize: ts(A11Y.minBodyPx), color: C.textMain, lineHeight: 1.5 }}>
+              {t("home.log.justDoneSub")}
+            </p>
+          )}
+        </div>
+      )}
+
       <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
         {entries.map((mod) => {
           const done = isEntryDone(mod, log);
-          const open = openId === mod.key;
+          const open = openIds.includes(mod.key);
           const summary = summaryFor(mod, log, prefs, t);
           return (
             <div key={mod.key} style={{ border: `2px solid ${open ? C.greenMuted : done ? C.sage : C.warmGray}`, borderRadius: 16, overflow: "hidden" }}>
@@ -716,7 +831,13 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                 type="button"
                 aria-expanded={open}
                 disabled={!editable}
-                onClick={() => setOpenId(open ? null : mod.key)}
+                onClick={(ev) => {
+                  pinned.current = {
+                    el: ev.currentTarget,
+                    top: ev.currentTarget.getBoundingClientRect().top,
+                  };
+                  toggleOpen(mod.key);
+                }}
                 style={{ width: "100%", minHeight: 60, display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: done ? "#f4f7f1" : C.white, border: "none", fontFamily: "inherit", textAlign: "start", cursor: editable ? "pointer" : "default" }}
               >
                 <Icon name={mod.icon} size={24} style={{ color: C.green }} />

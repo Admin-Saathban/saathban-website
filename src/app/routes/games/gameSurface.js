@@ -25,8 +25,11 @@
 
 export const GAME = {
   /* THE TABLE, as the owner designed it in the live designer: a
-     midnight blue-black, lit from behind the top of the board and
-     falling away to almost nothing at the edges. It was plum; the
+     near-black, even. It began at #17203A and the owner's verdict
+     was that the top read BLUE and the bottom black — a bloom rather
+     than a room. The top stop is #0C1322 now and the bottom is
+     unchanged at #060A14, so the whole table is one dark and the
+     light on it is a suggestion rather than a colour. It was plum; the
      board's four colours are now the DEEP RICH set, and a warm
      purple under a red and a green zone was tinting both.
 
@@ -40,7 +43,7 @@ export const GAME = {
   surfaceLift:
     "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 0 0/24px 24px, " +
     "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.045) 0 1.3px, transparent 1.7px) 12px 12px/24px 24px, " +
-    "radial-gradient(125% 88% at 50% 4%, #17203A 0%, #101A30 46%, #0A1020 74%, #060A14 100%)",
+    "radial-gradient(125% 88% at 50% 4%, #0C1322 0%, #0A1020 46%, #080D18 74%, #060A14 100%)",
   /* Text on that surface. Warm rather than pure white — pure white on
      a dark ground glares, and these are old eyes. */
   ink: "#F6EBE2",

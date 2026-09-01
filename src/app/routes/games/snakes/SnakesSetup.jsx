@@ -308,7 +308,15 @@ export default function SnakesSetup({ session, myId, onChanged, onLeave }) {
 
       {/* ── the table ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-        {Array.from({ length: players }, (_, i) => {
+        {/* SEATS ARE 1-BASED. create_game_session sits the host in seat
+            1, and game_seats refuses a seat 0 outright — which is how
+            this was found. An EMPTY seat is not a row at all
+            (game_seats_check makes a row with nobody in it declare
+            itself a bot), so the chairs are drawn from seats_total and
+            a row is looked up for each; the ones with no row are the
+            ones still waiting. */}
+        {Array.from({ length: players }, (_, k) => {
+          const i = k + 1;
           const seat = seats.find((s) => s.seat_no === i) || null;
           const taken = seat && (seat.profile_id || seat.is_bot);
           const c = colorOf(seatColorIdx(session, i));

@@ -223,21 +223,38 @@ function Avatar({ name, photo, sample, colour, ink, isTurn, remaining, seconds, 
             pointerEvents: "none",
           }}
         >
+          {/* The groove the clock runs in. Darker than the table
+              rather than lighter: a pale ring around every plate
+              was four grey circles on a midnight board, and the
+              one that mattered had to compete with them. */}
           <circle
             cx={box / 2}
             cy={box / 2}
             r={arcR}
             fill="none"
-            stroke="rgba(255,255,255,0.14)"
-            strokeWidth={3}
+            stroke="rgba(0,0,0,0.42)"
+            strokeWidth={3.5}
           />
+          {/* THE CLOCK IS THIS SEAT'S OWN COLOUR.
+
+              It was gold — the one colour on this board that
+              belongs to nobody — so every seat's clock looked
+              the same and the ring said only "a clock is
+              running", never whose. In this player's colour it
+              says both at once, and it matches the gotis the
+              person is being asked to move.
+
+              Colour is not carrying it alone: the ring's LENGTH
+              is the time left, the last fifth turns red, and the
+              seconds are spoken in the label and printed under
+              the plate. */}
           <circle
             cx={box / 2}
             cy={box / 2}
             r={arcR}
             fill="none"
-            stroke={urgent ? "#E85141" : GAME.gold}
-            strokeWidth={3}
+            stroke={urgent ? "#E85141" : colour}
+            strokeWidth={3.5}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - left)}
@@ -292,9 +309,13 @@ function Avatar({ name, photo, sample, colour, ink, isTurn, remaining, seconds, 
             fontSize: ts(A11Y.minBodyPx),
             fontWeight: 800,
             color: GAME.ink,
-            background: "rgba(0,0,0,0.55)",
-            borderRadius: 8,
-            padding: "0 5px",
+            /* The same midnight as every other surface in the
+               game, rather than a plate of flat black. */
+            background: GAME.panel,
+            border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 3px 10px rgba(0,0,0,0.5)",
+            borderRadius: 9,
+            padding: "0 6px",
             lineHeight: 1.3,
           }}
         >

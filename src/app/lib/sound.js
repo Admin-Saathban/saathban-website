@@ -494,9 +494,52 @@ function sHome(c, t0) {
 
    Quiet enough to sit under conversation, and no pitch in it at
    all — a note would make it an event. */
+/* WHY THE LAST TWO ATTEMPTS STILL WHISTLED. Both were BANDPASS
+   filters, and a bandpass is a resonator: it picks a frequency
+   out of the noise and rings on it. Sweeping that peak downward
+   does not make it un-pitched — it makes it a falling TONE, which
+   is a whistle, which is what the owner kept hearing however far
+   the numbers moved. Starting at 4200Hz put the ring right where
+   a phone alert lives.
+
+   A LOWPASS HAS NO PEAK TO RING ON. It takes the top off the air
+   and lets the rest through, so closing it is a gust receding
+   rather than a note falling. Q at the floor, because Q is
+   precisely the resonance that was the problem.
+
+   AND THE ATTACK IS SLOW. The shared `hit` helper opens in 6ms,
+   which is a transient — a tick, the front edge of an alert. Air
+   moving has no front edge, so this one is written out longhand
+   to rise over 45ms and fall away over the rest of its 200. */
 function sChatSend(c, t0) {
-  hit(c, t0, { dur: 0.2, peak: 0.11, band: 4200, sweepTo: 700, q: 0.7, type: "bandpass" });
-  hit(c, t0 + 0.02, { dur: 0.16, peak: 0.045, band: 2600, sweepTo: 500, q: 0.5 });
+  const src = noise(c);
+  src.playbackRate.value = 0.85 + Math.random() * 0.2;
+
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.Q.value = 0.0001;
+  lp.frequency.setValueAtTime(2400, t0);
+  lp.frequency.exponentialRampToValueAtTime(260, t0 + 0.2);
+
+  /* One shelf off the very bottom, so the gust does not thump.
+     Without it the closing lowpass ends on the noise's own low
+     rumble and the sound gains a soft knock at the end. */
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 170;
+  hp.Q.value = 0.0001;
+
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.075, t0 + 0.045);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+
+  src.connect(lp);
+  lp.connect(hp);
+  hp.connect(g);
+  g.connect(fxGain || master);
+  src.start(t0, Math.random() * 0.5);
+  src.stop(t0 + 0.24);
 }
 
 /* A GOTI SENT HOME LANDING. Short, low, and physical — the sound

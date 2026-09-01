@@ -44,6 +44,7 @@ import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
 import PublicResult from "./routes/games/PublicResult.jsx";
+import SharedScore from "./routes/home/SharedScore.jsx";
 import ClaimSeat from "./routes/games/ClaimSeat.jsx";
 import CalendarPage from "./routes/calendar/CalendarPage.jsx";
 import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
@@ -318,6 +319,12 @@ export default function AppRoot() {
               enumerable — one id in, one game out, with the unguessable
               session id as the key, exactly as the join link works. */}
           <Route path="g/:id" element={<PublicResult />} />
+          {/* A shared score, opened by whoever the link was sent to —
+              OUTSIDE RequireAuth for the same reason as g/:id. The
+              boundary is read_share_link (0114), which returns a first
+              name and the score summary and nothing else, and answers
+              null for missing, expired and revoked alike. */}
+          <Route path="s/:token" element={<SharedScore />} />
           {/* Saath-Icon home area: hub at /app/home, daily log at
               /app/home/log. Icons only; RLS stays the real security
               boundary, this guard is navigation. */}

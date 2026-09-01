@@ -114,7 +114,6 @@ export function characterLine({ moodId, doneCount, missedDays, firstName, restDa
 }
 
 // ─── Share sheet copy ───
-export const SHARE_LINK_MOCK = "https://saathban.app/s/AB12-CD34";
 
 // ─── Small date helpers ───
 export function isoDate(d) {

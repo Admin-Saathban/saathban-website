@@ -30,6 +30,7 @@ import ScoreShare from "./ScoreShare.jsx";
 import CompanyLine from "./CompanyLine.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
+import { useCircle } from "../circle/circleStore.js";
 import { useDailyLogs, DB_MODULES } from "./logStore.js";
 import { pushToast } from "../../lib/feedback.jsx";
 import { fetchMyProgress, estimatePointsToday } from "../../lib/points.js";
@@ -60,6 +61,11 @@ export default function IconHome() {
   const { t, ts, lang, meta } = useI18n();
   const dateLocale = dateLocaleFor(lang);
   const { profile } = useSession();
+  /* The real circle, not the mock's empty array. The sheet's "send to
+     your circle" branch was unreachable while this was always [], so
+     the one share destination that looked honest was only honest by
+     accident. */
+  const circle = useCircle(profile?.id);
   // RequireAuth guarantees an Icon profile here; the fallback only
   // covers the first render of edge navigations.
   const iconId = profile?.id ?? null;
@@ -290,7 +296,7 @@ export default function IconHome() {
             restDay={restToday}
             onToggleRest={toggleRest}
             editable
-            circleMembers={MOCK_ICON.circleMembers}
+            circleMembers={circle.members}
           />
         </div>
 

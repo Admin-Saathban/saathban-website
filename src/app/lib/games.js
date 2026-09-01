@@ -653,3 +653,29 @@ export async function seatBots(sessionId, seatNos) {
   });
   if (error) throw new Error(error.message);
 }
+/* ── TABLES YOU WALKED AWAY FROM (0114) ────────────────────────
+
+   Leaving a live game hands the seat to a bot and clears
+   profile_id, which is right for the game and erases you from the
+   table: fetchMySessions reads game_seats BY profile_id, so the
+   moment you leave, the table stops existing as far as your app
+   is concerned. You cannot see it, you cannot go back to it, and
+   you are not told how it ended.
+
+   game_seats.left_by remembers whose chair the bot is sitting in,
+   and this is how the list finds them again. `still_open` is
+   whether the chair is still the bot's — somebody else may have
+   taken it, and then the honest answer is that the table is no
+   longer yours to walk back into. ── */
+export async function fetchLeftTables() {
+  const { data, error } = await supabase.rpc("my_left_tables");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* Take the chair back, if the bot still has it. */
+export async function rejoinLeftSeat(sessionId) {
+  const { data, error } = await supabase.rpc("rejoin_left_seat", { p_session: sessionId });
+  if (error) throw error;
+  return data;
+}

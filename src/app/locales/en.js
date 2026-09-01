@@ -3027,7 +3027,7 @@ const en = {
       leaveCta: "Leave the table",
       leaveTitle: "Leave the table?",
       leaveBody:
-        "If the game has begun, a friendly bot takes your chair so the others can carry on. If it hasn't started yet, your seat simply opens up again.",
+        "A bot will play your seat, and the table stays yours — come back to it whenever you like.",
       leaveConfirm: "Yes, leave",
       leaveStay: "Stay at the table",
       thinking: "thinking…",
@@ -3197,6 +3197,11 @@ const en = {
     loadError: "That didn't load. Please try again in a moment.",
     actionError: "That didn't go through — please try again.",
     home: {
+      leftTitle: "Tables you left",
+      leftOpen: "A bot has your seat — you can take it back.",
+      leftTaken: "Someone else has taken your seat.",
+      leftFinished: "This game has finished.",
+      rejoin: "Take my seat back",
       myTables: "My tables",
       empty: "No games on the go — pick one below and open a table.",
       yourTurnChip: "Your move",

@@ -1228,19 +1228,22 @@ export default function LudoSession() {
         {atTable && (
           <button
             type="button"
-            /* BACKING OUT NEVER FORCES A CHOICE. This asked "are
-               you sure you want to leave the table?" — and the
-               honest answer was usually "I did not want to leave
-               the table, I wanted to look at something else".
-               The table is yours; going back to Games does not
-               give it up, and returning resumes it exactly where
-               it was. So this simply leaves.
+            /* LEAVING IS A MOMENT, NOT A TRAPDOOR.
 
-               GIVING UP THE SEAT is a different act and still
-               asks, on the seat sheet, where it reads as a
-               decision about the table rather than about the
-               screen. */
-            onClick={() => navigate("/app/games")}
+               This navigated straight out, on the reasoning that
+               backing out should never force a choice — the table
+               was yours either way and going to look at something
+               else was not leaving. The owner has ruled the other
+               way, and playing it his way he is right: a door with
+               no ceremony in the corner of a game reads as an exit
+               you fell through, and he could not tell afterwards
+               whether he had left or not.
+
+               So it asks, and the answer is a real leaving: the
+               seat goes to a bot and the table stays findable and
+               rejoinable (0114). Both halves are in the sentence
+               it puts on screen. */
+            onClick={() => setLeaveAsk(true)}
             aria-label={t("ludo.back")}
             title={t("ludo.back")}
             style={{
@@ -1956,77 +1959,88 @@ export default function LudoSession() {
 
       {/* Leaving is a decision, so it is asked as one — warmly, and
           with the seat's fate stated rather than implied. */}
+      {/* ── LEAVING, IN THE GAME'S OWN STYLE ──
+
+             It was the app's white card with brown ink and a
+             Saathban-green button, sitting on a midnight table:
+             a page from another screen laid on the felt at the
+             one moment a person is deciding something.
+
+             Midnight now, like the chat and both profile cards.
+             One warm line that says both true things — the bot
+             plays your seat, and the table is still yours — and
+             two buttons that say what they do. ── */}
       {leaveAsk && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("ludo.ceremony.leaveTitle")}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 80,
-            background: "rgba(45,36,24,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          <div style={{ background: C.white, borderRadius: 22, padding: "26px 22px", maxWidth: 460, width: "100%" }}>
-            <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green, margin: "0 0 10px" }}>
+        <>
+          <GameMotion />
+          <div
+            className="sb-veil-in"
+            onClick={() => setLeaveAsk(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.55)" }}
+            aria-hidden="true"
+          />
+          <div
+            className="sb-panel-in"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("ludo.ceremony.leaveTitle")}
+            style={{
+              ...NO_SELECT,
+              position: "fixed",
+              insetInline: 0,
+              bottom: 0,
+              zIndex: 81,
+              background: GAME.panel,
+              border: "none",
+              borderRadius: "18px 18px 0 0",
+              boxShadow: GAME.panelShadow,
+              padding: "22px 18px calc(22px + env(safe-area-inset-bottom))",
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: meta.fonts.heading,
+                fontSize: ts(24),
+                fontWeight: 700,
+                color: GAME.ink,
+                margin: "0 0 8px",
+              }}
+            >
               {t("ludo.ceremony.leaveTitle")}
             </h2>
-            <p style={{ fontSize: ts(19), lineHeight: 1.55, color: C.textMain, margin: "0 0 20px" }}>
+            <p style={{ fontSize: ts(17), lineHeight: 1.55, color: GAME.inkMuted, margin: "0 0 20px" }}>
               {t("ludo.ceremony.leaveBody")}
             </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
+            <div style={{ display: "flex", gap: 10 }}>
+              <GameBtn
                 onClick={async () => {
                   setLeaveAsk(false);
-                  // Navigate first: a guest loses read access to the
-                  // session the instant they leave, so staying here
-                  // would only show them a door closing on them.
-                  try { await leaveSession(game.id); } catch { /* already gone is fine */ }
+                  /* Navigate after, not before: a leaver loses read
+                     access to the session the instant the seat is
+                     handed over, and staying here would only show
+                     them a door closing on them. */
+                  try {
+                    await leaveSession(game.id);
+                  } catch {
+                    /* already gone is fine */
+                  }
                   navigate("/app/games");
                 }}
-                style={{
-                  flex: "1 1 160px",
-                  minHeight: 56,
-                  borderRadius: 50,
-                  border: "none",
-                  background: C.green,
-                  color: C.cream,
-                  fontSize: ts(19),
-                  fontWeight: 700,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
+                style={{ flex: "1 1 0", minHeight: 56 }}
               >
                 {t("ludo.ceremony.leaveConfirm")}
-              </button>
-              <button
-                type="button"
+              </GameBtn>
+              <GamePill
                 onClick={() => setLeaveAsk(false)}
-                style={{
-                  flex: "1 1 160px",
-                  minHeight: 56,
-                  borderRadius: 50,
-                  border: `2px solid ${C.warmGray}`,
-                  background: C.white,
-                  color: C.textMain,
-                  fontSize: ts(19),
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
+                style={{ flex: "1 1 0", minHeight: 56, justifyContent: "center" }}
               >
                 {t("ludo.ceremony.leaveStay")}
-              </button>
+              </GamePill>
             </div>
           </div>
-        </div>
+        </>
       )}
+
     </>
   );
 }

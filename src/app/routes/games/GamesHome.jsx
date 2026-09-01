@@ -16,6 +16,8 @@ import {
   fetchMyAttempts,
   joinByCode,
   liveSessionOf,
+  fetchLeftTables,
+  rejoinLeftSeat,
   liveSessionsOf,
   leaveSession,
   fetchTablePeople,
@@ -160,19 +162,24 @@ export default function GamesHome() {
   const [streak, setStreak] = useState(0);
   /* §9: who is at each live table, keyed by session. */
   const [peopleAt, setPeopleAt] = useState(new Map());
+  /* Tables this person walked away from (0114). Kept apart from
+     `sessions` on purpose: they are not tables you are at. */
+  const [leftTables, setLeftTables] = useState([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [g, s, attempts] = await Promise.all([
+        const [g, s, attempts, left] = await Promise.all([
           fetchGames(),
           fetchMySessions(profile.id),
           fetchMyAttempts(profile.id),
+          fetchLeftTables().catch(() => []),
         ]);
         if (!alive) return;
         setGames(g);
         setSessions(s);
+        setLeftTables(left);
         /* The faces, for the live tables only — a history page's
            worth of seats is not worth fetching to draw two rows. */
         fetchTablePeople(
@@ -382,6 +389,74 @@ export default function GamesHome() {
         <>
           <SectionLabel>{t("games.home.activeTitle")}</SectionLabel>
           {live.map(renderTable)}
+        </>
+      )}
+
+      {/* ── AND THE ONES YOU WALKED AWAY FROM ──
+
+             A separate heading, deliberately. The owner could not
+             tell from this list whether he was still in a game or
+             had left it, because a table he had left did not
+             appear at all and a table he was still in looked like
+             any other row. Two headings answer it without anybody
+             reading a word of the row.
+
+             The row does not summon: a bot is playing that seat
+             and the game does not need him. It offers the chair
+             back, and only while the chair is still the bot's —
+             somebody may have taken it, and then the honest answer
+             is that the table is no longer his to walk into. ── */}
+      {leftTables.length > 0 && (
+        <>
+          <SectionLabel>{t("games.home.leftTitle")}</SectionLabel>
+          {leftTables.map((row) => (
+            <Card key={row.id} style={{ borderStyle: "dashed" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <BoardThumb gameKey={row.game_key} size={44} />
+                <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: ts(18) }}>
+                    {row.title ||
+                      (() => {
+                        const g = games.find((x) => x.key === row.game_key);
+                        return g ? gameName(g, lang) : row.game_key;
+                      })()}
+                  </p>
+                  <BodyText muted style={{ margin: 0, fontSize: ts(15) }}>
+                    {row.status === "finished"
+                      ? t("games.home.leftFinished")
+                      : row.still_open
+                      ? t("games.home.leftOpen")
+                      : t("games.home.leftTaken")}
+                  </BodyText>
+                </div>
+                {row.status === "active" && row.still_open && (
+                  <GhostBtn
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const r = await rejoinLeftSeat(row.id);
+                        if (r?.ok) {
+                          navigate(
+                            row.game_key === "ludo"
+                              ? `/app/games/ludo/${row.id}`
+                              : `/app/games/s/${row.id}`
+                          );
+                          return;
+                        }
+                      } catch {
+                        /* the row's own line already says it may be gone */
+                      }
+                      setBusy(false);
+                      setLeftTables(await fetchLeftTables().catch(() => []));
+                    }}
+                  >
+                    {t("games.home.rejoin")}
+                  </GhostBtn>
+                )}
+              </div>
+            </Card>
+          ))}
         </>
       )}
 

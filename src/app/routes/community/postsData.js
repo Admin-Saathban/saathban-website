@@ -9,6 +9,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { SURFACE } from "../../../shared/tokens.js";
 
 /* §3 — six warm swatches. Index into this, never a stored hex: the
    palette has changed once already and a #FFF3D6 in the database
@@ -27,7 +28,24 @@ export function colourOf(post) {
   if (post.image_path) return null;
   if (post.audio_path) return null;   // §7 — a voice post is a card, not a swatch
   if ((post.body || "").length > 180) return null;
-  return SWATCHES[post.colour] ?? null;
+  /* ONE SURFACE, NOT SIX WARM PLATES. SWATCHES[0] is #FBF0DC — the
+     cream in the owner's screenshot — and the whole array belongs to
+     the palette that has been replaced. The locked system puts a text
+     post on the comment surface or on plain ground, and has no cream
+     anywhere in the app world.
+
+     The stored colour is UNTOUCHED: every post keeps the number its
+     writer chose, so if a system-compliant palette arrives later those
+     choices are still there to honour. What changes is only what the
+     number paints today.
+
+     CONSEQUENCE, FLAGGED RATHER THAN DECIDED: the composer still offers
+     six swatches and they now all render the same. That makes the
+     picker a promise the feed does not keep, so it needs an owner's
+     ruling — retire the colour feature, or give it a palette from the
+     locked system. Not mine to take, and not silently left as six
+     buttons that do one thing. */
+  return SURFACE.comment;
 }
 
 /* ─── §10 the menus' verbs ─── */

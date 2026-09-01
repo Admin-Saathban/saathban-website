@@ -149,9 +149,26 @@ function ReportForm({ onSend, onCancel }) {
 function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   const { t, ts, lang } = useI18n();
   const p = post.payload || {};
+  /* THE LOCKED CARD LANGUAGE: a recessed surface and a hairline, not a
+     heavy accent outline. This was C.selected inside a 2px C.green
+     border — a treatment from the palette that has been replaced, and
+     the loudest object in the feed for something that is only an
+     embedded panel inside somebody's post.
+
+     Ground rather than surface, because it sits INSIDE a post card that
+     is already the surface; recessed is what an embedded panel is. */
   const box = {
-    background: C.selected,
-    border: `2px solid ${C.green}`,
+    background: C.ground,
+    /* warmGray, not navEdge. navEdge is the hairline for the DARK
+       chrome and resolves to #3A4048 — on this light ground that
+       measures 9.33:1, which is a rule, not a hairline. warmGray is
+       1.22:1 and is what a card edge on a light surface is for.
+
+       I chose navEdge by its NAME — "edge", therefore hairline — without
+       checking what it paints on the ground I was putting it on. That is
+       the week's mistake once more, and the only reason it did not ship
+       is that I measured a card I had already looked at. */
+    border: `1px solid ${C.warmGray}`,
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 12,

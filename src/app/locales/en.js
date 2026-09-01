@@ -1939,7 +1939,7 @@ const en = {
       openToAll: "Open to all — no limit on places",
       goingOne: "1 person going so far",
       goingMany: "{n} people going so far",
-      rsvpCta: "Count me in",
+      rsvpCta: "I'll come",
       goingBadge: "You're going",
       cancelCta: "Change of plans?",
       fullNote: "This one is full — the next gathering will have your name on it.",

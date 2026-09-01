@@ -1912,6 +1912,7 @@ const en = {
       confirmOn: "They'll say \"I'm coming\" — a small promise.",
       confirmOff: "They can just come along.",
       send: "Ask them",
+      cancel: "Not now",
       needWhat: "Say what you're up for, and we'll ask.",
       failed: "That didn't send. Try once more?",
       /* §12's protocol, said plainly: this is not a broadcast. */

@@ -504,6 +504,98 @@ export default function NewGame() {
   return (
     <RoomScreen>
       <GameMotion />
+      {/* THE RULES SCREEN REPLACES THE ROOM rather than covering
+
+          it: a sheet over a screen that already scrolls gives a
+          person two scrolling surfaces and one thumb. Same ground,
+          so it reads as the same place turned over. */}
+      {rulesOpen ? (
+        <HouseRulesScreen
+          ts={ts}
+          onBack={() => setRulesOpen(false)}
+          sections={[
+            {
+              id: "turn",
+              title: t("games.setup.rulesTurn"),
+              flags: [sixAgain, threeSixes, autoOnlyMove],
+              body: (
+                <>
+                  <RuleSwitch
+                    on={sixAgain}
+                    onToggle={() => setSixAgain((v) => !v)}
+                    label={t("ludo.rules.extraRoll")}
+                  />
+                  <RuleSwitch
+                    on={threeSixes}
+                    onToggle={() => setThreeSixes((v) => !v)}
+                    label={t("ludo.rules.threeSixes")}
+                  />
+                  <RuleSwitch
+                    on={autoOnlyMove}
+                    onToggle={() => setAutoOnlyMove((v) => !v)}
+                    label={t("games.setup.autoOnlyMove")}
+                  />
+                </>
+              ),
+            },
+            {
+              id: "meet",
+              title: t("games.setup.rulesPairs"),
+              flags: [jotaOn, captureFirst],
+              body: (
+                <>
+                  <RuleSwitch
+                    on={jotaOn}
+                    onToggle={() => setJotaOn((v) => !v)}
+                    label={t("ludo.rules.jota")}
+                  />
+                  <RuleSwitch
+                    on={captureFirst}
+                    onToggle={() => setCaptureFirst((v) => !v)}
+                    label={t("ludo.rules.captureFirst")}
+                  />
+                </>
+              ),
+            },
+            {
+              id: "home",
+              title: t("games.setup.rulesHome"),
+              flags: [exactHome],
+              body: (
+                <RuleSwitch
+                  on={exactHome}
+                  onToggle={() => setExactHome((v) => !v)}
+                  label={t("ludo.rules.exactHome")}
+                />
+              ),
+            },
+            {
+              id: "clock",
+              title: t("games.setup.rulesClock"),
+              body: <TimerChoice value={turnSecs} onPick={setTurnSecs} t={t} ts={ts} />,
+            },
+            {
+              id: "together",
+              title: t("games.setup.rulesTogether"),
+              flags: [teams],
+              body: (
+                <RuleSwitch
+                  on={teams}
+                  onToggle={() => setTeams((v) => !v)}
+                  label={t("games.setup.teams")}
+                  hint={t("games.setup.teamsNote")}
+                />
+              ),
+            },
+            {
+              id: "remember",
+              title: t("games.setup.rulesRemember"),
+              body: <RememberChoice value={remember} onPick={setRemember} t={t} ts={ts} />,
+            },
+          ]}
+        />
+      ) : (
+      <>
       {/* THE ROOM ARRIVES RATHER THAN APPEARING.
 
           Measured at 390px, this used to paint in three waves — a
@@ -650,96 +742,6 @@ export default function NewGame() {
         />
       )}
 
-      {/* THE RULES SCREEN REPLACES THE ROOM rather than covering
-          it: a sheet over a screen that already scrolls gives a
-          person two scrolling surfaces and one thumb. Same ground,
-          so it reads as the same place turned over. */}
-      {rulesOpen ? (
-        <HouseRulesScreen
-          ts={ts}
-          onBack={() => setRulesOpen(false)}
-          sections={[
-            {
-              id: "turn",
-              title: t("games.setup.rulesTurn"),
-              flags: [sixAgain, threeSixes, autoOnlyMove],
-              body: (
-                <>
-                  <RuleSwitch
-                    on={sixAgain}
-                    onToggle={() => setSixAgain((v) => !v)}
-                    label={t("ludo.rules.extraRoll")}
-                  />
-                  <RuleSwitch
-                    on={threeSixes}
-                    onToggle={() => setThreeSixes((v) => !v)}
-                    label={t("ludo.rules.threeSixes")}
-                  />
-                  <RuleSwitch
-                    on={autoOnlyMove}
-                    onToggle={() => setAutoOnlyMove((v) => !v)}
-                    label={t("games.setup.autoOnlyMove")}
-                  />
-                </>
-              ),
-            },
-            {
-              id: "meet",
-              title: t("games.setup.rulesPairs"),
-              flags: [jotaOn, captureFirst],
-              body: (
-                <>
-                  <RuleSwitch
-                    on={jotaOn}
-                    onToggle={() => setJotaOn((v) => !v)}
-                    label={t("ludo.rules.jota")}
-                  />
-                  <RuleSwitch
-                    on={captureFirst}
-                    onToggle={() => setCaptureFirst((v) => !v)}
-                    label={t("ludo.rules.captureFirst")}
-                  />
-                </>
-              ),
-            },
-            {
-              id: "home",
-              title: t("games.setup.rulesHome"),
-              flags: [exactHome],
-              body: (
-                <RuleSwitch
-                  on={exactHome}
-                  onToggle={() => setExactHome((v) => !v)}
-                  label={t("ludo.rules.exactHome")}
-                />
-              ),
-            },
-            {
-              id: "clock",
-              title: t("games.setup.rulesClock"),
-              body: <TimerChoice value={turnSecs} onPick={setTurnSecs} t={t} ts={ts} />,
-            },
-            {
-              id: "together",
-              title: t("games.setup.rulesTogether"),
-              flags: [teams],
-              body: (
-                <RuleSwitch
-                  on={teams}
-                  onToggle={() => setTeams((v) => !v)}
-                  label={t("games.setup.teams")}
-                  hint={t("games.setup.teamsNote")}
-                />
-              ),
-            },
-            {
-              id: "remember",
-              title: t("games.setup.rulesRemember"),
-              body: <RememberChoice value={remember} onPick={setRemember} t={t} ts={ts} />,
-            },
-          ]}
-        />
-      ) : (
       <SeatSetup
         me={profile}
         minSeats={game.min_seats}
@@ -815,7 +817,6 @@ export default function NewGame() {
         onPickPeople={(seat) => setSheetSeat(seat)}
         onStart={start}
       />
-      )}
 
       {sheetSeat != null && (
         <FacesSheet
@@ -830,6 +831,8 @@ export default function NewGame() {
         />
       )}
       </div>
+      </>
+      )}
     </RoomScreen>
   );
 }

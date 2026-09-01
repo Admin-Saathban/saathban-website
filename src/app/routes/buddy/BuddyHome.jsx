@@ -25,7 +25,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import {
   fetchOwnApplications,
@@ -115,7 +114,6 @@ export default function BuddyHome() {
 
   return (
     <>
-      <AppHeader />
       <main
         style={{
           minHeight: "100vh",

@@ -24,7 +24,6 @@ import { Link, useLocation } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { roleHomePath, useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import { arrivalClass } from "../../components/motion.jsx";
 
 export default function SavedPage() {
@@ -34,7 +33,6 @@ export default function SavedPage() {
 
   return (
     <>
-      <AppHeader />
       <main
         className={arrivalClass(state)}
         style={{

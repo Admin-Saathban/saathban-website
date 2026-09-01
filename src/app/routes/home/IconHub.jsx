@@ -41,7 +41,6 @@ import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useDailyLogs } from "./logStore.js";
 import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import { greetingKeyForHour, isoDate } from "./homeMock.js";
-import AppHeader from "../../components/AppHeader.jsx";
 import Icon from "../../components/Icon.jsx";
 import { awardMyBadges } from "../../lib/points.js";
 import TodayReminders from "./TodayReminders.jsx";
@@ -86,7 +85,6 @@ export default function IconHub() {
 
   return (
     <>
-      <AppHeader />
       <main
         style={{
           minHeight: "100vh",

@@ -30,7 +30,6 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import { fetchMyRsvps, nextOccurrence, localIsoDate } from "../events/eventsStore.js";
 import { actionsFor, kindsForRole, KIND_ICON } from "./entryActions.js";
@@ -197,7 +196,6 @@ export default function CalendarPage() {
 
   return (
     <>
-      <AppHeader />
       <main
         style={{
           minHeight: "100vh",

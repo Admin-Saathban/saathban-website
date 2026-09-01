@@ -20,7 +20,6 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
-import AppHeader from "../components/AppHeader.jsx";
 import { moreGroups } from "../components/navItems.js";
 import { shouldPulse } from "./profile/profileFields.js";
 import useBuddyActive from "../components/useBuddyActive.js";
@@ -58,7 +57,6 @@ export default function MorePage() {
   return (
     <>
       <style>{DOT_CSS}</style>
-      <AppHeader />
       <main
         style={{
           minHeight: "100vh",

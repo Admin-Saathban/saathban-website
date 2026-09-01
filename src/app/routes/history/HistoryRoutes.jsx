@@ -7,13 +7,11 @@
    ═════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import JourneyPage from "./JourneyPage.jsx";
 
 export default function HistoryRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<JourneyPage />} />
         <Route path="*" element={<Navigate to="/app/history" replace />} />

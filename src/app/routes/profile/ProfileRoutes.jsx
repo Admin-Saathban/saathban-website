@@ -5,13 +5,11 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import ProfilePage from "./ProfilePage.jsx";
 
 export default function ProfileRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/app/profile" replace />} />

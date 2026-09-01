@@ -32,7 +32,6 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y, MEANING } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import Icon from "../../components/Icon.jsx";
 import { arrivalClass, openFullScreen } from "../../components/motion.jsx";
 import {
@@ -363,7 +362,6 @@ export default function SearchPage() {
 
   return (
     <>
-      <AppHeader />
       <main
         className={arrivalClass(state)}
         style={{

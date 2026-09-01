@@ -12,7 +12,6 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import Feed from "./Feed.jsx";
 import MessagesWorld from "../messages/MessagesWorld.jsx";
 
@@ -22,7 +21,7 @@ export default function CommunityRoutes() {
       {/* The world: no AppHeader, no app bar — it covers both. */}
       <Route path="messages/*" element={<MessagesWorld />} />
 
-      <Route path="" element={<><AppHeader /><Feed /></>} />
+      <Route path="" element={<><Feed /></>} />
       {/* §2.1 — "Connect with Saath-Icons" promised finding people and
          landed on the Requests inbox, which is people who had already
          found you. The label and the destination were two different

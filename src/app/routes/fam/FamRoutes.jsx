@@ -5,7 +5,6 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import FamDashboard from "./FamDashboard.jsx";
 import InviteFlow from "./InviteFlow.jsx";
 import Reminders from "./Reminders.jsx";
@@ -14,7 +13,6 @@ import LogSetup from "./LogSetup.jsx";
 export default function FamRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<FamDashboard />} />
         <Route path="invite" element={<InviteFlow />} />

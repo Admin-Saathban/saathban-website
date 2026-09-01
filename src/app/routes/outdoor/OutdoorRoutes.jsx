@@ -6,7 +6,6 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import WhatsOn from "./WhatsOn.jsx";
 import OutdoorHome from "./OutdoorHome.jsx";
 import PlaceView from "./PlaceView.jsx";
@@ -15,7 +14,6 @@ import Moments from "./Moments.jsx";
 export default function OutdoorRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         {/* §12 — Out & about and Events are ONE screen. What's on is
             that screen; the old place directory keeps its own route

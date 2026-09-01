@@ -14,7 +14,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { AuthScreen, Title, Intro, Button } from "../../components/ui.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import { ROLE_DISPLAY } from "../../constants/roles.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { roleHomePath } from "../../lib/session.jsx";
@@ -56,7 +55,6 @@ export default function Welcome() {
   if (!who) {
     return (
       <>
-        <AppHeader />
         <AuthScreen showHeader={false}> </AuthScreen>
       </>
     );
@@ -69,7 +67,6 @@ export default function Welcome() {
 
   return (
     <>
-      <AppHeader />
       <AuthScreen showHeader={false}>
       <p
         style={{

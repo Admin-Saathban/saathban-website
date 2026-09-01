@@ -7,13 +7,11 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import CirclePage from "./CirclePage.jsx";
 
 export default function CircleRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<CirclePage />} />
         <Route path="*" element={<Navigate to="/app/circle" replace />} />

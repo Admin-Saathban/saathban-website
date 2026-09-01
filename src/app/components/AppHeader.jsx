@@ -31,6 +31,19 @@ import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDra
 import { useDrawer } from "./Drawer.jsx";
 import useShutter from "./useShutter.js";
 
+/* WHERE THE HEADER DOES NOT BELONG.
+
+   It is mounted ONCE by the shell now, so it has to answer this for
+   itself exactly as the bottom bar does — the same shape as
+   AppShellBar's own list, kept beside it rather than shared, because
+   the two disagree on purpose: admin keeps its header and has no bar.
+
+   The Messages world is here because it draws its own header. Two
+   headers stacked is what lifting this into the shell would otherwise
+   have produced on that one route. */
+const NO_HEADER = ["/app/auth", "/app/g/", "/app/join/", "/app/community/messages"];
+const isLudoTable = (p) => /^\/app\/games\/ludo\/[^/]+/.test(p);
+
 export default function AppHeader() {
   const { t, meta } = useI18n();
   const { profile } = useSession();
@@ -53,11 +66,28 @@ export default function AppHeader() {
     pathname !== home &&
     !(profile.role === "admin" && pathname.startsWith("/app/admin"));
 
+  /* Mounted once by the shell, so it answers this itself. Below the
+     hooks, never above them: a hook behind a condition is a hook that
+     changes count between renders, which is the bug I shipped into the
+     swipe two nights ago. */
+  /* HIDDEN, NOT UNMOUNTED. Returning null on these routes cost the
+     thing this lift was for: passing through Messages destroyed the
+     header and rebuilt it on the way back, so a Groups -> Messages ->
+     Home swipe still remounted it twice. Kept in the tree and taken out
+     of the layout with display:none, it survives every tab.
+
+     Signed out is the one case that genuinely returns null — there is no
+     profile to render, and rendering it would read role off nothing. */
+  const hideHere =
+    NO_HEADER.some((q) => pathname.startsWith(q)) || isLudoTable(pathname);
+
   const backArrow = meta.dir === "rtl" ? "→" : "←";
   /* "default" is the first entry in this tab's history: nothing to go
      back to, so Home is the only honest destination. */
   const hasHistory = locationKey !== "default";
   const goBack = () => (hasHistory ? navigate(-1) : navigate(home));
+
+  if (!profile) return null;
 
   return (
     <>
@@ -76,6 +106,7 @@ export default function AppHeader() {
            §4.1 still holds: an outline means you can tap it. A
            hairline along one edge is not an outline — it is where
            the chrome stops and the content starts. */
+        display: hideHere ? "none" : undefined,
         background: C.nav,
         borderBottom: `1px solid ${C.navEdge}`,
         /* THE HEADER OWNS THE TOP INSET. Its jet fills the status-bar

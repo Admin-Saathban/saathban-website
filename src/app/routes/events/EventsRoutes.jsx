@@ -13,7 +13,6 @@ import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import { Screen } from "./ui.jsx";
 import EventsList from "./EventsList.jsx";
 import MyCalendar from "./MyCalendar.jsx";
@@ -64,7 +63,6 @@ export default function EventsRoutes() {
 
   return (
     <>
-      <AppHeader />
       <Screen>
         <nav
           aria-label={t("events.nav.events")}

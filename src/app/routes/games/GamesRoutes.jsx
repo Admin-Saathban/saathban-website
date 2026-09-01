@@ -7,7 +7,6 @@
    ═════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import GamesHome from "./GamesHome.jsx";
 import SessionPage from "./SessionPage.jsx";
 import NewGame from "./NewGame.jsx";
@@ -17,7 +16,6 @@ import TableHistory from "./TableHistory.jsx";
 export default function GamesRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<GamesHome />} />
         {/* One-screen setup: pick people or bots, then Start. From

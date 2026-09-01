@@ -33,7 +33,6 @@ import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs, DB_MODULES } from "./logStore.js";
 import { pushToast } from "../../lib/feedback.jsx";
 import { fetchMyProgress, estimatePointsToday } from "../../lib/points.js";
-import AppHeader from "../../components/AppHeader.jsx";
 
 // Weekday and month names come from Intl for the active language.
 const dateLocaleFor = (lang) => (lang === "ur" ? "ur-PK" : "en-GB");
@@ -183,7 +182,6 @@ export default function IconHome() {
 
   return (
     <>
-      <AppHeader />
       <main
         className="ih-root"
         style={{

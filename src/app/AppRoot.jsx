@@ -62,6 +62,7 @@ import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
+import AppHeader from "./components/AppHeader.jsx";
 /* NAVIGATION_SPEC §5 and §6 — four destinations the new bar and
    More rows point at. Every one of them was a live link to nothing
    until this commit. */
@@ -234,6 +235,20 @@ export default function AppRoot() {
         {/* The marketing site loads its own fonts inside its own components,
             so /app has to ask for them itself. */}
         <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
+
+        {/* THE HEADER, MOUNTED ONCE FOR THE WHOLE APP.
+
+            It used to be rendered by each of 27 route files, so every
+            navigation destroyed one header and built another: the avatar
+            re-signed its URL, the wordmark reflowed, and a tab swipe —
+            which should be a slide — looked like a page reload. Outside
+            <Routes>, it survives navigation and only the content beneath
+            it changes.
+
+            Above <Routes> in the tree, so it sits at the top of the
+            document and its sticky positioning works against the page
+            scroll exactly as it did when each screen carried its own. */}
+        <AppHeader />
 
         <Routes>
           <Route index element={<AppHome />} />

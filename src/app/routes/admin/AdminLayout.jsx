@@ -18,7 +18,6 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { NavLink, Outlet } from "react-router-dom";
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import supabase from "../../lib/supabase.js";
 import * as api from "./api.js";
 
@@ -110,7 +109,6 @@ export default function AdminLayout() {
 
   return (
     <>
-    <AppHeader />
     {/* ADMIN ON A PHONE. The shell was a flex row with a fixed 240px
         sidebar and no media query anywhere in the file — so on a 390px
         screen the sidebar took 240, the 32px main padding took 64, and

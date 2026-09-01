@@ -43,7 +43,6 @@ import {
   currentUserId,
 } from "./supabaseVetting.js";
 import { ApplicationStatus, KindErrorScreen } from "./screens.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import {
   StepIdentity,
   StepProfile,
@@ -100,7 +99,6 @@ const STEP_COMPONENTS = {
 export default function VettingForm() {
   return (
     <>
-      <AppHeader />
       <VettingFormInner />
     </>
   );

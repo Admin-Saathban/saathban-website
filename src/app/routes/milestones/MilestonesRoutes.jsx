@@ -12,7 +12,6 @@
 
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
-import AppHeader from "../../components/AppHeader.jsx";
 import { Screen } from "./ui.jsx";
 import Milestones from "./Milestones.jsx";
 import AdminMilestones from "./AdminMilestones.jsx";
@@ -27,7 +26,6 @@ export default function MilestonesRoutes() {
 
   return (
     <>
-      <AppHeader />
       <Screen>
         <Routes>
           <Route index element={role === "admin" ? <AdminMilestones /> : <Milestones />} />

@@ -5,7 +5,6 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import GroupsList from "./GroupsList.jsx";
 import CreateGroup from "./CreateGroup.jsx";
 import GroupPage from "./GroupPage.jsx";
@@ -14,7 +13,6 @@ import GroupManage from "./GroupManage.jsx";
 export default function GroupsRoutes() {
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<GroupsList />} />
         <Route path="new" element={<CreateGroup />} />

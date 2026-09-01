@@ -19,7 +19,6 @@ import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { LOCALES } from "../locales/index.js";
 import { TEXT_SIZES, useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
-import AppHeader from "../components/AppHeader.jsx";
 import LogSetupPanel from "./home/LogSetupPanel.jsx";
 import WhoCanMessage from "./WhoCanMessage.jsx";
 import TaggingSetting from "./TaggingSetting.jsx";
@@ -184,7 +183,6 @@ export default function AppSettings() {
 
   return (
     <>
-    <AppHeader />
     <main
       style={{
         minHeight: "100vh",

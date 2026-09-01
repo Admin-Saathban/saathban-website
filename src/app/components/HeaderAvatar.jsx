@@ -21,22 +21,53 @@ import { shouldPulse } from "../routes/profile/profileFields.js";
 import { signedAvatarUrl } from "../routes/profile/avatar.js";
 import { openFullScreen } from "./motion.jsx";
 
+/* ── THE SIGNED URL IS CACHED FOR THE SESSION ──
+
+   The avatar lives in a private bucket, so showing it means asking
+   Supabase to sign a URL. That is a network round trip, and it was
+   happening on every remount of this component — which, until the
+   header was lifted into the shell, meant every single navigation.
+   The owner sees it as the avatar blinking out and back on each swipe.
+
+   Module scope rather than a ref: the point is to survive the
+   component being destroyed and rebuilt, and a ref dies with it.
+
+   Signed URLs expire, so the entry carries the time it was made and is
+   re-signed after TTL. Fifty minutes against a one-hour signature —
+   the margin matters because a URL that expires while on screen is a
+   broken image, which is worse than a request nobody noticed.
+
+   Keyed by storage path: if the person changes their picture the path
+   changes, so the old entry is simply never asked for again. */
+const SIGNED = new Map();
+const TTL_MS = 50 * 60 * 1000;
+
+function cachedAvatar(path) {
+  const hit = SIGNED.get(path);
+  return hit && Date.now() - hit.at < TTL_MS ? hit.url : null;
+}
+
 export default function HeaderAvatar() {
   const { t } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();
-  const [src, setSrc] = useState(null);
+  /* Seeded from the cache SYNCHRONOUSLY, so a remount paints the
+     picture on the first frame instead of showing the initial and
+     swapping. The swap was the blink. */
+  const [src, setSrc] = useState(() =>
+    profile?.avatar_url ? cachedAvatar(profile.avatar_url) : null);
 
   useEffect(() => {
     let alive = true;
-    if (profile?.avatar_url) {
-      signedAvatarUrl(profile.avatar_url).then((u) => alive && setSrc(u));
-    } else {
-      setSrc(null);
-    }
-    return () => {
-      alive = false;
-    };
+    const path = profile?.avatar_url;
+    if (!path) { setSrc(null); return undefined; }
+    const hit = cachedAvatar(path);
+    if (hit) { setSrc(hit); return undefined; }   // nothing to ask for
+    signedAvatarUrl(path).then((u) => {
+      if (u) SIGNED.set(path, { url: u, at: Date.now() });
+      if (alive) setSrc(u);
+    });
+    return () => { alive = false; };
   }, [profile?.avatar_url]);
 
   if (!profile) return null;

@@ -8,7 +8,6 @@
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import { useSession } from "../../lib/session.jsx";
 import SkillsPage from "./SkillsPage.jsx";
 import CoursePage from "./CoursePage.jsx";
@@ -22,7 +21,6 @@ export default function SkillsRoutes() {
   const { profile } = useSession();
   return (
     <>
-      <AppHeader />
       <Routes>
         <Route index element={<SkillsPage />} />
         {/* §16 — the course is open to Icons, Fam and Buddies. */}

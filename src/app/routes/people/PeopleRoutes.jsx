@@ -7,7 +7,6 @@
    ════════════════════════════════════════════════ */
 
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
-import AppHeader from "../../components/AppHeader.jsx";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import PersonPage from "./PersonPage.jsx";
 import ThreadPage from "./ThreadPage.jsx";
@@ -38,7 +37,6 @@ function ChatRedirect() {
 export default function PeopleRoutes() {
   return (
     <>
-      <AppHeader />
       <Screen>
         <Routes>
           <Route index element={<PeopleList />} />

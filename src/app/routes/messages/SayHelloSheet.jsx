@@ -30,10 +30,17 @@ import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { openDmWith } from "../people/peopleStore.js";
 import { sendDeep } from "../people/myPeopleStore.js";
+import useBackToClose from "../../components/useBackToClose.js";
 
 const VARIANTS = ["a", "b", "c", "d"];
 
 export default function SayHelloSheet({ person, onClose }) {
+  /* Back closes the sheet instead of leaving the chats list behind it.
+     Mounted only while open — ChatsList renders it as {hello && ...} —
+     so the hook takes true, and the component that owns the panel owns
+     its dismissal. */
+  useBackToClose(true, onClose);
+
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const navigate = useNavigate();

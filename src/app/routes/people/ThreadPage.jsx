@@ -51,6 +51,7 @@ import { isStickerBody, fetchPerson, openDmWith } from "./peopleStore.js";
 import Icon from "../../components/Icon.jsx";
 import { registerDraftGuard } from "../messages/draftGuard.js";
 import RichText from "../../lib/richText.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 
 const POLL_MS = 4000;
 
@@ -116,6 +117,24 @@ export default function ThreadPage() {
   // Bubbles on their way to the server (text/stickers only).
   const [pendingMsgs, setPendingMsgs] = useState([]);
   const [lightbox, setLightbox] = useState(null);    // signed url shown large
+
+  /* EVERY PANEL THIS SCREEN OPENS ANSWERS BACK.
+
+     Three surfaces, and until now none of them had a history entry, so
+     the Android back gesture did not close them — it left the
+     conversation, which is both halves of what the owner reported: you
+     cannot get out of the thing, and when you do you are not where you
+     were. The full-screen ones are the worst of it, because a photo
+     opened large covers the whole thread and the only way out was a
+     small × in the corner.
+
+     Registered here rather than in a child because these ARE this
+     screen's own panels — the rule the games lane arrived at is that
+     whoever owns a panel owns its dismissal, and a parent must not
+     register on behalf of a child that registers for itself. */
+  useBackToClose(!!lightbox, () => setLightbox(null));
+  useBackToClose(chooserOpen, () => setChooserOpen(false));
+  useBackToClose(pickerOpen, () => setPickerOpen(false));
   const [flashId, setFlashId] = useState(null);      // briefly highlighted after a jump
   const msgRefs = useRef({});
   const cameraRef = useRef(null);

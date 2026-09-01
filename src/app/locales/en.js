@@ -2985,7 +2985,7 @@ const en = {
       quieter: "Quieter",
       louder: "Louder",
       ambient: "Background music",
-      ambientHint: "A soft drone under the game. Off unless you ask for it.",
+      ambientHint: "A soft room tone under the game. The mute above turns off everything, including this.",
       haptics: "Gentle vibration",
       hapticsHint: "A small tap when a token is sent home, and when someone wins.",
       hapticsNone: "This phone doesn't offer vibration.",

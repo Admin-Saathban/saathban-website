@@ -166,6 +166,17 @@ export function SoundPanel({ onClose }) {
           what the words report, and turning the row back on restores
           an audible volume rather than leaving a switch that says On
           above a slider still at zero. */}
+      {/* MUSIC, on its own switch. The mute above silences
+          everything including this; somebody who wants the dice and
+          the capture but not the drone should not have to give up
+          both to get there. Remembered per person, like the rest. */}
+      <ToggleRow
+        ts={ts}
+        label={t("games.sound.ambient")}
+        hint={t("games.sound.ambientHint")}
+        on={prefs.music !== false}
+        onChange={(on) => update({ music: on })}
+      />
       <ToggleRow
         ts={ts}
         label={t("games.sound.effects")}

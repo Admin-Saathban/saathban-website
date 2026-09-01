@@ -36,7 +36,12 @@ const STORE_KEY = "saathban.app.sound";
    Volume defaults to 0.7 rather than 1.0 so the first sound a person
    ever hears is gentle — it is easier to turn something up than to
    forgive it for being loud once. */
-const DEFAULTS = { volume: 0.7, muted: false, haptics: true };
+/* `music` is ON by default, which is the owner's reversal of his own
+   earlier ruling and the reason the bed is back. It is a separate
+   key from `muted` on purpose: somebody who wants the dice and the
+   capture but not the drone should not have to give up both, and
+   the mute on the table still silences everything above it. */
+const DEFAULTS = { volume: 0.7, muted: false, haptics: true, music: true };
 
 let prefs = { ...DEFAULTS };
 let loaded = false;
@@ -57,6 +62,8 @@ function loadPrefs() {
            localStorage, and reading it would be the only way the
            deleted feature could return. */
         haptics: saved.haptics !== false,
+        /* remembered per person, and undefined means the new default */
+        music: saved.music !== false,
       };
     }
   } catch {
@@ -78,6 +85,7 @@ export function setSoundPrefs(patch) {
     /* preference won't survive the session; the sound still obeys it now */
   }
   if (ctx && master) master.gain.value = prefs.muted ? 0 : prefs.volume;
+  syncBedToPrefs();
   for (const fn of listeners) fn({ ...prefs });
   return { ...prefs };
 }
@@ -124,6 +132,11 @@ export function unlockSound() {
   if (!c) return;
   if (c.state === "suspended") c.resume().catch(() => {});
   unlocked = true;
+  /* Whatever asked for music before anybody had touched the page
+     gets it now. This is the whole autoplay dance: we never prompt
+     for a gesture, we take the first one the person was making
+     anyway. */
+  if (bedWanted) startAmbience(bedWanted);
 }
 
 export function isSoundReady() {
@@ -163,6 +176,7 @@ export function resumeSound() {
   try {
     if (master) master.gain.value = prefs.muted ? 0 : prefs.volume;
     ctx.resume().catch(() => {});
+    if (bedWanted && !bed) startAmbience(bedWanted);
   } catch {
     /* nothing to resume */
   }
@@ -371,9 +385,24 @@ function sWin(c, t0) {
 /* A turn arriving. The quietest thing in the file: two soft notes, a
    nudge rather than an alert. It exists because a person may be
    looking away from the phone while a bot thinks. */
+/* IT IS YOUR GO. Two notes rising a fourth, with a third voice an
+   octave up that decays fast — the little bell on top is what
+   makes it carry over a room without being loud.
+
+   DISTINCT FROM THE BED BY DESIGN, and it has to be: the drone
+   sits on A at 110Hz through a 520Hz lowpass, so a chime in the
+   same register would be felt as the music swelling rather than
+   as anything addressed to you. This lives two octaves above it
+   and has a fast attack, which is the opposite of everything the
+   bed does.
+
+   Slightly warmer and a little more present than the version
+   nobody could hear: a triangle rather than a pure sine, and the
+   cutoff opened so the top note keeps its edge. */
 function sYourTurn(c, t0) {
-  tone(c, t0, { freq: 392, dur: 0.18, type: "sine", peak: 0.12, cutoff: 2200 });
-  tone(c, t0 + 0.13, { freq: 523, dur: 0.26, type: "sine", peak: 0.11, cutoff: 2200 });
+  tone(c, t0, { freq: 392, dur: 0.2, type: "triangle", peak: 0.16, cutoff: 3200 });
+  tone(c, t0 + 0.12, { freq: 523.25, dur: 0.34, type: "triangle", peak: 0.15, cutoff: 3200 });
+  tone(c, t0 + 0.14, { freq: 1046.5, dur: 0.22, type: "sine", peak: 0.05, cutoff: 5200 });
 }
 
 /* A press. Almost subliminal — it exists so a tap on a die or a goti
@@ -485,21 +514,122 @@ export function playHopRun(count, spacingMs = 190) {
   }
 }
 
-/* ── background music: DELETED ─────────────────────────────────
+/* ── background music ──────────────────────────────────────────
 
-   GAMES_BACKLOG A5 asked for a loopable ambient bed, off by default.
-   It was built: a tanpura-ish drone, three detuned sines, very quiet,
-   nobody's default. GAMES_IMMERSION_SPEC §7 cancels A5 outright —
-   "the owner's ruling is that it should not exist. Remove the
-   feature, its toggle and its assets."
+   RULING REVERSED. GAMES_BACKLOG A5 asked for an ambient bed; §7
+   cancelled it outright and I deleted the feature, its toggle and
+   its start-up paths. The owner has now reversed that, so it is
+   built again rather than un-commented — the old one was removed
+   properly and there was nothing left to switch back on.
 
-   So it is gone rather than switched off, and that distinction is the
-   instruction. A feature that merely defaults to off is still a
-   feature: it has a toggle somebody can find, a preference that
-   persists, code that runs on every unlock and every visibility
-   change, and a way to come back by accident. There is now no bed to
-   start, so nothing has to remember not to start it.
+   WHAT IT IS. Three quiet voices: a root drone, a fifth above it,
+   and a very slow filter sweep that keeps the pair from sitting
+   dead still. No melody, no rhythm, nothing that resolves — a room
+   tone rather than a tune, because a tune has a length and this
+   plays for as long as somebody takes over a move.
 
-   stopAllSound() below is the replacement for what stopAmbient() used
-   to be called for. */
+   PER GAME, by root note rather than by arrangement: ludo sits on
+   A, snakes a tone below it, carrom a third above. The same room,
+   three different afternoons in it.
+
+   It runs through `master` like everything else, so the mute on the
+   table silences it with one tap and the volume slider governs it.
+   It is deliberately about a fifth of the level of the dice: it
+   should be the thing you notice stopping, not the thing you notice
+   starting. */
+
+const ROOTS = { ludo: 110, snakes: 98, carrom: 123.47, daily_puzzle: 130.81 };
+let bed = null;
+let bedWanted = null; // a game key we should be playing once unlocked
+
+function buildBed(c, key) {
+  const root = ROOTS[key] || 110;
+  const out = c.createGain();
+  out.gain.value = 0;
+  const warm = c.createBiquadFilter();
+  warm.type = "lowpass";
+  warm.frequency.value = 520;
+  warm.Q.value = 0.4;
+  out.connect(warm);
+  warm.connect(master);
+
+  /* Two voices a fifth apart, each very slightly detuned against
+     itself, which is what stops a synth drone sounding like a test
+     tone. */
+  const oscs = [];
+  for (const [mult, level, cents] of [[1, 0.055, -4], [1.5, 0.032, 5], [2, 0.016, -9]]) {
+    const o = c.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = root * mult;
+    o.detune.value = cents;
+    const g = c.createGain();
+    g.gain.value = level;
+    o.connect(g);
+    g.connect(out);
+    o.start();
+    oscs.push(o);
+  }
+
+  /* The slow sweep. Twenty-three seconds is chosen to not line up
+     with anything a person does — a cycle that matched the turn
+     clock would start to feel like a countdown. */
+  const lfo = c.createOscillator();
+  lfo.frequency.value = 1 / 23;
+  const lfoAmt = c.createGain();
+  lfoAmt.gain.value = 130;
+  lfo.connect(lfoAmt);
+  lfoAmt.connect(warm.frequency);
+  lfo.start();
+  oscs.push(lfo);
+
+  return { out, oscs, key };
+}
+
+/* Start, or change which game is playing. Safe to call repeatedly:
+   the same key twice is a no-op, a different key crossfades by
+   stopping and starting, and calling it before a gesture only
+   REMEMBERS the wish — browsers refuse audio until somebody has
+   touched the page, so unlockSound() below starts what was asked
+   for the moment that happens. */
+export function startAmbience(gameKey) {
+  bedWanted = gameKey || null;
+  if (!gameKey) return stopAmbience();
+  if (!unlocked || !ctx) return;
+  if (!prefs.music) return;
+  if (bed && bed.key === gameKey) return;
+  stopAmbience();
+  const c = ensureCtx();
+  if (!c) return;
+  bed = buildBed(c, gameKey);
+  /* In over a second and a half. A bed that arrives at full level is
+     a bed you noticed starting. */
+  bed.out.gain.cancelScheduledValues(c.currentTime);
+  bed.out.gain.setValueAtTime(0, c.currentTime);
+  bed.out.gain.linearRampToValueAtTime(1, c.currentTime + 1.6);
+}
+
+export function stopAmbience() {
+  if (!bed || !ctx) { bed = null; return; }
+  const b = bed;
+  bed = null;
+  try {
+    const t = ctx.currentTime;
+    b.out.gain.cancelScheduledValues(t);
+    b.out.gain.setValueAtTime(b.out.gain.value, t);
+    b.out.gain.linearRampToValueAtTime(0, t + 0.7);
+    for (const o of b.oscs) o.stop(t + 0.8);
+  } catch {
+    /* a context that has gone away has stopped it for us */
+  }
+}
+
+/* Called when the music preference changes, so the bed follows it
+   without anyone leaving the table. */
+function syncBedToPrefs() {
+  if (!prefs.music) stopAmbience();
+  else if (bedWanted) startAmbience(bedWanted);
+}
+
+/* stopAllSound() below is what silences everything in flight,
+   including this. */
 

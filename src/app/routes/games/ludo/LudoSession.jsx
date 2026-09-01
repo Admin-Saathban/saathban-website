@@ -29,7 +29,7 @@ import { GAME, NO_SELECT } from "../gameSurface.js";
 import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine } from "../GameUI.jsx";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
-import { stopAllSound, resumeSound } from "../../../lib/sound.js";
+import { stopAllSound, resumeSound, startAmbience, stopAmbience } from "../../../lib/sound.js";
 import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
 import LudoBoard from "./LudoBoard.jsx";
@@ -700,9 +700,18 @@ export default function LudoSession() {
 
      Resumed on mount for the next table, so leaving one game and
      opening another is not silent. */
+  /* And the table's own room tone, asked for on arrival and taken
+     away on the way out. It cannot start until somebody has touched
+     the page — startAmbience remembers the wish and the first tap
+     begins it, which is the browser's rule and not one anybody
+     should have explained to them. */
   useEffect(() => {
     resumeSound();
-    return () => stopAllSound();
+    startAmbience("ludo");
+    return () => {
+      stopAmbience();
+      stopAllSound();
+    };
   }, []);
 
   const [soundOpen, setSoundOpen] = useState(false);

@@ -30,6 +30,8 @@
    would have pinned an old palette into the database for ever.
    ════════════════════════════════════════════════ */
 
+import { startAmbience, stopAmbience } from "../../lib/sound.js";
+import { useSoundUnlock } from "../../lib/gameFeel.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
@@ -143,6 +145,26 @@ export default function NewGame() {
   /* null until it has answered, so the room can wait for it rather
      than growing a row when it lands. */
   const [gamesFinished, setGamesFinished] = useState(null);
+
+  /* Music from the room onward, not only from the board. Setting a
+     table is part of the evening, and a silence that broke the
+     moment you pressed Start would draw attention to the
+     machinery. */
+  /* THE ROOM NEEDS ITS OWN UNLOCK. useSoundUnlock lives inside
+     useGameFeel, which the board uses and this screen does not — so
+     the first tap in here never reached the audio context, the wish
+     to play was remembered and nothing ever started it. Measured: 0
+     oscillators in the room after a real tap, 4 on the board after
+     the same tap. Same code, one missing hook.
+
+     It takes the first tap somebody was making anyway; it never asks
+     for one. */
+  useSoundUnlock();
+
+  useEffect(() => {
+    startAmbience(gameKey);
+    return () => stopAmbience();
+  }, [gameKey]);
 
   useEffect(() => {
     let alive = true;

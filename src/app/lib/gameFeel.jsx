@@ -178,6 +178,8 @@ export function useGameFeel({
   const seenId = useRef(null);
   const wonRef = useRef(false);
   const turnRef = useRef(null);
+  /* which handover we have already chimed for */
+  const chimedFor = useRef(null);
 
   /* Moves → sound. */
   useEffect(() => {
@@ -228,16 +230,47 @@ export function useGameFeel({
 
   /* Your turn, quietly — only on a real change, never on first paint,
      and never while the table is over. */
+  /* A POLL CAN STEP OVER THE HANDOVER.
+
+     This fired only on an observed change from not-mine to mine.
+     The board polls every 2.5 seconds and bots answer in about
+     one — so a round can go mine → bot → bot → mine entirely
+     between two polls, and the client sees mine, then mine. No
+     change observed, no chime, and the faster the bots the more
+     reliably it is silent.
+
+     So the handover is identified by the LAST MOVE instead. If it
+     is my turn and the last thing that happened was somebody
+     else's move, the table has just come round to me — whether or
+     not any poll caught the moment. Chiming once per distinct
+     last-move is what keeps that from repeating on every poll.
+
+     Both paths are kept: the observed transition still fires
+     immediately when a poll does catch it, which is a beat
+     earlier than waiting for the move to be read. */
   useEffect(() => {
     if (status !== "active" || mySeatNo == null || currentSeat == null) return;
+    const isMine = currentSeat === mySeatNo;
     const wasMine = turnRef.current;
-    turnRef.current = currentSeat === mySeatNo;
-    if (wasMine === null || wasMine === undefined) return;
-    if (!wasMine && currentSeat === mySeatNo) {
-      playSound("yourTurn");
-      hapticTurn();
+    turnRef.current = isMine;
+
+    /* First sight of the table is not a handover. */
+    if (wasMine === null || wasMine === undefined) {
+      chimedFor.current = eventKey ?? "start";
+      return;
     }
-  }, [currentSeat, mySeatNo, status]);
+    if (!isMine) return;
+
+    const key = eventKey ?? "start";
+    const somebodyElseMoved =
+      lastMove && lastMove.seat != null && lastMove.seat !== mySeatNo;
+    const observed = !wasMine;
+    if (!observed && !somebodyElseMoved) return;
+    if (chimedFor.current === key) return;
+    chimedFor.current = key;
+    playSound("yourTurn");
+    hapticTurn();
+  }, [currentSeat, mySeatNo, status, eventKey, lastMove]);
 }
 
 /* ── motion ────────────────────────────────────── */

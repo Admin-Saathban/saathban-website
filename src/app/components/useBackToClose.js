@@ -53,21 +53,46 @@ export default function useBackToClose(open, onClose) {
      somebody else owns would send the person back a screen. */
   const pushed = useRef(false);
 
+  /* HOW DEEP THIS ONE SITS, and it is the difference between a hook that
+     nests and one that does not.
+
+     popstate is a WINDOW event: one back press runs every mounted
+     handler, not just the innermost. Lane 3 found this — a sheet with a
+     confirmation step inside it would close BOTH levels on one press and
+     leave an orphaned entry on the stack for the next press to spend, so
+     the press after that would appear to do nothing.
+
+     Each instance now records the depth it pushed at, and acts only when
+     history has come back PAST it. Two sheets open at depths 1 and 2:
+     one back leaves history at 1, so the depth-2 sheet closes and the
+     depth-1 sheet does not. The next back leaves 0 and closes the
+     other. */
+  const depth = useRef(0);
+
   useEffect(() => {
     if (!open) return undefined;
 
-    const marker = { sbSheet: (window.history.state?.sbSheet || 0) + 1 };
-    window.history.pushState({ ...window.history.state, ...marker }, "");
+    const mine = (window.history.state?.sbSheet || 0) + 1;
+    depth.current = mine;
+    window.history.pushState({ ...window.history.state, sbSheet: mine }, "");
     pushed.current = true;
 
     const onPop = () => {
-      /* The entry is already gone by the time this fires — the browser
-         popped it. So we must not pop again on the way out. */
+      /* Only if history has come back past MY entry. A deeper sheet
+         closing leaves the stack at or above my depth, and that press
+         was not for me. */
+      const now = window.history.state?.sbSheet || 0;
+      if (now >= depth.current) return;
+      /* My entry is already gone by the time this fires — the browser
+         popped it — so I must not pop again on the way out. */
       pushed.current = false;
       closeRef.current?.();
     };
     const onKey = (e) => {
-      if (e.key === "Escape") closeRef.current?.();
+      /* Escape belongs to the topmost sheet only, for the same reason. */
+      if (e.key !== "Escape") return;
+      if ((window.history.state?.sbSheet || 0) !== depth.current) return;
+      closeRef.current?.();
     };
 
     window.addEventListener("popstate", onPop);

@@ -83,7 +83,6 @@ import {
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 import RichText from "../../lib/richText.jsx";
-import useBackToClose from "../../components/useBackToClose.js";
 
 /* §7 shows where a post came from as a small label — the area if the
    author has one, else the city. It is information, not a filter: there
@@ -474,7 +473,29 @@ function PostCard({
      sentence somebody was part way through. Cancelling keeps them on
      the feed with the post intact, which is the smaller loss of the
      two that were on offer. */
-  useBackToClose(editing, onEditCancel);
+  /* NO BACK HANDLER HERE FOR THE MOMENT, deliberately, and it is
+     coming back.
+
+     I added one and it broke the thing it was protecting. This editor
+     opens FROM the post menu, and that menu closes by unmounting;
+     useBackToClose's cleanup calls history.back() to remove the menu's
+     own entry, but history.back() is ASYNCHRONOUS. The editor pushes
+     its entry in the same commit, so the queued back lands on the
+     EDITOR'S entry instead — and the editor's own handler, seeing
+     history below its depth, cancelled it. Measured: with the line in,
+     the textarea is never present at any sample; with it out, it is
+     there at +45ms.
+
+     Lane 2 is fixing the hook at the root (cleanup only reclaims an
+     entry that is still the top one) and will restore this line as
+     useBackToClose(editing, askCancelEdit) — with a discard prompt,
+     because back closing the editor silently still threw away the
+     sentence, which was the other half of why this mattered.
+
+     Removed rather than worked around. I had a 150ms arming delay that
+     tested green, and a timing patch that outlives the bug it was
+     written for is how one vocabulary becomes two. */
+
   /* §7 — post-audio is private, so the card signs its own URL. Done
      here rather than for the whole feed so that a list of forty posts
      signs only the handful that actually carry a recording. */
@@ -1501,7 +1522,22 @@ export default function Feed({ composer = true, embedded = false }) {
     try {
       if (mine) await clearReaction(postId, myId);
       else await setReaction(postId, myId, emoji);
-      setReactions(await fetchReactions(posts.map((p) => p.id)));
+      /* NO REFETCH ON SUCCESS, and this is the reaction lag.
+
+         Measured, 27 posts, phone-speed CPU: the tap painted in 54ms,
+         and then the feed re-rendered every card AGAIN a full second
+         later when this refetch came back. The screen moving a second
+         after you let go is what reads as lag — not the tap, which was
+         never slow.
+
+         And the second wave changed nothing. We already know the
+         answer: it is the reaction we just wrote. Twenty-six of those
+         cards were handed data identical to what they held. Somebody
+         tapping four hearts while scrolling bought four delayed blocks
+         of the main thread for no new information.
+
+         Other people's reactions still arrive — on the next feed load,
+         which is where every other person's activity arrives too. */
     } catch {
       setReactions(prior);
       raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "reaction" });

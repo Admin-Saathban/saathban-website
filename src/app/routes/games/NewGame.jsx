@@ -117,7 +117,7 @@ export default function NewGame() {
   const { profile } = useSession();
   const navigate = useNavigate();
 
-  const [game, setGame] = useState(null);
+  const [game, setGame] = useState(undefined);
   const [busy, setBusy] = useState(false);
   /* One live table at a time. The refusal belongs HERE, on Start — the
      moment the second table would actually come into being. */
@@ -140,7 +140,9 @@ export default function NewGame() {
      finished tables rather than stored — so this is a count, not a
      balance, and there is nothing here to spend or lose. */
   const [theme, setTheme] = useState(DEFAULT_THEME);
-  const [gamesFinished, setGamesFinished] = useState(0);
+  /* null until it has answered, so the room can wait for it rather
+     than growing a row when it lands. */
+  const [gamesFinished, setGamesFinished] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -315,11 +317,32 @@ export default function NewGame() {
     }
   };
 
+  /* Waiting for everything, and holding the room's height while it
+     waits — a placeholder shorter than what replaces it is the
+     growth this was meant to remove. */
+  if (game === undefined || gamesFinished === null) {
+    return (
+      <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+        <GameMotion />
+        {/* Nothing shaped like anything. A grey block that becomes a
+            room is two states; an empty table the room arrives onto
+            is one, and it is honest that nothing is ready yet rather
+            than that something rectangular is. */}
+        <div aria-hidden="true" style={{ minHeight: "72vh" }} />
+        <BodyText muted role="status" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>
+          …
+        </BodyText>
+      </GamesScreen>
+    );
+  }
+
+  /* No such game — said plainly rather than as a dot that never
+     resolves, which is what null-means-both produced. */
   if (game === null) {
     return (
       <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
-      <GameMotion />
-        <BodyText muted role="status">…</BodyText>
+        <GameMotion />
+        <BodyText role="alert">{t("games.loadError")}</BodyText>
       </GamesScreen>
     );
   }
@@ -329,6 +352,22 @@ export default function NewGame() {
 
   return (
     <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game>
+      <GameMotion />
+      {/* THE ROOM ARRIVES RATHER THAN APPEARING.
+
+          Measured at 390px, this used to paint in three waves — a
+          dot, a half-built screen, then the room — growing the page
+          twice under whoever was looking at it. It reported a
+          cumulative layout shift of ZERO the whole time, because each
+          wave appended BELOW what was already there and displaced
+          nothing. The metric cannot see a screen assembling itself;
+          only a person can.
+
+          Now it waits for everything and arrives once, on the same
+          190ms the game's sheets use, so opening the room feels like
+          the panels that later open on top of it. The reduced-motion
+          rule that governs those governs this. */}
+      <div className="sb-game-panel" style={{ background: "transparent", border: "none", boxShadow: "none" }}>
       <h1
         style={{
           fontSize: ts(28),
@@ -460,6 +499,7 @@ export default function NewGame() {
           }}
         />
       )}
+      </div>
     </GamesScreen>
   );
 }

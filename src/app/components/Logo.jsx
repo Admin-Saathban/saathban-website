@@ -53,9 +53,59 @@ const INK = { x: 166, y: 692, w: 1677, h: 473, canvas: 2000 };
    reversible: if a tightly-cropped transparent asset ever lands, delete
    the filter and the blend and set INK to the new bounds — every call
    site follows, exactly as the original note promised. */
+/* THE CREAM PLATE IS GONE FROM THE DARK CHROME.
+
+   The filter-and-blend treatment got the plate out of the way, and it
+   was still the wrong answer: inverting a wordmark drawn for cream
+   leaves grey letters with soft edges, and against jet they read as a
+   photograph of a logo rather than a logo. The owner is right that it
+   sits wrong.
+
+   variant="light" now draws the word instead of the picture, in the
+   heading face the app already loads. A wordmark IS type — this is the
+   letters set properly rather than a bitmap of them, so it is sharp at
+   every density, scales with the header rather than resampling, weighs
+   nothing, and takes colour like anything else.
+
+   LIGHT RATHER THAN GOLD, though the owner offered both. The bell is
+   becoming gold in the same strip; a gold wordmark beside it would put
+   two warm marks either side of a teal accent and the chrome would have
+   three colours competing. The wordmark is the quietest thing up there
+   and should stay so — it is a label, not a control.
+
+   The image path is untouched for the marketing site and for anywhere
+   the mark sits on cream. */
 export default function Logo({ height = 28, alt = "Saathban", variant = "dark", style }) {
   const s = height / INK.h;
   const light = variant === "light";
+
+  if (light) {
+    return (
+      <span
+        role="img"
+        aria-label={alt}
+        style={{
+          display: "block",
+          fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+          fontSize: Math.round(height * 0.78),
+          lineHeight: 1,
+          fontWeight: 600,
+          /* Wide tracking is what makes a word read as a mark rather
+             than as a heading that happens to be centred. */
+          letterSpacing: "0.16em",
+          /* The trailing letter-space pushes the word off centre by half
+             a space; this takes it back. */
+          textIndent: "0.16em",
+          color: "#F2F3F5",
+          whiteSpace: "nowrap",
+          ...style,
+        }}
+      >
+        SAATHBAN
+      </span>
+    );
+  }
+
   return (
     <span
       role="img"

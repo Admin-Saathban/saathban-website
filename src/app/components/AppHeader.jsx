@@ -173,6 +173,11 @@ export default function AppHeader() {
           to={home}
           aria-label="Saathban"
           style={{
+            /* The wordmark is TYPE now, and this anchor was decorating
+               it — a thin underline straight through the mark, which the
+               span cannot cancel because decoration comes from the
+               ancestor. It was invisible while the logo was a picture. */
+            textDecoration: "none",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",

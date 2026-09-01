@@ -108,14 +108,32 @@ was there to read means they think something is deleted that is not. For a
 post the person may be removing precisely because they regret it, that is a
 privacy failure and not merely a stale screen.
 
-**This requirement is NOT met today, and I am naming it rather than writing
-a rule the app cannot obey.** `pushToast` in `lib/feedback.jsx` always sets a
-dismiss timer — every toast fades, and there is no persistent tone. So a
-failed delete currently reports through something that disappears. Closing
-that gap needs a toast that stays until acknowledged, which is a change to
-the feedback host rather than to any one caller. Until then, delete is
-optimistic and its failure notice is transient, and that is a known hole
-rather than a decision.
+**This requirement is met.** `pushToast` takes `sticky: true`: no dismiss
+timer, and it is exempt from the three-toast eviction, because a line nobody
+has read yet is exactly the wrong one to drop for a newer one. It carries the
+same ✕ as any other toast, so it waits to be acknowledged rather than
+trapping the screen.
+
+```js
+raiseToast(t("feedback.deleteFailedStay"),
+           { tone: "error", key: "postaction", sticky: true });
+```
+
+Use it **only** where the failure outlives the glance: an optimistic action
+that is irreversible, or one whose success the person has already been shown
+and may walk away believing. Everything else fades. If every line becomes
+sticky, none of them is read.
+
+The copy has to say the state, not the event — "That post was NOT deleted —
+it is back on your list", never "Something went wrong". The person's belief is
+wrong at that moment, and the sentence exists to correct it.
+
+Verified by aborting the DELETE and looking again after twelve seconds, in
+both languages: the card goes at once, returns when the request fails, and
+the notice is still there and still dismissible. (Aborting *instantly* makes
+the restore beat the assertion — a real failure costs a round trip, so the
+test delays its refusal by 1.5s to make the optimistic gap observable at
+all.)
 
 The general form: **optimistic is correct for anything reversible, and for
 anything destructive that is confirmed first. The exception is not

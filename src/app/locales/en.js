@@ -3713,6 +3713,7 @@ const en = {
     linkCopied: "Link copied ✓",
     linkNotCopied: "Your phone would not let us copy it. You can share the post from its page instead.",
     showLessDone: "You will see less from {name}. They are not told.",
+    deleteFailedStay: "That post was NOT deleted — it is back on your list. Please try again.",
     postDeleted: "Your post is deleted.",
     postHidden: "Hidden from your feed.",
     postUpdated: "Your post is updated ✓",

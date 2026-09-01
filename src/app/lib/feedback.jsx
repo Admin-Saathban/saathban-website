@@ -62,20 +62,33 @@ export function dismissToast(id) {
    for rapid taps on the same control. */
 export function pushToast(text, opts = {}) {
   if (!text) return null;
-  const { tone = "success", actionLabel, onAction, key } = opts;
+  const { tone = "success", actionLabel, onAction, key, sticky = false } = opts;
   if (key) {
     const prior = toasts.find((x) => x.key === key);
     if (prior) dismissToast(prior.id);
   }
   const id = ++seq;
+  /* `sticky` waits to be acknowledged instead of fading.
+
+     RESPONSIVENESS.md requires it: an optimistic destructive action
+     shows the thing gone immediately, so if the request then FAILS,
+     the person may already have looked away or closed the app —
+     believing a post is deleted that is not. A four-second line is
+     fine for "saved"; it is not fine for "that did not happen after
+     all". Every toast used to carry a dismiss timer, which is why
+     that requirement was written down as a known hole. */
   const life = actionLabel ? LIFETIME_WITH_ACTION_MS : LIFETIME_MS;
-  const timer = setTimeout(() => dismissToast(id), life);
-  toasts = [...toasts, { id, text, tone, actionLabel, onAction, key, timer }];
-  // Oldest falls away when the stack is full — the newest news wins.
+  const timer = sticky ? null : setTimeout(() => dismissToast(id), life);
+  toasts = [...toasts, { id, text, tone, actionLabel, onAction, key, sticky, timer }];
+  /* Oldest falls away when the stack is full — the newest news wins,
+     EXCEPT a sticky one, which is on screen precisely because nobody
+     has read it yet. Evicting it would reintroduce the hole by a
+     different route. */
   while (toasts.length > MAX_VISIBLE) {
-    const oldest = toasts[0];
-    if (oldest.timer) clearTimeout(oldest.timer);
-    toasts = toasts.slice(1);
+    const victim = toasts.find((x) => !x.sticky);
+    if (!victim) break; // all sticky: let the stack grow rather than lose one
+    if (victim.timer) clearTimeout(victim.timer);
+    toasts = toasts.filter((x) => x.id !== victim.id);
   }
   emit();
   return id;

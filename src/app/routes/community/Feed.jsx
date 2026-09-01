@@ -1642,7 +1642,11 @@ export default function Feed({ composer = true, embedded = false }) {
           .then(() => load())
           .catch(() => {
             setPosts(prior);
-            raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+            /* Sticky, and deliberately: the card has already gone from
+               the screen, so somebody may have looked away or closed
+               the app believing the post deleted. A line that fades
+               after four seconds would leave them believing it. */
+            raiseToast(t("feedback.deleteFailedStay"), { tone: "error", key: "postaction", sticky: true });
           });
       } else if (kind === "dm") {
         try {

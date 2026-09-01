@@ -13,6 +13,18 @@
    bottom of this sheet, so a person had two ways to leave a table
    and one way to close a menu. The door is the door.
 
+   AND THIS SHEET IS LUDO'S, not a shared one. `rules` is a ludo
+   house-rules object and the middle section renders ludo's own
+   list from it, so another game reusing this file gets a menu
+   about somebody else's rules.
+
+   Worth saying because it already cost somebody time: when the
+   Leave row went, `onLeave` went with it, and React does not
+   complain about a prop nobody reads — the snakes lane passed a
+   door here and got silence. There is no way to make an unknown
+   prop throw, so the defence is this paragraph and the signature
+   below being the only list of what this component accepts.
+
    IT OPENS SHORT, AND EVERY SECTION IS SHUT. It used to open with
    Sound already expanded against an 88dvh ceiling, which on a
    phone is the whole screen: no board to tap beside it, no cross,

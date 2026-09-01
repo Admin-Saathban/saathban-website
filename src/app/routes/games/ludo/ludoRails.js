@@ -161,14 +161,19 @@ export async function fetchSession(sessionId) {
      It is a PATH into a private bucket, not a URL; signing it is
      the caller's job (gameAvatar.jsx). */
   let faces = new Map();
+  let samples = new Map();
   if (ids.length) {
     const { data: profiles, error: pErr } = await supabase
       .from("safe_profiles")
-      .select("id, full_name, avatar_url")
+      .select("id, full_name, avatar_url, avatar_sample")
       .in("id", ids);
     if (pErr) throw new Error(pErr.message);
     names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
     faces = new Map((profiles || []).map((p) => [p.id, p.avatar_url]));
+    /* A drawn face somebody picked for themselves, if they did. */
+    samples = new Map(
+      (profiles || []).map((p) => [p.id, p.avatar_sample ?? null])
+    );
   }
 
   /* NOW 30, because the SERVER now says 30.
@@ -237,6 +242,7 @@ export async function fetchSession(sessionId) {
       presence: s.presence,
       name: s.is_bot ? null : names.get(s.profile_id) || null,
       avatar: s.is_bot ? null : faces.get(s.profile_id) || null,
+      avatar_sample: s.is_bot ? null : samples.get(s.profile_id) ?? null,
     })),
   };
 }

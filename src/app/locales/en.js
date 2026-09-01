@@ -2845,6 +2845,8 @@ const en = {
     back: "Back to Games",
     /* A player's card, opened from their circle at the table. */
     card: {
+      sample: "Face {n}",
+      upload: "Use a photo instead",
       mine: "Your card",
       nameLabel: "Your name at this table",
       save: "Save",

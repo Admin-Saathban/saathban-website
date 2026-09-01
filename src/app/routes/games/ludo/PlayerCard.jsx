@@ -29,11 +29,12 @@ import { useEffect, useRef, useState } from "react";
 import { A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { GAME, NO_SELECT } from "../gameSurface.js";
-import { GameMotion } from "../GameUI.jsx";
+import { GameMotion, GamePill } from "../GameUI.jsx";
 import { SEAT_COLORS, SEAT_INK, SEAT_COLOR_NAMES } from "../seatColors.js";
 import { MUTE_KINDS, readMutes, setMuted } from "../tableMutes.js";
 import { signedAvatarUrl, uploadAvatar, ACCEPTED, MAX_BYTES } from "../../profile/avatar.js";
 import { useSignedAvatar } from "../gameAvatar.jsx";
+import SampleAvatar, { sampleFor, SAMPLE_COUNT } from "../sampleAvatars.jsx";
 import { updateMyProfile } from "../../profile/data.js";
 import { fileReport } from "../../community/communityData.js";
 
@@ -148,9 +149,15 @@ export default function PlayerCard({
   const [error, setError] = useState("");
   const [mutes, setMutes] = useState({});
   const [reported, setReported] = useState(false);
+  /* The sample-face picker, opened from the camera badge alongside
+     uploading a real one. */
+  const [picking, setPicking] = useState(false);
+  const [sample, setSample] = useState(null);
   const fileRef = useRef(null);
 
   const profileId = row?.profile_id || null;
+  const shownSample =
+    sample ?? row?.avatar_sample ?? sampleFor(profileId, seat);
   const colour = SEAT_COLORS[seat];
 
   useEffect(() => {
@@ -320,8 +327,10 @@ export default function PlayerCard({
                   alt=""
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
+              ) : row?.is_bot ? (
+                initialOf(displayName)
               ) : (
-                initialOf(isMe ? name : displayName)
+                <SampleAvatar index={shownSample} size={84} />
               )}
             </span>
             {/* THE CAMERA BADGE, on your own card only. White, on the
@@ -331,7 +340,7 @@ export default function PlayerCard({
               <>
                 <button
                   type="button"
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() => setPicking((v) => !v)}
                   aria-label={t("ludo.card.changePhoto")}
                   disabled={busy}
                   style={{
@@ -464,6 +473,54 @@ export default function PlayerCard({
             >
               {saved ? t("ludo.card.saved") : t("ludo.card.save")}
             </button>
+            {/* PICK A FACE, OR USE A REAL ONE. The badge opens both
+                rather than going straight to the camera roll: most
+                people will never upload a photo, and the ones who
+                will are not stopped by one extra tap. */}
+            {picking && (
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(6, 1fr)",
+                    gap: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  {Array.from({ length: SAMPLE_COUNT }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setSample(i);
+                        setPhoto(null);
+                        updateMyProfile(profileId, { avatar_sample: i }).catch(() => {});
+                      }}
+                      aria-label={t("ludo.card.sample", { n: i + 1 })}
+                      style={{
+                        padding: 0,
+                        border:
+                          shownSample === i
+                            ? `2px solid ${GAME.you}`
+                            : "2px solid transparent",
+                        borderRadius: "50%",
+                        background: "transparent",
+                        cursor: "pointer",
+                        lineHeight: 0,
+                      }}
+                    >
+                      <SampleAvatar index={i} size={40} />
+                    </button>
+                  ))}
+                </div>
+                <GamePill
+                  onClick={() => fileRef.current?.click()}
+                  style={{ width: "100%", minHeight: 48, justifyContent: "center" }}
+                >
+                  {t("ludo.card.upload")}
+                </GamePill>
+              </div>
+            )}
           </>
         ) : (
           <>

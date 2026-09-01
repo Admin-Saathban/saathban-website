@@ -51,6 +51,8 @@ import {
   startWithBots,
 } from "../../lib/games.js";
 import { createShare } from "../community/communityData.js";
+import { updateMyProfile } from "../profile/data.js";
+import { TimerChoice, RememberChoice } from "./setup/RoomChoices.jsx";
 import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
@@ -206,8 +208,50 @@ export default function NewGame() {
 
   /* Ludo's two house rules, owned by the screen that offers them
      rather than by the shared setup component (§8.1). */
+  /* ── THE HOUSE RULES, ALL FIVE, ALL ON ────────────────────────
+
+     A six rolls again · jota · exact landing to get home · three
+     sixes cancels the turn · you must take one before going home.
+     Every one of them is how the game is played at a real table in
+     Pakistan, which is why they are all on by default: a person who
+     opens a table and presses Start should get the game they know.
+
+     capture_before_home was the odd one out — its default was OFF
+     everywhere, including in the engine — so it is written
+     EXPLICITLY into house_rules from this room rather than left to
+     a default that disagrees with the switch above it.
+
+     REMEMBERED, IF ASKED. The choice sits on the host's own profile
+     (settings.ludo_rules) and is loaded back the next time they
+     open a room. Somebody who plays the same five rules every
+     Sunday should set them once. */
   const [autoOnlyMove, setAutoOnlyMove] = useState(true);
   const [undoOn, setUndoOn] = useState(true);
+  const [sixAgain, setSixAgain] = useState(true);
+  const [jotaOn, setJotaOn] = useState(true);
+  const [exactHome, setExactHome] = useState(true);
+  const [threeSixes, setThreeSixes] = useState(true);
+  const [captureFirst, setCaptureFirst] = useState(true);
+  /* 20 / 30 / 45 / 60 seconds, or null for no clock at all. */
+  const [turnSecs, setTurnSecs] = useState(30);
+  /* "just this table" or "all my tables" */
+  const [remember, setRemember] = useState(false);
+
+  /* Whatever this host settled on last time. Loaded once, and only
+     if they asked for it to be — an unasked-for memory is a table
+     that changed its own rules behind somebody's back. */
+  useEffect(() => {
+    const saved = profile?.settings?.ludo_rules;
+    if (!saved) return;
+    setSixAgain(saved.extra_roll_on_six !== false);
+    setJotaOn(saved.jota !== false);
+    setExactHome(saved.exact_home !== false);
+    setThreeSixes(saved.three_sixes !== false);
+    setCaptureFirst(saved.capture_before_home !== false);
+    if (saved.turn_seconds === null || typeof saved.turn_seconds === "number") {
+      setTurnSecs(saved.turn_seconds);
+    }
+  }, [profile?.settings?.ludo_rules]);
   /* TEAMS, and an honest caveat. The owner has asked for the
      switch to live here with the other house rules and it does:
      the choice is made in the room, frozen with the rest of the
@@ -277,7 +321,20 @@ export default function NewGame() {
            they ran out of time. The rails lane sets the same value for
            tables opened their way; this is the other door into the same
            room. */
-        house.turn_seconds = 30;
+        /* THE MOVE TIMER, chosen in this room. `relaxed` is null,
+           and a null is written as a very large number rather than
+           omitted: game_tick falls back to 30 when the key is
+           missing, so leaving it out would give a relaxed table a
+           thirty-second clock — the opposite of what was chosen. */
+        house.turn_seconds = turnSecs === null ? 86400 : turnSecs;
+        /* All five, written explicitly. capture_before_home's engine
+           default is OFF, so a switch left to a default would
+           silently disagree with what the room showed. */
+        house.extra_roll_on_six = sixAgain;
+        house.jota = jotaOn;
+        house.exact_home = exactHome;
+        house.three_sixes = threeSixes;
+        house.capture_before_home = captureFirst;
         /* Written only when chosen, like the other two, so an old
            table and a new one keep the same shape. */
         if (teams) house.teams = true;
@@ -296,6 +353,27 @@ export default function NewGame() {
         title.trim() ||
         (host ? t("games.setup.defaultTitle", { game: name, host }) : name);
       const id = await createSession(game.key, seats, house, named);
+      /* "Use these for all my future tables". Saved after the table
+         is made rather than before, so a failure to create does not
+         leave somebody's preferences changed by a game that never
+         happened. */
+      if (remember && game.key === "ludo") {
+        updateMyProfile(profile.id, {
+          settings: {
+            ...(profile.settings || {}),
+            ludo_rules: {
+              extra_roll_on_six: sixAgain,
+              jota: jotaOn,
+              exact_home: exactHome,
+              three_sixes: threeSixes,
+              capture_before_home: captureFirst,
+              turn_seconds: turnSecs,
+            },
+          },
+        }).catch(() => {
+          /* the table still opens; only the memory is lost */
+        });
+      }
       try {
         sessionStorage.setItem("saathban.app.freshTable", id);
       } catch {
@@ -574,6 +652,33 @@ export default function NewGame() {
         rules={
           game.key === "ludo" ? (
             <>
+              <RuleSwitch
+                on={sixAgain}
+                onToggle={() => setSixAgain((v) => !v)}
+                label={t("ludo.rules.extraRoll")}
+              />
+              <RuleSwitch
+                on={jotaOn}
+                onToggle={() => setJotaOn((v) => !v)}
+                label={t("ludo.rules.jota")}
+              />
+              <RuleSwitch
+                on={exactHome}
+                onToggle={() => setExactHome((v) => !v)}
+                label={t("ludo.rules.exactHome")}
+              />
+              <RuleSwitch
+                on={threeSixes}
+                onToggle={() => setThreeSixes((v) => !v)}
+                label={t("ludo.rules.threeSixes")}
+              />
+              <RuleSwitch
+                on={captureFirst}
+                onToggle={() => setCaptureFirst((v) => !v)}
+                label={t("ludo.rules.captureFirst")}
+              />
+              <TimerChoice value={turnSecs} onPick={setTurnSecs} t={t} ts={ts} />
+              <RememberChoice value={remember} onPick={setRemember} t={t} ts={ts} />
               <RuleSwitch
                 on={autoOnlyMove}
                 onToggle={() => setAutoOnlyMove((v) => !v)}

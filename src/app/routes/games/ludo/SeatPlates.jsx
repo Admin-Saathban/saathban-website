@@ -46,6 +46,7 @@ export { screenCorner } from "./seatCorners.js";
 import { screenCorner as cornerFor } from "./seatCorners.js";
 import Die from "./Dice.jsx";
 import { useSignedAvatar, AvatarPhoto } from "../gameAvatar.jsx";
+import SampleAvatar, { sampleFor } from "../sampleAvatars.jsx";
 
 /* Seconds left until `deadline`, ticking once a second — and only
    while there is a deadline to count to. */
@@ -182,7 +183,7 @@ function ChatParticle({ onOpen, label, unread }) {
    turn: an arc drawn on everyone would be four clocks, three of them
    lying. It sits OUTSIDE the circle so the circle itself stays a
    circle only. */
-function Avatar({ name, photo, colour, ink, isTurn, remaining, seconds, label, size = 52 }) {
+function Avatar({ name, photo, sample, colour, ink, isTurn, remaining, seconds, label, size = 52 }) {
   const { ts } = useI18n();
   const arcR = size / 2 + 4;
   const box = arcR * 2 + 6;
@@ -262,10 +263,20 @@ function Avatar({ name, photo, colour, ink, isTurn, remaining, seconds, label, s
           boxShadow: "0 6px 14px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.4)",
         }}
       >
+        {/* THREE LAYERS, IN ORDER OF TRUTH: a real photo if there
+            is one, an illustrated face if there is not, and the
+            initial underneath both — which now shows only for a
+            bot or an empty chair, because those are the two things
+            at this table that are not a person.
+
+            Stacked rather than switched, so nothing moves when the
+            signed URL arrives a moment after the render. */}
         {initialOf(name)}
-        {/* Over the initial rather than instead of it, so nothing
-            moves when the signed URL arrives and anybody without a
-            photo keeps a circle that looks deliberate. */}
+        {sample != null && (
+          <span style={{ position: "absolute", inset: 0 }}>
+            <SampleAvatar index={sample} size={size} />
+          </span>
+        )}
         <AvatarPhoto src={photo} />
       </span>
       {isTurn && urgent && (
@@ -482,6 +493,13 @@ function Plate({
      plate whether or not that seat has a face — a hook behind a
      condition is a hook that changes count between renders. */
   const photo = useSignedAvatar(row?.avatar || null);
+  /* A drawn face for anybody real who has not uploaded one. Bots
+     and empty chairs keep the letter: they are not people, and
+     giving them a face would be the table pretending. */
+  const sample =
+    isPerson && !photo
+      ? row?.avatar_sample ?? sampleFor(row?.profile_id, seat)
+      : null;
   /* A FIFTH BIGGER, all round. 44/42/38 were sized against a
      board that has since grown and a plate that has since lost
      its name chip, its turn line and its badges — the circles were
@@ -494,6 +512,7 @@ function Plate({
       <Avatar
         name={row?.is_bot ? t("ludo.seat.bot") : row?.name}
         photo={photo}
+        sample={sample}
         colour={isMe ? GAME.you : SEAT_COLORS[seat]}
         ink={isMe ? GAME.youInk : SEAT_INK[seat]}
         isTurn={isTurn}

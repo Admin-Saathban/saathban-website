@@ -92,18 +92,39 @@ function ChatParticle({ onOpen, label, unread }) {
         boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
       }}
     >
-      {/* DRAWN, NOT TYPED. 💬 is a different object on every platform
-          and a blank box on some of them — the door control in the bar
-          had exactly that problem and was redrawn for exactly this
-          reason. */}
-      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+      {/* ONE SHAPE, ONE FILL, THREE HOLES.
+
+          This was a white bubble with three dark dots painted on
+          top of it — and the dark was #111A2E, the panel colour,
+          which is a NAVY. On the frosted chip it read as a black
+          patch inside a white one: two fills arguing at 15 pixels
+          across. The owner's word for it was half-tinted.
+
+          So the dots are knocked OUT of the bubble instead, as
+          subpaths under evenodd, and the frosted glass shows
+          through them. There is exactly one fill on this glyph and
+          it is white. Nothing can be tinted, because nothing else
+          is painted.
+
+          The tail is part of the same outline rather than a second
+          shape: two overlapping white subpaths under evenodd cancel
+          each other where they meet, which is the other way this
+          glyph could have grown a hole nobody asked for.
+
+          DRAWN, NOT TYPED — 💬 is a different object on every
+          platform and a blank box on some of them. */}
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
         <path
-          d="M2 4.2A2.2 2.2 0 0 1 4.2 2h7.6A2.2 2.2 0 0 1 14 4.2v5.1a2.2 2.2 0 0 1-2.2 2.2H6.6L3.4 14v-2.5H4.2A2.2 2.2 0 0 1 2 9.3Z"
+          fillRule="evenodd"
           fill="#FFFFFF"
+          d={
+            "M4.6 2 H11.4 A2.6 2.6 0 0 1 14 4.6 V9 A2.6 2.6 0 0 1 11.4 11.6 " +
+            "H7.9 L4.7 14.6 V11.6 H4.6 A2.6 2.6 0 0 1 2 9 V4.6 A2.6 2.6 0 0 1 4.6 2 Z " +
+            "M4.1 6.8 a1.05 1.05 0 1 0 2.1 0 a1.05 1.05 0 1 0 -2.1 0 Z " +
+            "M6.95 6.8 a1.05 1.05 0 1 0 2.1 0 a1.05 1.05 0 1 0 -2.1 0 Z " +
+            "M9.8 6.8 a1.05 1.05 0 1 0 2.1 0 a1.05 1.05 0 1 0 -2.1 0 Z"
+          }
         />
-        <circle cx="5.4" cy="6.75" r="0.95" fill={GAME.panelFlat} />
-        <circle cx="8" cy="6.75" r="0.95" fill={GAME.panelFlat} />
-        <circle cx="10.6" cy="6.75" r="0.95" fill={GAME.panelFlat} />
       </svg>
       {unread > 0 && (
         <span

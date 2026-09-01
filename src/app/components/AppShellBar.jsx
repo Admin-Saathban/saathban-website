@@ -55,6 +55,7 @@ const HIDDEN_PREFIXES = ["/app/auth", "/app/admin", "/app/g/", "/app/join/"];
    table. */
 const isGameWorld = (path) =>
   /^\/app\/games\/ludo\/[^/]+/.test(path) ||
+  /^\/app\/games\/snakes\/[^/]+/.test(path) ||
   /^\/app\/games\/new\/[^/]+/.test(path);
 
 export default function AppShellBar() {

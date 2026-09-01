@@ -51,7 +51,9 @@ const NO_HEADER = ["/app/auth", "/app/g/", "/app/join/", "/app/community/message
 
    The list at /app/games/ludo keeps its header. */
 const isGameWorld = (p) =>
-  /^\/app\/games\/ludo\/[^/]+/.test(p) || /^\/app\/games\/new\/[^/]+/.test(p);
+  /^\/app\/games\/ludo\/[^/]+/.test(p) ||
+  /^\/app\/games\/snakes\/[^/]+/.test(p) ||
+  /^\/app\/games\/new\/[^/]+/.test(p);
 
 export default function AppHeader() {
   const { t, meta } = useI18n();

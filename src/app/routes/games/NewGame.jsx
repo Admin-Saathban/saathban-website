@@ -56,6 +56,7 @@ import { TimerChoice, RememberChoice } from "./setup/RoomChoices.jsx";
 import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
+import HouseRulesScreen from "./setup/HouseRulesScreen.jsx";
 import { Switch as RuleSwitchBase } from "./setup/SeatSetup.jsx";
 /* NO THEME PICKER. Four names, one board — see the note in
    themes.js. ThemePicker.jsx and the rest of themes.js are left
@@ -276,6 +277,9 @@ export default function NewGame() {
      what a game is would be a worse thing to ship than a switch
      that is early. */
   const [teams, setTeams] = useState(false);
+  /* The rules are a screen of their own now, not a column in this
+     one. See HouseRulesScreen for why. */
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   /* The game's own name, in the reader's language. Read here rather
      than in the render because start() needs it too, for the
@@ -646,6 +650,96 @@ export default function NewGame() {
         />
       )}
 
+      {/* THE RULES SCREEN REPLACES THE ROOM rather than covering
+          it: a sheet over a screen that already scrolls gives a
+          person two scrolling surfaces and one thumb. Same ground,
+          so it reads as the same place turned over. */}
+      {rulesOpen ? (
+        <HouseRulesScreen
+          ts={ts}
+          onBack={() => setRulesOpen(false)}
+          sections={[
+            {
+              id: "turn",
+              title: t("games.setup.rulesTurn"),
+              flags: [sixAgain, threeSixes, autoOnlyMove],
+              body: (
+                <>
+                  <RuleSwitch
+                    on={sixAgain}
+                    onToggle={() => setSixAgain((v) => !v)}
+                    label={t("ludo.rules.extraRoll")}
+                  />
+                  <RuleSwitch
+                    on={threeSixes}
+                    onToggle={() => setThreeSixes((v) => !v)}
+                    label={t("ludo.rules.threeSixes")}
+                  />
+                  <RuleSwitch
+                    on={autoOnlyMove}
+                    onToggle={() => setAutoOnlyMove((v) => !v)}
+                    label={t("games.setup.autoOnlyMove")}
+                  />
+                </>
+              ),
+            },
+            {
+              id: "meet",
+              title: t("games.setup.rulesPairs"),
+              flags: [jotaOn, captureFirst],
+              body: (
+                <>
+                  <RuleSwitch
+                    on={jotaOn}
+                    onToggle={() => setJotaOn((v) => !v)}
+                    label={t("ludo.rules.jota")}
+                  />
+                  <RuleSwitch
+                    on={captureFirst}
+                    onToggle={() => setCaptureFirst((v) => !v)}
+                    label={t("ludo.rules.captureFirst")}
+                  />
+                </>
+              ),
+            },
+            {
+              id: "home",
+              title: t("games.setup.rulesHome"),
+              flags: [exactHome],
+              body: (
+                <RuleSwitch
+                  on={exactHome}
+                  onToggle={() => setExactHome((v) => !v)}
+                  label={t("ludo.rules.exactHome")}
+                />
+              ),
+            },
+            {
+              id: "clock",
+              title: t("games.setup.rulesClock"),
+              body: <TimerChoice value={turnSecs} onPick={setTurnSecs} t={t} ts={ts} />,
+            },
+            {
+              id: "together",
+              title: t("games.setup.rulesTogether"),
+              flags: [teams],
+              body: (
+                <RuleSwitch
+                  on={teams}
+                  onToggle={() => setTeams((v) => !v)}
+                  label={t("games.setup.teams")}
+                  hint={t("games.setup.teamsNote")}
+                />
+              ),
+            },
+            {
+              id: "remember",
+              title: t("games.setup.rulesRemember"),
+              body: <RememberChoice value={remember} onPick={setRemember} t={t} ts={ts} />,
+            },
+          ]}
+        />
+      ) : (
       <SeatSetup
         me={profile}
         minSeats={game.min_seats}
@@ -658,52 +752,61 @@ export default function NewGame() {
         /* §8.1: Ludo's rules, passed by Ludo. Carrom passes none
            and therefore shows none — a game cannot be asked about
            a rule it does not have. */
+        /* ── ONE BUTTON, NOT A WALL ──────────────────────────────
+
+             This slot held five rule switches, a five-way timer, a
+             two-way memory, an auto-move switch and a teams switch
+             — nine controls between the dice choice and Start, all
+             the same size and shape. The owner called it a wall,
+             and a column of nine identical controls is exactly
+             that: nothing on it looks more important than anything
+             else, so none of it is read and Start is a scroll away.
+
+             The rules did not go anywhere. They are on a screen of
+             their own, one press from here, in the same language
+             as the settings menu inside a table. ── */
         rules={
           game.key === "ludo" ? (
-            <>
-              <RuleSwitch
-                on={sixAgain}
-                onToggle={() => setSixAgain((v) => !v)}
-                label={t("ludo.rules.extraRoll")}
-              />
-              <RuleSwitch
-                on={jotaOn}
-                onToggle={() => setJotaOn((v) => !v)}
-                label={t("ludo.rules.jota")}
-              />
-              <RuleSwitch
-                on={exactHome}
-                onToggle={() => setExactHome((v) => !v)}
-                label={t("ludo.rules.exactHome")}
-              />
-              <RuleSwitch
-                on={threeSixes}
-                onToggle={() => setThreeSixes((v) => !v)}
-                label={t("ludo.rules.threeSixes")}
-              />
-              <RuleSwitch
-                on={captureFirst}
-                onToggle={() => setCaptureFirst((v) => !v)}
-                label={t("ludo.rules.captureFirst")}
-              />
-              <TimerChoice value={turnSecs} onPick={setTurnSecs} t={t} ts={ts} />
-              <RememberChoice value={remember} onPick={setRemember} t={t} ts={ts} />
-              <RuleSwitch
-                on={autoOnlyMove}
-                onToggle={() => setAutoOnlyMove((v) => !v)}
-                label={t("games.setup.autoOnlyMove")}
-              />
-
-              {/* Only at a table with four chairs: two against two
-                  needs four people, and a switch that cannot apply
-                  is a question with no answer. */}
-              <RuleSwitch
-                on={teams}
-                onToggle={() => setTeams((v) => !v)}
-                label={t("games.setup.teams")}
-                hint={t("games.setup.teamsNote")}
-              />
-            </>
+            <button
+              type="button"
+              onClick={() => setRulesOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                width: "100%",
+                minHeight: 56,
+                padding: "10px 16px",
+                marginBottom: 12,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(255,255,255,0.07)",
+                color: "#F6EBE2",
+                fontFamily: "inherit",
+                fontSize: ts(A11Y.minBodyPx),
+                fontWeight: 700,
+                textAlign: "start",
+                cursor: "pointer",
+                boxSizing: "border-box",
+              }}
+            >
+              <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span>{t("games.setup.houseRules")}</span>
+                {/* What it would say if you opened it, so most
+                    people never need to. */}
+                <span style={{ fontSize: ts(14), fontWeight: 500, color: "#A8B4CC" }}>
+                  {t("games.setup.houseRulesSummary", {
+                    on: [sixAgain, jotaOn, exactHome, threeSixes, captureFirst].filter(Boolean).length,
+                    secs:
+                      turnSecs === null
+                        ? t("games.setup.timerRelaxed")
+                        : t("games.setup.timerSecs", { n: turnSecs }),
+                  })}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{ color: "#A8B4CC" }}>›</span>
+            </button>
           ) : null
         }
         /* NO `extras`. It held the theme picker and nothing else;
@@ -712,6 +815,7 @@ export default function NewGame() {
         onPickPeople={(seat) => setSheetSeat(seat)}
         onStart={start}
       />
+      )}
 
       {sheetSeat != null && (
         <FacesSheet

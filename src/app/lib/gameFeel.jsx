@@ -381,7 +381,32 @@ export const GAME_MOTION_CSS = `
   62%  { transform: translateY(-3px) scale(0.97, 1.04); }
   100% { transform: translateY(0)    scale(1, 1); }
 }
-.sb-die-land { animation: saath-die-land 260ms cubic-bezier(.2,.8,.3,1) 1 both; }
+/* THE NUMBER IS HELD, AND THE HOLD IS THE POINT.
+
+   The throw ended, the cube turned to its face, and play carried
+   straight on — so the owner saw a die stop and a goti move, and
+   never read the number in between. A result nobody has time to
+   read has not been shown.
+
+   So the die stays up for 800ms after it lands: a little larger
+   than life, on a warm halo, then both fade and it is an ordinary
+   die again. Scale AND glow rather than either alone — a die at
+   1.14 with no halo just looks nearer, and a halo with no size
+   change is a decoration on something that has not changed. */
+@keyframes saath-die-hold {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(243,206,94,0)); }
+  14%  { transform: scale(1.14); filter: drop-shadow(0 0 9px rgba(243,206,94,0.85)); }
+  70%  { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(243,206,94,0.72)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(243,206,94,0)); }
+}
+/* The squash first, then the hold. Two animations on one element,
+   sequenced by a delay rather than merged into one keyframe, so
+   the landing keeps the timing it was tuned with. */
+.sb-die-land {
+  animation:
+    saath-die-land 260ms cubic-bezier(.2,.8,.3,1) 1 both,
+    saath-die-hold 800ms ease-out 200ms 1 both;
+}
 @keyframes saath-nudge {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-4px); }

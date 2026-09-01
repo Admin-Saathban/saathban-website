@@ -93,9 +93,35 @@ export default function GamesHome() {
   /* Takes the registry row. quickTable needs it for the seat
      count, and this screen already has it — passing the key would
      make it fetch what is sitting in this component's state. */
+  /* ── WHY TAPPING LUDO STOPPED WORKING ─────────────────────────
+
+     `opening` was set on the way out and cleared only in a CATCH,
+     so the success path — the one everybody takes — left it
+     latched. This pane is never unmounted (it lives in the tab
+     panes), so coming back to the games list returns to the same
+     component with the same state, the guard below fires, and
+     every tap after the first returns silently.
+
+     Not the first tap of a session, then: the first tap after a
+     table, and then for ever. Driven rather than reasoned — tap 1
+     reached the setup room in 375ms, back, tap 2 nothing in six
+     seconds, tap 3 nothing.
+
+     THE OTHER HALF IS SILENCE. Even working, this awaits
+     fetchMySessions — and if you hold a table of a different game,
+     a leave and a create as well — before one pixel changes. Three
+     round trips on mobile data with the screen looking completely
+     inert is a tap that did not register, as far as the person
+     tapping is concerned. Same lesson as the goti walk: the
+     response to a tap has to begin with the tap. */
   const openTable = async (game) => {
     const key = game.key;
-    if (opening) return;
+    /* Only the SAME game is refused. Tapping Snakes while Ludo is
+       still opening is somebody changing their mind, not a double
+       tap, and it was being swallowed too. */
+    if (opening === key) return;
+    /* Before the first await, so the tile presses immediately. */
+    setOpening(key);
 
     /* TAPPING A GAME OPENS THAT GAME.
 
@@ -116,16 +142,15 @@ export default function GamesHome() {
     if (mine) {
       if (mine.game_key === key) {
         navigate(mine.game_key === "ludo" ? `/app/games/ludo/${mine.id}` : `/app/games/s/${mine.id}`);
+        setOpening(null);
         return;
       }
-      setOpening(key);
       try {
         await leaveSession(mine.id);
       } catch {
         /* if it will not let go, the create below fails honestly */
       }
     }
-    setOpening(key);
     try {
       /* ITEM 1: THE SETUP ROOM RETURNS, before the board.
 
@@ -140,7 +165,12 @@ export default function GamesHome() {
          made and a seat held in one tap from a feed. That is a
          different act from choosing a game to play. */
       navigate(`/app/games/new/${key}`);
-    } catch {
+    } finally {
+      /* FINALLY, NOT CATCH. This was a catch, so the success path
+         — navigating to the setup room, which is what happens
+         every time it works — left the flag set on a component
+         that stays mounted. A latch released only when things go
+         wrong is a latch that is stuck whenever they go right. */
       setOpening(null);
     }
   };
@@ -504,6 +534,7 @@ export default function GamesHome() {
               key={g.key}
               type="button"
               disabled={!g.enabled}
+              aria-busy={opening === g.key}
               onClick={() => openTable(g)}
               style={{
                 display: "flex",
@@ -520,6 +551,15 @@ export default function GamesHome() {
                 textAlign: "start",
                 cursor: g.enabled ? "pointer" : "default",
                 opacity: g.enabled ? 1 : 0.5,
+                /* The tap is answered before the network is. This
+                   press is the whole of what somebody gets for the
+                   second or two of round trips behind opening a
+                   table, and without it the screen is
+                   indistinguishable from one that did not hear
+                   them. */
+                transform: opening === g.key ? "scale(0.98)" : "none",
+                borderColor: opening === g.key ? C.green : C.warmGray,
+                transition: "transform 120ms ease, border-color 120ms ease",
               }}
             >
               {/* §9: A GAME IS AN OBJECT, NOT A LIST ROW. The board
@@ -677,6 +717,17 @@ export default function GamesHome() {
             >
               {t("games.code.go")}
             </PrimaryBtn>
+            {/* The way out, mirroring pastHide below. Clears the
+                digits on the way: reopening should start fresh
+                rather than resume half of someone else's code. */}
+            <GhostBtn
+              type="button"
+              onClick={() => { setCodeOpen(false); setCode(""); setCodeMsg(""); }}
+              aria-expanded
+              style={{ width: "100%" }}
+            >
+              {t("games.code.cancel")}
+            </GhostBtn>
           </form>
         )}
       </Card>

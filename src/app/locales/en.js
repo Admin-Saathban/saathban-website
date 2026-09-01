@@ -1912,7 +1912,6 @@ const en = {
       confirmOn: "They'll say \"I'm coming\" — a small promise.",
       confirmOff: "They can just come along.",
       send: "Ask them",
-      cancel: "Not now",
       needWhat: "Say what you're up for, and we'll ask.",
       failed: "That didn't send. Try once more?",
       /* §12's protocol, said plainly: this is not a broadcast. */
@@ -3224,6 +3223,18 @@ const en = {
     setup: {
       timer: "How long is a turn?",
       timerHint: "When it runs out, a bot plays that turn so nobody is left waiting.",
+      houseRules: "House rules",
+      houseRulesHint:
+        "Almost nobody changes these. They are here for the tables where somebody does.",
+      houseRulesSummary: "{on} of 5 on \u00b7 {secs} a turn",
+      backToTable: "Back to the table",
+      rulesOnOf: "{on} of {of} on",
+      rulesTurn: "How a turn works",
+      rulesPairs: "When pieces meet",
+      rulesHome: "Getting home",
+      rulesClock: "How long a turn may take",
+      rulesTogether: "Playing together",
+      rulesRemember: "Next time",
       timerSecs: "{n}s",
       timerRelaxed: "Relaxed",
       remember: "Keep these rules?",
@@ -3450,6 +3461,7 @@ const en = {
     code: {
       cta: "Have a code?",
       title: "Join with a code",
+      cancel: "Not now",
       hint: "Six digits, read aloud by a friend.",
       go: "Take me to the table",
       noTable:

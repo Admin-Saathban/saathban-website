@@ -159,7 +159,9 @@ export default function Die({
   useEffect(() => {
     if (wasRolling.current && !rolling) {
       setLanding(true);
-      const id = window.setTimeout(() => setLanding(false), 280);
+      /* 260ms of landing plus 800ms of holding the number, and
+         the class carries both. */
+      const id = window.setTimeout(() => setLanding(false), 1040);
       wasRolling.current = rolling;
       return () => window.clearTimeout(id);
     }

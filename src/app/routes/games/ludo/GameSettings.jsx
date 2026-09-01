@@ -57,6 +57,10 @@ import Rulebook from "./Rulebook.jsx";
 
 /* The five the host chooses, in the order the setup room offers
    them. `invert` marks the one whose default is OFF. */
+/* Injected at build time by vite.config.js. */
+const BUILD =
+  typeof __SB_BUILD_HASH__ === "string" ? `build ${__SB_BUILD_HASH__}` : "build unknown";
+
 const HOUSE = [
   { key: "extra_roll_on_six", label: "ludo.rules.extraRoll" },
   { key: "jota", label: "ludo.rules.jota" },
@@ -323,6 +327,38 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
         <Section id="book" open={open} onToggle={setOpen} ts={ts} title={t("ludo.settings.rulebook")}>
           <Rulebook rules={rules} />
         </Section>
+
+        {/* ── WHICH BUILD THIS TABLE IS RUNNING ──────────────────
+
+             The argument this ends: a lane reports something fixed,
+             the owner's phone still shows it broken, and neither
+             side can tell whether they are looking at the same
+             code. Twice this week the answer was that the work had
+             simply not shipped yet, and it took a bundle download
+             and a keyframe comparison to establish it. Now every
+             report carries a hash and the table shows one.
+
+             The define is lane 2's (vite.config.js), which reads
+             VERCEL_GIT_COMMIT_SHA on a deploy and asks git
+             locally. Guarded with typeof anyway: a settings sheet
+             that throws because a build constant is missing would
+             be a worse bug than the one it exists to prevent.
+
+             Small, grey, and last. It is for one person on one
+             evening, not a label anybody else needs to read. ── */}
+        <p
+          style={{
+            margin: "14px 0 0",
+            textAlign: "center",
+            fontSize: ts(13),
+            letterSpacing: "0.06em",
+            color: GAME.inkMuted,
+            opacity: 0.72,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {BUILD}
+        </p>
       </section>
     </>
   );

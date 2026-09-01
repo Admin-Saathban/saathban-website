@@ -75,8 +75,25 @@ import CollisionNote from "../CollisionNote.jsx";
 /* Where one person's "talk me through it" is remembered. */
 const HINTS_KEY = "sb-ludo-hints";
 
-const BOT_BEAT = 1400;
-const BOT_GAP = 3000;
+/* SOMEBODY ELSE'S THROW, IN TWO PARTS.
+
+   It was one: the dice tumbled for the whole hold and the board
+   was applied the moment it ended, so the die went from turning
+   straight to gone and the number it landed on was never on the
+   screen as a still object. The owner's words — he sees the goti
+   move without ever seeing what the bot got.
+
+   BOT_THROW is the cube turning (one full 700ms loop, so it stops
+   square). BOT_HOLD is the number sitting there afterwards, lit,
+   with nothing else happening. Only then is the move applied and
+   the goti walks.
+
+   BOT_GAP has to clear all of it plus the walk, or the next bot's
+   tick interrupts the last one's number. */
+const BOT_THROW = 700;
+const BOT_HOLD = 800;
+const BOT_BEAT = BOT_THROW + BOT_HOLD;
+const BOT_GAP = 3600;
 
 /* Everything the play screen draws from, as one string. If two
    polls produce the same one, the second is not a render. */
@@ -274,6 +291,8 @@ export default function LudoSession() {
 
   const shownMoveRef = useRef(undefined);
   const botHoldRef = useRef(0);
+  /* The moment the cube stops turning, halfway through the hold. */
+  const botSettleRef = useRef(0);
   /* Whose sounds this viewer has silenced, reachable from `load`. */
   const isSilentRef = useRef(null);
   /* True while a move is waiting for its throw to finish. Nothing
@@ -362,7 +381,7 @@ export default function LudoSession() {
     ) {
       shownMoveRef.current = key;
       holdingRef.current = true;
-      setBotThrow({ seat: mover, die: mv.die || null });
+      setBotThrow({ seat: mover, die: mv.die || null, phase: "throwing" });
       /* THE SAME NOISE A PERSON'S THROW MAKES.
 
          It made none. The dice sound existed and had exactly one
@@ -376,6 +395,15 @@ export default function LudoSession() {
          sound a seat makes. */
       if (!isSilentRef.current?.(mover)) playSound("dice");
       window.clearTimeout(botHoldRef.current);
+      /* THE CUBE STOPS, AND THE NUMBER STAYS. Phase two puts the
+         die on the plate showing what was actually thrown — the
+         face comes from lastDiceRef, which was written a few
+         lines above from this same move — and the plate's own
+         landing animation lights it. Nothing else moves for
+         BOT_HOLD. */
+      botSettleRef.current = window.setTimeout(() => {
+        setBotThrow((b) => (b ? { ...b, phase: "settled" } : b));
+      }, BOT_THROW);
       botHoldRef.current = window.setTimeout(() => {
         holdingRef.current = false;
         setBotThrow(null);
@@ -419,6 +447,7 @@ export default function LudoSession() {
     softClosed.current = false;
     shownMoveRef.current = undefined;
     window.clearTimeout(botHoldRef.current);
+    window.clearTimeout(botSettleRef.current);
     holdingRef.current = false;
     setBotThrow(null);
     /* The plates' remembered faces, the bot pacemaker's clock and
@@ -1179,9 +1208,14 @@ export default function LudoSession() {
 
   /* WHICH SEAT IS MID-THROW. Mine while I am rolling; a bot's
      while its own throw is being shown (see the bot beat). */
+  /* ONLY WHILE THE CUBE IS ACTUALLY TURNING. In the settled half
+     of somebody else's throw this goes back to null, which is
+     what lets the plate draw a still die showing the number they
+     threw — and what makes the die's own landing animation fire,
+     because that is armed by the edge out of `rolling`. */
   const rollingSeat = rolling
     ? mySeatRow?.seat ?? null
-    : botThrow
+    : botThrow && botThrow.phase !== "settled"
     ? botThrow.seat
     : null;
 

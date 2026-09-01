@@ -2,12 +2,28 @@
    The dice — beside their owner, never in the board's middle, and
    they ARE the roll control. There is no roll bar anywhere.
 
+   A REAL CUBE, IN SPACE. This was a flat SVG square with a CSS
+   `rotate()` on it, and the owner named exactly what that is: "it
+   should revolve like a ball round, not like a book on your
+   finger." A rotation in the plane of the screen has no way to
+   show a second face, so the pips were the only thing moving and
+   the die read as a token being spun rather than an object being
+   thrown.
+
+   So: six faces, `preserve-3d`, a perspective on the wrapper, and
+   a throw that turns about two axes at once. The faces you see mid
+   throw are the die's OWN other numbers — 1 opposite 6, 2 opposite
+   5, 3 opposite 4, the way a die is actually made — which is why
+   it reads as one object turning instead of a picture changing.
+
    IVORY AND MATTE. Body #F8F2E4, edge #D8CCAE, a soft square corner
    and classic round dark pips at #2B2B2B. The white highlight bar
    across the top is gone: it was there to say "this is a cube, not a
    card", and on a midnight table a gloss on a small white object
    reads as a screen element rather than as a die you could pick up.
-   The edge does that job instead.
+   The cube's own shading does that job now, and it is honest about
+   it — a face turned away from the light is darker because it is
+   turned away.
 
    A die is a real object here, and a whole die is a tap target — so
    "roll" never asks for a precise finger.
@@ -23,7 +39,11 @@
    only signal — the sentence is.
    ════════════════════════════════════════════════ */
 
+import { useEffect, useRef, useState } from "react";
+
 const IVORY = "#F8F2E4";
+/* The same teal as every other chosen thing in the game. */
+const SELECTED = "#2AB8A0";
 const EDGE = "#D8CCAE";
 const PIP = "#2B2B2B";
 
@@ -63,6 +83,47 @@ export function DieFace({ value = 1, size = 38, ink = PIP, faint = false }) {
   );
 }
 
+/* ── The six faces, laid out the way a die is actually made ───────
+   Opposite faces sum to seven. That is not decoration: it is what
+   makes a tumbling cube read as ONE object. If 1 and 6 were
+   adjacent, a quarter turn would show you a pair no real die can
+   show, and the eye — which has held a die — would know.
+
+   `transform` places the face; `rest` is the cube rotation that
+   brings that face back to the front. They are inverses, and they
+   have to stay inverses or a die lands showing the wrong number.  */
+const FACES = [
+  { v: 1, transform: "" },
+  { v: 6, transform: "rotateY(180deg)" },
+  { v: 3, transform: "rotateY(90deg)" },
+  { v: 4, transform: "rotateY(-90deg)" },
+  { v: 2, transform: "rotateX(90deg)" },
+  { v: 5, transform: "rotateX(-90deg)" },
+];
+
+const REST = {
+  1: "rotateX(0deg) rotateY(0deg)",
+  6: "rotateX(0deg) rotateY(-180deg)",
+  3: "rotateX(0deg) rotateY(-90deg)",
+  4: "rotateX(0deg) rotateY(90deg)",
+  2: "rotateX(-90deg) rotateY(0deg)",
+  5: "rotateX(90deg) rotateY(0deg)",
+};
+
+/* How much light each face keeps at rest. The front is lit, the
+   sides fall away, the bottom is in shadow — so even a die sitting
+   perfectly still reads as having depth rather than as a sticker.
+   Applied as a dark wash over the face, never by changing the
+   ivory, so every face is the same object under different light. */
+const SHADE = {
+  1: 0,
+  2: 0.06,
+  3: 0.14,
+  4: 0.14,
+  5: 0.22,
+  6: 0.1,
+};
+
 /* One die beside its player, with everything a person needs to know
    about it. */
 export default function Die({
@@ -87,44 +148,122 @@ export default function Die({
 }) {
   const spent = state === "used" || state === "wasted";
   const clickable = !!onClick && !disabled && (state === "ready" || state === "selected");
-  const inner = (
+  const rolling = state === "rolling";
+
+  /* THE LANDING FIRES ON THE EDGE, NOT ON THE STATE. A die that is
+     merely sitting there must not squash every time React re-renders
+     it, so the bounce is armed by the transition out of `rolling`
+     and by nothing else. */
+  const wasRolling = useRef(rolling);
+  const [landing, setLanding] = useState(false);
+  useEffect(() => {
+    if (wasRolling.current && !rolling) {
+      setLanding(true);
+      const id = window.setTimeout(() => setLanding(false), 280);
+      wasRolling.current = rolling;
+      return () => window.clearTimeout(id);
+    }
+    wasRolling.current = rolling;
+    return undefined;
+  }, [rolling]);
+
+  /* A SEPARATE THROW EVERY TIME. Two dice thrown from one hand do
+     not turn in lockstep — but a DELAY would not have given that,
+     because a delayed copy of one path is still that path and the
+     pair would show the same faces half a beat apart. They take
+     genuinely different routes instead, one leading on X and one
+     on Y, and both end square (see the keyframes) so whenever the
+     server's answer stops the throw the cube is face-on and the
+     turn into the rolled number starts from somewhere known. */
+  const seed = useRef(Math.random());
+  useEffect(() => {
+    if (rolling) seed.current = Math.random();
+  }, [rolling]);
+
+  const shown = PIPS[value] ? value : null;
+
+  const cube = (
     <span
       style={{
         position: "relative",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "block",
+        width: size,
+        height: size,
+        transformStyle: "preserve-3d",
+        /* At rest it holds the orientation that puts its number at
+           the front. Nothing rolled yet has no orientation to hold. */
+        transform: rolling ? undefined : REST[shown || 1],
+        /* Not instant: when the answer lands the cube turns INTO its
+           face rather than cutting to it, which is the deceleration
+           the throw has been promising for 700ms. */
+        transition: rolling ? "none" : "transform 300ms cubic-bezier(.16,.84,.28,1)",
+        animation: rolling
+          ? `${seed.current < 0.5 ? "saath-throw" : "saath-throw-b"} 700ms linear infinite`
+          : undefined,
+      }}
+    >
+      {FACES.map((f) => (
+        <span
+          key={f.v}
+          style={{
+            position: "absolute",
+            inset: 0,
+            transform: `${f.transform} translateZ(${size / 2}px)`,
+            backfaceVisibility: "hidden",
+            lineHeight: 0,
+          }}
+        >
+          <DieFace
+            value={f.v}
+            size={size}
+            ink={PIP}
+            faint={shown == null && !rolling && f.v === 5}
+          />
+          {/* The light. A wash rather than a different ivory, so
+              the faces stay one object. */}
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: (9 / 38) * size,
+              background: `rgba(24,18,8,${SHADE[f.v]})`,
+              pointerEvents: "none",
+            }}
+          />
+        </span>
+      ))}
+    </span>
+  );
+
+  const inner = (
+    <span
+      className={landing ? "sb-die-land" : undefined}
+      style={{
+        position: "relative",
+        display: "inline-block",
+        width: size,
+        height: size,
         borderRadius: (11 / 38) * size,
-        padding: 2,
-        border: state === "selected" ? "3px solid #F3CE5E" : "3px solid transparent",
+        /* THE DIE YOU ARE HOLDING. Teal, like every other
+           "this one" in the game — gold here was chrome
+           wearing the board's colour, and it read as the
+           goti halo having escaped onto the controls. */
+        outline: state === "selected" ? `3px solid ${SELECTED}` : "none",
+        outlineOffset: 2,
         opacity: spent ? 0.45 : 1,
-        /* 600ms a turn, eased so it leaves fast and settles —
-           linear at 420ms was what made it read as a shake. */
-        animation:
-          state === "rolling"
-            ? "saath-tumble 0.6s cubic-bezier(.22,.7,.36,1) infinite"
-            : undefined,
+        /* THE DEPTH THE CUBE IS TURNING IN. Small relative to the
+           die — a shallow perspective on a 38px object is what makes
+           a near face grow as it comes round, and that growth is the
+           whole difference between a cube and a hexagon. */
+        perspective: size * 4.5,
         /* Matte, and it sits on the table rather than glowing on it. */
         filter: dim
           ? "drop-shadow(0 1px 3px rgba(0,0,0,0.35))"
           : "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
       }}
     >
-      {value ? (
-        <DieFace value={value} size={size} ink={PIP} />
-      ) : (
-        /* NOTHING ROLLED YET, AND NOTHING TO CLAIM. A hardcoded
-           `|| 1` claimed a number nobody threw; a truly empty face
-           fixed the lie and produced a plain ivory square that read
-           as an empty card. Faint pips are unmistakably a die and
-           claim nothing.
-
-           This is now the ONLY faint thing on a die, and it is the
-           first roll of a table only — every seat that has thrown
-           keeps its last face, so the board fills with real dice
-           within a turn. */
-        <DieFace value={5} size={size} ink={PIP} faint />
-      )}
+      {cube}
     </span>
   );
 

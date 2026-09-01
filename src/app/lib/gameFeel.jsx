@@ -326,13 +326,62 @@ export const GAME_MOTION_CSS = `
 
    Two full turns over 600ms, a hop of eight pixels at the top of
    it, no sideways travel at all, coming to rest square. */
-@keyframes saath-tumble {
-  0%   { transform: translateY(0)    rotate(0deg)   scale(1); }
-  25%  { transform: translateY(-8px) rotate(190deg) scale(1.06); }
-  55%  { transform: translateY(-6px) rotate(400deg) scale(1.06); }
-  80%  { transform: translateY(1px)  rotate(620deg) scale(0.98); }
-  100% { transform: translateY(0)    rotate(720deg) scale(1); }
+/* WRONG, AND REPLACED. A plain CSS rotate() is a rotation in the PLANE of
+   the screen: a flat square turning about its own middle, which
+   is a card spun on a finger and never a die. The owner's words
+   were exact — "it should revolve like a ball round, not like a
+   book on your finger" — and this keyframe is the book.
+
+   A thrown die turns about two axes at once, shows several of
+   its six faces on the way, and comes down. That cannot be done
+   to a flat square at all, however it is eased: it needs six
+   faces in space. So the die below is a real cube (Dice.jsx) and
+   these are its keyframes.
+
+   TWO AXES, INCOMMENSURATE. 1080deg of Y against 720deg of X
+   means the pair never repeats within the throw, so the same
+   face is not presented twice at the same moment of the arc and
+   the tumble does not read as a loop. The cube rises, hangs, and
+   falls — the arc a thrown object makes — and the landing is a
+   separate, shorter animation so the settle can overshoot. */
+@keyframes saath-throw {
+  0%   { transform: translateY(0)     rotateX(0deg)   rotateY(0deg)    rotateZ(0deg); }
+  30%  { transform: translateY(-14px) rotateX(230deg) rotateY(320deg)  rotateZ(12deg); }
+  60%  { transform: translateY(-11px) rotateX(470deg) rotateY(690deg)  rotateZ(-8deg); }
+  85%  { transform: translateY(-3px)  rotateX(650deg) rotateY(950deg)  rotateZ(4deg); }
+  100% { transform: translateY(0)     rotateX(720deg) rotateY(1080deg) rotateZ(0deg); }
 }
+/* THE SECOND HAND. Two dice leaving one hand do not turn in
+   lockstep, and a delay would not fix that — a delayed copy of
+   the same path is the same path, and both dice would still be
+   showing the same face at the same moment, half a beat apart.
+   So the pair genuinely turns differently: this one leads on X.
+
+   BOTH END AT A WHOLE NUMBER OF TURNS, and that is the part
+   that matters. The throw loops until the answer arrives, so it
+   is stopped at whatever moment the server replies — and because
+   every iteration ENDS square, stopping it leaves the cube face-
+   on rather than at some arbitrary angle. The 300ms turn into
+   the rolled face then starts from a known orientation, which is
+   what lets it read as the die settling rather than as a cut. */
+@keyframes saath-throw-b {
+  0%   { transform: translateY(0)     rotateX(0deg)    rotateY(0deg)   rotateZ(0deg); }
+  30%  { transform: translateY(-16px) rotateX(340deg)  rotateY(210deg) rotateZ(-14deg); }
+  60%  { transform: translateY(-10px) rotateX(700deg)  rotateY(430deg) rotateZ(9deg); }
+  85%  { transform: translateY(-4px)  rotateX(960deg)  rotateY(640deg) rotateZ(-5deg); }
+  100% { transform: translateY(0)     rotateX(1080deg) rotateY(720deg) rotateZ(0deg); }
+}
+/* THE LANDING. The cube has stopped turning and is on the table;
+   this is the weight arriving after it — one squash and a small
+   rebound, 260ms, on the WRAPPER rather than the cube, so it
+   cannot fight the 3D transform the cube is holding. */
+@keyframes saath-die-land {
+  0%   { transform: translateY(-6px) scale(1, 1); }
+  35%  { transform: translateY(0)    scale(1.1, 0.88); }
+  62%  { transform: translateY(-3px) scale(0.97, 1.04); }
+  100% { transform: translateY(0)    scale(1, 1); }
+}
+.sb-die-land { animation: saath-die-land 260ms cubic-bezier(.2,.8,.3,1) 1 both; }
 @keyframes saath-nudge {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-4px); }
@@ -450,7 +499,7 @@ export const GAME_MOTION_CSS = `
   /* Disable the animation itself rather than redefining keyframes:
      one rule, and it cannot be defeated by source order. */
   .sb-shake, .sb-nudge, .sb-hop, .sb-win-pop, .sb-confetti-piece,
-  [style*="saath-tumble"], .sb-tumbling,
+  [style*="saath-throw"], .sb-tumbling, .sb-die-land,
   .sb-think, .sb-die-arrow, .sb-cell-flash, .sb-ceremony {
     animation: none !important;
   }

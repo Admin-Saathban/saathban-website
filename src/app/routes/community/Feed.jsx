@@ -83,6 +83,7 @@ import {
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 import RichText from "../../lib/richText.jsx";
+import useBackToClose from "../../components/useBackToClose.js";
 
 /* §7 shows where a post came from as a small label — the area if the
    author has one, else the city. It is information, not a filter: there
@@ -458,6 +459,22 @@ function PostCard({
   const [draft, setDraft] = useState(post.body || "");
   const [savingEdit, setSavingEdit] = useState(false);
   useEffect(() => { if (editing) setDraft(post.body || ""); }, [editing, post.body]);
+
+  /* BACK CANCELS THE EDIT INSTEAD OF LEAVING COMMUNITY.
+
+     This is an overlay that no audit for role="dialog" can see: there
+     is no dialog, no menu, no scrim. Selecting Edit replaces the
+     post's words with a textarea IN PLACE, so the only thing that says
+     a surface is open is a boolean. Back therefore did what back does
+     with no history entry to spend — it navigated off the feed
+     entirely, and took the half-written edit with it.
+
+     Worse than a menu for exactly that reason: a menu closed by
+     accident costs a tap, an editor closed by accident costs the
+     sentence somebody was part way through. Cancelling keeps them on
+     the feed with the post intact, which is the smaller loss of the
+     two that were on offer. */
+  useBackToClose(editing, onEditCancel);
   /* §7 — post-audio is private, so the card signs its own URL. Done
      here rather than for the whole feed so that a list of forty posts
      signs only the handful that actually carry a recording. */

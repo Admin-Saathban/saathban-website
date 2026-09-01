@@ -217,6 +217,22 @@ export default function SnakesSession() {
     return <Centered><p>{t("games.wait.calledOff")}</p></Centered>;
   }
 
+  /* A TABLE WITH NOBODY AT IT IS NOT A TABLE EITHER, and this one is
+     the quiet failure rather than the loud one.
+
+     game_seats is behind can_view_game(), so a reader who is not a
+     participant gets ZERO ROWS AND NO ERROR — PostgREST answers 200
+     with []. Nothing throws. The board then drew itself perfectly:
+     paper, snakes, ladders, and not one piece on it.
+
+     It is easy to reach without doing anything wrong. Miss enough
+     turns and the rails hand your seat to a bot; you are no longer a
+     participant, and the table you were sitting at five minutes ago
+     becomes a beautiful empty board. Say so instead. */
+  if (session && !finished && (session.seats || []).length === 0) {
+    return <Centered><p>{t("games.wait.calledOff")}</p></Centered>;
+  }
+
   if (error === "gone") {
     return <Centered><p>{t("games.wait.calledOff")}</p></Centered>;
   }

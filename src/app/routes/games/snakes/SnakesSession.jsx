@@ -204,6 +204,19 @@ export default function SnakesSession() {
     });
   }, [session, frame, t]);
 
+  /* A TABLE THAT WAS CALLED OFF IS NOT A TABLE.
+
+     Found by looking: a lobby left sitting is cancelled by the rails'
+     own tick, and this screen only knew about lobby, active and
+     finished — so a cancelled table fell through to the LAST branch
+     and drew a live board with everybody on square zero, waiting for
+     a turn that was never coming. Falling through to the most
+     specific screen is the wrong default; the fall-through here is
+     now the board only when the board is really what this is. */
+  if (session?.status === "cancelled") {
+    return <Centered><p>{t("games.wait.calledOff")}</p></Centered>;
+  }
+
   if (error === "gone") {
     return <Centered><p>{t("games.wait.calledOff")}</p></Centered>;
   }

@@ -31,7 +31,7 @@ import { Sticker, parseStickerRef } from "../../../assets/stickers/stickers.jsx"
 import { SEAT_COLORS } from "./board.js";
 import { fetchChat, sendChat } from "./ludoRails.js";
 import { readMutes } from "../tableMutes.js";
-import { playSound } from "../../../lib/sound.js";
+import { playSound, unlockSound } from "../../../lib/sound.js";
 import useBackToClose from "../../../components/useBackToClose.js";
 
 const POLL_MS = 4000;
@@ -69,6 +69,29 @@ export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSen
   const [mutes, setMutes] = useState({});
 
   const seatOf = (profileId) => seats.find((s) => s.profile_id === profileId);
+
+  /* THE FIRST SEND WAS PAYING FOR THE WHOLE SOUND SYSTEM.
+
+     playSound("chatSend") fires before the round trip, which is right
+     — but on the first call it constructs the AudioContext, and that
+     is not free on a mid-range phone. Measured, throttled 4x:
+
+       sound on   first send 329ms, later sends 53-61ms
+       muted       first send  95ms, later sends 42ms
+
+     235ms of the first send was building an audio graph, on the send
+     path, in front of the person. Opening the panel is a user gesture
+     too, so the context can be built there instead — the cost is paid
+     against a tap that is already opening something, where it is
+     invisible, rather than against the one tap that is supposed to
+     feel immediate.
+
+     This is why he reported it after a FRESH INSTALL: the context is
+     built once per page load, and the chat whoosh is often the first
+     sound of a session. */
+  useEffect(() => {
+    if (open) unlockSound();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -331,6 +354,27 @@ export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSen
             />
             <button
               type="submit"
+              /* THE KEYBOARD MUST NOT DROP AFTER EVERY MESSAGE.
+
+                 Measured on a throttled phone profile: focus was on
+                 BODY after every single send, six out of six. Tapping
+                 this button focuses it, then the draft clears and
+                 `disabled` becomes true — and a disabled element
+                 cannot hold focus, so it falls to the document and the
+                 soft keyboard closes with it. To type a second line
+                 you had to tap the input again.
+
+                 That is what "sending feels slow" actually was. The
+                 bubble was never slow; the CONVERSATION stopped after
+                 each line.
+
+                 preventDefault on mousedown is what stops a control
+                 taking focus in the first place, so the input never
+                 loses it and there is nothing to restore. Refocusing
+                 afterwards would race React's commit — the blur
+                 happens when the disable renders, not when the tap
+                 lands. */
+              onMouseDown={(e) => e.preventDefault()}
               disabled={!draft.trim()}
               style={{
                 flex: "0 0 auto",

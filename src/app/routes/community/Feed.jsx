@@ -1351,6 +1351,34 @@ export default function Feed({ composer = true, embedded = false }) {
 
   /* Reactions land instantly and reconcile: a tap that the server
      refuses rolls back rather than lying. */
+  /* ── ACT NOW, CONFIRM BEHIND ──
+
+     Every menu action used to await the network BEFORE touching the
+     screen, and several then awaited a full feed reload on top. Measured
+     on the deployed build at 300ms latency: pressing "Pin to your
+     profile" showed nothing for 373ms, and from Karachi to a Singapore
+     region that is comfortably the second the owner reports. The sheet
+     sat open and frozen the whole time, which reads as a dead app.
+
+     `act` inverts it: the sheet closes and the change appears at once,
+     the request goes behind, and a failure PUTS IT BACK and says so.
+     Nothing here waits on a round trip to show that it happened.
+
+     The reload afterwards is deliberately NOT awaited — it reconciles
+     with the server in the background. Awaiting it was the second half
+     of the delay: an action that had already succeeded still held the
+     screen while the whole feed came down again. */
+  const act = (apply, request, undo) => {
+    setMenuPost(null);
+    apply();
+    request()
+      .then(() => load())
+      .catch(() => {
+        undo?.();
+        raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+      });
+  };
+
   const toggleReaction = async (postId, emoji, mine) => {
     const prior = reactions;
     setReactions((rs) => {
@@ -1536,31 +1564,78 @@ export default function Feed({ composer = true, embedded = false }) {
           following={extras.follows.some((x) => x.post_id === menuPost.id && x.profile_id === myId)}
           onClose={() => setMenuPost(null)}
           actions={{
-            pin: async (on) => { await setPinned(menuPost.id, on); setMenuPost(null); await load(); },
-            changeVisibility: async () => {
-              /* Cycles through the three in §2's order — the sheet
-                 shows the current value on the row, so the change is
-                 visible where it was made. */
+            pin: (on) => {
+              const p = menuPost;
+              act(
+                () => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, pinned_at: on ? new Date().toISOString() : null } : x))),
+                () => setPinned(p.id, on),
+                () => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, pinned_at: p.pinned_at } : x)))
+              );
+            },
+            changeVisibility: () => {
+              /* Cycles through the three in §2's order. This one keeps
+                 the sheet OPEN on purpose — the row shows the current
+                 value, so the change has to be visible where it was
+                 made, and closing would hide the answer. */
               const order = ["public", "friends", "private"];
-              const next = order[(order.indexOf(menuPost.visibility || "public") + 1) % 3];
-              await setPostVisibility(menuPost.id, next);
-              setMenuPost({ ...menuPost, visibility: next });
-              await load();
+              const p = menuPost;
+              const was = p.visibility || "public";
+              const next = order[(order.indexOf(was) + 1) % 3];
+              setMenuPost({ ...p, visibility: next });
+              setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, visibility: next } : x)));
+              setPostVisibility(p.id, next)
+                .then(() => load())
+                .catch(() => {
+                  setMenuPost((m) => (m && m.id === p.id ? { ...m, visibility: was } : m));
+                  setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, visibility: was } : x)));
+                  raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+                });
             },
             edit: () => { setMenuPost(null); openComposer(null); },
-            setReplies: async (off) => { await setRepliesOff(menuPost.id, off); setMenuPost(null); await load(); },
-            copyLink: async () => { await copyLink(menuPost.id); setMenuPost(null); },
-            closeHelp: async (note) => { await closeHelp(menuPost.id, note); setMenuPost(null); await load(); },
-            remove: async () => { const p = menuPost; setMenuPost(null); await onAction("delete", p); },
-            save: async (on) => {
-              await toggleSave(menuPost.id, myId, !on);
-              setExtras(await fetchHelpExtras((posts || []).map((x) => x.id)));
-              setMenuPost(null);
+            setReplies: (off) => {
+              const p = menuPost;
+              act(
+                () => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies_off: off } : x))),
+                () => setRepliesOff(p.id, off),
+                () => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies_off: p.replies_off } : x)))
+              );
             },
-            follow: async (on) => {
-              await toggleFollow(menuPost.id, myId, !on);
-              setExtras(await fetchHelpExtras((posts || []).map((x) => x.id)));
-              setMenuPost(null);
+            copyLink: async () => { await copyLink(menuPost.id); setMenuPost(null); },
+            closeHelp: (note) => {
+              const p = menuPost;
+              act(() => {}, () => closeHelp(p.id, note));
+            },
+            remove: async () => { const p = menuPost; setMenuPost(null); await onAction("delete", p); },
+            /* Saved and followed are lists of {post_id, profile_id}, so
+               the local change is adding or dropping one row — the same
+               shape the server will confirm. */
+            save: (on) => {
+              const p = menuPost;
+              const was = extras.saves;
+              act(
+                () => setExtras((x) => ({
+                  ...x,
+                  saves: on
+                    ? x.saves.filter((r) => !(r.post_id === p.id && r.profile_id === myId))
+                    : [...x.saves, { post_id: p.id, profile_id: myId }],
+                })),
+                () => toggleSave(p.id, myId, !on),
+                () => setExtras((x) => ({ ...x, saves: was }))
+              );
+            },
+            follow: (on) => {
+              const p = menuPost;
+              const was = extras.follows;
+              act(
+                () => setExtras((x) => ({
+                  ...x,
+                  follows: on
+                    ? x.follows.filter((r) => !(r.post_id === p.id && r.profile_id === myId))
+                    : [...x.follows, { post_id: p.id, profile_id: myId }],
+                })),
+                () => toggleFollow(p.id, myId, !on),
+                () => setExtras((x) => ({ ...x, follows: was }))
+              );
             },
             hide: async () => { const p = menuPost; setMenuPost(null); await onAction("hide", p); },
             showLess: async () => {

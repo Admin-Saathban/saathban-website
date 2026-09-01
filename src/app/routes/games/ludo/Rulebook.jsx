@@ -133,7 +133,7 @@ export default function Rulebook({ rules }) {
               person reading a rule needs to know whether it applies
               here at the moment they read it, and a chip in the
               margin is read second or not at all. */}
-          <span style={{ color: GAME.gold, fontWeight: 700 }}>
+          <span style={{ color: GAME.you, fontWeight: 700 }}>
             {stateOf(p.rule, rules, t)}
           </span>
         </>

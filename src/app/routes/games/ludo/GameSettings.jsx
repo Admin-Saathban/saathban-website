@@ -5,9 +5,21 @@
    Four sections, in the order somebody reaches for them:
 
      1. Sound      — the mute, and two levels that do not fight
-     2. This table — the house rules, read-only once play has begun
-     3. Rulebook   — the book, searchable
-     4. Leave      — the same door and the same confirm
+     2. Playing    — move hints, off unless somebody asks for them
+     3. This table — the house rules, read-only once play has begun
+     4. Rulebook   — the book, searchable
+
+   NO LEAVE ROW. The door is in the top bar and it was ALSO the
+   bottom of this sheet, so a person had two ways to leave a table
+   and one way to close a menu. The door is the door.
+
+   IT OPENS SHORT, AND EVERY SECTION IS SHUT. It used to open with
+   Sound already expanded against an 88dvh ceiling, which on a
+   phone is the whole screen: no board to tap beside it, no cross,
+   and a back gesture that left the table. Four collapsed rows and
+   a 62dvh ceiling leave a clear band of board above the sheet,
+   which is the thing a person actually aims at when they want a
+   sheet gone.
 
    ONE MUTE, TWO LEVELS. Music and game sounds used to share a single
    volume with a boolean beside it, so the only way to have the dice
@@ -27,7 +39,7 @@ import { useEffect, useState } from "react";
 import { A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { GAME, NO_SELECT } from "../gameSurface.js";
-import { GameBtn, GamePill, GameMotion } from "../GameUI.jsx";
+import { GamePill, GameMotion, SheetHandle, SheetClose, useBackToClose } from "../GameUI.jsx";
 import { getSoundPrefs, setSoundPrefs, onSoundPrefs } from "../../../lib/sound.js";
 import Rulebook from "./Rulebook.jsx";
 
@@ -114,12 +126,15 @@ function Level({ label, value, onChange, ts }) {
   );
 }
 
-export default function GameSettings({ rules, editable, onClose, onLeave }) {
+export default function GameSettings({ rules, editable, onClose, hints, onHints }) {
   const { t, ts, meta } = useI18n();
-  const [open, setOpen] = useState("sound");
+  /* EVERYTHING SHUT. See the note at the top: an expanded section
+     is what made this sheet as tall as the screen. */
+  const [open, setOpen] = useState(null);
   const [prefs, setPrefs] = useState(() => getSoundPrefs());
 
   useEffect(() => onSoundPrefs(setPrefs), []);
+  useBackToClose(true, onClose);
   const put = (patch) => setPrefs(setSoundPrefs(patch));
 
   return (
@@ -142,8 +157,12 @@ export default function GameSettings({ rules, editable, onClose, onLeave }) {
           insetInline: 0,
           bottom: 0,
           zIndex: 77,
-          maxHeight: "88dvh",
+          /* A CLEAR BAND OF BOARD ABOVE IT. 62 rather than 88: the
+             gap is not decoration, it is the target you tap to
+             dismiss the thing, and at 88dvh there was not one. */
+          maxHeight: "62dvh",
           overflowY: "auto",
+          overscrollBehavior: "contain",
           background: GAME.panel,
           border: "none",
           borderRadius: "18px 18px 0 0",
@@ -151,32 +170,8 @@ export default function GameSettings({ rules, editable, onClose, onLeave }) {
           padding: "14px 16px calc(20px + env(safe-area-inset-bottom))",
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("ludo.chat.close")}
-          style={{
-            display: "block",
-            margin: "0 auto 12px",
-            width: 64,
-            height: 20,
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <span
-            style={{
-              display: "block",
-              width: 44,
-              height: 4,
-              margin: "0 auto",
-              borderRadius: 2,
-              background: "rgba(255,255,255,0.28)",
-            }}
-          />
-        </button>
+        <SheetHandle onClose={onClose} label={t("ludo.chat.close")} />
+        <SheetClose onClose={onClose} label={t("ludo.chat.close")} />
 
         <h2
           style={{
@@ -185,6 +180,7 @@ export default function GameSettings({ rules, editable, onClose, onLeave }) {
             fontWeight: 700,
             color: GAME.ink,
             margin: "0 0 14px",
+            paddingInlineEnd: 52,
           }}
         >
           {t("ludo.settings.title")}
@@ -209,6 +205,68 @@ export default function GameSettings({ rules, editable, onClose, onLeave }) {
             onChange={(v) => put({ effects: v })}
             ts={ts}
           />
+        </Section>
+
+        {/* MOVE HINTS, AND THEY ARE OFF.
+
+            "Tap the goti you'd like to move", "The 2 had nowhere to
+            go, so it goes unused", "Tap a die, then tap the goti it
+            should move" — a game explaining itself, every turn, to
+            somebody who has played ludo their whole life. The
+            owner's ruling is that it stops; this is where the
+            people who do want it turn it back on.
+
+            Whose turn it is and what actually happened — a capture,
+            a goti home, a win — are not hints and are not behind
+            this switch. */}
+        <Section id="play" open={open} onToggle={setOpen} ts={ts} title={t("ludo.settings.playing")}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              minHeight: A11Y.minTapTargetPx,
+            }}
+          >
+            <span style={{ fontSize: ts(A11Y.minBodyPx), color: GAME.ink, flex: "1 1 auto" }}>
+              {t("ludo.settings.hints")}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!hints}
+              aria-label={t("ludo.settings.hints")}
+              onClick={() => onHints?.(!hints)}
+              style={{
+                flex: "0 0 auto",
+                width: 62,
+                height: 34,
+                borderRadius: 17,
+                border: "none",
+                padding: 3,
+                cursor: "pointer",
+                background: hints ? GAME.you : GAME.off,
+                transition: "background 160ms ease",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "block",
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "#FFFFFF",
+                  transform: hints ? "translateX(28px)" : "translateX(0)",
+                  transition: "transform 160ms cubic-bezier(.2,.9,.3,1)",
+                }}
+              />
+            </button>
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: ts(15), lineHeight: 1.45, color: GAME.inkMuted }}>
+            {t("ludo.settings.hintsNote")}
+          </p>
         </Section>
 
         <Section id="table" open={open} onToggle={setOpen} ts={ts} title={t("ludo.settings.table")}>
@@ -253,12 +311,6 @@ export default function GameSettings({ rules, editable, onClose, onLeave }) {
         <Section id="book" open={open} onToggle={setOpen} ts={ts} title={t("ludo.settings.rulebook")}>
           <Rulebook rules={rules} />
         </Section>
-
-        <div style={{ marginTop: 6 }}>
-          <GameBtn onClick={onLeave} style={{ width: "100%", minHeight: 52 }}>
-            {t("ludo.ceremony.leaveCta")}
-          </GameBtn>
-        </div>
       </section>
     </>
   );

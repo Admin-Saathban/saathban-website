@@ -593,6 +593,12 @@ const en = {
       glassMore: "One glass more",
       ofGlasses: "of {n} glasses",
       sumDone: "Done",
+      /* Said ONCE, at the moment the last entry is answered. Plain
+         and adult: it states what happened, it does not congratulate
+         somebody for looking after themselves. */
+      justDone: "That is the day logged.",
+      justDoneSub: "Everything is in. Nothing more to do here today.",
+      allDoneChip: "Today's log is done",
       sumNoted: "Noted",
       sumSleep: "{h} hours · {q}",
       sumMeds: "{n} of {total} ticked",
@@ -1488,6 +1494,11 @@ const en = {
       reportedBy: "· reported by {name}",
     },
     app: {
+      notFound: "No application with id “{id}”.",
+      backToTheQueue: "← Back to the queue",
+      attemptN: "Attempt {n}",
+      refsBeforeProbation: "Both reference calls must be recorded before this application can move to probation.",
+      reject: "Reject",
       refsExplainer: "Two non-family references, actually phoned. The collection is not the safeguard — the call is.",
       auditScope: "The audit trail is super-admin scope. Status changes are still recorded automatically — a super-admin can review who moved what, when, and why.",
       docExplainer: "A request reaches the applicant as an in-app notification and is audit-logged automatically.",
@@ -3502,6 +3513,9 @@ const en = {
      One line per completed action. Warm, short, and always in the
      person's own language. */
   feedback: {
+    savedState: "Saved ✓",
+    saveCta: "Save",
+    cancelCta: "Cancel",
     dismiss: "Dismiss",
     retry: "Try again",
     sending: "Sending…",

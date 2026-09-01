@@ -20,7 +20,7 @@
    ribbon over the board.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GAME, NO_SELECT } from "./gameSurface.js";
 import { A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -67,13 +67,16 @@ export function GameBtn({ children, onClick, disabled, style = {}, ...rest }) {
         fontWeight: 800,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.45 : 1,
-        /* The lip under a moulded button, and it goes when pressed —
-           the button is level with the table for as long as your
-           thumb is on it. */
+        /* NO MOULDED LIP. A hard 3px edge under a control is the
+           other half of the 1990s look the gradient was — together
+           they draw a plastic key on a toolbar. One soft shadow
+           says the button is above the sheet, and pressing it
+           takes the shadow away, which is the whole of what
+           pressing something looks like. */
         boxShadow: down
-          ? "inset 0 2px 6px rgba(0,0,0,0.35)"
-          : `0 3px 0 ${GAME.accentEdge}, 0 6px 14px rgba(0,0,0,0.35)`,
-        transform: down ? "translateY(2px)" : "none",
+          ? "inset 0 1px 4px rgba(0,0,0,0.30)"
+          : "0 4px 14px rgba(0,0,0,0.34)",
+        transform: down ? "translateY(1px)" : "none",
         transition: "transform 100ms ease, box-shadow 100ms ease",
         ...style,
       }}
@@ -167,6 +170,135 @@ export function GameMotion() {
   );
 }
 
+/* ── ANYTHING THAT OPENS OVER THE TABLE CAN BE CLOSED ──────────
+
+   The owner's report was that the settings sheet is "almost
+   impossible to close", and the sheet did have a veil and a drag
+   handle. What it did not have was a way out that a person on an
+   Android phone would REACH FOR: their hand goes to the back
+   gesture, and a back gesture in a single-page app is a route
+   change — so the one instinct everybody has took them off the
+   table entirely instead of shutting the sheet.
+
+   So an open sheet is a history entry. Back pops it and the sheet
+   closes; the board stays. Escape does the same for a keyboard.
+
+   THE ENTRY IS REMOVED BY WHOEVER DID NOT USE IT. Closing by ✕,
+   by veil or by swipe calls history.back() itself, so the stack
+   does not silently grow one entry per open — and the `popped`
+   flag is what stops that call from firing a second close when
+   the pop it caused arrives. */
+export function useBackToClose(open, onClose) {
+  useEffect(() => {
+    if (!open) return undefined;
+    let popped = false;
+    const tag = { sbSheet: Date.now() };
+    window.history.pushState(tag, "");
+    const onPop = () => {
+      popped = true;
+      onClose?.();
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("keydown", onKey);
+      /* Closed by something other than the back gesture, so our
+         entry is still on the stack and has to come off. */
+      if (!popped) window.history.back();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+}
+
+/* A sheet's grab handle, which is also a swipe-down to close.
+
+   It LOOKED like one before and was only a button, so a downward
+   drag on it did nothing and the affordance was a lie. Pointer
+   events rather than touch events, so a mouse drag works too and
+   there is one code path to be wrong in. */
+export function SheetHandle({ onClose, label }) {
+  const from = useRef(null);
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClose}
+      onPointerDown={(e) => {
+        from.current = e.clientY;
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      }}
+      onPointerUp={(e) => {
+        const start = from.current;
+        from.current = null;
+        /* Forty pixels down. Short enough to be an easy flick and
+           long enough that a tap with a shaky hand is still a
+           tap — and a tap closes it anyway, so the two agree. */
+        if (start != null && e.clientY - start > 40) onClose?.();
+      }}
+      style={{
+        display: "block",
+        margin: "0 auto 12px",
+        width: 96,
+        height: 24,
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+        touchAction: "none",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          display: "block",
+          width: 44,
+          height: 4,
+          margin: "0 auto",
+          borderRadius: 2,
+          background: "rgba(255,255,255,0.28)",
+        }}
+      />
+    </button>
+  );
+}
+
+/* The ✕ in a sheet's top-right. Present because a drag handle is
+   a convention and a cross is a control: the owner looked for a
+   way out and there was not one drawn. */
+export function SheetClose({ onClose, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label={label}
+      style={{
+        position: "absolute",
+        top: 12,
+        insetInlineEnd: 12,
+        width: 40,
+        height: 40,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 12,
+        border: `1px solid ${GAME.glassEdge}`,
+        background: GAME.glass,
+        color: GAME.ink,
+        fontSize: 20,
+        lineHeight: 1,
+        cursor: "pointer",
+        padding: 0,
+      }}
+    >
+      <span aria-hidden="true">✕</span>
+    </button>
+  );
+}
+
 /* A line that says what just happened and then stops saying it.
 
    The play screen used to carry a permanent instruction — "Tap a die,
@@ -196,10 +328,41 @@ export function FlashLine({ keyed, children, ms = 2600, style = {} }) {
         textAlign: "center",
         fontSize: ts(A11Y.minBodyPx),
         fontWeight: 700,
+        /* ON A SURFACE, NOT ON THE TABLE.
+
+           This was bare bold text laid straight onto the dark
+           ground, and bare light text on a dark ground with no
+           edge and no surface under it is the oldest look a
+           screen has — it is what a terminal does. The owner's
+           word for it was "dated", which is exact.
+
+           It is a card now, in the same midnight the chat, the
+           profile cards and the settings menu are made of, so
+           the sentence under the board comes from the same
+           world as everything else on the screen. Warm off-
+           white ink rather than white: #F6EBE2 against a blue-
+           black reads as lamplight, and pure white reads as a
+           system message.
+
+           SHRINK-WRAPPED, and centred by the column it lives in.
+           A full-width bar would be a status line; a card the
+           width of its own sentence is a remark. */
         color: GAME.ink,
+        display: "inline-block",
+        maxWidth: "100%",
+        padding: "7px 14px",
+        borderRadius: 13,
+        background: GAME.panel,
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+        lineHeight: 1.35,
         minHeight: 0,
         opacity: shown ? 1 : 0,
-        transition: "opacity 260ms ease",
+        /* It arrives with the card, not only with the ink: a
+           surface fading up under a sentence is what stops the
+           line looking like it was always there. */
+        transform: shown ? "translateY(0)" : "translateY(4px)",
+        transition: "opacity 260ms ease, transform 260ms cubic-bezier(.2,.9,.3,1)",
         pointerEvents: "none",
       }}
     >

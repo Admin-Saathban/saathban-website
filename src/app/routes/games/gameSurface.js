@@ -82,28 +82,48 @@ export const GAME = {
      app's furniture is not a game, it is the app with the lights
      off.
 
-     Brass for the one thing you are meant to press, midnight for
+     TEAL for the one thing you are meant to press, midnight for
      everything that opens over the table, glass for everything
-     that sits on one, teal for you. GOLD IS NOW RATIONED: the
-     crown at the centre of the board and the halo on a goti you
-     may move, and nothing else — it used to edge every panel, and
-     a colour that is everywhere cannot point at anything.
+     that sits on one, a muted red for the one thing that
+     destroys something.
+
+     GOLD IS OFF THE CHROME ENTIRELY. Rationing it was not
+     enough: a brass gradient on a 52px button is a Windows 95
+     toolbar, and the owner's word for the settings sheet was
+     "cheap". Gradients on controls date a screen faster than
+     any other single choice, because for twenty years they were
+     how a button said it was a button; a flat fill and a radius
+     say it now.
+
+     Two things on the BOARD keep gold, and they are not chrome:
+     the crown at the centre and the halo on a goti you may move.
+     Gold is the only colour on that board belonging to no seat,
+     which is exactly why the halo can mean "this one" without
+     also meaning "this player".
 
      Saathban's green appears exactly once inside a game, on your
      own chat bubbles and the Send beside them, because that is
      the one place the owner asked for it. Nowhere else. ════════ */
 
-  /* PRIMARY ACTION — the one thing you are meant to press. Brass,
-     lit from the top, with dark ink because gold takes dark text
-     and every white-on-gold combination fails contrast. */
-  accent: "linear-gradient(180deg, #F7D07A 0%, #E3B052 42%, #C2892C 100%)",
-  accentFlat: "#E3B052",
-  accentInk: "#3B2408",
-  accentEdge: "#8A5F16",
-  /* Pressed: the gradient flips and the button sinks a pixel. A
-     chunky control with no pressed state reads as a picture of a
-     button. */
-  accentPressed: "linear-gradient(180deg, #C2892C 0%, #E3B052 100%)",
+  /* PRIMARY ACTION — the one thing you are meant to press.
+
+     FLAT TEAL, and flat is the point. This was a three-stop brass
+     gradient with a darker edge, which is the exact treatment the
+     owner called cheap; the teal is the colour this app already
+     uses for "yes, this one" (it is `you` below, and Save on a
+     profile card has worn it all along), so confirming now looks
+     the same everywhere in the game.
+
+     DARK INK ON IT, still. Near-white on this teal is about
+     2.4:1 and fails at any size; #04231F is above 8:1. The rule
+     that forced dark text on brass was never about brass. */
+  accent: "#2AB8A0",
+  accentFlat: "#2AB8A0",
+  accentInk: "#04231F",
+  accentEdge: "rgba(0,0,0,0.22)",
+  /* Pressed: it darkens and sinks a pixel. A control with no
+     pressed state reads as a picture of a button. */
+  accentPressed: "#1E9585",
 
   /* PANELS — the chat, both profile cards, every sheet. The same
      midnight gradient as the table, one shade lighter at the top,

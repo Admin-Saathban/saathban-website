@@ -30,7 +30,7 @@
    its own access anyway — this is navigation, RLS is the boundary.
    ════════════════════════════════════════════════ */
 
-import { useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import BottomBar, { BAR_HEIGHT } from "./BottomBar.jsx";
@@ -113,8 +113,24 @@ export default function AppShellBar() {
      THE BUILD PASSED, because that is a runtime error. Still
      unconditional, so the hook count cannot change between renders; it
      is told whether it is live rather than mounted only sometimes. */
-  const swipeItems = barItems(role, { buddyActive });
-  useTabSwipe(swipeItems, !hidden && !moreOpen);
+  /* MEMOISED, AND THAT IS NOT A PERFORMANCE TWEAK. useTabSwipe keys
+     its effect on this array, and the effect's cleanup calls clear()
+     — which strips the drag classes and drops the incoming pane. A
+     fresh array every render therefore TORE DOWN AN IN-FLIGHT
+     GESTURE any time anything re-rendered the shell: a notification
+     arriving, the shutter changing its mind, a subscription tick.
+     Measured: with a fresh array the drag class survived one frame
+     of a 36-frame swipe. */
+  const swipeItems = useMemo(() => barItems(role, { buddyActive }), [role, buddyActive]);
+  /* NOT `!hidden`. The bar being shuttered away is not a reason to
+     refuse the gesture — scrolled down the page is exactly where
+     somebody swipes to the next tab, and tying the two together
+     both disabled the swipe there AND flipped `enabled` mid-drag
+     the moment anything revealed the bar, which re-ran the effect
+     and killed the gesture it was meant to enable. The drawer is
+     different: it is a surface over the tabs, so swiping beneath it
+     would move the ground under an open thing. */
+  useTabSwipe(swipeItems, !moreOpen);
 
   /* A FIXED BAR RESERVES NO SPACE, so the last thing on every screen
      would sit underneath it — which for a screen ending in a button

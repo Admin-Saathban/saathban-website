@@ -184,6 +184,23 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
     <div
       dir={meta.dir}
       className="sb-push"
+      /* A FULL-SCREEN SURFACE IS A DIALOG OR IT IS NOTHING.
+
+         This covers the entire feed and takes the typing, and it was
+         an anonymous <div> — so a screen reader announced no change of
+         context, gave the surface no name, and left every post behind
+         it still reachable underneath. Someone using the app by voice
+         or by keyboard was writing into a box the app had not told
+         them about, over a feed it had not told them was gone.
+
+         It is also why no audit found it: Lane 2's scan keyed on
+         role="dialog", and the one role in this file is on the
+         visibility picker further down, not on the surface itself.
+         The thing most in need of being announced was the thing least
+         visible to the tool looking for it. */
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("posts.newPost")}
       style={{
         position: "fixed",
         inset: 0,

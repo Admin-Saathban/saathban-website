@@ -630,18 +630,42 @@ export default function LudoSession() {
      which is the correct answer. A board that is smaller is still a
      board. A board with its bottom edge below the fold is not. */
   const fitRef = useRef(null);
+  /* THE PLAYERS SIT AT THE BOARD, NOT AT THE SCREEN'S EDGES.
+
+     The two rows of circles used to be siblings of the board's slot,
+     so the slot took every pixel between them and the circles were
+     pinned to the top and bottom of the phone — with two hundred
+     pixels of empty table between each row and the board it belongs
+     to. Side by side with the recording that is the loudest
+     remaining difference: theirs sit within a few pixels of the
+     wood.
+
+     So the rows moved INSIDE the slot and the whole group centres
+     together. The board is then measured against what is left after
+     them, which is what these two refs are for — a constant would
+     be wrong the moment a name wraps or the text size is turned
+     up. */
+  const topRailRef = useRef(null);
+  const bottomRailRef = useRef(null);
   const [boardPx, setBoardPx] = useState(0);
   useEffect(() => {
     const el = fitRef.current;
     if (!el || typeof ResizeObserver === "undefined") return undefined;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      const side = Math.max(140, Math.floor(Math.min(r.width, r.height)));
+      const rails =
+        (topRailRef.current?.offsetHeight || 0) +
+        (bottomRailRef.current?.offsetHeight || 0);
+      /* Two pixels of slack, so a rounded-up board can never grow
+         the slot it was measured from and start the loop. */
+      const side = Math.max(140, Math.floor(Math.min(r.width, r.height - rails - 2)));
       setBoardPx((prev) => (Math.abs(prev - side) > 1 ? side : prev));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (topRailRef.current) ro.observe(topRailRef.current);
+    if (bottomRailRef.current) ro.observe(bottomRailRef.current);
     /* The URL bar collapsing changes dvh without resizing the element
        on some browsers, so the viewport itself is watched too. */
     window.addEventListener("resize", measure);
@@ -1201,10 +1225,29 @@ export default function LudoSession() {
       {/* ── PLAYING ── */}
       {atTable && (
         <>
-          {/* Whose turn, and what just happened. No card and no
-              countdown bar: the clock is drawn on the player (§2) and
-              the border was costing the board ninety pixels. */}
-          <div style={{ flex: "0 0 auto" }}>
+          {/* THE SLOT, and everything that sits at the board is in
+              it: the far players, the board, and you. It takes every
+              pixel the bar above and the line below do not, and
+              centres the three of them as one group.
+
+              min-height: 0 is what makes that true — a flex child's
+              default min-height is its content, so without it the
+              board would refuse to shrink and would push the bottom
+              row off the screen instead. */}
+          <div
+            ref={fitRef}
+            style={{
+              boxSizing: "border-box",
+              flex: "1 1 auto",
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+          <div ref={topRailRef} style={{ flex: "0 0 auto", width: "100%" }}>
           <SeatPlates
             where="top"
             compact={playing && shortScreen}
@@ -1225,25 +1268,6 @@ export default function LudoSession() {
           />
           </div>
 
-          {/* THE SLOT. It takes every pixel the rows above and below
-              do not, and the board inside it is the largest square
-              that fits. min-height: 0 is what makes that true — a
-              flex child's default min-height is its content, so
-              without it the board would refuse to shrink and would
-              push the roll button off the bottom instead, which is
-              the whole bug in miniature. */}
-          <div
-            ref={fitRef}
-            style={{
-              boxSizing: "border-box",
-              flex: "1 1 auto",
-              minHeight: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-            }}
-          >
           <div
             style={{
               boxSizing: "border-box",
@@ -1368,8 +1392,8 @@ export default function LudoSession() {
             {t("ludo.legend.flow")}
           </p>
           </div>
-          </div>
 
+          <div ref={bottomRailRef} style={{ flex: "0 0 auto", width: "100%" }}>
           <SeatPlates
             where="bottom"
             compact={playing && shortScreen}
@@ -1388,6 +1412,8 @@ export default function LudoSession() {
             {...platePins}
             diceCount={diceCount}
           />
+          </div>
+          </div>
 
           <div style={{ margin: playing ? "0 0 4px" : "0 0 10px", flex: "0 0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>

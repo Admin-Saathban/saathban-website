@@ -155,6 +155,35 @@ export default function Icon({
    `onDark` rather than sniffing the background: a component cannot see
    what is painted behind it, and guessing is how a white icon ends up
    on a white bar. The caller knows. */
+/* ── THE GOLD, AS A GRADIENT ──
+
+   The bell is not a flat yellow: it is lit from above, so it reads as an
+   object on the jet rather than a sticker on it. That needs two stops,
+   which needs a real <linearGradient> in the document — a CSS gradient
+   cannot fill an SVG path from outside.
+
+   Injected once, like the drag stylesheet, rather than rendered per
+   icon: a page with nine bells does not need nine identical defs, and an
+   id that appears twice is an id that stops resolving. */
+const GOLD_ID = "sb-gold-fill";
+
+function ensureGold() {
+  if (typeof document === "undefined" || document.getElementById(GOLD_ID)) return;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("id", GOLD_ID);
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
+  svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+  svg.innerHTML =
+    '<defs><linearGradient id="sb-gold" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="#F7DFA0"/>' +
+    '<stop offset="45%" stop-color="#E3B052"/>' +
+    '<stop offset="100%" stop-color="#A8781F"/>' +
+    "</linearGradient></defs>";
+  document.body.appendChild(svg);
+}
+
 export function IconChip({
   name,
   size = 22,
@@ -180,6 +209,27 @@ export function IconChip({
     : onDark ? APP_COLORS.navInk
     : APP_COLORS.textMain;
 
+  /* WHAT IS FILLED, AND WHY EACH ONE IS.
+
+     Messages: a WHITE interior. A speech bubble drawn in outline is a
+     ring, and a ring at 22px on a dark bar is mostly bar — the fill is
+     what makes it read as a bubble at a glance, which is the point of it
+     being a landmark. Active, the chip goes accent and the bubble goes
+     solid white on it.
+
+     The bell: gold with a top-light, so it sits ON the jet rather than
+     being printed on it. Stroke stays bronze so the edge holds where the
+     gradient is palest.
+
+     Everything else stays line-art. Two filled icons in a strip are two
+     landmarks; five would be a pattern, and a pattern has no landmarks. */
+  const glyphFill =
+    tone === "blue" ? (active ? CHIP.activeInk : "#FFFFFF")
+    : tone === "bronze" ? `url(#sb-gold)`
+    : "none";
+
+  if (tone === "bronze") ensureGold();
+
   return (
     <span
       style={{
@@ -201,7 +251,7 @@ export function IconChip({
       }}
       {...rest}
     >
-      <Icon name={name} size={size} label={label} />
+      <Icon name={name} size={size} label={label} fill={glyphFill} />
       {badge}
     </span>
   );

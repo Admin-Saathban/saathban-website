@@ -25,6 +25,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
+import { buildStamp } from "../../shared/build.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
 import Drawer from "./Drawer.jsx";
@@ -34,6 +35,11 @@ import { countToday } from "./moreCount.js";
 import Icon from "./Icon.jsx";
 
 export const MORE_DRAWER_ID = "more";
+
+/* Computed once at module load: it cannot change while the app is
+   running, and recomputing it per render would be a date object per
+   open of the drawer for a string that is frozen at build time. */
+const BUILD_STAMP = buildStamp();
 
 export default function MoreDrawer({ open, onClose, role, buddyActive }) {
   const { t, ts, meta } = useI18n();
@@ -165,6 +171,35 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
           );
         })}
       </ul>
+
+      {/* WHAT IS ACTUALLY RUNNING ON THIS PHONE.
+
+          Not decoration and not a version number for its own sake:
+          it exists so a report saying "fixed in 6a90de9" can be
+          checked against the device in two seconds by looking,
+          instead of argued about. It sits at the foot of More
+          because that is the one screen reachable from anywhere
+          that nobody is ever mid-task in.
+
+          dir="ltr" and a fixed digit order: this is the one string
+          in the app that must read identically in both languages,
+          because its whole job is to be compared with another copy
+          of itself. Muted and small — it is for the rare moment
+          somebody goes looking, not a thing to notice daily. */}
+      <p
+        dir="ltr"
+        data-sb-build={BUILD_STAMP}
+        style={{
+          margin: "14px 12px 4px",
+          fontSize: ts(13),
+          color: C.textMuted,
+          textAlign: meta.dir === "rtl" ? "left" : "start",
+          userSelect: "text",
+          WebkitUserSelect: "text",
+        }}
+      >
+        {BUILD_STAMP}
+      </p>
     </Drawer>
   );
 }

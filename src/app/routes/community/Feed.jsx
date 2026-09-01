@@ -76,6 +76,10 @@ import {
   setRepliesOff,
   setPinned,
   removeTag,
+  editBody,
+  hidePost,
+  unhidePost,
+  fetchMyHiddenPostIds,
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 import RichText from "../../lib/richText.jsx";
@@ -442,9 +446,18 @@ function PostCard({
   helpNames,
   iOffered,
   onMenu,
+  editing,
+  onEditSave,
+  onEditCancel,
 }) {
   const { t, ts } = useI18n();
   const [reporting, setReporting] = useState(false);
+  /* Seeded from the post each time editing opens, so cancelling and
+     reopening starts from what is actually saved rather than from the
+     last abandoned draft. */
+  const [draft, setDraft] = useState(post.body || "");
+  const [savingEdit, setSavingEdit] = useState(false);
+  useEffect(() => { if (editing) setDraft(post.body || ""); }, [editing, post.body]);
   /* §7 — post-audio is private, so the card signs its own URL. Done
      here rather than for the whole feed so that a list of forty posts
      signs only the handful that actually carry a recording. */
@@ -653,7 +666,63 @@ function PostCard({
         </span>
       )}
 
-      {post.body && (colourOf(post) ? (
+      {/* THE EDITING STATE. Selecting Edit used to open a blank
+          composer elsewhere on the screen; the words are here, so the
+          editing happens here. */}
+      {editing ? (
+        <div style={{ margin: "10px 0 12px" }}>
+          <label
+            htmlFor={`edit-${post.id}`}
+            style={{ display: "block", fontSize: ts(16), fontWeight: 700, color: C.textMain, marginBottom: 6 }}
+          >
+            {t("posts.menu.editingTitle")}
+          </label>
+          <textarea
+            id={`edit-${post.id}`}
+            value={draft}
+            autoFocus
+            rows={5}
+            onChange={(e) => setDraft(e.target.value)}
+            style={{
+              width: "100%", boxSizing: "border-box", fontFamily: "inherit",
+              fontSize: ts(A11Y.minBodyPx), lineHeight: 1.6, color: C.textMain,
+              background: C.white, border: `2px solid ${C.green}`, borderRadius: 14,
+              padding: "10px 12px", textAlign: "start",
+            }}
+          />
+          <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              disabled={savingEdit || !draft.trim() || draft === post.body}
+              onClick={async () => {
+                setSavingEdit(true);
+                try { await onEditSave(draft); } finally { setSavingEdit(false); }
+              }}
+              style={{
+                minHeight: A11Y.minTapTargetPx, padding: "0 22px", borderRadius: 50,
+                border: "none", background: C.green, color: C.cream, fontFamily: "inherit",
+                fontSize: ts(17), fontWeight: 700,
+                opacity: savingEdit || !draft.trim() || draft === post.body ? 0.6 : 1,
+                cursor: savingEdit || !draft.trim() || draft === post.body ? "default" : "pointer",
+              }}
+            >
+              {savingEdit ? t("feedback.saving") : t("posts.menu.editSave")}
+            </button>
+            <button
+              type="button"
+              disabled={savingEdit}
+              onClick={onEditCancel}
+              style={{
+                minHeight: A11Y.minTapTargetPx, padding: "0 22px", borderRadius: 50,
+                border: `2px solid ${C.warmGray}`, background: C.white, color: C.textMain,
+                fontFamily: "inherit", fontSize: ts(17), fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              {t("posts.menu.editCancel")}
+            </button>
+          </div>
+        </div>
+      ) : post.body && (colourOf(post) ? (
         /* §3 — short text only. colourOf() returns null once a post
            runs long or carries a photo, so a long post never becomes
            unreadable on yellow. */
@@ -1103,6 +1172,9 @@ export default function Feed({ composer = true, embedded = false }) {
   const [composerStart, setComposerStart] = useState(null);
   /* §10 — one sheet for the whole feed, not one per card. */
   const [menuPost, setMenuPost] = useState(null);
+  const [hiddenIds, setHiddenIds] = useState(() => new Set());
+  /* Editing happens on the post, where the words already are. */
+  const [editingId, setEditingId] = useState(null);
   /* §6/§10 — offers, saves and follows for what is on screen. */
   const [extras, setExtras] = useState({ offers: [], saves: [], follows: [], tags: [] });
 
@@ -1225,7 +1297,11 @@ export default function Feed({ composer = true, embedded = false }) {
       const authorsForBand = await fetchAuthors(rows.map((p) => p.author_id));
       const neighbours = await fetchGroupNeighbourIds(myId).catch(() => new Set());
       const widened = widenFeed(rows, authorsForBand, profile, neighbours);
-      setPosts(widened.posts);
+      /* 0116. A post hidden by this reader is gone for this reader
+         only — the author is never told and nobody else is affected. */
+      const hidden = await fetchMyHiddenPostIds().catch(() => new Set());
+      setHiddenIds(hidden);
+      setPosts(widened.posts.filter((p) => !hidden.has(p.id)));
       setRadius(widened.radius);
       const joinable = rows.filter((p) => p.post_type === "walk" || p.post_type === "activity");
       const [a, r, j] = await Promise.all([
@@ -1368,6 +1444,26 @@ export default function Feed({ composer = true, embedded = false }) {
      with the server in the background. Awaiting it was the second half
      of the delay: an action that had already succeeded still held the
      screen while the whole feed came down again. */
+  /* The post leaves at once and the line offers the way back, which is
+     the only honest form of a one-tap destructive-ish action: undoing
+     it must not require finding the post again, because it is gone. */
+  const hideOne = async (p) => {
+    setPosts((ps) => ps.filter((x) => x.id !== p.id));
+    setHiddenIds((h) => new Set(h).add(p.id));
+    try {
+      await hidePost(p.id, myId);
+      showToast(t("feedback.postHidden"), t("community.feed.undo"), async () => {
+        await unhidePost(p.id, myId);
+        setHiddenIds((h) => { const n = new Set(h); n.delete(p.id); return n; });
+        await load();
+      });
+    } catch {
+      setPosts((ps) => (ps.some((x) => x.id === p.id) ? ps : [p, ...ps]));
+      setHiddenIds((h) => { const n = new Set(h); n.delete(p.id); return n; });
+      raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+    }
+  };
+
   const act = (apply, request, undo) => {
     setMenuPost(null);
     apply();
@@ -1464,6 +1560,7 @@ export default function Feed({ composer = true, embedded = false }) {
       } else if (kind === "delete") {
         await deleteOwnPost(target.id);
         await load();
+        showToast(t("feedback.postDeleted"));
       } else if (kind === "dm") {
         try {
           await sendDmRequest(target.author_id);
@@ -1591,7 +1688,11 @@ export default function Feed({ composer = true, embedded = false }) {
                   raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
                 });
             },
-            edit: () => { setMenuPost(null); openComposer(null); },
+            /* Edit opened a BLANK composer: Composer's startWith prop
+               was declared and never read, so the words being edited
+               were nowhere on screen. The post itself becomes editable
+               instead — the editing state IS the acknowledgement. */
+            edit: () => { const p = menuPost; setMenuPost(null); setEditingId(p.id); },
             setReplies: (off) => {
               const p = menuPost;
               act(
@@ -1600,7 +1701,15 @@ export default function Feed({ composer = true, embedded = false }) {
                 () => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, replies_off: p.replies_off } : x)))
               );
             },
-            copyLink: async () => { await copyLink(menuPost.id); setMenuPost(null); },
+            /* Nothing on screen changes when a link is copied, so the
+               line is the only evidence — and it reports which of the
+               two things happened, because a clipboard write can be
+               refused. */
+            copyLink: async () => {
+              const ok = await copyLink(menuPost.id);
+              setMenuPost(null);
+              showToast(t(ok ? "feedback.linkCopied" : "feedback.linkNotCopied"));
+            },
             closeHelp: (note) => {
               const p = menuPost;
               act(() => {}, () => closeHelp(p.id, note));
@@ -1637,11 +1746,13 @@ export default function Feed({ composer = true, embedded = false }) {
                 () => setExtras((x) => ({ ...x, follows: was }))
               );
             },
-            hide: async () => { const p = menuPost; setMenuPost(null); await onAction("hide", p); },
+            hide: async () => { const p = menuPost; setMenuPost(null); await hideOne(p); },
             showLess: async () => {
+              const name = (menuAuthor?.full_name || "").split(" ")[0];
               await showLessFrom(myId, menuPost.author_id);
               setMenuPost(null);
               await load();
+              showToast(t("feedback.showLessDone", { name }));
             },
             report: async () => { const p = menuPost; setMenuPost(null); await onAction("report", p, ""); },
           }}
@@ -2022,6 +2133,23 @@ export default function Feed({ composer = true, embedded = false }) {
                 joinInfo={joins[p.id]}
                 onToggleReaction={toggleReaction}
                 onAction={onAction}
+                editing={editingId === p.id}
+                onEditCancel={() => setEditingId(null)}
+                onEditSave={async (text) => {
+                  try {
+                    await editBody(p.id, text);
+                    setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, body: text.trim() } : x)));
+                    setEditingId(null);
+                    /* Said as soon as it is true, not after the feed
+                       has finished reloading — the write has already
+                       succeeded by here, and on a slow connection the
+                       reload is seconds of silence after the fact. */
+                    showToast(t("feedback.postUpdated"));
+                    await load();
+                  } catch {
+                    raiseToast(t("feedback.somethingWrong"), { tone: "error", key: "postaction" });
+                  }
+                }}
                 taggedNames={extras.tags
                   .filter((x) => x.post_id === p.id)
                   .map((x) => authors[x.person_id]?.full_name || "")

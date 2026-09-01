@@ -61,6 +61,12 @@ function Item({ label, sub, onClick, danger, disabled }) {
 export default function PostMenu({ post, mine, authorName, saved, following, onClose, actions }) {
   const { t, ts, meta } = useI18n();
   const [note, setNote] = useState("");
+  /* Delete asks first, and asks HERE — in the sheet the person is
+     already looking at, under the item they pressed. A browser
+     confirm() would be a different voice in a different place, and
+     the one destructive thing in the app should not be the one thing
+     that talks like a machine. */
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const divider = <div style={{ height: 1, background: C.warmGray, margin: "6px 0" }} />;
 
@@ -143,7 +149,47 @@ export default function PostMenu({ post, mine, authorName, saved, following, onC
 
             {divider}
             {/* The only red item, alone. */}
-            <Item label={t("posts.menu.delete")} danger onClick={() => actions.remove()} />
+            {!confirmDelete ? (
+              <Item label={t("posts.menu.delete")} danger onClick={() => setConfirmDelete(true)} />
+            ) : (
+              <div style={{ padding: "12px 16px 4px" }} role="group" aria-label={t("posts.menu.deleteAsk")}>
+                <p style={{ margin: "0 0 4px", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+                  {t("posts.menu.deleteAsk")}
+                </p>
+                <p style={{ margin: "0 0 12px", fontSize: ts(16), color: C.textMuted, lineHeight: 1.5 }}>
+                  {t("posts.menu.deleteAskSub")}
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {/* Keeping it is the wider, calmer option and comes
+                      first in reading order, so the finger that is
+                      already moving does not land on delete. */}
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    style={{
+                      flex: "2 1 160px", minHeight: A11Y.minTapTargetPx, padding: "0 20px",
+                      borderRadius: 50, border: `2px solid ${C.green}`, background: C.white,
+                      color: C.green, fontFamily: "inherit", fontSize: ts(17), fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t("posts.menu.deleteKeep")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => actions.remove()}
+                    style={{
+                      flex: "1 1 130px", minHeight: A11Y.minTapTargetPx, padding: "0 20px",
+                      borderRadius: 50, border: "none", background: C.error || C.brown,
+                      color: C.white, fontFamily: "inherit", fontSize: ts(17), fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t("posts.menu.deleteYes")}
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <>

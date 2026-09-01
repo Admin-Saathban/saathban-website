@@ -117,6 +117,37 @@ export function postLink(postId) {
   return `${origin}/app/community?post=${postId}`;
 }
 
+/* ── Hiding a post, for one reader ── 0116.
+
+   "Hide this post" called onAction("hide", post), and onAction had no
+   branch for it: the tap fell through, wrote nothing and said nothing.
+   There was no table either, so there was nothing for it to fall
+   through TO.
+
+   Private by construction: the row is keyed by the person doing the
+   hiding and "hides: mine only" is the whole policy, so the author is
+   never told and no other reader can see it. */
+export async function hidePost(postId, myId) {
+  const { error } = await supabase.from("post_hides").insert({ post_id: postId, profile_id: myId });
+  /* Hiding something already hidden is not a failure worth reporting. */
+  if (error && error.code !== "23505") throw new Error(error.message);
+}
+
+export async function unhidePost(postId, myId) {
+  const { error } = await supabase
+    .from("post_hides")
+    .delete()
+    .eq("post_id", postId)
+    .eq("profile_id", myId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchMyHiddenPostIds() {
+  const { data, error } = await supabase.from("post_hides").select("post_id");
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((r) => r.post_id));
+}
+
 export async function copyLink(postId) {
   try {
     await navigator.clipboard.writeText(postLink(postId));

@@ -22,7 +22,7 @@ import { useI18n } from "../../../lib/i18n.jsx";
 import { useSession } from "../../../lib/session.jsx";
 import { Card, SectionLabel, BodyText, Pill, PrimaryBtn, GhostBtn } from "../../circle/ui.jsx";
 import { fetchSession, startSession, roll, move, tick, rematch, legalFor, undoAvailable, undoMove } from "./ludoRails.js";
-import { tableIsSoft, reformTable, fetchSeatInvites, fetchPieceMarks, seen } from "./ludoRails.js";
+import { tableIsSoft, reformTable, fetchSeatInvites, seen } from "./ludoRails.js";
 import SeatSheet, { TableName } from "./TableEdits.jsx";
 import { useGameFeel, GameMotionStyles, Confetti } from "../../../lib/gameFeel.jsx";
 import { GAME, NO_SELECT } from "../gameSurface.js";
@@ -134,13 +134,6 @@ export default function LudoSession() {
   const [soft, setSoft] = useState(false);
   const [seatSheet, setSeatSheet] = useState(null);
   const [seatInvites, setSeatInvites] = useState([]);
-  /* What each player wears on their own gotis (0095), by seat. */
-  const [marksBySeat, setMarksBySeat] = useState(null);
-  /* Bumped when I change what my gotis wear. WITHOUT THIS the marks
-     effect keys only on who is sitting where, which does not change
-     when I pick a new glyph — so the choice saved, and the board went
-     on drawing the old one until somebody took a different seat. */
-  const [marksNonce, setMarksNonce] = useState(0);
   const [pickedDie, setPickedDie] = useState(0);
   /* Options for EVERY die still in hand, keyed by its index. Knowing
      about the other one matters: a die with nothing it can do is a
@@ -191,36 +184,6 @@ export default function LudoSession() {
     setSoft(isSoft);
     setSeatInvites(isSoft ? await fetchSeatInvites(sessionId) : []);
   };
-  /* The marks, re-read when the people at the table change. Keyed
-     by SEAT rather than by person, because that is what the board
-     draws with — and it means taking a different seat carries
-     your gotis with you, which is the whole point of them being
-     yours rather than the table's. */
-  const seatKey = (game?.seats || [])
-    .map((x) => `${x.seat}:${x.profile_id || "bot"}`)
-    .join("|");
-  useEffect(() => {
-    const rows = game?.seats || [];
-    const ids = rows.map((x) => x.profile_id).filter(Boolean);
-    if (!ids.length) return undefined;
-    let alive = true;
-    fetchPieceMarks(ids)
-      .then((byId) => {
-        if (!alive) return;
-        const bySeat = {};
-        for (const r of rows) {
-          const m = r.profile_id ? byId.get(r.profile_id) : null;
-          if (m && m.some(Boolean)) bySeat[r.seat] = m;
-        }
-        setMarksBySeat(Object.keys(bySeat).length ? bySeat : null);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seatKey, marksNonce]);
-
   /* Touched on the poll, at most every ten seconds. The board
      polls every 2.5s and the grace window is ninety, so this is
      as sparse as it can be and still keep a reader present. */
@@ -1171,8 +1134,7 @@ export default function LudoSession() {
           soft={soft}
           onClose={() => setSeatSheet(null)}
           onChanged={async () => {
-            setMarksNonce((n) => n + 1);
-            await load();
+                await load();
           }}
         />
       )}
@@ -1362,7 +1324,6 @@ export default function LudoSession() {
           <div style={{ ...themeVars(themeOf(rules)) }}>
           <LudoBoard
             mySeat={mySeatRow?.seat ?? null}
-            marksBySeat={marksBySeat}
             isSilent={isSilent}
             state={state}
             seatsInPlay={game.target_seats}

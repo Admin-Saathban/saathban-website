@@ -118,7 +118,7 @@ function ColourGoti({ colour, chosen, taken, onPick, label }) {
       }}
     >
       <svg width={size - 8} height={size - 8} viewBox="-20 -20 40 40" aria-hidden="true">
-        <Pawn seat={colour} cx={0} cy={0} r={15} showSeat={false} />
+        <Pawn seat={colour} cx={0} cy={0} r={15} />
       </svg>
     </button>
   );

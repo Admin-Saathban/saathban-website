@@ -24,7 +24,7 @@ import { GAME, NO_SELECT } from "../gameSurface.js";
 import { SEAT_COLORS, SEAT_INK } from "./board.js";
 /* The names, from where the hexes are — never a second list. */
 import { SEAT_COLOR_NAMES } from "../seatColors.js";
-import { reformTable, takeSeat, inviteToSeat, fetchAskable, fetchPieceMarks, setPieceMarks } from "./ludoRails.js";
+import { reformTable, takeSeat, inviteToSeat, fetchAskable } from "./ludoRails.js";
 import ShareTableButton from "../ShareTableButton.jsx";
 import { createShare } from "../../community/communityData.js";
 
@@ -134,124 +134,6 @@ function Sheet({ title, onClose, children }) {
 }
 
 
-/* ── YOUR OWN FOUR (0095) ──────────────────────────────────────
-   The owner's oldest complaint was that you cannot tell which of
-   your gotis is which. They asked for the mark to be choosable —
-   "you can name each goti if you want… change or design their own
-   emojis" — and were equally clear about the limit: "color should
-   mainly be the same respective ie blue red yellow green which was
-   assigned originally". So this changes what is WRITTEN on a goti
-   and never what colour it is.
-
-   It lives on your own seat and nowhere else, and unlike the rest
-   of this sheet it is not confined to the soft window: your gotis
-   are yours, not the table's, and a preference you can only change
-   in the thirty seconds before your first roll is a preference
-   nobody will ever change. */
-const PALETTE = ["", "\u2618", "\u2600", "\u2764", "\u2605", "\u266A", "\u265B", "\u2693", "\u2708", "\u26BD", "\u2615", "\u273F"];
-
-function GotiMarks({ seat, myId, onSaved }) {
-  const { t, ts } = useI18n();
-  const [marks, setMarks] = useState(null);
-  const [slot, setSlot] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    fetchPieceMarks([myId])
-      .then((m) => alive && setMarks((m.get(myId) || ["", "", "", ""]).slice(0, 4)))
-      .catch(() => alive && setMarks(["", "", "", ""]));
-    return () => {
-      alive = false;
-    };
-  }, [myId]);
-
-  const put = async (i, glyph) => {
-    if (busy) return;
-    const next = [0, 1, 2, 3].map((n) => (n === i ? glyph : marks?.[n] || ""));
-    setMarks(next);
-    setSlot(null);
-    setBusy(true);
-    try {
-      await setPieceMarks(next);
-      await onSaved?.();
-    } catch {
-      /* the board simply keeps the marks it had */
-    }
-    setBusy(false);
-  };
-
-  const colour = SEAT_COLORS[seat];
-  const ink = SEAT_INK[seat];
-
-  return (
-    <>
-      <p
-        style={{
-          margin: "10px 2px 2px",
-          fontSize: ts(15),
-          fontWeight: 800,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: GAME.inkMuted,
-        }}
-      >
-        {t("ludo.table.myGotis")}
-      </p>
-      <div style={{ display: "flex", gap: 10 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setSlot(slot === i ? null : i)}
-            aria-pressed={slot === i}
-            aria-label={t("ludo.table.gotiSlot", { n: i + 1 })}
-            style={{
-              flex: 1,
-              height: 56,
-              borderRadius: 28,
-              /* THE COLOUR IS NOT A CHOICE HERE. Each slot is drawn
-                 in the seat's own colour so it is plain that the
-                 mark is the only thing being changed. */
-              background: colour,
-              color: ink,
-              border: slot === i ? `3px solid ${C.cream}` : `3px solid transparent`,
-              fontSize: ts(24),
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            {marks?.[i] || i + 1}
-          </button>
-        ))}
-      </div>
-      {slot != null && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-          {PALETTE.map((glyph, n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => put(slot, glyph)}
-              aria-label={glyph || t("ludo.table.gotiPlain")}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                border: `1px solid ${GAME.controlEdge}`,
-                background: GAME.control,
-                color: GAME.ink,
-                fontSize: ts(22),
-                cursor: "pointer",
-              }}
-            >
-              {glyph || String(slot + 1)}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
 /* ── The house rules, at the table (TASK 5) ─────────────────────
    Four switches, each one a rule people actually argue about at a
    real table. They write straight into house_rules, which is what
@@ -515,11 +397,13 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
             </p>
           )}
 
-          {/* My own seat: what I wear on my four. Not gated on the
-              soft window — see GotiMarks. */}
-          {row?.profile_id && row.profile_id === myId && (
-            <GotiMarks seat={seat} myId={myId} onSaved={onChanged} />
-          )}
+          {/* THE GOTI-MARK PICKER IS GONE, with the glyphs it
+              drew. Nothing is printed on a piece any more, so a
+              control for choosing what gets printed on one was a
+              choice with no consequence, which is worse than no
+              choice. The table and its RPC (0095) are untouched, so
+              bringing marks back would be a render change and not a
+              migration. */}
 
           {iAmHost && soft && <HouseRules sessionId={sessionId} rules={rules} onChanged={onChanged} />}
 

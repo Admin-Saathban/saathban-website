@@ -747,58 +747,17 @@ function useWalk(pieces, isSilent) {
   return { shown, flights, trail, arrivedHome, closeCalls, hops };
 }
 
-/* THE MOOD OF EVERY GOTI ON THE TRACK.
+/* "Blue 3" — the name of one goti, for the screen reader and for
+   the tooltip. Colour AND number, because either alone is
+   ambiguous: four gotis share a colour, and four numbers are
+   shared across the seats.
 
-   Smug: standing on one of the eight stops, where nothing can take it.
-   Worried: an enemy sits one to six squares BEHIND it — the range a
-   single die can cross — and it is neither on a stop nor doubled up
-   into a jota, because a lone goti is the only kind a single can take.
-
-   This is arithmetic the player could do themselves by counting
-   backwards round the ring from each of their pieces. The board doing
-   it is the whole point: it turns a thing you must audit into a thing
-   you can see.
-
-   Deliberately NOT a face for being behind, losing, or slow. Danger
-   and safety only. */
-function moodsOf(pieces) {
-  const mood = new Map();
-  const at = [];
-  pieces.forEach((row, seat) =>
-    row.forEach((p) => {
-      if (p >= 1 && p <= 51) at.push({ seat, abs: absOf(seat, p), p });
-    })
-  );
-  pieces.forEach((row, seat) =>
-    row.forEach((p, i) => {
-      if (!(p >= 1 && p <= 51)) return;
-      const abs = absOf(seat, p);
-      if (SAFE_ABS.includes(abs)) {
-        mood.set(`${seat}:${i}`, "smug");
-        return;
-      }
-      /* A pair cannot be taken by a single, so it does not fret. */
-      const mine = row.filter((q) => q === p).length;
-      if (mine >= 2) return;
-      const hunted = at.some(
-        (o) => o.seat !== seat && ((abs - o.abs + 52) % 52) >= 1 && ((abs - o.abs + 52) % 52) <= 6
-      );
-      if (hunted) mood.set(`${seat}:${i}`, "worried");
-    })
-  );
-  return mood;
-}
-
-/* "Blue 3" — the name of one goti, for the screen reader and for the
-   tooltip. Colour AND number, because either alone is ambiguous: four
-   gotis share a colour, and four numbers are shared across the seats. */
-function pieceLabel(seat, i, mark) {
+   The chosen mark used to be said out loud here as well. Nothing
+   is drawn on a goti any more, so there is nothing to say. */
+function pieceLabel(seat, i) {
   const name = SEAT_COLOR_NAMES[seat % SEAT_COLOR_NAMES.length] || "";
   const who = name ? name[0].toUpperCase() + name.slice(1) : "Seat " + (seat + 1);
-  /* A chosen mark is said out loud too. The point of a mark is to
-     tell one of your four from the others, and that job does not
-     stop mattering for somebody using a screen reader. */
-  return mark ? `${who} ${i + 1} ${mark}` : `${who} ${i + 1}`;
+  return `${who} ${i + 1}`;
 }
 
 export default function LudoBoard({
@@ -819,11 +778,6 @@ export default function LudoBoard({
      underneath it would answer it by accident. */
   dragDisabled = false,
   mySeat = null,
-  /* WHAT EACH PLAYER WEARS ON THEIR OWN FOUR (0095), keyed by
-     seat: { 0: ["\u2618", "", "\u2600", ""] }. Absent or empty
-     and a goti falls back to the mark it has always drawn, so a
-     table where nobody has chosen looks exactly as it did. */
-  marksBySeat = null,
   /* isSilent(seat) → that player's sounds are muted for this
      viewer, at this table. */
   isSilent,
@@ -859,7 +813,6 @@ export default function LudoBoard({
      where it is being drawn, or look smug on a stop it has not
      visibly reached yet. useCaptured wants the truth because a capture
      is an event, not a position. */
-  const moods = moodsOf(pieces);
   /* Fed the TRUTH, not the walked positions: a captured goti snaps
      home rather than strolling back, so the shake has to key off the
      real board or it would fire a beat late. */
@@ -1721,10 +1674,8 @@ export default function LudoBoard({
                      live board. */
                   r={p >= 57 ? HOME_R : isJota ? JOTA_R : GOTI_R}
                   piece={i}
-                  mark={marksBySeat?.[seat]?.[i] || null}
                   spin={spin}
-                  mood={moods.get(`${seat}:${i}`) || null}
-                  label={pieceLabel(seat, i, marksBySeat?.[seat]?.[i])}
+                  label={pieceLabel(seat, i)}
                   tilt={p >= 52 && p < 57}
                 />
                 </g>
@@ -1810,9 +1761,8 @@ export default function LudoBoard({
                   cy={rr * CELL}
                   r={GOTI_R}
                   piece={Number(k.split(":")[1])}
-                  mark={marksBySeat?.[seat]?.[Number(k.split(":")[1])] || null}
                   spin={spin}
-                  label={pieceLabel(seat, Number(k.split(":")[1]), marksBySeat?.[seat]?.[Number(k.split(":")[1])])}
+                  label={pieceLabel(seat, Number(k.split(":")[1]))}
                 />
               </g>
             </g>
@@ -1839,7 +1789,7 @@ export default function LudoBoard({
               r={GOTI_R * 1.08}
               piece={drag.piece}
               spin={spin}
-              label={pieceLabel(drag.seat, drag.piece, marksBySeat?.[drag.seat]?.[drag.piece])}
+              label={pieceLabel(drag.seat, drag.piece)}
             />
           </g>
         )}

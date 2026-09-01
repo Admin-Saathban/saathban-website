@@ -584,91 +584,38 @@ export default function SeatSheet({ sessionId, seat, row, seats, seatsTotal, iAm
 /* ── The table's name ────────────────────────────────────────────
    Tap the name, type, done. No dialog: the name IS the field, which
    is the whole of "tapping the thing itself" for a piece of text. */
-export function TableName({ sessionId, title, editable, onChanged }) {
-  const { t, ts } = useI18n();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(title || "");
-  const input = useRef(null);
+/* THE TABLE'S NAME, ON THE BOARD, AS TEXT.
 
-  useEffect(() => {
-    if (editing) input.current?.focus();
-  }, [editing]);
-  useEffect(() => {
-    setDraft(title || "");
-  }, [title]);
+   It was a button that turned into a text field, so a live game
+   carried an input labelled "Name this table" across the top of
+   it — a form control on a board, which is the single most
+   app-like thing that can sit on one. Naming happens in the setup
+   room, once, before there is a table to interrupt.
 
-  const commit = async () => {
-    setEditing(false);
-    if ((draft || "").trim() === (title || "").trim()) return;
-    try {
-      await reformTable(sessionId, { title: draft });
-      await onChanged?.();
-    } catch {
-      setDraft(title || "");
-    }
-  };
-
-  const base = {
-    fontSize: ts(A11Y.minBodyPx),
-    fontWeight: 700,
-    minWidth: 0,
-    maxWidth: "58vw",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  };
-
-  if (editing) {
-    return (
-      <input
-        ref={input}
-        value={draft}
-        maxLength={40}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") {
-            setDraft(title || "");
-            setEditing(false);
-          }
-        }}
-        aria-label={t("ludo.table.nameLabel")}
-        style={{
-          ...base,
-          padding: "6px 10px",
-          borderRadius: 10,
-          border: `1px solid ${GAME.controlEdge}`,
-          background: GAME.control,
-          color: GAME.ink,
-        }}
-      />
-    );
-  }
-
-  if (!editable) {
-    return title ? <p style={{ ...base, margin: 0, color: C.greenMuted }}>{title}</p> : null;
-  }
-
+   Every table has a name now (NewGame falls back to "Ludo with
+   {host}" when nobody types one), so the empty case is not a
+   prompt to fill anything in — it is an older table, and it
+   renders nothing at all rather than an invitation the board
+   cannot honour. */
+export function TableName({ title }) {
+  const { ts } = useI18n();
+  if (!title) return null;
   return (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
-      aria-label={t("ludo.table.nameLabel")}
+    <p
       style={{
-        ...base,
         margin: 0,
-        padding: "6px 10px",
-        minHeight: 44,
-        borderRadius: 10,
-        border: `1px dashed ${title ? "transparent" : GAME.controlEdge}`,
-        background: "transparent",
-        color: title ? GAME.ink : GAME.inkMuted,
-        textAlign: "start",
-        cursor: "pointer",
+        minWidth: 0,
+        maxWidth: "58vw",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        fontSize: ts(A11Y.minBodyPx),
+        fontWeight: 700,
+        color: GAME.ink,
       }}
     >
-      {title || t("ludo.table.nameIt")}
-    </button>
+      {title}
+    </p>
   );
 }
+

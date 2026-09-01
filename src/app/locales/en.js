@@ -3034,6 +3034,7 @@ const en = {
     },
 
     setup: {
+      defaultTitle: "{game} with {host}",
       subtitle: "Set your table, then it opens by itself",
       diceOneCard: "One die — classic",
       diceTwoCard: "Two dice — the Desi table",

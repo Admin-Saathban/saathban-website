@@ -1041,52 +1041,15 @@ export default function LudoSession() {
         {/* The name of the game earns its space in the lobby, where
             there is no board yet. Once play starts the board IS the
             screen (§1) and the title is 30px the board should have. */}
-        {game.status !== "playing" ? (
-          <h1
-            style={{
-              fontFamily: meta.fonts.heading,
-              /* Smaller than the lobby's 30: this sits over a board
-                 now, not over a page, and a two-line heading was
-                 taking the top of the table. */
-              fontSize: ts(22),
-              fontWeight: 700,
-              color: GAME.ink,
-              margin: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "58vw",
-            }}
-          >
-            {game.title || `🎲 ${t("ludo.title")}`}
-          </h1>
-        ) : (
-          /* During play the row survives to hold the sound icon, and
-             the width beside it is empty. A table's name costs nothing
-             THERE, so §1 keeps its board and D1 keeps its name. An
-             unnamed table renders the row exactly as before. */
-          /* §8: THE NAME IS THE FIELD. Tapping it turns it into
-             one, while the table is still soft; after that it is
-             the same line of text it always was. A table with no
-             name shows the invitation to give it one only to the
-             person who opened it — to everyone else an unnamed
-             table is simply unnamed, and the row stays empty. */
-          <TableName
-            sessionId={game.id}
-            title={game.title}
-            editable={editable && iAmHost}
-            onChanged={load}
-          />
-        )}
-        {/* LEAVING LIVES UP HERE NOW, during play. It is a door, not
-            an action of the game, and down in the action row it was a
-            full-width pill costing the board about 70px of height on
-            every screen. Requirement: on a short screen the leave
-            control collapses into the bar rather than pushing the
-            board off the bottom — so it does, on every screen, since
-            the reasoning does not stop being true at 721px. Still a
-            44px target, still labelled for a screen reader, still
-            opens the same warm confirm. */}
+        {/* THE NAME IS A LINE OF TEXT, IN EVERY STATE.
+
+            The lobby drew it as a heading and play drew it as an
+            editable field — so "Name this table" sat over a live
+            board as a dashed input box, which is a form control on
+            a table. The room names the table; the board says what
+            it is called. */}
+        <TableName title={game.title} />
+
         {/* THE BUG: THE DOOR WAS ONLY THERE DURING PLAY.
 
             `playing` is game.status === "playing", and the host now

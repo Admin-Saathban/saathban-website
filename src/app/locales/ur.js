@@ -2838,6 +2838,7 @@ const ur = {
     },
 
     setup: {
+      defaultTitle: "{host} کے ساتھ {game}",
       subtitle: "میز سجائیے، پھر یہ خود کھل جائے گی",
       diceOneCard: "ایک نرد — روایتی",
       diceTwoCard: "دو نرد — دیسی میز",

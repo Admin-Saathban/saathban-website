@@ -225,6 +225,11 @@ export default function NewGame() {
      that is early. */
   const [teams, setTeams] = useState(false);
 
+  /* The game's own name, in the reader's language. Read here rather
+     than in the render because start() needs it too, for the
+     table's default name. */
+  const name = game ? (lang === "ur" ? game.name_ur : game.name_en) : "";
+
   const start = async (setup) => {
     if (busy || !game) return;
     const { seats, diceCount, colours, fill } = setup;
@@ -277,7 +282,20 @@ export default function NewGame() {
            table and a new one keep the same shape. */
         if (teams) house.teams = true;
       }
-      const id = await createSession(game.key, seats, house, title);
+      /* A NAME, ALWAYS. Naming is optional for the person and not
+         for the table: the board shows the name and the history
+         lists it, and "the fourth of nine identical Ludos" is what
+         no name actually costs. So a table nobody titled is named
+         after the game and whoever opened it.
+
+         First name only — a table called "Ludo with Alexander
+         Testing-Smith" is a name that gets ellipsed to nothing at
+         390px. */
+      const host = (profile.full_name || "").trim().split(/\s+/)[0];
+      const named =
+        title.trim() ||
+        (host ? t("games.setup.defaultTitle", { game: name, host }) : name);
+      const id = await createSession(game.key, seats, house, named);
       try {
         sessionStorage.setItem("saathban.app.freshTable", id);
       } catch {
@@ -390,7 +408,6 @@ export default function NewGame() {
     );
   }
 
-  const name = lang === "ur" ? game.name_ur : game.name_en;
   const takenIds = Object.values(seated).map((p) => p.id);
 
   return (

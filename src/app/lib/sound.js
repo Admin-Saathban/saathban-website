@@ -41,7 +41,27 @@ const STORE_KEY = "saathban.app.sound";
    key from `muted` on purpose: somebody who wants the dice and the
    capture but not the drone should not have to give up both, and
    the mute on the table still silences everything above it. */
-const DEFAULTS = { volume: 0.7, muted: false, haptics: true, music: true };
+/* TWO LEVELS, NOT ONE.
+
+   There was a single `volume` on the master gain and a `music`
+   boolean beside it, so the only way to have the dice without the
+   march was to have neither at a lower level. The owner's ruling is
+   two independent sliders — music at 45, game sounds at 70 — and
+   two numbers cannot both live on one gain.
+
+   So the master carries the MUTE only, and the two levels sit on
+   gains of their own: the bed feeds musicGain, every effect feeds
+   fxGain, and both feed master. One switch still silences
+   everything, which is the promise the mute makes.
+
+   `volume` is still read back from anybody's stored prefs and used
+   as the effects level if they have no `effects` — a person who set
+   it once should not be reset to loud by an upgrade.
+
+   `music: true/false` is likewise honoured on the way in: false
+   becomes a level of zero rather than being dropped, so a person
+   who turned the bed off does not find it playing tomorrow. */
+const DEFAULTS = { muted: false, haptics: true, music: 0.45, effects: 0.7 };
 
 let prefs = { ...DEFAULTS };
 let loaded = false;
@@ -54,16 +74,24 @@ function loadPrefs() {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const saved = JSON.parse(raw);
+      const lvl = (v, fallback) =>
+        typeof v === "number" ? Math.min(1, Math.max(0, v)) : fallback;
       prefs = {
-        volume: typeof saved.volume === "number" ? Math.min(1, Math.max(0, saved.volume)) : DEFAULTS.volume,
         muted: !!saved.muted,
-        /* The old ambient flag is deliberately NOT read back. A person
-           who once switched the bed on has it sitting in their
-           localStorage, and reading it would be the only way the
-           deleted feature could return. */
         haptics: saved.haptics !== false,
-        /* remembered per person, and undefined means the new default */
-        music: saved.music !== false,
+        /* An older prefs blob has one `volume` and a music BOOLEAN.
+           Both are honoured rather than discarded: volume becomes
+           the effects level, and music:false becomes a music level
+           of zero. Somebody who turned the bed off once must not
+           find it playing because the shape of the setting
+           changed. */
+        effects: lvl(saved.effects, lvl(saved.volume, DEFAULTS.effects)),
+        music:
+          typeof saved.music === "number"
+            ? lvl(saved.music, DEFAULTS.music)
+            : saved.music === false
+            ? 0
+            : DEFAULTS.music,
       };
     }
   } catch {
@@ -84,7 +112,7 @@ export function setSoundPrefs(patch) {
   } catch {
     /* preference won't survive the session; the sound still obeys it now */
   }
-  if (ctx && master) master.gain.value = prefs.muted ? 0 : prefs.volume;
+  applyLevels();
   syncBedToPrefs();
   for (const fn of listeners) fn({ ...prefs });
   return { ...prefs };
@@ -99,7 +127,22 @@ export function onSoundPrefs(fn) {
 
 let ctx = null;
 let master = null;
+/* THE TWO LEVELS, as gains. master carries the mute alone: one
+   switch that silences everything is a promise, and a promise kept
+   by one node cannot be half-kept. */
+let musicGain = null;
+let fxGain = null;
 let unlocked = false;
+
+/* Push the stored levels onto the graph. Called on every change and
+   once when the graph is built, so there is one place that knows
+   how a preference becomes a gain. */
+function applyLevels() {
+  if (!ctx || !master) return;
+  master.gain.value = prefs.muted ? 0 : 1;
+  if (musicGain) musicGain.gain.value = prefs.music;
+  if (fxGain) fxGain.gain.value = prefs.effects;
+}
 
 function ensureCtx() {
   if (ctx) return ctx;
@@ -107,7 +150,12 @@ function ensureCtx() {
   if (!AC) return null;
   ctx = new AC();
   master = ctx.createGain();
-  master.gain.value = loadPrefs().muted ? 0 : prefs.volume;
+  loadPrefs();
+  musicGain = ctx.createGain();
+  fxGain = ctx.createGain();
+  musicGain.connect(master);
+  fxGain.connect(master);
+  applyLevels();
 
   /* A gentle limiter, not a loudness maximiser. Its whole job is to
      catch the one case where three sounds land on the same frame —
@@ -174,7 +222,7 @@ export function stopAllSound() {
 export function resumeSound() {
   if (!ctx || !unlocked) return;
   try {
-    if (master) master.gain.value = prefs.muted ? 0 : prefs.volume;
+    applyLevels();
     ctx.resume().catch(() => {});
     if (bedWanted && !bed) startAmbience(bedWanted);
   } catch {
@@ -238,7 +286,7 @@ function tone(c, at, { freq, to, dur = 0.2, type = "sine", peak = 0.2, cutoff = 
 
   osc.connect(lp);
   lp.connect(g);
-  g.connect(master);
+  g.connect(fxGain || master);
   osc.start(at);
   osc.stop(at + dur + 0.02);
 }
@@ -261,7 +309,7 @@ function hit(c, at, { dur = 0.12, peak = 0.2, band = 1200, q = 1.2, sweepTo = nu
 
   src.connect(f);
   f.connect(g);
-  g.connect(master);
+  g.connect(fxGain || master);
   src.start(at, Math.random() * 0.5);
   src.stop(at + dur + 0.02);
 }
@@ -531,7 +579,7 @@ export function playSound(name, opts = {}) {
   try {
     if (!VOICES[name]) return false;
     loadPrefs();
-    if (prefs.muted || prefs.volume <= 0) {
+    if (prefs.muted || prefs.effects <= 0) {
       announce(name, false);
       return false;
     }
@@ -556,7 +604,7 @@ export function playHopRun(count, spacingMs = 190) {
   try {
     loadPrefs();
     const n = Math.max(1, Math.min(24, count));
-    if (prefs.muted || prefs.volume <= 0) {
+    if (prefs.muted || prefs.effects <= 0) {
       announce("hopRun", false);
       return false;
     }
@@ -686,7 +734,7 @@ function buildBed(c, key) {
   warm.frequency.value = 3200;
   warm.Q.value = 0.4;
   out.connect(warm);
-  warm.connect(master);
+  warm.connect(musicGain || master);
 
   const march = key !== "snakes";
   const step = march ? 0.23 : 0.43;

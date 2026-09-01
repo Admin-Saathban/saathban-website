@@ -29,6 +29,7 @@ import { GAME, NO_SELECT } from "../gameSurface.js";
 import { GameBtn, GamePill, GamePanel, GameMotion, FlashLine } from "../GameUI.jsx";
 import InfoPanel from "../../../components/InfoPanel.jsx";
 import { SoundButton, SoundPanel } from "../SoundControls.jsx";
+import GameSettings from "./GameSettings.jsx";
 import { stopAllSound, resumeSound, startAmbience, stopAmbience } from "../../../lib/sound.js";
 import { themeOf, themeVars } from "../themes.js";
 import { SEAT_COLORS, povRotation } from "./board.js";
@@ -112,6 +113,49 @@ function RulesPanel({ rules }) {
         </div>
       ))}
     </Card>
+  );
+}
+
+/* ── THE THREE CONTROLS AT THE TOP OF THE GAME ────────────────
+
+   The owner placed these by dragging at 390x640: leave at the far
+   left, sound and settings together on the right. Solid dark
+   squares, 40px, radius 12, a white glyph and no text label on any
+   of them.
+
+   The POSITIONS are honoured as an arrangement rather than as
+   pixel coordinates — leave alone on the left, the other two
+   together on the right — because a 390x640 layout hard-coded in
+   absolute pixels is a layout that is wrong on every other phone,
+   and the thing he was placing was the arrangement.
+
+   No labels is the part that matters most: three round pills with
+   words in them across the top of a board is a toolbar, and a
+   toolbar is the app. ── */
+function TopBtn({ onClick, label, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      style={{
+        flex: "0 0 auto",
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        border: "none",
+        background: "#1E2226",
+        color: "#FFFFFF",
+        padding: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -438,6 +482,7 @@ export default function LudoSession() {
      announced to a screen reader as a status rather than an alert. */
   const [ceremony, setCeremony] = useState(null); // "setting" | "start" | null
   const [leaveAsk, setLeaveAsk] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   /* The chat sheet, and whose card is open. Both are opened from
      the circles at the corners: a person's circle opens their card,
      the particle on your own opens the chat. */
@@ -1257,47 +1302,11 @@ export default function LudoSession() {
             atTable, so it is there whenever there is a board to
             leave. */}
         {atTable && (
-          <button
-            type="button"
-            /* LEAVING IS A MOMENT, NOT A TRAPDOOR.
-
-               This navigated straight out, on the reasoning that
-               backing out should never force a choice — the table
-               was yours either way and going to look at something
-               else was not leaving. The owner has ruled the other
-               way, and playing it his way he is right: a door with
-               no ceremony in the corner of a game reads as an exit
-               you fell through, and he could not tell afterwards
-               whether he had left or not.
-
-               So it asks, and the answer is a real leaving: the
-               seat goes to a bot and the table stays findable and
-               rejoinable (0114). Both halves are in the sentence
-               it puts on screen. */
-            onClick={() => setLeaveAsk(true)}
-            aria-label={t("ludo.back")}
-            title={t("ludo.back")}
-            style={{
-              flex: "0 0 auto",
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              border: `1px solid ${GAME.pillEdge}`,
-              background: GAME.pill,
-              color: GAME.ink,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            {/* DRAWN, NOT TYPED. 🚪 renders as a blank tofu box on
-                anything without an emoji font for it — which included
-                the browser this was verified in, so the control that
-                leaves the game showed as a brown rectangle. A door
-                with an arrow out of it costs eleven lines and renders
-                identically everywhere. */}
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <TopBtn onClick={() => setLeaveAsk(true)} label={t("ludo.back")}>
+            {/* DRAWN, NOT TYPED. A door emoji is a blank tofu box
+                on anything without a font for it, which included
+                the browser this was first verified in. */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8"
                 stroke="currentColor"
@@ -1314,12 +1323,41 @@ export default function LudoSession() {
                 strokeLinejoin="round"
               />
             </svg>
-          </button>
+          </TopBtn>
         )}
-        <SoundButton
-          onClick={() => setSoundOpen((v) => !v)}
-          compact={playing}
-        />
+
+        {/* Sound and settings sit together on the right, in the
+            order the owner placed them. */}
+        <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
+          <TopBtn
+            onClick={() => setSoundOpen((v) => !v)}
+            label={t("games.sound.title")}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9h4l5-4v14l-5-4H4Z" fill="currentColor" />
+              <path
+                d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+              />
+            </svg>
+          </TopBtn>
+          {/* THE HAMBURGER, matching the app's More icon — three
+              lines, and nothing else. */}
+          <TopBtn
+            onClick={() => setSettingsOpen(true)}
+            label={t("ludo.settings.title")}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              {[6, 12, 18].map((y) => (
+                <rect key={y} x={3} y={y - 1} width={18} height={2} rx={1} fill="currentColor" />
+              ))}
+            </svg>
+          </TopBtn>
+        </div>
+
       </div>
 
       {soundOpen && <SoundPanel onClose={() => setSoundOpen(false)} />}
@@ -2008,6 +2046,20 @@ export default function LudoSession() {
 
       {/* Leaving is a decision, so it is asked as one — warmly, and
           with the seat's fate stated rather than implied. */}
+      {/* The settings menu: sound, this table, the rulebook, and the
+          same way out. */}
+      {settingsOpen && (
+        <GameSettings
+          rules={rules}
+          editable={editable}
+          onClose={() => setSettingsOpen(false)}
+          onLeave={() => {
+            setSettingsOpen(false);
+            setLeaveAsk(true);
+          }}
+        />
+      )}
+
       {/* ── LEAVING, IN THE GAME'S OWN STYLE ──
 
              It was the app's white card with brown ink and a

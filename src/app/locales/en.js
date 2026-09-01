@@ -2476,6 +2476,13 @@ const en = {
       /* The sub-line answers the fear that stops people using this
          control at all. It is true, and it is reversible. */
       showLess: "Show less from {name}",
+    deleteAsk: "Delete this post?",
+    deleteAskSub: "It will go from the feed for everyone. This one cannot be undone.",
+    deleteKeep: "Keep it",
+    deleteYes: "Delete it",
+    editingTitle: "Editing your post",
+    editSave: "Save changes",
+    editCancel: "Leave it as it was",
       showLessSub: "They won't know.",
       report: "Report this",
     },
@@ -2764,6 +2771,72 @@ const en = {
 
   // ─── Ludo (routes/games/ludo/) ───
   ludo: {
+    /* The settings menu, and the book inside it. */
+    settings: {
+      title: "Settings",
+      sound: "Sound",
+      table: "This table",
+      rulebook: "Rulebook",
+      mute: "Mute everything",
+      unmute: "Turn the sound back on",
+      music: "Background music",
+      effects: "Game sounds",
+      frozen: "The game has begun, so these are settled for this table.",
+      on: "On",
+      off: "Off",
+    },
+    book: {
+      search: "Look something up",
+      nothing: "Nothing in the book matches \u201c{q}\u201d.",
+      state: {
+        on: "On at this table.",
+        off: "Off at this table.",
+        oneDie: "One die at this table.",
+        twoDice: "Two dice at this table.",
+      },
+      setup: {
+        title: "Setting up",
+        seats: "Two to four people play. Any chair nobody takes is played by a friendly bot, so a game never waits for a fourth.",
+        colours: "Each seat has its own colour, and the seat decides it \u2014 yellow, blue, red and green, going round the board clockwise.",
+        dice: "The host chooses one die or two before the first roll. With two, both are thrown together and each is spent separately.",
+      },
+      moving: {
+        title: "Moving",
+        out: "A goti leaves its yard on a six, and lands on the coloured square outside its own corner.",
+        count: "After that it walks the number you threw, one square at a time, all the way round the board.",
+        six: "A six earns another roll after your move.",
+        threeSixes: "Three sixes in a row cancels the whole run \u2014 those moves are taken back and the turn passes.",
+      },
+      safe: {
+        title: "Safe squares",
+        stars: "The eight squares marked with a star are safe. A goti standing on one cannot be taken.",
+        sharing: "Two players may stand on the same star at the same time. Neither can touch the other there.",
+      },
+      capturing: {
+        title: "Capturing",
+        take: "Landing on a square where one enemy goti stands sends it home, and it starts again.",
+        extraTurn: "Taking a goti earns you another turn.",
+        notOnStar: "You cannot take anybody who is standing on a star.",
+      },
+      jota: {
+        title: "Jota (pairs)",
+        what: "Two of your own gotis on one square make a jota. A single enemy goti cannot take a pair, and cannot pass it.",
+        half: "A jota travels together, at half the number you threw \u2014 so a six moves the pair three squares.",
+        breaking: "You may move one of the two alone instead, and the pair is broken.",
+      },
+      home: {
+        title: "Getting home",
+        column: "After a full lap, a goti turns off the ring into its own coloured column and climbs to the middle.",
+        exact: "Finishing needs the exact number \u2014 overshooting is not a move.",
+        captureFirst: "You must take at least one goti before any of yours may enter the home column.",
+        another: "Getting a goti home earns you another turn.",
+      },
+      winning: {
+        title: "Winning",
+        four: "The first player to bring all four gotis home wins.",
+        carryOn: "The others may play on for second and third if they would like to.",
+      },
+    },
     /* The two things in a game of ludo worth saying out loud. */
     moment: {
       took: "{who} took one of {whose} gotis",
@@ -2813,6 +2886,8 @@ const en = {
       waitHost: "Waiting for the host to start the game — the rules above are what you'll play by.",
     },
     rules: {
+      jota: "Jota (pairs)",
+      threeSixes: "Three sixes cancels the turn",
       title: "House rules",
       diceCount: "Dice",
       diceCountHint: "Two dice is the Desi table: both are thrown together and each is used separately.",
@@ -3563,6 +3638,12 @@ const en = {
     sending: "Sending…",
     saving: "Saving…",
     working: "Just a moment…",
+    linkCopied: "Link copied ✓",
+    linkNotCopied: "Your phone would not let us copy it. You can share the post from its page instead.",
+    showLessDone: "You will see less from {name}. They are not told.",
+    postDeleted: "Your post is deleted.",
+    postHidden: "Hidden from your feed.",
+    postUpdated: "Your post is updated ✓",
     somethingWrong: "That didn't go through. Please try again.",
     offlineKept: "Saved on this phone — it will sync when you're back online.",
     // community

@@ -44,6 +44,18 @@ const QUICK = ["👏", "😂", "😮", "🙏", "🎉", "😅", "❤️", "🤞"]
 export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSent }) {
   const { t, ts } = useI18n();
   const [messages, setMessages] = useState([]);
+  /* MINE, ALREADY SAID, NOT YET ACKNOWLEDGED.
+
+     A message used to appear when the server said it had it: send,
+     round trip, refetch, render — about a second on a good
+     connection and longer on a phone. A second between tapping Send
+     and seeing your own words is long enough to tap Send again.
+
+     So it is on screen the instant it is sent, and the round trip
+     happens behind it. This is safe in a way an optimistic UPDATE
+     is not: nothing else changes, and if the send fails the line
+     simply stops being there. */
+  const [pending, setPending] = useState([]);
   const [draft, setDraft] = useState("");
   const endRef = useRef(null);
   const [mutes, setMutes] = useState({});
@@ -64,15 +76,32 @@ export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSen
     if (open) endRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length, open]);
 
-  const shown = useMemo(
-    () => messages.filter((m) => m.sender_id === myId || !mutes[m.sender_id]?.chat),
-    [messages, mutes, myId]
-  );
+  const shown = useMemo(() => {
+    const heard = messages.filter((m) => m.sender_id === myId || !mutes[m.sender_id]?.chat);
+    /* A pending line stands down the moment its real twin arrives.
+       Matched on the BODY, because the local copy never had the
+       server's id — and each real message may cancel only one
+       pending line, so saying "ok" twice does not make both
+       disappear when the first is acknowledged. */
+    const claimed = new Set();
+    const live = pending.filter((p) => {
+      const twin = heard.find(
+        (m) => m.sender_id === myId && m.body === p.body && !claimed.has(m.id)
+      );
+      if (!twin) return true;
+      claimed.add(twin.id);
+      return false;
+    });
+    return [...heard, ...live];
+  }, [messages, mutes, myId, pending]);
 
   const send = async (body) => {
     const text = (body || "").trim();
     if (!text) return;
     setDraft("");
+    /* On screen before the network is touched. */
+    const mine = { id: `local-${Date.now()}-${Math.random()}`, sender_id: myId, body: text };
+    setPending((p) => [...p, mine]);
     /* THE WHOOSH, before the round trip. A send sound that waits for
        the server arrives after the message is already on screen, and
        a sound that lags what it describes reads as a second event. */
@@ -82,7 +111,11 @@ export default function ChatPanel({ sessionId, myId, seats, open, onClose, onSen
       setMessages(await fetchChat(sessionId));
       onSent?.(text);
     } catch {
-      /* transient; the poll reconciles */
+      /* IT DID NOT GO. The line is taken back off the screen rather
+         than left sitting there looking sent — a message you can
+         see and nobody received is worse than one that visibly
+         failed to appear. */
+      setPending((p) => p.filter((x) => x.id !== mine.id));
     }
   };
 

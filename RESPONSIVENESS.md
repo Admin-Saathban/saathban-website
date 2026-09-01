@@ -55,9 +55,20 @@ const act = (apply, request, undo) => {
 
 Three things about it worth copying:
 
-- **The reconcile is not awaited.** Awaiting a refetch after a successful
-  action holds the screen for a second round trip, after the thing the person
-  asked for has already happened.
+- **The reconcile is not awaited — AND NOR IS THE HANDLER THAT CONTAINS IT.**
+  Awaiting a refetch after a successful action holds the screen for a second
+  round trip, after the thing the person asked for has already happened.
+
+  This one is easy to get half right, and Lane 4 found the half. An
+  un-awaited reconcile is not enough if a CALLER awaits the handler it lives
+  in: the await simply moves up a level and the button holds anyway. Their
+  Save button stayed on "Saving…" through an entire feed reload, after the
+  words were already saved and on screen — the reconcile was not awaited by
+  the request chain, but it was awaited by the component. The same stall
+  wearing different clothes.
+
+  So check the whole path, not the handler: if anything between the tap and
+  the paint says `await`, the person is waiting for it.
 - **`undo` restores the exact prior value**, captured before `apply` — not a
   guess at what it used to be.
 - **Some actions keep their surface open.** Changing a post's visibility shows
@@ -75,6 +86,41 @@ is worse than a brief pause.
 "Something went wrong" is the last resort, not the first. When the server
 gives a reason, show the server's reason. A refusal is not an error to retry:
 do not offer "try again" for something that will never succeed.
+
+## Destructive actions follow the rule too
+
+They asked whether delete should be the one place that waits for the server,
+and were right to want that decided here rather than left as a silent
+exception in one file.
+
+**It follows the rule.** Delete is confirmed before it happens, the card goes
+at once, and a refusal puts it back from the value captured before the change.
+Making it wait would mean the person most likely to be on a poor connection
+watches a post they have just chosen to remove sit on screen for eight
+seconds — measured, at 1200ms latency, 8642ms before the card moved. That is
+the rule's own worst case, not an argument for an exception to it.
+
+**With one requirement that only destructive actions carry.** A failed delete
+must be reported in a way that SURVIVES being looked away from — not a toast
+that fades after four seconds. Somebody who deletes a post and sees it go may
+close the app believing it gone; if the request then fails, a message nobody
+was there to read means they think something is deleted that is not. For a
+post the person may be removing precisely because they regret it, that is a
+privacy failure and not merely a stale screen.
+
+**This requirement is NOT met today, and I am naming it rather than writing
+a rule the app cannot obey.** `pushToast` in `lib/feedback.jsx` always sets a
+dismiss timer — every toast fades, and there is no persistent tone. So a
+failed delete currently reports through something that disappears. Closing
+that gap needs a toast that stays until acknowledged, which is a change to
+the feedback host rather than to any one caller. Until then, delete is
+optimistic and its failure notice is transient, and that is a known hole
+rather than a decision.
+
+The general form: **optimistic is correct for anything reversible, and for
+anything destructive that is confirmed first. The exception is not
+"destructive" — it is "irreversible AND the failure cannot be told to
+anyone".** If you cannot report the failure, do not claim the success.
 
 ## Two things that are NOT this rule
 

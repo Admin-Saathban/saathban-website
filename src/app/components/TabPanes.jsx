@@ -193,6 +193,7 @@ export default function TabPanes() {
       {PANES.filter((p) => visited.includes(p.key)).map((p) => (
         <div
           key={p.key}
+          data-sb-pane={p.key}
           /* display:none rather than unmounting — the state, the fetched
              data and the DOM all survive, which is the entire feature. */
           style={{ display: p.key === active ? "block" : "none" }}

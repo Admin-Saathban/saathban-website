@@ -48,11 +48,24 @@
 
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { wantsLessMotion } from "./motion.jsx";
+import { wantsLessMotion } from "./motion.jsx";
+import { paneFor as paneKeyFor } from "./TabPanes.jsx";
 
 /* Below ENGAGE the gesture is still undecided and the page scrolls
    normally; past it the drag owns the finger. 12px is small enough to
    feel immediate and large enough that a tap never starts a drag. */
+/* 12px, and the guard in `start` is what protects a tap — not this
+   number.
+
+   I raised this to 20 first, believing the drag was swallowing presses,
+   because a thumb roll of 16px killed a tap on the deployed build. It
+   does — and so does 16px of roll in any app: that is Chrome's own touch
+   slop, which cancels the synthetic click when a touch travels too far.
+   Verified by shipping the guard and measuring again; 16px still
+   cancelled. It was never ours to fix.
+
+   So the threshold stays low, because a LOW threshold is what makes the
+   pane start moving WITH the finger rather than after it. */
 const ENGAGE = 12;
 
 /* ── THE DRAG STYLESHEET LIVES HERE, WITH THE HOOK THAT USES IT ──
@@ -74,13 +87,32 @@ const ENGAGE = 12;
    stays in one module and AppShellBar does not grow another child. */
 const STYLE_ID = "sb-tab-drag-styles";
 const DRAG_CSS = `
-html.sb-dragging main {
-  transform: translate3d(var(--sb-drag, 0px), 0, 0);
-  will-change: transform;
-}
-html.sb-settling main {
-  transform: translate3d(var(--sb-drag, 0px), 0, 0);
-  transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+/* THE PANE MOVES, AND SO DOES THE ONE YOU ARE GOING TO.
+
+   This translated the main element, so the screen you were leaving slid
+   away over bare ground with no sign of where you were headed. Measured
+   during a drag: exactly one pane was ever display:block. It looked like
+   it was taking something away rather than bringing something in, which
+   is most of why it reads as nothing happening.
+
+   The incoming pane is marked [data-sb-into] by the hook and sits one
+   screen away, so it tracks the finger from the first pixel. Only ever a
+   pane that is already MOUNTED — mounting one mid-drag would fetch a
+   screen somebody may be about to swipe away from. An unvisited
+   neighbour still shows ground, which is honest: there is nothing there
+   yet. */
+html.sb-dragging [data-sb-pane] {
+  transform: translate3d(var(--sb-drag, 0px), 0, 0);
+  will-change: transform;
+}
+html.sb-settling [data-sb-pane] {
+  transform: translate3d(var(--sb-drag, 0px), 0, 0);
+  transition: transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+html.sb-dragging [data-sb-pane][data-sb-into],
+html.sb-settling [data-sb-pane][data-sb-into] {
+  display: block !important;
+  transform: translate3d(calc(var(--sb-side, 1) * 100vw + var(--sb-drag, 0px)), 0, 0);
 }
 html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
 
@@ -144,9 +176,28 @@ export default function useTabSwipe(items, enabled = true) {
 
     const root = document.documentElement;
     const setDrag = (px) => root.style.setProperty("--sb-drag", px + "px");
-    const clear = () => {
-      root.classList.remove("sb-dragging", "sb-settling");
-      root.style.removeProperty("--sb-drag");
+    /* Reveal the neighbour on the side the finger is heading, if that
+       pane is already in the document. */
+    const hideIncoming = () => {
+      document.querySelectorAll("[data-sb-into]")
+        .forEach((el) => el.removeAttribute("data-sb-into"));
+    };
+    const showIncoming = (dx) => {
+      hideIncoming();
+      const n = neighbour(dx);
+      if (n < 0 || n >= items.length) return;
+      const key = paneKeyFor(items[n].to);
+      const el = key && document.querySelector('[data-sb-pane="' + key + '"]');
+      if (!el) return;
+      el.setAttribute("data-sb-into", "");
+      root.style.setProperty("--sb-side", dx < 0 ? "1" : "-1");
+    };
+
+    const clear = () => {
+      root.classList.remove("sb-dragging", "sb-settling");
+      root.style.removeProperty("--sb-drag");
+      root.style.removeProperty("--sb-side");
+      hideIncoming();
     };
 
     /* Longest match wins: /app/games/ludo must resolve to the Games tab,
@@ -169,7 +220,15 @@ export default function useTabSwipe(items, enabled = true) {
       return st.current.idx + (forward ? 1 : -1);
     };
 
-    const start = (e) => {
+    /* YOU DO NOT SWIPE TABS BY STARTING ON A BUTTON. A gesture that
+       begins on something tappable is a tap on that thing — a heart, a
+       menu row, a chip. Excluding those outright means the drag can
+       never interfere with a press however far a thumb rolls, which is
+       a stronger guarantee than any threshold, because a threshold is
+       always wrong for somebody. */
+    const TAPPABLE = "button, a, [role='button'], [role='checkbox'], [role='switch'], [role='tab'], label, summary";
+
+    const start = (e) => {
       const s = st.current;
       /* A SETTLE IS INTERRUPTIBLE. The old version kept the timeout id
          nowhere, so a second flick during the 200ms settle left the
@@ -186,9 +245,10 @@ export default function useTabSwipe(items, enabled = true) {
       s.on = false; s.dx = 0; s.v = 0;
       if (e.touches.length !== 1) { s.dead = true; return; }
       const el = e.target instanceof Element ? e.target : null;
-      s.dead =
-        !el ||
-        scrollsSideways(el) ||
+      s.dead =
+        !el ||
+        scrollsSideways(el) ||
+        !!el.closest(TAPPABLE) ||
         !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
       s.idx = indexOfPath();
       if (s.idx < 0) s.dead = true;
@@ -218,10 +278,11 @@ export default function useTabSwipe(items, enabled = true) {
            it — a thumb arcing down the screen crosses 12px of x while
            crossing 11px of y, and that is a scroll. */
         if (Math.abs(dx) < Math.abs(dy) * DOMINANCE) return;
-        s.on = true;
-        if (!wantsLessMotion()) {
-          root.classList.add("sb-dragging");
-          root.classList.remove("sb-settling");
+        s.on = true;
+        if (!wantsLessMotion()) {
+          root.classList.add("sb-dragging");
+          root.classList.remove("sb-settling");
+          showIncoming(dx);
         }
       }
 

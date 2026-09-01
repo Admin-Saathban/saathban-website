@@ -94,6 +94,36 @@ export default function useShutter(scrollerRef) {
     const read = () => {
       frame = 0;
       const y = Math.max(0, posY());
+
+      /* ── THE BAR HOLDS STILL UNDER A SHEET OR A KEYBOARD ──
+
+         Opening "Join with a code" made the bar open and close
+         repeatedly. The shutter reads scrolling as intent, and a
+         software keyboard produces scrolling that is not intent: it
+         shrinks the viewport and the browser scrolls the focused field
+         into view, which arrives here as a real gesture. Then the
+         layout settles, that arrives as another, and the bar oscillates.
+
+         DETECTED RATHER THAN DECLARED. The alternative is every sheet
+         in the app remembering to tell the shutter it exists, and the
+         one that forgets is the one that flickers — this app has five
+         lanes and more sheets than I can name. An open dialog or a
+         focused field is visible from here, so nothing has to opt in
+         and every sheet that raises a keyboard is covered by the same
+         two lines, including the ones not written yet.
+
+         Note this is a HOLD, not a hide: whatever the bar was doing, it
+         goes on doing. A bar that vanished under every keyboard would
+         be a different bug with the same cause. */
+      const el = document.activeElement;
+      const typing =
+        !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+      if (typing || document.querySelector('[role="dialog"]')) {
+        lastY.current = y;
+        anchor.current = y;
+        return;
+      }
+
       /* Quiet: keep the numbers current so the next real gesture is
          measured from here, and decide nothing. */
       if (Date.now() < quietUntil) {

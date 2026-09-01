@@ -41,6 +41,7 @@ import FamRoutes from "./routes/fam/FamRoutes.jsx";
 import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
 import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
+import SnakesRoutes from "./routes/games/snakes/SnakesRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
 import PublicResult from "./routes/games/PublicResult.jsx";
@@ -437,6 +438,20 @@ export default function AppRoot() {
             element={
               <RequireAuth>
                 <LudoRoutes />
+              </RequireAuth>
+            }
+          />
+          {/* Snakes & Ladders (routes/games/snakes, migration 0105).
+              Its own full-screen world for the same reason ludo has
+              one: a board with an app header over it and a tab bar
+              under it is a picture of a game, not a game. Declared
+              ABOVE the games shell, which would otherwise swallow it
+              as games/*. */}
+          <Route
+            path="games/snakes/*"
+            element={
+              <RequireAuth>
+                <SnakesRoutes />
               </RequireAuth>
             }
           />

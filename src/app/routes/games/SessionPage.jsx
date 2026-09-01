@@ -461,6 +461,12 @@ export default function SessionPage() {
   if (session.game_key === "ludo" && session.status !== "lobby") {
     return <Navigate to={`/app/games/ludo/${session.id}`} replace />;
   }
+  /* Snakes owns its screen now (routes/games/snakes, 1 Sept). Unlike
+     ludo it takes the LOBBY too, because its setup room is part of
+     that world rather than a page in this shell. */
+  if (session.game_key === "snakes") {
+    return <Navigate to={`/app/games/snakes/${session.id}`} replace />;
+  }
 
   return (
     <GamesScreen backTo="/app/games" backLabel={t("games.board.backHome")} game={live}>

@@ -58,7 +58,9 @@ import CommunityRoutes from "../routes/community/CommunityRoutes.jsx";
    inside a hidden tab — with the tab underneath it still mounted,
    still holding its header and its scroll. */
 const isGameWorld = (p) =>
-  /^\/app\/games\/ludo\/[^/]+/.test(p) || /^\/app\/games\/new\/[^/]+/.test(p);
+  /^\/app\/games\/ludo\/[^/]+/.test(p) ||
+  /^\/app\/games\/snakes\/[^/]+/.test(p) ||
+  /^\/app\/games\/new\/[^/]+/.test(p);
 
 /* `path` is relative to /app, because AppRoot is itself mounted at
    /app/* and these re-create the routes it used to declare. */

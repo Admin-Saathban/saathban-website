@@ -199,11 +199,27 @@ export function LanguageProvider({ children }) {
           --sb-safe-top: env(safe-area-inset-top, 0px);
           --sb-safe-bottom: env(safe-area-inset-bottom, 0px);
         }
-        /* The ground reaches the physical edges: with viewport-fit=cover
-           the areas beside the notch belong to the page, and a page that
-           does not paint them lets the platform's own black through —
-           which is the band the owner has been looking at. */
-        html { background: ${APP_COLORS.bg}; }
+        /* THE UNDERLAY IS THE GROUND, AT EVERY LAYER.
+
+           With viewport-fit=cover and a translucent status bar the whole
+           screen belongs to the page, including the strips behind the
+           notch and the home indicator. Anything that does not paint
+           them shows whatever is underneath, and underneath a web view
+           is black.
+
+           So the colour is set on html, on body and on the shell root
+           rather than once and hopefully inherited. The point is not
+           redundancy for its own sake: it means that at any moment when
+           a bar has travelled and the content beneath has not yet
+           painted — a settle, a route change, a scroll on a slow frame —
+           what shows is PAGE rather than void. A transient sage gap
+           reads as the app; a transient black one reads as broken.
+
+           The scroll container therefore owns the full viewport, and the
+           safe-area insets are padding INSIDE it (on the bars, which are
+           part of the page) rather than margin outside it. */
+        html, body { background: ${APP_COLORS.bg}; }
+        .sb-appshell { background: ${APP_COLORS.bg}; min-height: 100vh; }
       `}</style>
       <style>{`html, body { margin: 0; background: ${APP_COLORS.bg};` +
         ` color: ${APP_COLORS.textMain}; font-family: ${meta.fonts.body}; }`}</style>

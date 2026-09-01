@@ -30,7 +30,21 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent, and this is the top band.
+
+         With "default" iOS standalone does NOT put the web view under
+         the status bar: the system reserves that strip and paints it
+         itself, which under a dark app is the black band. And because
+         nothing is behind the status bar, env(safe-area-inset-top) is 0
+         even with viewport-fit=cover — so the cover attribute alone
+         could never have fixed it, and the top inset the header pads
+         with was measuring a gap the page did not own.
+
+         "black-translucent" hands the whole screen to the page. The
+         status bar glyphs draw over our own pixels — white on the jet
+         header, which is what we want — and the top inset becomes real
+         so the header's padding starts doing its job. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Saathban" />
 
     <!-- Open Graph -->

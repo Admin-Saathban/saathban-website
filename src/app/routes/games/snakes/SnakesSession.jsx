@@ -120,6 +120,10 @@ export default function SnakesSession() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cardSeat, setCardSeat] = useState(null);
   const [rolling, setRolling] = useState(false);
+  /* The winner's moment is HELD until dismissed, so it needs somewhere
+     to record that it was — otherwise Done and the back gesture both
+     had nothing to do and the card could not be got rid of. */
+  const [winnerSeen, setWinnerSeen] = useState(false);
   const seenRef = useRef(0);
 
   /* Keyed on the COUNTS, not on the session object. fetchSession
@@ -362,11 +366,11 @@ export default function SnakesSession() {
           onClose={() => setCardSeat(null)}
         />
       )}
-      {winner && (
+      {winner && !winnerSeen && (
         <Celebration
           colorIdx={seatColorIdx(session, winner.seat_no)}
           name={winner.name || t("games.board.bot")}
-          onDone={() => {}}
+          onDone={() => setWinnerSeen(true)}
         />
       )}
     </>

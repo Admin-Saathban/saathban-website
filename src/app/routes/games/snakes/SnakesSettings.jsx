@@ -31,6 +31,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { getSoundPrefs, setSoundPrefs, onSoundPrefs } from "../../../lib/sound.js";
 import Icon from "../../../components/Icon.jsx";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 const PANEL = "#14110C";
 const LINE = "rgba(255,255,255,.10)";
@@ -85,15 +86,17 @@ export default function SnakesSettings({ board, onClose, onLeave }) {
   const [prefs, setPrefs] = useState(() => getSoundPrefs());
   const [confirming, setConfirming] = useState(false);
 
+  /* THE ANDROID BACK GESTURE CLOSES THIS, rather than navigating out
+     of the game. A sheet whose open state is a plain useState has no
+     history entry of its own, so back leaves the screen underneath
+     instead — you cannot get out of the sheet, and when you do get
+     out you are somewhere else. Lane 2's audit found 22 of 23 overlay
+     surfaces in the app behaving that way; this one was going to be
+     the 23rd. */
+  useBackToClose(true, onClose);
+
   useEffect(() => onSoundPrefs(setPrefs), []);
   const put = (patch) => setPrefs(setSoundPrefs(patch));
-
-  /* Escape closes, like every other sheet in the app. */
-  useEffect(() => {
-    const k = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
-  }, [onClose]);
 
   return (
     <>

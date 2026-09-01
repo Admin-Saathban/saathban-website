@@ -21,6 +21,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { playSound } from "../../../lib/sound.js";
 import { colorOf } from "./skins.js";
+import useBackToClose from "../../../components/useBackToClose.js";
 
 const CSS = `
 @keyframes sb-snk-fall {
@@ -41,6 +42,9 @@ export default function Celebration({ colorIdx = 0, name, onDone }) {
   const { t, ts } = useI18n();
   const c = colorOf(colorIdx);
   const fired = useRef(false);
+
+  /* Back dismisses the winner's moment instead of leaving the table. */
+  useBackToClose(true, onDone);
 
   useEffect(() => {
     if (fired.current) return;

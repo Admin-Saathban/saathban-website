@@ -162,6 +162,12 @@ So do not stage at all. Commit straight by pathspec:
 git commit -F- -- <paths>
 ```
 
+**One exception: a new file.** Pathspec matches only what git already
+tracks, so a brand-new file aborts the whole commit — "did not match any
+file(s) known to git", and quietly enough to miss. Add that file, alone, then
+commit immediately. It is the one moment something of yours is in the shared
+index, so keep it short.
+
 This takes the working-tree content of exactly those files, puts nothing of
 yours in the shared index for anyone else to sweep up, and leaves their
 staged work alone. `git add` followed by a commit leaves a window open for

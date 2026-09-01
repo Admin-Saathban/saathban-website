@@ -1,4 +1,40 @@
 /* ════════════════════════════════════════════════
+   FOUR NAMES FOR ONE BOARD. The picker is gone; this file stays
+   because old tables carry a key that still has to resolve.
+
+   WHAT ACTUALLY DIFFERED, asked for and answered honestly. The
+   ludo board reads exactly THREE of the twelve tokens below —
+   --sb-table-cell and --sb-table-cell-alt (the two stops of the
+   track squares' gradient) and --sb-table-line (the gridline).
+   Everything a person actually looks at is drawn by the board
+   itself and is not themed at all: the timber frame, the midnight
+   surround, the four yards, the home triangles, the crown, the
+   arrows, the stars.
+
+   So, between the two themes anybody can reach:
+
+     Classic  cell #FFFFFF, alt #FCFCFB, line rgba(58,52,42,.55)
+     Wood     cell #F6EAD2, alt #E7D3B3, line #C9AD83
+
+   — a faint cream tint on the squares. Marble differs from
+   Classic by #ECEAE5 against #FCFCFB on the alternate stop, which
+   is a difference of about four values in each channel on half of
+   a subtle gradient. Night is the only one that would genuinely
+   look like another board (#273041 squares), and it is locked
+   behind twenty-five finished tables, so almost nobody has ever
+   seen it.
+
+   The owner has designed the board — bright white, wood frame,
+   midnight table — and ruled: make them distinct or cut to the
+   one. Cutting is the honest half. Four names for one board is a
+   choice that isn't one, and an unlock ladder on top of it is a
+   reward that gives nothing.
+
+   themeOf() below still answers, so every table ever created
+   still opens; it simply always answers with the designed board.
+   ════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════
    Table themes (backlog C1) — the surface a table is played on.
 
    The host picks one at setup and it applies to everyone at that
@@ -111,8 +147,12 @@ export const DEFAULT_THEME = "classic";
    before themes existed carries no key at all, and it must still
    open. */
 export function themeOf(houseRules) {
-  const key = houseRules?.table_theme;
-  return THEMES[key] || THEMES[DEFAULT_THEME];
+  /* ALWAYS THE DESIGNED BOARD. The key on an old table is read and
+     deliberately ignored rather than deleted: dropping it from
+     every stored house_rules would be a migration over live rows
+     to change nothing anybody can see. */
+  void houseRules;
+  return THEMES[DEFAULT_THEME];
 }
 
 /* The CSS custom properties a themed surface sets. Applied to a

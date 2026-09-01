@@ -57,7 +57,10 @@ import PeoplePicker from "./PeoplePicker.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import SeatSetup from "./setup/SeatSetup.jsx";
 import { Switch as RuleSwitchBase } from "./setup/SeatSetup.jsx";
-import ThemePicker from "./ThemePicker.jsx";
+/* NO THEME PICKER. Four names, one board — see the note in
+   themes.js. ThemePicker.jsx and the rest of themes.js are left
+   standing because existing tables carry a table_theme key that
+   still has to resolve. */
 import { DEFAULT_THEME } from "./themes.js";
 import { BodyText, GhostBtn } from "./ui.jsx";
 import RoomScreen from "./setup/RoomScreen.jsx";
@@ -697,9 +700,9 @@ export default function NewGame() {
             </>
           ) : null
         }
-        extras={
-          <ThemePicker value={theme} onPick={setTheme} gamesFinished={gamesFinished} />
-        }
+        /* NO `extras`. It held the theme picker and nothing else;
+           an empty JSX expression is a syntax error, so the slot
+           goes with its one occupant. */
         onPickPeople={(seat) => setSheetSeat(seat)}
         onStart={start}
       />

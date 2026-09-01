@@ -551,6 +551,13 @@ function PostCard({
   const lastTapRef = useRef({ t: 0, x: 0, y: 0 });
   const [pop, setPop] = useState(null);
 
+  /* WHICH REACTION ALREADY FIRED ON THE WAY DOWN, so the click that
+     follows does not do it twice. Timestamped rather than a bare flag:
+     a pointerdown whose pointerup lands outside the button never
+     produces a click, and a bare flag would then swallow the NEXT
+     genuine tap. Anything older than a gesture is stale. */
+  const reactFiredRef = useRef(null);
+
   const onCardPointerUp = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     if (e.target.closest("button, a, input, textarea, [role='dialog']")) return;
@@ -915,7 +922,46 @@ function PostCard({
               type="button"
               aria-pressed={mine}
               aria-label={t(REACTION_LABEL[emoji])}
-              onClick={() => onToggleReaction(post.id, emoji, mine)}
+              /* ON THE WAY DOWN, NOT ON THE WAY UP.
+
+                 The optimistic write was real and was genuinely first,
+                 and it still felt slow, because onClick cannot run
+                 until the finger LIFTS and the browser has synthesised
+                 a click from the touch. Measured on a phone profile:
+                 down-to-up 74ms of hold, up-to-flip another 73ms, so
+                 147ms before anything moved — and a person holds
+                 longer than a probe does. Every millisecond of the
+                 hold was silence.
+
+                 The earlier measurement missed it entirely because it
+                 used .click(), which skips the touch sequence and
+                 never waits for a lift that a real finger has to make.
+
+                 pointercancel is the browser telling us a scroll took
+                 the gesture over — the one honest signal that this was
+                 never a tap — so that is where it is undone, rather
+                 than guessing from a movement threshold. */
+              onPointerDown={(e) => {
+                if (e.pointerType === "mouse" && e.button !== 0) return;
+                reactFiredRef.current = { emoji, mine, at: Date.now() };
+                onToggleReaction(post.id, emoji, mine);
+              }}
+              onPointerCancel={() => {
+                const f = reactFiredRef.current;
+                reactFiredRef.current = null;
+                if (f) onToggleReaction(post.id, f.emoji, !f.mine);
+              }}
+              onClick={() => {
+                const f = reactFiredRef.current;
+                /* Already done on the way down. A keyboard activation
+                   sends a click with no pointerdown before it, which is
+                   why this path stays. */
+                if (f && f.emoji === emoji && Date.now() - f.at < 700) {
+                  reactFiredRef.current = null;
+                  return;
+                }
+                onToggleReaction(post.id, emoji, mine);
+              }}
               /* ONE LINE OF PLAIN ACTIONS — no pills, no boxes.
 
                  Four outlined pills under every post was four more

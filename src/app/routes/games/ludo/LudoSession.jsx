@@ -626,7 +626,23 @@ export default function LudoSession() {
      with the chat open closes the chat; back with nothing open asks
      whether you meant to leave. */
   const [backGuard, setBackGuard] = useState(true);
-  useBackToClose(atTable && backGuard, () => {
+  /* ── READ OFF `game`, NOT OFF `atTable` ────────────────────────
+
+     `atTable` is declared six hundred lines below this, and a hook
+     argument is evaluated DURING RENDER — so naming it here threw
+     "Cannot access before initialization" and blanked the board on
+     the deployed build. Fourth time this file has done it, and the
+     third distinct way; the build passed every time.
+
+     The same expression, evaluated where it is safe. See the
+     identical note on `autoMove`, which is the same fix for the
+     same reason — and the reason there are now two of these is
+     that a rule I wrote down one round ago was not enough on its
+     own. Every hook in this component must read only from state
+     and props declared above it, never from the derived consts in
+     the render body. */
+  const liveTable = game?.status === "playing" || game?.status === "lobby";
+  useBackToClose(liveTable && backGuard, () => {
     setBackGuard(false);
     setLeaveAsk(true);
   });

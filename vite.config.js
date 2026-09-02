@@ -43,17 +43,28 @@ function stampServiceWorker(hash, builtAt) {
   return {
     name: 'sb-stamp-sw',
     apply: 'build',
-    closeBundle() {
-      const out = resolve(process.cwd(), 'dist/sw.js')
-      const src = readFileSync(out, 'utf8')
-      if (!src.includes('__SB_SW_VERSION__')) {
-        throw new Error('sw.js has no __SB_SW_VERSION__ placeholder — the worker would never update')
+    /* EMITTED, not post-processed.
+
+       This first read dist/sw.js after Vite had copied public/ over
+       it — which depends on hook ordering, and a build failed the day
+       it did not hold: the copy had not run, so the file it read was
+       the PREVIOUS build's already-stamped worker and the guard
+       correctly refused. Reading the template from src/ and emitting
+       the result as a build asset depends on nothing. The template
+       lives in src/ and is imported by no one, so it is never
+       bundled. */
+    generateBundle() {
+      const src = readFileSync(resolve(process.cwd(), 'src/sw-template.js'), 'utf8')
+      for (const token of ['__SB_SW_VERSION__', '__SB_SW_BUILT_AT__']) {
+        if (!src.includes(token)) {
+          throw new Error('src/sw-template.js has no ' + token + ' — the worker could not report which build it is')
+        }
       }
-      if (!src.includes('__SB_SW_BUILT_AT__')) {
-        throw new Error('sw.js has no __SB_SW_BUILT_AT__ placeholder — the update notice could not tell which side is stale')
-      }
-      const stamped = src.split('__SB_SW_VERSION__').join(hash).split('__SB_SW_BUILT_AT__').join(builtAt)
-      writeFileSync(out, stamped)
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sw.js',
+        source: src.split('__SB_SW_VERSION__').join(hash).split('__SB_SW_BUILT_AT__').join(builtAt),
+      })
     },
   }
 }

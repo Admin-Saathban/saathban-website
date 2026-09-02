@@ -63,6 +63,25 @@ const ENOUGH_TO_SCROLL = 1.5;
 let quietUntil = 0;
 const revealers = new Set();
 
+/* FROZEN, which is stronger than quiet and is not a timer.
+
+   quietenShutter(450) was called when a tab SWITCH completed, so
+   the whole drag before it ran with the shutter live — and a slow
+   held drag outlasts 450ms anyway. Caught on the owner's own
+   recording: during each slide the bar was displaced downward with
+   its labels clipped off the screen edge for 13-15 frames, about
+   350ms, then snapped back. Panes have different scroll positions
+   and swapping them moves the document under the shutter, which
+   reads that as a gesture nobody made.
+
+   A count rather than a flag: gestures and tab switches overlap at
+   the edges, and the last one out should not thaw for everybody
+   still holding. */
+let frozen = 0;
+
+export function freezeShutter() { frozen += 1; }
+export function thawShutter() { if (frozen > 0) frozen -= 1; }
+
 export function quietenShutter(ms = 450) {
   quietUntil = Date.now() + ms;
 }
@@ -119,6 +138,15 @@ export default function useShutter(scrollerRef) {
       const typing =
         !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
       if (typing || document.querySelector('[role="dialog"]')) {
+        lastY.current = y;
+        anchor.current = y;
+        return;
+      }
+
+      /* Held by a horizontal gesture: keep the numbers current so
+         the next real scroll is measured from here, and move
+         nothing at all until the slide has settled. */
+      if (frozen > 0) {
         lastY.current = y;
         anchor.current = y;
         return;

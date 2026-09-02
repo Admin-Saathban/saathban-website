@@ -50,6 +50,7 @@ import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { wantsLessMotion } from "./motion.jsx";
 import { paneFor as paneKeyFor } from "./TabPanes.jsx";
+import { freezeShutter, thawShutter } from "./useShutter.js";
 
 /* Below ENGAGE the gesture is still undecided and the page scrolls
    normally; past it the drag owns the finger. 12px is small enough to
@@ -208,7 +209,17 @@ export default function useTabSwipe(items, enabled = true) {
       root.style.setProperty("--sb-side", dx < 0 ? "1" : "-1");
     };
 
+    /* Released exactly once per gesture, whichever way it ends —
+       committed, abandoned, cancelled by the OS, or unmounted. */
+    const thaw = () => {
+      const s = st.current;
+      if (!s.froze) return;
+      s.froze = false;
+      thawShutter();
+    };
+
     const clear = () => {
+      thaw();
       root.classList.remove("sb-dragging", "sb-settling");
       root.style.removeProperty("--sb-drag");
       root.style.removeProperty("--sb-side");
@@ -267,6 +278,20 @@ export default function useTabSwipe(items, enabled = true) {
         !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
       s.idx = indexOfPath();
       if (s.idx < 0) s.dead = true;
+      /* THE BAR STOPS LISTENING THE MOMENT A FINGER LANDS.
+
+         Not at engage and not at the switch: the damage happens in
+         between. Panes carry their own scroll positions, so swapping
+         them moves the document under the shutter, which reads it as
+         a gesture nobody made and slides the bar away mid-drag. On
+         the owner's recording the bar was displaced with its labels
+         clipped for about 350ms of every slide.
+
+         Frozen here rather than at engage because the pane swap can
+         begin before the twelfth pixel. A gesture that turns out to
+         be a scroll thaws immediately below, so vertical scrolling
+         still hides the bar exactly as it did. */
+      if (!s.dead && !s.froze) { s.froze = true; freezeShutter(); }
       s.x = e.touches[0].clientX;
       s.y = e.touches[0].clientY;
       s.lastX = s.x;
@@ -287,7 +312,7 @@ export default function useTabSwipe(items, enabled = true) {
 
            The test is >= rather than >: a perfectly diagonal drag is
            not a swipe, and on a real thumb it is common. */
-        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; return; }
+        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; thaw(); return; }
         if (Math.abs(dx) < ENGAGE) return;
         /* Sideways ENOUGH. Passing ENGAGE is not the same as meaning
            it — a thumb arcing down the screen crosses 12px of x while

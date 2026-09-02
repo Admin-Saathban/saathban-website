@@ -30,6 +30,16 @@ export function onAppUpdate(fn) {
   return () => { if (listener === fn) listener = null; };
 }
 
+/* A worker that has installed but is parked in the waiting slot is
+   asked to take over. Without this it can sit there indefinitely —
+   observed on exactly the migration that matters, from the old
+   worker that could never update. */
+function askWaitingToActivate(reg) {
+  const waiting = reg && reg.waiting;
+  if (!waiting) return;
+  try { waiting.postMessage({ type: "SB_SKIP_WAITING" }); } catch { /* nothing to do */ }
+}
+
 function announce() {
   if (alreadySaid || !listener) return;
   alreadySaid = true;
@@ -94,6 +104,8 @@ export function registerAppServiceWorker() {
       return;
     }
 
+    askWaitingToActivate(reg);
+
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       compareWithController();
     });
@@ -108,6 +120,7 @@ export function registerAppServiceWorker() {
            at "installed" instead, and a person on that browser should
            still be told. */
         if (incoming.state !== "installed" && incoming.state !== "activated") return;
+        askWaitingToActivate(reg);
         if (!navigator.serviceWorker.controller) return;  // first ever install
         askVersion(incoming).then((reply) => {
           if (reply && reply.builtAt && BUILD.time && reply.builtAt > BUILD.time) announce();
@@ -123,6 +136,7 @@ export function registerAppServiceWorker() {
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) return;
       recheck();
+      askWaitingToActivate(reg);
       compareWithController();
     });
     window.setInterval(recheck, RECHECK_MS);

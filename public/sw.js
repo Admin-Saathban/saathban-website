@@ -94,6 +94,24 @@ self.addEventListener("activate", (event) => {
    worker was behind. */
 self.addEventListener("message", (event) => {
   const data = event.data;
+
+  /* ASKED TO STEP UP, because asking to on install is not reliable.
+
+     Measured on the migration that matters — a device carrying the
+     old pre-fix worker — this worker installed and then sat at
+     "installed" in the waiting slot indefinitely, with the old one
+     still active and controlling, despite skipWaiting() being
+     called in its own install handler. Fifteen seconds, two
+     navigations, no activation. So the page asks explicitly when it
+     sees a worker waiting, and activation stops depending on a call
+     whose effect could not be relied upon.
+
+     Safe to activate under a live page ONLY because this app builds
+     to a single JS chunk: the running page has its bundle already
+     and asks for no lazy pieces, so dropping the previous build's
+     cache cannot strand one mid-session. */
+  if (data && data.type === "SB_SKIP_WAITING") { self.skipWaiting(); return; }
+
   if (!data || data.type !== "SB_VERSION") return;
   const reply = { type: "SB_VERSION", version: VERSION, builtAt: BUILT_AT };
   if (event.ports && event.ports[0]) event.ports[0].postMessage(reply);

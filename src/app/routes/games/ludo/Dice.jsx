@@ -41,6 +41,8 @@
 
 
 
+import { useEffect, useRef } from "react";
+
 const IVORY = "#F8F2E4";
 /* The board's own "this one", the same gold as the halo on a goti
    you may move. Teal is the game's chrome colour and this is not

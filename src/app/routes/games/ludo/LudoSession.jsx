@@ -272,6 +272,9 @@ export default function LudoSession() {
      thing that knows. A seat number, not a boolean: at a table of
      four the hold belongs to whoever threw. */
   const [landingSeat, setLandingSeat] = useState(null);
+  /* TRUE WHILE MY OWN THROW IS BEING READ. Nothing on the board
+     may be offered while this is up — see doRoll. */
+  const [rollHeld, setRollHeld] = useState(false);
   const landingTimer = useRef(0);
   const holdNumber = (seat) => {
     if (seat == null) return;
@@ -923,6 +926,22 @@ export default function LudoSession() {
     } finally {
       stopped = true;
       setRolling(false);
+      /* ── THE HOLD IS PART OF THE THROW, NOT OF THE RECONCILE ──
+
+         A bot's number was held because its whole move is held
+         back and released as one; mine was not, because my roll
+         takes the optimistic path — the answer lands, the board
+         updates, the halos appear, and the glow was left to
+         decorate a turn that had already moved on. The owner's
+         recording is unambiguous side by side, which is why he
+         called it asymmetric rather than missing.
+
+         So the throw now ends the way somebody else's does: the
+         cube stops, the number sits lit, and NOTHING is offered
+         until that is over. `rollHeld` is what the board reads to
+         keep its halos to itself for those 800ms. */
+      setRollHeld(true);
+      window.setTimeout(() => setRollHeld(false), HOLD_MS);
       /* The cube has come to rest. Hold the number up before
          anything else is allowed to happen — including the
          auto-played move, which waits out the same HOLD_MS.
@@ -1991,7 +2010,13 @@ export default function LudoSession() {
             }}
             state={state}
             seatsInPlay={game.target_seats}
-            options={isMyTurn && hasDice ? options : []}
+            /* NOTHING IS OFFERED WHILE THE NUMBER IS BEING READ.
+               rollHeld is up for the 800ms after my own cube comes
+               to rest; the halos, the drag targets and the taps all
+               come from this list, so emptying it for that moment is
+               the whole of "and only then may his move options
+               appear". */
+            options={isMyTurn && hasDice && !rollHeld ? options : []}
             currentSeat={game.current_seat}
             sharingSeats={sharingSeats}
             landingSeat={landingSeat}

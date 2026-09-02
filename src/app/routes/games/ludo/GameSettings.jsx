@@ -170,32 +170,47 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
         aria-label={t("ludo.settings.title")}
         style={{
           ...NO_SELECT,
-          /* ── DOWN FROM THE TOP, NOT UP FROM THE BOTTOM ────────
+          /* ── A MENU FALLING FROM THE HAMBURGER ─────────────────
 
-               Owner's ruling, and it agrees with where the control
-               that opens it now lives: the hamburger is at the top
-               right, so a panel rising from the far edge of the
-               screen is a sheet arriving from somewhere nobody
-               touched. A notification shade comes from the edge
-               you pulled.
+               It came down from the top, which was right, and then
+               spanned the screen edge to edge, which made it a
+               curtain across the app rather than a menu belonging
+               to the button that opened it.
 
-               The rounded corners move with it — a panel anchored
-               to the top is rounded at the BOTTOM, or it reads as
-               a card that has been pushed off the screen. ── */
+               The app already has the answer and I should have
+               copied it rather than invented one: components/
+               Drawer.jsx, the More menu. Its manners are a fixed
+               panel inset from the trailing edge, a bounded width
+               rather than a percentage of the screen, a scrim
+               behind it, and a shadow deep enough to lift it off
+               what it covers. Same here — 12px from the right, 320
+               wide but never more than 86vw on a narrow phone,
+               square at the top because it is attached to that
+               edge and rounded below where it hangs into the
+               screen.
+
+               The board stays visible to the left of it, which is
+               also the thing that closes it: the scrim takes the
+               tap. ── */
           position: "fixed",
-          insetInline: 0,
           top: 0,
+          insetInlineEnd: 12,
+          width: 320,
+          maxWidth: "86vw",
           zIndex: 77,
           /* A CLEAR BAND OF BOARD ABOVE IT. 62 rather than 88: the
              gap is not decoration, it is the target you tap to
              dismiss the thing, and at 88dvh there was not one. */
-          maxHeight: "62dvh",
+          maxHeight: "78dvh",
           overflowY: "auto",
           overscrollBehavior: "contain",
           background: GAME.panel,
           border: "none",
           borderRadius: "0 0 18px 18px",
-          boxShadow: GAME.panelShadow,
+          /* Deeper than a sheet's: this one floats over a board
+             rather than sitting on the bottom edge of the screen,
+             so it needs an edge of its own on three sides. */
+          boxShadow: "0 18px 46px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,255,255,0.07) inset",
           /* The safe inset is at the TOP now: a phone with a notch
              would otherwise put the ✕ under it. */
           padding: "calc(14px + env(safe-area-inset-top)) 16px 20px",

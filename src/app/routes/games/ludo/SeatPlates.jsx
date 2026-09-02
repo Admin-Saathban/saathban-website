@@ -406,38 +406,60 @@ function SeatDice({
 
      One key per die, in both branches. Same element, same ref,
      the edge is seen. */
-  const faces = rolled
-    ? dice.map((d, i) => (
-        <Die
-          key={`die${i}`}
-          value={d.v}
-          size={38}
-          state={d.state}
-          landing={landing}
-          dim={!isTurn}
-          label={
-            d.state === "used"
+  /* ── ONE MAP. ONE ELEMENT PER DIE. ────────────────────────────
+
+     This was two `<Die>` expressions behind a ternary — one for
+     dice that have a number and one for dice that do not — and
+     giving both the same key was not enough. The owner's
+     recording shows the cost at 10.00s: the die goes from a small
+     flat square to a large rotated cube between two consecutive
+     frames, with nothing in between. That is a new element
+     mounting into the middle of an animation, and it is the hitch
+     he can see in every throw.
+
+     Now there is one list and one JSX site. A die goes tappable ->
+     tumbling -> held entirely through props on a node that never
+     leaves the document, which is what makes the throw continuous
+     rather than three fragments that happen to be adjacent.
+
+     `slots` is how many dice there are to draw: the real ones once
+     they have numbers, and before that the one or two this table
+     plays with, so the count does not change under the animation
+     either. */
+  const slots = rolled ? dice.length : empties;
+  const faces = Array.from({ length: slots }).map((_, i) => {
+    const d = rolled ? dice[i] : null;
+    return (
+      <Die
+        key={`die${i}`}
+        value={d ? d.v : throwing ? tumbleFaces?.[i] ?? null : lastValue ?? null}
+        size={38}
+        state={d ? d.state : throwing ? "rolling" : "ready"}
+        landing={landing}
+        dim={!isTurn}
+        label={
+          d
+            ? d.state === "used"
               ? t("ludo.dice.used", { n: d.v })
               : d.state === "wasted"
               ? t("ludo.dice.wasted", { n: d.v })
               : t("ludo.dice.pick", { n: d.v })
-          }
-          onClick={isMe && onPickDie && d.state === "ready" ? () => onPickDie(i) : undefined}
-        />
-      ))
-    : Array.from({ length: empties }).map((_, i) => (
-        <Die
-          key={`die${i}`}
-          value={throwing ? tumbleFaces?.[i] ?? null : lastValue ?? null}
-          size={38}
-          state={throwing ? "rolling" : "ready"}
-          landing={landing}
-          dim={!isTurn}
-          label={live ? t("ludo.turn.rollCta") : undefined}
-          onClick={live ? onRoll : undefined}
-        />
-      ));
-
+            : live
+            ? t("ludo.turn.rollCta")
+            : undefined
+        }
+        onClick={
+          d
+            ? isMe && onPickDie && d.state === "ready"
+              ? () => onPickDie(i)
+              : undefined
+            : live
+            ? onRoll
+            : undefined
+        }
+      />
+    );
+  });
   return (
     <span
       style={{
@@ -664,8 +686,25 @@ function Plate({
           minWidth: 0,
         }}
       >
-        {tapped}
+        {/* ── KEYED, AND THAT IS NOT DECORATION ──────────────────
+
+             These two are siblings with no keys, so React matches
+             them BY POSITION. The dice element therefore keeps its
+             identity only for as long as everything before it in
+             this list keeps its shape — and when it does not, React
+             unmounts SeatDice and mounts a fresh one, taking every
+             die inside it with it. That is the second of the two
+             swaps in a throw, the one at the landing: a die that has
+             just come to rest is thrown away and rebuilt, which is a
+             dropped frame at the exact moment the number appears.
+
+             An explicit key pins each slot to itself regardless of
+             what its neighbours do. Cheap, and it removes a whole
+             category of remount rather than the one instance of it
+             I could find. ── */}
+        <span key="who" style={{ display: "contents" }}>{tapped}</span>
         <SeatDice
+          key="dice"
           landing={landing}
           dice={dice}
           diceCount={diceCount}

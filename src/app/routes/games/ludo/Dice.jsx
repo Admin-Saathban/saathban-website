@@ -302,38 +302,52 @@ export default function Die({
     </span>
   );
 
-  if (!clickable) {
-    return (
-      <span
-        role={label ? "img" : undefined}
-        aria-label={label}
-        aria-hidden={label ? undefined : true}
-        style={{ display: "inline-flex" }}
-      >
-        {inner}
-      </span>
-    );
-  }
+  /* ── ONE ELEMENT, WHATEVER THE DIE IS DOING ───────────────────
+
+     This used to return a <button> when the die could be tapped
+     and a <span> when it could not — so the moment a throw
+     began, the element TYPE changed and React threw the node
+     away and built another. The owner's recording shows the
+     result: at 10.00s the die jumps from a small flat square to
+     a large rotated cube between two frames, with nothing
+     between them. That is not a fast animation, it is a new
+     element mounting halfway through one.
+
+     It is always a <button> now. Tappable or not is `disabled`
+     and a pointer-events rule — property changes on a node that
+     stays put — so the die goes tappable -> tumbling -> held
+     without ever leaving the document. A disabled button is also
+     the honest thing for a die you may not throw yet: it is the
+     same object, temporarily not for pressing.
+
+     `aria-hidden` while it is not interactive, so a screen
+     reader is not offered a control that does nothing; the label
+     comes back with the button. */
   return (
     <button
       type="button"
-      className="sb-pressable"
+      className={clickable ? "sb-pressable" : undefined}
+      disabled={!clickable}
+      aria-label={clickable || label ? label : undefined}
+      aria-hidden={!clickable && !label ? true : undefined}
+      aria-pressed={clickable ? state === "selected" : undefined}
       /* ON TOUCH-DOWN, NOT TOUCH-UP. A die that answers when your
-         finger LIFTS feels like a delay even when nothing is slow,
-         because the gap between pressing and releasing is a tenth
-         of a second you did not know you were spending. The
-         browser's own click follows and is suppressed. */
-      onPointerDown={(e) => {
-        e.preventDefault();
-        onClick?.();
-      }}
-      aria-label={label}
-      aria-pressed={state === "selected"}
+         finger LIFTS feels like a delay even when nothing is
+         slow, because the gap between pressing and releasing is a
+         tenth of a second you did not know you were spending. */
+      onPointerDown={
+        clickable
+          ? (e) => {
+              e.preventDefault();
+              onClick?.();
+            }
+          : undefined
+      }
       style={{
         background: "none",
         border: "none",
         padding: 0,
-        cursor: "pointer",
+        cursor: clickable ? "pointer" : "default",
         lineHeight: 0,
         /* A whole die is the target, and it clears 48px with the
            padding the wrapper already carries. */
@@ -342,6 +356,9 @@ export default function Die({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
+        /* A die that is not yours to press must not eat the tap
+           meant for the board behind it. */
+        pointerEvents: clickable ? "auto" : "none",
       }}
     >
       {inner}

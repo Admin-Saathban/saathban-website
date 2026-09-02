@@ -337,37 +337,63 @@ function hit(c, at, { dur = 0.12, peak = 0.2, band = 1200, q = 1.2, sweepTo = nu
    Roughly three times the level it was. It was mixed to sit under
    a conversation, and it is the loudest thing a person does on this
    screen. ── */
+/* ── DICE, NOT A DRUM ──────────────────────────────────────────
+
+   The last version put a `tone()` under the final contact — a
+   sine at 150Hz falling to 74 — to give the landing some weight.
+   A sine with a pitch is a DRUM, and the owner heard exactly
+   that. Weight was the wrong thing to want: dice are light, and
+   what makes them sound like dice is that no two contacts are
+   the same and none of them has a note.
+
+   So this is noise and only noise. Fourteen short clicks, each
+   band-passed somewhere different between 1.6k and 3.4k with a
+   little random spread, high enough that nothing reads as a
+   drum skin. The gaps shrink as the tumble goes on, so the
+   rattle thickens rather than swells — density carries the arc
+   instead of loudness, which is what a real handful does.
+
+   It ends on ONE soft tick at 700ms, the moment the cube comes
+   to rest, and then nothing at all while the number is read. ── */
 function sDice(c, t0) {
-  /* Eleven contacts over 700ms, the gaps closing as it goes: 96, 88,
-     80 ... 40ms. Written as a shrinking gap rather than a list, so
-     the acceleration is a property of the line rather than a table
-     somebody has to keep in tune. */
   let at = 0;
-  const n = 11;
+  const n = 14;
   for (let k = 0; k < n; k++) {
     const u = k / (n - 1);
-    /* Louder towards the end, and the last contact loudest of all —
-       that one is the die hitting the table rather than turning on
-       it, so it gets a low body under the wood. */
     const last = k === n - 1;
-    const peak = (0.1 + 0.26 * u) * (last ? 1.5 : 1);
+    /* The landing tick is SOFTER than the rattle before it, not
+       louder: the die is settling, not being struck. */
+    const peak = last ? 0.1 : 0.11 + 0.1 * u;
     hit(c, t0 + at, {
-      dur: last ? 0.13 : 0.05 + 0.03 * (1 - u),
+      dur: last ? 0.055 : 0.028 + 0.018 * (1 - u),
       peak,
-      band: 1500 - 700 * u + (Math.random() * 240 - 120),
-      q: 1.5,
+      /* High and scattered. Anything under about 1.2k starts to
+         acquire a body, and a body is a drum. */
+      band: 1600 + Math.random() * 1800,
+      q: 2.2 + Math.random() * 1.2,
+      type: "bandpass",
     });
-    if (last) {
-      tone(c, t0 + at, { freq: 150, to: 74, dur: 0.14, type: "sine", peak: 0.16, cutoff: 520 });
-    }
-    at += (0.096 - 0.056 * u);
+    /* Tuned so the fourteenth click lands at 699ms — the
+       millisecond the cube comes to rest. */
+    at += 0.069 - 0.033 * u;
   }
 }
-function sHop(c, t0, step = 0, of = 1) {
-  const climb = of > 1 ? Math.min(1, step / Math.max(1, of - 1)) : 0;
-  const freq = 620 * Math.pow(2, climb * 0.33); // up a major third across the run
-  tone(c, t0, { freq, to: freq * 0.94, dur: 0.075, type: "sine", peak: 0.13, cutoff: 2400 });
-  hit(c, t0, { dur: 0.035, peak: 0.07, band: 1800, q: 2 });
+/* ── A STEP. THE SAME STEP, EVERY TIME ─────────────────────────
+
+   This climbed a major third across the length of a move: a sine
+   whose pitch rose with `step / of`. That is an ARC, and the arc
+   belongs to the throw — hearing one under a goti walking is the
+   roll's gesture leaking into the move, which is what the owner
+   caught.
+
+   A goti crossing squares is not building to anything. Each step
+   is the same small dry contact as the last, and the only thing
+   that changes across a move is how many of them there are.
+
+   `step` and `of` are still taken so every caller keeps working,
+   and are deliberately unused. */
+function sHop(c, t0) {
+  hit(c, t0, { dur: 0.03, peak: 0.075, band: 2100, q: 2.4 });
 }
 
 /* A capture. Warm and a little rueful — a falling fourth with a soft

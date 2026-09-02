@@ -53,7 +53,7 @@ const OFF = "#4A5058";
 const GLASS = "rgba(255,255,255,0.07)";
 const CHIP = "rgba(255,255,255,0.10)";
 const EDGE = "rgba(255,255,255,0.18)";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { SEAT_COLORS, SEAT_COLOR_NAMES } from "../seatColors.js";
@@ -362,11 +362,18 @@ export default function SeatSetup({
      produced the leak, because every new Ludo rule then appears in
      every other game until somebody notices. A rule cannot leak
      into a game that never passed it. */
+  /* The room above needs the seat count to decide whether a rule
+     that requires four players may be turned on at all. */
+  onSeatsChanged = null,
   rules = null,
   extras = null,
 }) {
   const { t, ts } = useI18n();
   const [seats, setSeats] = useState(Math.max(2, minSeats));
+  useEffect(() => {
+    onSeatsChanged?.(seats);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seats]);
   const [diceCount, setDiceCount] = useState(1);
   /* ON, because the alternative is asking a person to confirm the one
      thing the rules had already decided. Off is for anyone who would

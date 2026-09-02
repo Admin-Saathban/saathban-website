@@ -280,6 +280,19 @@ export default function NewGame() {
   /* The rules are a screen of their own now, not a column in this
      one. See HouseRulesScreen for why. */
   const [rulesOpen, setRulesOpen] = useState(false);
+  /* HOW MANY CHAIRS ARE AT THE TABLE, mirrored up out of SeatSetup.
+     Two against two needs four of them, and the switch has to know
+     — a toggle that can be turned on and then silently ignored is
+     the shape of defect that let `teams` sit in the setup room for
+     four rounds doing nothing. */
+  const [seatCount, setSeatCount] = useState(4);
+  const teamsPossible = seatCount === 4;
+  /* Turned on at a four-seat table and then the table shrinks: the
+     rule cannot apply any more, so it goes off with the chairs
+     rather than being written to a table that cannot honour it. */
+  useEffect(() => {
+    if (!teamsPossible && teams) setTeams(false);
+  }, [teamsPossible, teams]);
 
   /* The game's own name, in the reader's language. Read here rather
      than in the render because start() needs it too, for the
@@ -581,9 +594,18 @@ export default function NewGame() {
               body: (
                 <RuleSwitch
                   on={teams}
-                  onToggle={() => setTeams((v) => !v)}
+                  /* IT STAYS OFF UNTIL THERE ARE FOUR. Not disabled
+                     and greyed — a control that cannot be pressed
+                     cannot tell you why. It presses, nothing turns
+                     on, and the line underneath says what is
+                     missing. */
+                  onToggle={() => teamsPossible && setTeams((v) => !v)}
                   label={t("games.setup.teams")}
-                  hint={t("games.setup.teamsNote")}
+                  hint={
+                    teamsPossible
+                      ? t("games.setup.teamsNote")
+                      : t("games.setup.teamsNeedsFour", { n: seatCount })
+                  }
                 />
               ),
             },
@@ -751,6 +773,7 @@ export default function NewGame() {
         botsAllowed={botsAllowed}
         canPostOpen={canPostOpen}
         showDice={game.key === "ludo"}
+        onSeatsChanged={setSeatCount}
         /* §8.1: Ludo's rules, passed by Ludo. Carrom passes none
            and therefore shows none — a game cannot be asked about
            a rule it does not have. */

@@ -53,11 +53,40 @@ const BOOK = [
   { id: "safe", items: [{ id: "stars" }, { id: "sharing" }] },
   {
     id: "capturing",
-    items: [{ id: "take" }, { id: "extraTurn" }, { id: "notOnStar" }],
+    items: [
+      { id: "take" },
+      { id: "extraTurn" },
+      /* ONE TURN, NOT TWO, and the engine agrees: game_exec_ludo
+         sets v_extra as a BOOLEAN — `v_six or o_capture or
+         o_finished` — so one capture and a double capture earn
+         exactly the same one extra roll. The spec asked for this
+         to be stated clearly rather than left for somebody to
+         discover mid-argument. */
+      { id: "takingAJota" },
+      { id: "notOnStar" },
+    ],
   },
   {
     id: "jota",
-    items: [{ id: "what", rule: "jota" }, { id: "half" }, { id: "breaking" }],
+    items: [
+      { id: "what", rule: "jota" },
+      { id: "half" },
+      { id: "breaking" },
+      /* ludo_path_clear: `if p_is_pair then return true` — a jota
+         walks past anything, a lone goti does not. */
+      { id: "passing" },
+      { id: "whenTaken" },
+    ],
+  },
+  {
+    id: "teams",
+    items: [
+      { id: "partners", rule: "teams" },
+      { id: "noTakingPartners" },
+      { id: "sharing" },
+      { id: "mixed" },
+      { id: "mixedTaken" },
+    ],
   },
   {
     id: "home",
@@ -80,9 +109,13 @@ function stateOf(rule, rules, t) {
     const n = Number(rules?.dice_count) || 1;
     return t(n === 2 ? "ludo.book.state.twoDice" : "ludo.book.state.oneDie");
   }
+  /* Two rules default OFF and every other one defaults ON, so the
+     test cannot be `!== false` for all of them — capture-first and
+     teams have to be asked the other way round or the book would
+     tell a table it is playing a rule it is not. */
   const off =
-    rule === "capture_before_home"
-      ? rules?.capture_before_home !== true
+    rule === "capture_before_home" || rule === "teams"
+      ? rules?.[rule] !== true
       : rules?.[rule] === false;
   return t(off ? "ludo.book.state.off" : "ludo.book.state.on");
 }

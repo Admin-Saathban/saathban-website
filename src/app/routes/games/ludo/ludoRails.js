@@ -73,10 +73,15 @@ export async function roll(sessionId) {
    not its face, so a player holding two sixes can say which one they
    are spending. `split` chooses, for a piece standing in a pair,
    between moving the pair together and moving this goti alone. */
-export async function move(sessionId, { piece, die = 0, split = false }) {
+/* `owner` is the seat whose goti is moving. It is the person taking
+   the turn every time except at a team table whose partners have
+   both captured — then a roll may move either of the team's gotis,
+   and which one has to travel with the move. Defaulted rather than
+   required, so every existing caller means what it always did. */
+export async function move(sessionId, { piece, die = 0, split = false, owner = null }) {
   const { error } = await supabase.rpc("play_turn", {
     p_session: sessionId,
-    p_payload: { piece, die, split },
+    p_payload: owner == null ? { piece, die, split } : { piece, die, split, owner },
   });
   if (error) throw new Error(error.message);
 }

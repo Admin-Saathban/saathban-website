@@ -876,7 +876,15 @@ export default function LudoSession() {
   const sendMove = (piece, option, dieIndex = pickedDie) => {
     setGame((g) => {
       if (!g?.state?.pieces || g.current_seat == null) return g;
-      const seat = g.current_seat;
+      /* WHOSE GOTI, NOT WHOSE TURN. At a team table where both
+         partners have captured, a roll may move either of the
+         team's gotis — so the option says which seat it belongs
+         to, and the optimistic update has to move that one. It
+         used to assume current_seat, which at a sharing table
+         would have moved MY goti on screen and the partner's on
+         the server: the board would have corrected itself a
+         moment later, which is the worst way for it to be wrong. */
+      const seat = option.owner ?? g.current_seat;
       const pieces = g.state.pieces.map((row, s2) =>
         s2 === seat ? row.map((p, i) => (i === piece ? option.to : p)) : row
       );
@@ -890,7 +898,7 @@ export default function LudoSession() {
     /* No setBusy: the board stays live. A second tap during the
        flight is answered by the options list, which the local state
        has already emptied for that die. */
-    move(game.id, { piece, die: dieIndex, split: option.split })
+    move(game.id, { piece, die: dieIndex, split: option.split, owner: option.owner ?? null })
       .then(() => load())
       .catch((err) => {
         setError(err.message || "ludo.errors.generic");
@@ -1232,6 +1240,24 @@ export default function LudoSession() {
         : "ready",
     }));
   };
+
+  /* ── WHOSE NUMBERS ARE SHARED ──────────────────────────────
+
+     The same condition the engine uses, read from the same field:
+     a team table of four, and both partners have taken somebody.
+     captured_by is not new state invented for teams — it has
+     always been there for capture-before-home, which is why the
+     rule could be specified this way at all.
+
+     Recomputed rather than sent: the server would have to add a
+     field to every board fetch to say something both sides can
+     already work out, and a second copy of a fact is a second
+     thing that can be wrong. */
+  const sharingSeats = (() => {
+    if (!rules?.teams || game.target_seats !== 4) return null;
+    const cap = Array.isArray(state.captured_by) ? state.captured_by : [];
+    return [0, 1, 2, 3].filter((n) => cap[n] === true && cap[(n + 2) % 4] === true);
+  })();
 
   const chain = Number(state.chain) || 0;
   /* This 60 is NOT a stale twin of the 30 that new tables carry, and
@@ -1612,6 +1638,7 @@ export default function LudoSession() {
             seatsInPlay={game.target_seats}
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
+            sharingSeats={sharingSeats}
             myId={myId}
             diceFor={diceForSeat}
             onRoll={doRoll}
@@ -1816,6 +1843,7 @@ export default function LudoSession() {
             seatsInPlay={game.target_seats}
             options={isMyTurn && hasDice ? options : []}
             currentSeat={game.current_seat}
+            sharingSeats={sharingSeats}
             onPieceTap={tapPiece}
             onPieceDrop={dropPiece}
             dragDisabled={!!chooser}
@@ -1834,6 +1862,7 @@ export default function LudoSession() {
             seatsInPlay={game.target_seats}
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
+            sharingSeats={sharingSeats}
             myId={myId}
             diceFor={diceForSeat}
             onRoll={doRoll}

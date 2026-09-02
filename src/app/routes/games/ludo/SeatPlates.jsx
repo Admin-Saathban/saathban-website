@@ -480,6 +480,13 @@ function Plate({
   row,
   isTurn,
   isMe,
+  /* This seat is on a team, and that team's numbers are now one
+     pool: both partners have taken somebody. The spec asks for it
+     to be visible on the circles, because until it shows there is
+     no way to know that your roll can move your partner's goti
+     other than noticing their gotis have become tappable. */
+  sharing,
+  partnerColour,
   align,
   dice,
   onRoll,
@@ -665,6 +672,37 @@ function Plate({
           {pending ? t("ludo.table.waiting") : t("ludo.seat.botHasSeat")}
         </span>
       )}
+      {/* NUMBERS SHARED. A short bar in the PARTNER'S colour under
+          this seat's own name — two colours touching, which is
+          what the rule is. Not a badge or an icon: at 26px an icon
+          is a smudge, and this has to read at a glance from across
+          a phone. Colour is not carrying it alone, the line under
+          it says so in words. */}
+      {sharing && (
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            marginTop: 3,
+            fontSize: ts(12),
+            fontWeight: 700,
+            color: GAME.inkMuted,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              display: "inline-block",
+              width: 18,
+              height: 4,
+              borderRadius: 2,
+              background: partnerColour,
+            }}
+          />
+          {t("ludo.teams.sharing")}
+        </span>
+      )}
       {/* Said to a screen reader, never drawn: the arrow at the dice
           is the visible half of this. */}
       <span
@@ -688,6 +726,10 @@ function Plate({
    in a row of their own rather than floating over it. */
 export default function SeatPlates({
   where,
+  /* Seats whose team has unlocked shared numbers. Worked out on
+     the session from captured_by, so the board and the engine
+     cannot disagree about it. */
+  sharingSeats = null,
   seats,
   seatsInPlay,
   spin,
@@ -778,6 +820,8 @@ export default function SeatPlates({
               seat={seat}
               row={seats.find((s) => s.seat === seat)}
               isTurn={seat === currentSeat}
+              sharing={!!sharingSeats?.includes(seat)}
+              partnerColour={SEAT_COLORS[(seat + 2) % 4]}
               isMe={seats.find((s) => s.seat === seat)?.profile_id === myId}
               align={i === 0 ? "start" : "end"}
               dice={diceFor ? diceFor(seat) : null}

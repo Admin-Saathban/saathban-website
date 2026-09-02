@@ -62,6 +62,7 @@ import BuddyHome from "./routes/buddy/BuddyHome.jsx";
 import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
 import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
+import UpdateNotice from "./components/UpdateNotice.jsx";
 import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
 import TabPanes, { paneFor } from "./components/TabPanes.jsx";
@@ -273,6 +274,13 @@ export default function AppRoot() {
             document and its sticky positioning works against the page
             scroll exactly as it did when each screen carried its own. */}
         <AppHeader />
+
+        {/* Says so when this page is older than the build on the
+            server. Mounted beside the header rather than inside a
+            route, because the whole point is that it survives
+            navigation — the person who needs it most is the one who
+            has been in the app for hours. */}
+        <UpdateNotice />
 
         {/* Visited tabs stay mounted here; see TabPanes. */}
         <TabPanes />

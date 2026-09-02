@@ -39,6 +39,12 @@ const ur = {
     dismiss: "یہ نوٹ بند کریں",
   },
 
+  update: {
+    ready: "ساتھ بن اپ ڈیٹ ہو گیا ہے",
+    refresh: "تازہ کریں",
+    later: "ابھی نہیں",
+  },
+
   hub: {
     stripLabel: "جہاں جا سکتے ہیں",
     todaysLog: "آج کا روزنامچہ",

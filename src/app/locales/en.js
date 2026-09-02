@@ -32,6 +32,15 @@ const en = {
     dismiss: "Close this note",
   },
 
+  /* Shown when the running page is older than the build on the
+     server. Deliberately plain: it is not an error and not the
+     person's fault, so it states a fact and offers the one action. */
+  update: {
+    ready: "Saathban has updated",
+    refresh: "Refresh",
+    later: "Not now",
+  },
+
   hub: {
     stripLabel: "Places to go",
     todaysLog: "Today's log",

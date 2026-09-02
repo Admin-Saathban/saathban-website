@@ -91,7 +91,11 @@ const HINTS_KEY = "sb-ludo-hints";
    BOT_GAP has to clear all of it plus the walk, or the next bot's
    tick interrupts the last one's number. */
 const BOT_THROW = 700;
-const BOT_HOLD = 800;
+/* How long a rolled number sits on the table before anything else
+   moves. One number, used by a bot's throw and by an auto-played
+   move alike, because it is the same promise to the same eye. */
+const HOLD_MS = 800;
+const BOT_HOLD = HOLD_MS;
 const BOT_BEAT = BOT_THROW + BOT_HOLD;
 const BOT_GAP = 3600;
 
@@ -569,6 +573,15 @@ export default function LudoSession() {
      hook in this file belongs above line 1092. */
   const [hints, setHints] = useState(() => {
     try {
+      /* ABSENT OR ANYTHING LEGACY MEANS OFF. The switch is newer
+         than the behaviour it governs, so a phone that has been
+         running this app for weeks may hold a value written
+         before the key existed, or by an older shape of it. Only
+         the exact string a person's own tap writes counts as on;
+         everything else — missing, "true", "1 ", a leftover from
+         some earlier experiment — reads as off, which is the
+         default the owner asked for and the safe direction to be
+         wrong in. */
       return window.localStorage.getItem(HINTS_KEY) === "1";
     } catch {
       return false;
@@ -587,6 +600,41 @@ export default function LudoSession() {
      panel on this screen where a stray back press would do the
      very thing the panel exists to ask about. */
   useBackToClose(leaveAsk, () => setLeaveAsk(false));
+
+  /* ── AND THE BACK GESTURE ASKS THE SAME QUESTION THE DOOR DOES ──
+
+     The door confirms; the back gesture just left. So the owner
+     backed out of a table believing he had quit it, and then got
+     "your move" notifications from a game that was still running
+     with his seat in it — which is not a notification bug at all.
+     Leaving nulls the seat's profile_id and the turn notifications
+     are keyed on profile_id (0114), so they stop the moment somebody
+     actually leaves. He was never leaving. One missing confirm
+     produced a defect that looked like it lived somewhere else
+     entirely.
+
+     IT HAS TO RE-ARM, which is why this is not simply another
+     useBackToClose. That hook exists to CLOSE something: it pops
+     the surface off its stack and, with nothing left behind it,
+     releases the history entry. Right for a sheet, wrong for a
+     guard — a guard that fires once has moved the problem to the
+     second press. So the arming is state: back disarms it and
+     raises the question, and dismissing the question arms it again.
+
+     It sits UNDERNEATH every sheet on this screen, because it
+     registers first and that hook runs the innermost surface. Back
+     with the chat open closes the chat; back with nothing open asks
+     whether you meant to leave. */
+  const [backGuard, setBackGuard] = useState(true);
+  useBackToClose(atTable && backGuard, () => {
+    setBackGuard(false);
+    setLeaveAsk(true);
+  });
+  useEffect(() => {
+    /* Armed again once the question is gone — and never while it is
+       up, or the guard would take the press meant for the panel. */
+    if (!leaveAsk) setBackGuard(true);
+  }, [leaveAsk]);
 
   /* THE WHOLE SCREEN, FOR AS LONG AS THIS TABLE IS OPEN.
 
@@ -986,7 +1034,20 @@ export default function LudoSession() {
     autoPlayed.current = key;
     const only = all[0];
     setAutoNote(true);
-    sendMove(only.piece, only, only.die);
+    /* THE NUMBER IS READ FIRST, EVEN WHEN NOBODY HAS TO CHOOSE.
+
+       This was the path the owner was on: one legal move, so the
+       board played it the instant the dice landed and the turn was
+       over before he had seen what he threw. The hold is not a
+       decoration on the tumble, it is the part of a throw where
+       you find out what happened — so it belongs here most of all,
+       because this is the one path with nothing else to slow it
+       down.
+
+       Cleaned up on the way out: a table left mid-hold would
+       otherwise send a move from a screen nobody is on. */
+    const held = window.setTimeout(() => sendMove(only.piece, only, only.die), HOLD_MS);
+    return () => window.clearTimeout(held);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsByDie, myTurnNow, busy, rolling, chooser, autoMove, diceKey]);
 
@@ -1434,10 +1495,22 @@ export default function LudoSession() {
             : { boxSizing: "border-box", overflowY: "auto", padding: "16px 12px 64px", maxWidth: 640, width: "100%", margin: "0 auto" }
         }
       >
+      {/* ── THE THREE CONTROLS, IN A COLUMN ON THE RIGHT ──────────
+
+           They were a row across the top: the door at the left edge
+           and the other two at the right, with the table's name
+           between them. The owner's ruling is a vertical column
+           pinned to the top-right, door topmost, evenly spaced.
+
+           Which also buys the board back a whole row of height —
+           the bar was 40px plus its margins across the full width,
+           and the column occupies 40px of width down the side of a
+           board that is square and therefore has room there. ── */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: "row-reverse",
+          alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 12,
           /* THE ROW GETS ITS OWN INSET, and the board does not.
@@ -1496,7 +1569,10 @@ export default function LudoSession() {
 
             atTable, so it is there whenever there is a board to
             leave. */}
-        {atTable && (
+        {/* The door is drawn INSIDE the column below, first, so it
+            is topmost. This slot keeps the table's name company on
+            the left. */}
+        {false && atTable && (
           <TopBtn onClick={() => setLeaveAsk(true)} label={t("ludo.back")}>
             {/* DRAWN, NOT TYPED. A door emoji is a blank tofu box
                 on anything without a font for it, which included
@@ -1523,7 +1599,27 @@ export default function LudoSession() {
 
         {/* Sound and settings sit together on the right, in the
             order the owner placed them. */}
-        <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: "0 0 auto" }}>
+          {atTable && (
+            <TopBtn onClick={() => setLeaveAsk(true)} label={t("ludo.back")}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M18 12H10m0 0 3-3m-3 3 3 3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </TopBtn>
+          )}
           <TopBtn
             onClick={() => setSoundOpen((v) => !v)}
             label={t("games.sound.title")}
@@ -2056,7 +2152,16 @@ export default function LudoSession() {
             </FlashLine>
           )}
 
-          {autoNote && (
+          {/* "Only one move was possible — played it for you."
+
+              I classified this as a RESULT and left it outside the
+              hints switch, on the reasoning that the board had
+              changed without the person touching it and they were
+              owed a sentence. The owner has ruled it commentary,
+              and the ruling is right: the goti visibly moved, so
+              the board already said it. Only a capture, a goti
+              reaching home and somebody winning are results. */}
+          {hints && autoNote && (
             <BodyText role="status" style={{ margin: "6px 0 0", textAlign: "center", fontWeight: 700, color: "#8FE3B0" }}>
               {t("ludo.turn.autoPlayed")}
             </BodyText>

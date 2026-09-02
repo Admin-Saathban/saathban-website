@@ -377,10 +377,35 @@ function SeatDice({
      bug rather than as a throw. */
   const throwing = !!rolling && !rolled;
 
+  /* ── WHY THE HOLD NEVER HAPPENED ON A PERSON'S OWN ROLL ──────
+
+     The die holds its number for 800ms after it lands, and Die
+     arms that from the EDGE out of `rolling` — it watches its own
+     prop go from tumbling to still.
+
+     Except this component drew two different dice. While the
+     throw was in the air the answer had not arrived, so `rolled`
+     was false and the die came from the second branch below with
+     key `e0`; the moment the server answered, `rolled` turned
+     true and it came from the FIRST branch with key `0`. Two
+     different keys is two different elements: React unmounted the
+     tumbling die and mounted a fresh one, whose `wasRolling` ref
+     started life as false. The edge happened between two
+     components and neither of them saw it.
+
+     A BOT'S THROW WAS FINE, which is why this survived a round of
+     looking at it: a bot's board is held back during the throw,
+     so `rolled` stays false the whole time and the SAME element
+     goes from rolling to settled. The feature worked in exactly
+     the place it is hardest to watch and failed in the place the
+     owner was looking.
+
+     One key per die, in both branches. Same element, same ref,
+     the edge is seen. */
   const faces = rolled
     ? dice.map((d, i) => (
         <Die
-          key={i}
+          key={`die${i}`}
           value={d.v}
           size={38}
           state={d.state}
@@ -397,7 +422,7 @@ function SeatDice({
       ))
     : Array.from({ length: empties }).map((_, i) => (
         <Die
-          key={`e${i}`}
+          key={`die${i}`}
           value={throwing ? tumbleFaces?.[i] ?? null : lastValue ?? null}
           size={38}
           state={throwing ? "rolling" : "ready"}
@@ -521,13 +546,23 @@ function Plate({
      plate whether or not that seat has a face — a hook behind a
      condition is a hook that changes count between renders. */
   const photo = useSignedAvatar(row?.avatar || null);
-  /* A drawn face for anybody real who has not uploaded one. Bots
-     and empty chairs keep the letter: they are not people, and
-     giving them a face would be the table pretending. */
-  const sample =
-    isPerson && !photo
-      ? row?.avatar_sample ?? sampleFor(row?.profile_id, seat)
-      : null;
+  /* A FACE FOR EVERY SEAT THAT IS TAKEN, BOTS INCLUDED.
+
+     I excluded bots on purpose and wrote a comment defending it:
+     "they are not people, and giving them a face would be the
+     table pretending". The owner has overruled it, and he is
+     right about what it produced — his four-handed table showed a
+     capital B on a coloured disc in three corners, which is not a
+     principled abstention, it is the system-default avatar he
+     asked to be rid of.
+
+     A bot's face is keyed on its SEAT, since it has no profile id
+     — so the four corners of a table are four different faces and
+     stay that way for the length of the game. An empty chair
+     still has no face, because there is nobody in it. */
+  const sample = !photo && (isPerson || row?.is_bot)
+    ? row?.avatar_sample ?? sampleFor(row?.profile_id || `bot:${seat}`, seat)
+    : null;
   /* A FIFTH BIGGER, all round. 44/42/38 were sized against a
      board that has since grown and a plate that has since lost
      its name chip, its turn line and its badges — the circles were

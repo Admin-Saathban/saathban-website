@@ -319,21 +319,50 @@ function hit(c, at, { dur = 0.12, peak = 0.2, band = 1200, q = 1.2, sweepTo = nu
 /* Dice tumbling on a wooden table: five or six irregular knocks that
    slow and quieten, then nothing. The irregularity is the point — an
    evenly spaced rattle sounds mechanical. */
-function sDice(c, t0) {
-  let at = t0;
-  const knocks = 5 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < knocks; i++) {
-    const fall = i / knocks;
-    hit(c, at, { dur: 0.05 + fall * 0.03, peak: 0.26 * (1 - fall * 0.55), band: 2200 - fall * 900, q: 1.6 });
-    at += 0.055 + fall * 0.06 + Math.random() * 0.03;
-  }
-  /* the last one settles: a little wooden body under it */
-  tone(c, at, { freq: 210, to: 150, dur: 0.14, type: "triangle", peak: 0.1, cutoff: 900 });
-}
+/* ── A THROW, SHAPED LIKE A THROW ──────────────────────────────
 
-/* One square. Tiny, dry, and pitched a touch higher each step so a
-   six-square run reads as a little rising phrase rather than six
-   identical taps. `step` climbs, `of` is how many are coming. */
+   The owner: far too quiet, and shapeless. Both true, and they had
+   the same cause — this was five knocks that got quieter, which is
+   a die that has already stopped. A throw does the opposite on the
+   way out: the cube leaves the hand, gathers as it turns, and then
+   STOPS. The silence afterwards is not the sound ending, it is part
+   of the gesture: the number sitting there being read.
+
+   So the knocks RISE — closer together and louder as they go — and
+   the last one is the landing, on the same 700ms the cube spends in
+   the air. Nothing after it. The hold that follows is silent by
+   design, and the two together are one movement: sound while it
+   turns, quiet while you read it.
+
+   Roughly three times the level it was. It was mixed to sit under
+   a conversation, and it is the loudest thing a person does on this
+   screen. ── */
+function sDice(c, t0) {
+  /* Eleven contacts over 700ms, the gaps closing as it goes: 96, 88,
+     80 ... 40ms. Written as a shrinking gap rather than a list, so
+     the acceleration is a property of the line rather than a table
+     somebody has to keep in tune. */
+  let at = 0;
+  const n = 11;
+  for (let k = 0; k < n; k++) {
+    const u = k / (n - 1);
+    /* Louder towards the end, and the last contact loudest of all —
+       that one is the die hitting the table rather than turning on
+       it, so it gets a low body under the wood. */
+    const last = k === n - 1;
+    const peak = (0.1 + 0.26 * u) * (last ? 1.5 : 1);
+    hit(c, t0 + at, {
+      dur: last ? 0.13 : 0.05 + 0.03 * (1 - u),
+      peak,
+      band: 1500 - 700 * u + (Math.random() * 240 - 120),
+      q: 1.5,
+    });
+    if (last) {
+      tone(c, t0 + at, { freq: 150, to: 74, dur: 0.14, type: "sine", peak: 0.16, cutoff: 520 });
+    }
+    at += (0.096 - 0.056 * u);
+  }
+}
 function sHop(c, t0, step = 0, of = 1) {
   const climb = of > 1 ? Math.min(1, step / Math.max(1, of - 1)) : 0;
   const freq = 620 * Math.pow(2, climb * 0.33); // up a major third across the run

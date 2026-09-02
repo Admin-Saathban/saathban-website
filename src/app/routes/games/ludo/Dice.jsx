@@ -42,8 +42,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const IVORY = "#F8F2E4";
-/* The same teal as every other chosen thing in the game. */
-const SELECTED = "#2AB8A0";
+/* The board's own "this one", the same gold as the halo on a goti
+   you may move. Teal is the game's chrome colour and this is not
+   chrome — it is a mark on an object lying on the table. */
+const IN_PLAY = "#F3CE5E";
 const EDGE = "#D8CCAE";
 const PIP = "#2B2B2B";
 
@@ -251,9 +253,25 @@ export default function Die({
            "this one" in the game — gold here was chrome
            wearing the board's colour, and it read as the
            goti halo having escaped onto the controls. */
-        outline: state === "selected" ? `3px solid ${SELECTED}` : "none",
+        /* ── NOTHING ON A TABLE IS HALF-DRAWN ──────────────────
+
+             A spent die used to drop to 45%, and the owner reads a
+             faded object as a rendering fault rather than as a
+             state — which is the same thing that happened to the
+             idle die two rounds ago, when dimming the whole die
+             made its solid pips look hollow. Twice now, the same
+             mechanism: a partly-transparent object on a dark
+             ground does not read as "finished with", it reads as
+             "not finished drawing".
+
+             So both dice stay at full strength always, and the
+             GOLD HALO marks the one in play. A mark that is added
+             to the live thing cannot be mistaken for the display
+             failing, and gold is the board's own "this one" —
+             the same colour as the halo on a movable goti. ── */
+        outline: state === "selected" ? `3px solid ${IN_PLAY}` : "none",
         outlineOffset: 2,
-        opacity: spent ? 0.45 : 1,
+        boxShadow: state === "selected" ? `0 0 12px ${IN_PLAY}80` : "none",
         /* THE DEPTH THE CUBE IS TURNING IN. Small relative to the
            die — a shallow perspective on a 38px object is what makes
            a near face grow as it comes round, and that growth is the

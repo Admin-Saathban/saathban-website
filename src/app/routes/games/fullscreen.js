@@ -36,6 +36,34 @@
 
 import { useEffect } from "react";
 
+/* ── WHAT ACTUALLY HAPPENED, WHERE THE OWNER CAN READ IT ────────
+
+   I shipped this and called it "unwitnessed", and it did not work
+   on his phone. The reason I could not tell is that a refused
+   fullscreen request looks exactly like one that was never made:
+   the promise rejects, the catch swallows it, and the layout
+   underneath is the same either way. That is the same shape of
+   defect as a check printing PASS over zero rows, and I shipped it
+   a week after writing that down.
+
+   So the attempt records itself, and the settings sheet prints it
+   under the build stamp. Not telemetry — a line he can read out.
+   `mode` is what the window actually is (a PWA reports standalone
+   or fullscreen here, a browser tab reports browser), which is the
+   fact that decides whether the API can help at all. */
+export const fullscreenReport = { tried: 0, mode: "?", result: "not tried" };
+
+function displayMode() {
+  try {
+    for (const m of ["fullscreen", "standalone", "minimal-ui", "browser"]) {
+      if (window.matchMedia(`(display-mode: ${m})`).matches) return m;
+    }
+  } catch {
+    /* no matchMedia: nothing to report */
+  }
+  return "?";
+}
+
 function enter(el) {
   const fn =
     el.requestFullscreen ||
@@ -95,12 +123,30 @@ export function useGameFullscreen(active) {
     let retry = null;
 
     const take = () => {
-      if (current()) return;
+      fullscreenReport.mode = displayMode();
+      /* ALREADY THE WHOLE SCREEN. An installed app whose manifest
+         asks for fullscreen has no bar to hide and no request to
+         make, and that is a success rather than a thing that did
+         not happen. */
+      if (fullscreenReport.mode === "fullscreen") {
+        fullscreenReport.result = "manifest";
+        return;
+      }
+      if (current()) { fullscreenReport.result = "already"; return; }
+      fullscreenReport.tried += 1;
+      if (!document.documentElement.requestFullscreen &&
+          !document.documentElement.webkitRequestFullscreen) {
+        fullscreenReport.result = "no api";
+        return;
+      }
       enter(el).then(
         () => {
           mine = true;
+          fullscreenReport.result = "granted";
         },
-        () => {
+        (err) => {
+          fullscreenReport.result =
+            "refused: " + String((err && err.name) || err || "?").slice(0, 24);
           /* Refused — almost always "no user activation". Wait for
              the next touch and try once more, then stop asking: a
              listener that re-arms for ever would fire a rejected
@@ -110,11 +156,16 @@ export function useGameFullscreen(active) {
           retry = () => {
             document.removeEventListener("pointerdown", retry, true);
             retry = null;
+            fullscreenReport.tried += 1;
             enter(el).then(
               () => {
                 mine = true;
+                fullscreenReport.result = "granted on tap";
               },
-              () => {}
+              (err2) => {
+                fullscreenReport.result =
+                  "refused on tap: " + String((err2 && err2.name) || err2 || "?").slice(0, 20);
+              }
             );
           };
           document.addEventListener("pointerdown", retry, true);

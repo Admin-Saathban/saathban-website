@@ -54,6 +54,7 @@ import { GAME, NO_SELECT } from "../gameSurface.js";
 import { GamePill, GameMotion, SheetHandle, SheetClose, useBackToClose } from "../GameUI.jsx";
 import { getSoundPrefs, setSoundPrefs, onSoundPrefs } from "../../../lib/sound.js";
 import Rulebook from "./Rulebook.jsx";
+import { fullscreenReport } from "../fullscreen.js";
 
 /* The five the host chooses, in the order the setup room offers
    them. `invert` marks the one whose default is OFF. */
@@ -169,9 +170,21 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
         aria-label={t("ludo.settings.title")}
         style={{
           ...NO_SELECT,
+          /* ── DOWN FROM THE TOP, NOT UP FROM THE BOTTOM ────────
+
+               Owner's ruling, and it agrees with where the control
+               that opens it now lives: the hamburger is at the top
+               right, so a panel rising from the far edge of the
+               screen is a sheet arriving from somewhere nobody
+               touched. A notification shade comes from the edge
+               you pulled.
+
+               The rounded corners move with it — a panel anchored
+               to the top is rounded at the BOTTOM, or it reads as
+               a card that has been pushed off the screen. ── */
           position: "fixed",
           insetInline: 0,
-          bottom: 0,
+          top: 0,
           zIndex: 77,
           /* A CLEAR BAND OF BOARD ABOVE IT. 62 rather than 88: the
              gap is not decoration, it is the target you tap to
@@ -181,12 +194,13 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
           overscrollBehavior: "contain",
           background: GAME.panel,
           border: "none",
-          borderRadius: "18px 18px 0 0",
+          borderRadius: "0 0 18px 18px",
           boxShadow: GAME.panelShadow,
-          padding: "14px 16px calc(20px + env(safe-area-inset-bottom))",
+          /* The safe inset is at the TOP now: a phone with a notch
+             would otherwise put the ✕ under it. */
+          padding: "calc(14px + env(safe-area-inset-top)) 16px 20px",
         }}
       >
-        <SheetHandle onClose={onClose} label={t("ludo.chat.close")} />
         <SheetClose onClose={onClose} label={t("ludo.chat.close")} />
 
         <h2
@@ -328,6 +342,12 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
           <Rulebook rules={rules} />
         </Section>
 
+        {/* THE GRAB HANDLE MOVED TO THE BOTTOM with the sheet. It
+            is the edge you pull, and on a shade that edge is the
+            one hanging into the screen — so the swipe that closes
+            it is UP, which is what SheetHandle's `up` does. */}
+        <SheetHandle onClose={onClose} label={t("ludo.chat.close")} up />
+
         {/* ── WHICH BUILD THIS TABLE IS RUNNING ──────────────────
 
              The argument this ends: a lane reports something fixed,
@@ -358,6 +378,11 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
           }}
         >
           {BUILD}
+          {" \u00b7 "}
+          {/* Screen: what the window IS, and what the request for
+              it got. Two words that turn "fullscreen does not
+              work" into something anybody can act on. */}
+          {`screen ${fullscreenReport.mode}/${fullscreenReport.result}`}
         </p>
       </section>
     </>

@@ -165,7 +165,7 @@ export default function PlayerCard({
 
   const profileId = row?.profile_id || null;
   const shownSample =
-    sample ?? row?.avatar_sample ?? sampleFor(profileId, seat);
+    sample ?? row?.avatar_sample ?? sampleFor(profileId || `bot:${seat}`, seat);
   const colour = SEAT_COLORS[seat];
 
   useEffect(() => {
@@ -335,9 +335,10 @@ export default function PlayerCard({
                   alt=""
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
-              ) : row?.is_bot ? (
-                initialOf(displayName)
               ) : (
+                /* Bots too — see the note in SeatPlates. Their
+                    face is keyed on the seat, because a bot has
+                    no profile id to key on. */
                 <SampleAvatar index={shownSample} size={84} />
               )}
             </span>

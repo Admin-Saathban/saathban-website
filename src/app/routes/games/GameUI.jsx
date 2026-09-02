@@ -192,7 +192,9 @@ export { default as useBackToClose } from "../../components/useBackToClose.js";
    drag on it did nothing and the affordance was a lie. Pointer
    events rather than touch events, so a mouse drag works too and
    there is one code path to be wrong in. */
-export function SheetHandle({ onClose, label }) {
+/* `up` for a panel anchored to the TOP of the screen, where the
+   gesture that dismisses it is a pull upwards rather than down. */
+export function SheetHandle({ onClose, label, up = false }) {
   const from = useRef(null);
   return (
     <button
@@ -209,11 +211,12 @@ export function SheetHandle({ onClose, label }) {
         /* Forty pixels down. Short enough to be an easy flick and
            long enough that a tap with a shaky hand is still a
            tap — and a tap closes it anyway, so the two agree. */
-        if (start != null && e.clientY - start > 40) onClose?.();
+        const travel = up ? start - e.clientY : e.clientY - start;
+        if (start != null && travel > 40) onClose?.();
       }}
       style={{
         display: "block",
-        margin: "0 auto 12px",
+        margin: up ? "10px auto 0" : "0 auto 12px",
         width: 96,
         height: 24,
         padding: 0,

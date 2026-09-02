@@ -338,6 +338,10 @@ function Avatar({ name, photo, sample, colour, ink, isTurn, remaining, seconds, 
 function SeatDice({
   dice,
   diceCount,
+  /* The turn's own "a number has just landed", handed straight
+     through to the dice. See the note in Dice.jsx for why this
+     cannot be worked out down there. */
+  landing = false,
   isTurn,
   isMe,
   canRoll,
@@ -409,6 +413,7 @@ function SeatDice({
           value={d.v}
           size={38}
           state={d.state}
+          landing={landing}
           dim={!isTurn}
           label={
             d.state === "used"
@@ -426,6 +431,7 @@ function SeatDice({
           value={throwing ? tumbleFaces?.[i] ?? null : lastValue ?? null}
           size={38}
           state={throwing ? "rolling" : "ready"}
+          landing={landing}
           dim={!isTurn}
           label={live ? t("ludo.turn.rollCta") : undefined}
           onClick={live ? onRoll : undefined}
@@ -512,6 +518,7 @@ function Plate({
      other than noticing their gotis have become tappable. */
   sharing,
   partnerColour,
+  landing,
   align,
   dice,
   onRoll,
@@ -659,6 +666,7 @@ function Plate({
       >
         {tapped}
         <SeatDice
+          landing={landing}
           dice={dice}
           diceCount={diceCount}
           isTurn={isTurn}
@@ -765,6 +773,8 @@ export default function SeatPlates({
      the session from captured_by, so the board and the engine
      cannot disagree about it. */
   sharingSeats = null,
+  /* Which seat's number is being held up right now, or null. */
+  landingSeat = null,
   seats,
   seatsInPlay,
   spin,
@@ -864,6 +874,7 @@ export default function SeatPlates({
               canRoll={!!canRoll && seat === currentSeat}
               onPickDie={onPickDie}
               rolling={rollingSeat === seat}
+              landing={landingSeat === seat}
               tumbleFaces={tumbleFaces}
               lastValue={lastDieBySeat ? lastDieBySeat[seat] : null}
               compact={compact}

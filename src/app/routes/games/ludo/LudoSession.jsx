@@ -258,6 +258,28 @@ export default function LudoSession() {
     if (!Array.isArray(game?.state?.dice)) setChooser(null);
   }, [game?.state?.dice]);
   const [rolling, setRolling] = useState(false);
+  /* ── WHOSE NUMBER IS BEING HELD UP, AND FOR HOW LONG ───────────
+
+     The 800ms where a thrown number sits lit and nothing else
+     moves. It lives HERE rather than inside the die because the
+     die is replaced twice during a single throw — once when a
+     tappable <button> becomes a tumbling <span>, once when the
+     answer arrives and the plate rebuilds its row from real dice
+     — so nothing the die remembers about its own past survives
+     the transition it would need to watch.
+
+     The session is the thing that resolves a throw, so it is the
+     thing that knows. A seat number, not a boolean: at a table of
+     four the hold belongs to whoever threw. */
+  const [landingSeat, setLandingSeat] = useState(null);
+  const landingTimer = useRef(0);
+  const holdNumber = (seat) => {
+    if (seat == null) return;
+    window.clearTimeout(landingTimer.current);
+    setLandingSeat(seat);
+    landingTimer.current = window.setTimeout(() => setLandingSeat(null), HOLD_MS + 240);
+  };
+  useEffect(() => () => window.clearTimeout(landingTimer.current), []);
   const [tumble, setTumble] = useState([1, 1]);
   /* Somebody else is throwing: { seat, die }. While this is set the
      board is deliberately one move behind the server. */
@@ -407,6 +429,7 @@ export default function LudoSession() {
          BOT_HOLD. */
       botSettleRef.current = window.setTimeout(() => {
         setBotThrow((b) => (b ? { ...b, phase: "settled" } : b));
+        holdNumber(mover);
       }, BOT_THROW);
       botHoldRef.current = window.setTimeout(() => {
         holdingRef.current = false;
@@ -900,6 +923,20 @@ export default function LudoSession() {
     } finally {
       stopped = true;
       setRolling(false);
+      /* The cube has come to rest. Hold the number up before
+         anything else is allowed to happen — including the
+         auto-played move, which waits out the same HOLD_MS.
+
+         Read off `game` rather than `mySeatRow`, which is declared
+         below this. It would be safe here — doRoll runs from a tap,
+         long after render — but that is the precise distinction this
+         file has blanked the board over four times, and a rule with
+         an exception is a rule nobody keeps at 4am. */
+      holdNumber(
+        (game?.seats || []).find((x) => x.profile_id === myId)?.seat ??
+          game?.current_seat ??
+          null
+      );
     }
   };
 
@@ -1751,6 +1788,7 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             sharingSeats={sharingSeats}
+            landingSeat={landingSeat}
             myId={myId}
             diceFor={diceForSeat}
             onRoll={doRoll}
@@ -1956,6 +1994,7 @@ export default function LudoSession() {
             options={isMyTurn && hasDice ? options : []}
             currentSeat={game.current_seat}
             sharingSeats={sharingSeats}
+            landingSeat={landingSeat}
             onPieceTap={tapPiece}
             onPieceDrop={dropPiece}
             dragDisabled={!!chooser}
@@ -1975,6 +2014,7 @@ export default function LudoSession() {
             spin={povRotation(mySeatRow?.seat ?? null)}
             currentSeat={game.current_seat}
             sharingSeats={sharingSeats}
+            landingSeat={landingSeat}
             myId={myId}
             diceFor={diceForSeat}
             onRoll={doRoll}

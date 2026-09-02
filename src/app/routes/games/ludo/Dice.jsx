@@ -39,7 +39,7 @@
    only signal — the sentence is.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useState } from "react";
+
 
 const IVORY = "#F8F2E4";
 /* The board's own "this one", the same gold as the halo on a goti
@@ -144,6 +144,9 @@ export default function Die({
      lift off the table. Whose turn it is was never this control's
      job — the breathing arrow says it. */
   dim = false,
+  /* True for the ~1s after the throw resolved: the number is
+     being held up to be read. Owned by the session. */
+  landing = false,
   label,
   onClick,
   disabled,
@@ -152,24 +155,34 @@ export default function Die({
   const clickable = !!onClick && !disabled && (state === "ready" || state === "selected");
   const rolling = state === "rolling";
 
-  /* THE LANDING FIRES ON THE EDGE, NOT ON THE STATE. A die that is
-     merely sitting there must not squash every time React re-renders
-     it, so the bounce is armed by the transition out of `rolling`
-     and by nothing else. */
-  const wasRolling = useRef(rolling);
-  const [landing, setLanding] = useState(false);
-  useEffect(() => {
-    if (wasRolling.current && !rolling) {
-      setLanding(true);
-      /* 260ms of landing plus 800ms of holding the number, and
-         the class carries both. */
-      const id = window.setTimeout(() => setLanding(false), 1040);
-      wasRolling.current = rolling;
-      return () => window.clearTimeout(id);
-    }
-    wasRolling.current = rolling;
-    return undefined;
-  }, [rolling]);
+  /* ── THE DIE IS TOLD IT HAS LANDED; IT DOES NOT REMEMBER ───────
+
+     This used to arm itself from the EDGE out of `rolling`: a ref
+     holding the previous value, and an effect firing when the
+     prop went true -> false. It never fired for a person's own
+     roll, and the reason took a marked DOM node on the deployed
+     build to find — this component is REPLACED twice during a
+     single throw.
+
+     Once at the start, because a die you may tap renders a
+     <button> and a die that is tumbling renders a <span>: the
+     element type changes, so React tears the DOM out. Once more
+     at the end, when the answer arrives and the plate rebuilds
+     the row from real dice instead of empty ones. Either one is
+     enough to reset a ref, so a memory of "what I was a moment
+     ago" cannot survive the very transition it exists to watch.
+
+     So the hold is not the die's memory any more, it is the
+     TURN'S state, handed down as a prop. The session knows
+     exactly when a throw resolved — it is the thing that
+     resolved it — and a prop survives any number of remounts
+     because it is re-read on every render rather than
+     remembered across them.
+
+     The general lesson, which cost this round: never derive
+     anything from a previous render in a component whose element
+     type or key can change. The state belongs to whoever owns
+     the event, not to whoever draws it. */
 
   /* A SEPARATE THROW EVERY TIME. Two dice thrown from one hand do
      not turn in lockstep — but a DELAY would not have given that,
@@ -242,7 +255,7 @@ export default function Die({
 
   const inner = (
     <span
-      className={landing ? "sb-die-land" : undefined}
+      className={landing && !rolling ? "sb-die-land" : undefined}
       style={{
         position: "relative",
         display: "inline-block",

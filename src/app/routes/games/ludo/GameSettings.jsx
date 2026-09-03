@@ -218,6 +218,10 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints,
             ? { right: 12 }
             : { insetInlineEnd: 12 }),
           width: 320,
+          /* The 16px of padding was landing OUTSIDE the 320, so the
+             panel measured 352 on a 393px screen and left 29px of
+             scrim. Inside the box, it is the width it says it is. */
+          boxSizing: "border-box",
           maxWidth: "86vw",
           zIndex: 77,
           /* A CLEAR BAND OF BOARD ABOVE IT. 62 rather than 88: the

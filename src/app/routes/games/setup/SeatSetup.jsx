@@ -461,13 +461,37 @@ export default function SeatSetup({
                 {isMe ? (me?.full_name || "•")[0].toUpperCase() : seat + 1}
               </span>
 
-              <ColourRow
-                mine={colours[seat]}
-                takenBy={takenBy}
-                seat={seat}
-                onPick={(c) => pick(seat, c)}
-                t={t}
-              />
+              {/* ── THE COLOUR PICKER IS GONE, AND WHICH IT WAS ───
+
+                   It was a control wired to nothing. The choice was
+                   written to house_rules.seat_colours and read back
+                   by NOBODY: the board draws every seat from
+                   SEAT_COLORS[seat] — a fixed four-colour palette
+                   indexed by seat number — in thirty-five places
+                   across seventeen files. Whatever he picked, he
+                   was yellow and the bot was green, because on this
+                   board a seat's colour is not a property of the
+                   seat, it IS the seat: board.js derives that
+                   seat's yard, its track entry, its home column and
+                   its safe stars from the same number.
+
+                   Second control this month found written-and-never-
+                   read, after `teams`. Both had the same tell — a
+                   value the setup room stores that nothing
+                   downstream ever asks for.
+
+                   REMOVED RATHER THAN REPAINTED, on the owner's own
+                   ruling that a picker which lies is worse than
+                   none. Repainting would mean threading a
+                   permutation through every one of those thirty-
+                   five sites, and it is not what he wants anyway:
+                   what "let me be green" means on this board is
+                   TAKE THE GREEN SEAT. That is a seat assignment,
+                   not a recolour — the POV rotation already sits
+                   whoever you are at the bottom of the screen — and
+                   it needs create_game_session to seat the host
+                   somewhere other than seat 0. Worth building; it
+                   is a different feature from this control. ── */}
 
               {/* A chosen person takes the chair's place in the row:
                   their face and their name, not the word "person".

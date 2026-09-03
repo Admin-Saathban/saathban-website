@@ -478,7 +478,26 @@ function useCaptured(pieces, onTaken) {
   const prevRef = useRef(null);
   const key = JSON.stringify(pieces);
 
+  /* Where the walk in flight is heading, so a board that arrives
+     saying the same thing does not start it again. */
+  const walkingTo = useRef(null);
+
   useEffect(() => {
+    /* ── A POLL MID-WALK USED TO START THE WALK AGAIN ─────────────
+
+       This effect keys on the board, and the board arrives twice
+       for one move: once optimistically when the goti is tapped,
+       and again when the server's answer is read back. The second
+       one carries the same squares — but it is a different array,
+       so the key differs by nothing that matters and the effect
+       runs anyway: cancelAnimationFrame, then the whole walk from
+       the beginning. A goti four cells along jumps back and sets
+       off again, which is precisely "it stutters".
+
+       So a board identical to the one already being walked to is
+       not news. Compared by value, because that is the only thing
+       that makes two boards the same. */
+    if (walkingTo.current && walkingTo.current === key) return undefined;
     const prev = prevRef.current;
     prevRef.current = pieces;
     if (!prev) return undefined;
@@ -510,6 +529,8 @@ function useCaptured(pieces, onTaken) {
 function useWalk(pieces, isSilent) {
   /* One thud per flight, fired from inside a frame loop. */
   const thudded = useRef(false);
+  /* And one strike, at the other end of the same flight. */
+  const struck = useRef(false);
   const [shown, setShown] = useState(pieces);
   /* Pieces currently flying home, key "seat:index" → interpolated
      [col, row]. A captured goti is NOT on the track any more, so its
@@ -557,9 +578,33 @@ function useWalk(pieces, isSilent) {
      and the trail fire on the integer boundary, and the goti eases
      across each square and lifts over it in between. */
   const nodes = useRef(new Map());
-  const bindPiece = (id) => (el) => {
-    if (el) nodes.current.set(id, el);
-    else nodes.current.delete(id);
+  /* ── ONE REF CALLBACK PER GOTI, FOR THE LIFE OF THE BOARD ──────
+
+     This built a NEW arrow function on every render, and React
+     treats a changed ref callback as a reason to detach and
+     reattach: it calls the old one with null and the new one with
+     the node, every render, for all sixteen gotis. Between those
+     two calls the map has no entry — and the walk's frame loop
+     reads that map sixty times a second, so any frame landing in
+     the gap simply skipped the goti it was moving. That is a
+     dropped frame with a cause, and it happens more often the more
+     the board re-renders, which is exactly the stutter the owner
+     describes.
+
+     Cached by id, so a goti's callback is the same function object
+     for as long as the board is mounted and React never detaches
+     it at all. */
+  const binders = useRef(new Map());
+  const bindPiece = (id) => {
+    let fn = binders.current.get(id);
+    if (!fn) {
+      fn = (el) => {
+        if (el) nodes.current.set(id, el);
+        else nodes.current.delete(id);
+      };
+      binders.current.set(id, fn);
+    }
+    return fn;
   };
   const clearOffsets = () => {
     nodes.current.forEach((el) => {
@@ -712,8 +757,10 @@ function useWalk(pieces, isSilent) {
       return { id: `${s2}:${i}`, seat: s2, cells, span: toP - fromP };
     });
 
+    walkingTo.current = key;
     const started = performance.now();
     thudded.current = false;
+    struck.current = false;
     let raf = 0;
     let lastStep = -1;
     const crossed = [];
@@ -782,6 +829,16 @@ function useWalk(pieces, isSilent) {
         if (elapsed < SHAKE_MS) {
           /* It has not left yet. It is still on the square it was
              taken on, having a moment about it. */
+          /* THE STRIKE. Fired on the first frame of the flinch —
+             the instant the goti is hit — rather than from a
+             state change somewhere else. It used to come from
+             useGameFeel at 520ms plus 190 a step, a cadence this
+             board has not used since the walk went to 120ms a
+             cell, so it landed on nothing. */
+          if (!struck.current) {
+            struck.current = true;
+            playSound("capture");
+          }
           const m = new Map();
           arcs.forEach((g) => m.set(g.key, { at: g.a, phase: "flinch" }));
           setFlights(m);
@@ -808,6 +865,7 @@ function useWalk(pieces, isSilent) {
       }
 
       if (elapsed >= totalMs) {
+        walkingTo.current = null;
         /* THE OFFSETS COME OFF IN THE SAME BREATH as the true board
            goes on. If React drew the goti at its destination while
            the node still carried the last frame's translate, the
@@ -838,6 +896,7 @@ function useWalk(pieces, isSilent) {
     raf = requestAnimationFrame(frame);
 
     return () => {
+      walkingTo.current = null;
       cancelAnimationFrame(raf);
       /* A move interrupted mid-walk — a rematch, a leave, a second
          move arriving — must not leave a goti sitting at an offset

@@ -172,9 +172,10 @@ function RulesPanel({ rules }) {
    No labels is the part that matters most: three round pills with
    words in them across the top of a board is a toolbar, and a
    toolbar is the app. ── */
-function TopBtn({ onClick, label, children }) {
+function TopBtn({ onClick, label, children, btnRef = null }) {
   return (
     <button
+      ref={btnRef}
       type="button"
       onClick={onClick}
       aria-label={label}
@@ -275,6 +276,17 @@ export default function LudoSession() {
   /* TRUE WHILE MY OWN THROW IS BEING READ. Nothing on the board
      may be offered while this is up — see doRoll. */
   const [rollHeld, setRollHeld] = useState(false);
+  /* Up for a moment after any throw of mine, so a turn that ends
+     with nothing to do still shows what was thrown. */
+  /* Whether my own just-thrown number is still being read. `load`
+     is declared above the state, so it reaches this through a ref
+     — the same reason, and the same shape, as isSilentRef. */
+  const deadHoldRef = useRef(false);
+  /* A turn of mine that ended with nothing to do, parked until the
+     number has been seen. */
+  const deadStateRef = useRef(0);
+  const [deadHold, setDeadHold] = useState(false);
+  deadHoldRef.current = deadHold;
   const landingTimer = useRef(0);
   const holdNumber = (seat) => {
     if (seat == null) return;
@@ -441,6 +453,27 @@ export default function LudoSession() {
       }, BOT_BEAT);
       return g;
     }
+    /* ── MY TURN MUST NOT END WHILE MY NUMBER IS BEING READ ───────
+
+       The one throw that most needs showing is the one that costs
+       the turn: everything in the yard, a six needed, a three
+       thrown. The server ends a turn with no legal move at once,
+       so the next board — with somebody else to play — arrived
+       before the number had been on screen for a single frame, and
+       the plate stopped drawing dice the moment it was not my turn
+       any more.
+
+       So a board that takes the turn away from me is parked for
+       the rest of the hold. Exactly the treatment somebody else's
+       move already gets, for the same reason: a thing worth
+       watching is worth not being interrupted. */
+    if (deadHoldRef.current && mine != null && g?.current_seat !== mine) {
+      window.clearTimeout(deadStateRef.current);
+      deadStateRef.current = window.setTimeout(() => {
+        setGame((prev) => (prev && sameBoard(prev, g) ? prev : g));
+      }, 700);
+      return g;
+    }
     shownMoveRef.current = key;
     /* NOTHING CHANGED, SO NOTHING RE-RENDERS.
 
@@ -478,6 +511,7 @@ export default function LudoSession() {
     shownMoveRef.current = undefined;
     window.clearTimeout(botHoldRef.current);
     window.clearTimeout(botSettleRef.current);
+    window.clearTimeout(deadStateRef.current);
     holdingRef.current = false;
     setBotThrow(null);
     /* The plates' remembered faces, the bot pacemaker's clock and
@@ -622,6 +656,27 @@ export default function LudoSession() {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /* ── WHICH SIDE THE MENU FALLS FROM ───────────────────────────
+
+     The panel was pinned to the trailing edge and the control
+     column is not always there: in Urdu the whole layout flips, so
+     the hamburger sat on one side of the screen and its own menu
+     dropped down the other. A menu has to fall from the button
+     that opened it or it is not that button's menu.
+
+     Measured off the control itself rather than assumed from the
+     writing direction, so it stays true whatever else moves. */
+  const settingsBtnRef = useRef(null);
+  const [panelSide, setPanelSide] = useState("end");
+  const openSettings = () => {
+    try {
+      const r = settingsBtnRef.current?.getBoundingClientRect();
+      if (r) setPanelSide(r.left + r.width / 2 > window.innerWidth / 2 ? "right" : "left");
+    } catch {
+      /* no layout to read: the trailing edge is the safe default */
+    }
+    setSettingsOpen(true);
+  };
   /* The leaving question answers to back as well. It is the one
      panel on this screen where a stray back press would do the
      very thing the panel exists to ask about. */
@@ -942,6 +997,20 @@ export default function LudoSession() {
          keep its halos to itself for those 800ms. */
       setRollHeld(true);
       window.setTimeout(() => setRollHeld(false), HOLD_MS);
+      /* ── A DEAD ROLL IS THE ONE THAT MOST NEEDS SHOWING ────────
+
+         First turn, everything in the yard, he needs a six: he
+         throws a three and the turn is gone before the number is
+         on the screen. The server ends a turn with no legal move
+         immediately, so the board went straight past the one piece
+         of information he actually wanted — what it cost him.
+
+         `deadRoll` holds the board's own reading of the throw for
+         the length of the hold plus a beat, so the number sits
+         lit, a line says there was nothing to do with it, and only
+         then does the table move on. */
+      setDeadHold(true);
+      window.setTimeout(() => setDeadHold(false), HOLD_MS + 500);
       /* The cube has come to rest. Hold the number up before
          anything else is allowed to happen — including the
          auto-played move, which waits out the same HOLD_MS.
@@ -1585,6 +1654,12 @@ export default function LudoSession() {
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 12,
+          /* ── THE CHROME STARTS BELOW THE TITLE LINE ───────────
+               A column flush with the very top of the screen sits
+               in the same band as the table's name and, on a phone
+               with a notch, under the system clock. Dropped so it
+               begins clear of both. ── */
+          paddingTop: 48,
           /* THE ROW GETS ITS OWN INSET, and the board does not.
 
              GAME.edge is 6px because §2 wants the board edge to edge,
@@ -1641,10 +1716,11 @@ export default function LudoSession() {
 
             atTable, so it is there whenever there is a board to
             leave. */}
-        {/* The door is drawn INSIDE the column below, first, so it
-            is topmost. This slot keeps the table's name company on
-            the left. */}
-        {false && atTable && (
+        {/* ── THE DOOR, ALONE, IN THE OPPOSITE CORNER ─────────────
+             Owner's ruling. The two settings controls keep their
+             column; the way out stands by itself where nothing
+             else can be pressed by mistake for it. ── */}
+        {atTable && (
           <TopBtn onClick={() => setLeaveAsk(true)} label={t("ludo.back")}>
             {/* DRAWN, NOT TYPED. A door emoji is a blank tofu box
                 on anything without a font for it, which included
@@ -1672,7 +1748,12 @@ export default function LudoSession() {
         {/* Sound and settings sit together on the right, in the
             order the owner placed them. */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: "0 0 auto" }}>
-          {atTable && (
+          {/* THE DOOR IS NOT IN THIS COLUMN — see the other corner
+              below. Leaving is a different kind of act from turning
+              the sound down, and stacking it with two settings
+              controls made a three-tall tower of chrome down one
+              edge of a square board. */}
+          {false && atTable && (
             <TopBtn onClick={() => setLeaveAsk(true)} label={t("ludo.back")}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
@@ -1710,7 +1791,8 @@ export default function LudoSession() {
           {/* THE HAMBURGER, matching the app's More icon — three
               lines, and nothing else. */}
           <TopBtn
-            onClick={() => setSettingsOpen(true)}
+            btnRef={settingsBtnRef}
+            onClick={openSettings}
             label={t("ludo.settings.title")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
@@ -2250,6 +2332,15 @@ export default function LudoSession() {
           {/* "The 2 had nowhere to go, so it goes unused." A dim die
               already says it, and a person who has played ludo does
               not need the sentence. */}
+          {/* "Nothing to do with that one." NOT a hint: it is the
+              result of a throw, and the only one the board cannot
+              show by moving something. It appears for the length of
+              the hold and goes. */}
+          {deadHold && isMyTurn && spendable === 0 && hasDice && (
+            <FlashLine keyed={diceKey} ms={1200}>
+              {t("ludo.turn.noMove")}
+            </FlashLine>
+          )}
           {hints && isMyTurn && deadDice.length > 0 && (
             <BodyText muted role="status" style={{ margin: "6px 0 0", textAlign: "center", color: GAME.inkMuted }}>
               {t("ludo.dice.wastedNote", { n: deadDice.map((d) => d.v).join(", ") })}
@@ -2489,6 +2580,7 @@ export default function LudoSession() {
           button in the top bar, and it was in both places. */}
       {settingsOpen && (
         <GameSettings
+          side={panelSide}
           rules={rules}
           editable={editable}
           onClose={() => setSettingsOpen(false)}

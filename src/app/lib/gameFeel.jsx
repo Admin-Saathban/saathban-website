@@ -120,7 +120,14 @@ export function soundsForMove(gameKey, m) {
     return out;
   }
 
-  /* ludo */
+  /* ── LUDO RETURNS NOTHING ──────────────────────────────────
+     Its board fires every one of its own sounds, from the
+     animation that earns it. Anything returned here would be a
+     second copy on a different clock. Kept as a branch rather
+     than deleted so the shape of the function still says which
+     games it answers for. */
+  return [];
+  // eslint-disable-next-line no-unreachable
   if (m.skipped) return out;
   const after = HOP_AT + Math.max(0, steps) * HOP_MS;
   if (m.capture) out.push(["capture", after + 40]);
@@ -225,10 +232,44 @@ export function useGameFeel({
     soundMove(gameKey, fresh[fresh.length - 1]?.move, isSilent?.(fresh[fresh.length - 1]?.seat));
   }, [moves, gameKey]);
 
-  /* The ludo path: no log, so we watch a key that changes per move. */
+  /* ── LUDO NO LONGER SOUNDS ITSELF FROM STATE ──────────────────
+
+     This watched `eventKey` — a stringify of the last move AND
+     the whole board — and played a move's whole sequence every
+     time it changed. For ludo that is not "a move happened", it
+     is "any square moved", which includes each step of a walk
+     the player is already watching, the reconcile after an
+     optimistic move, a bot's held move being released, and a
+     poll bringing anything at all.
+
+     And every sequence begins with ["dice", 0]. That is the
+     owner's report exactly: the roll rattle playing while gotis
+     walk, and sounds arriving that match nothing on the screen.
+     The capture and jota sounds were scheduled at 520ms + 190ms
+     a step — a cadence the board stopped using rounds ago, when
+     the walk went to 120ms a cell — so they landed at moments
+     with nothing under them.
+
+     THE RULE, and it is the owner's: a sound may only fire as
+     part of an animation somebody is watching. Ludo has an
+     animated board, so every one of its sounds is fired BY the
+     thing that animates:
+
+       dice     LudoSession, the throw (mine and a bot's alike)
+       hop      LudoBoard, once per cell as the goti crosses it
+       capture  LudoBoard, as the taken goti is struck
+       thud     LudoBoard, as it lands back in its yard
+       jota     LudoBoard, as a pair closes on one square
+       home     LudoBoard, as a goti reaches the middle
+       yourTurn here, below — a handover, which has no animation
+       win      here, below — likewise
+
+     Snakes and carrom keep this path: neither has a board that
+     fires its own sounds, and snakes' scheduled hop run is
+     matched to its own token walk. */
   const seenKey = useRef(null);
   useEffect(() => {
-    if (eventKey == null) return;
+    if (eventKey == null || gameKey === "ludo") return;
     const first = seenKey.current === null;
     if (seenKey.current === eventKey) return;
     seenKey.current = eventKey;

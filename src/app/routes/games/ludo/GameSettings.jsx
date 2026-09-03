@@ -143,7 +143,7 @@ function Level({ label, value, onChange, ts }) {
   );
 }
 
-export default function GameSettings({ rules, editable, onClose, hints, onHints }) {
+export default function GameSettings({ rules, editable, onClose, hints, onHints, side = "end" }) {
   const { t, ts, meta } = useI18n();
   /* EVERYTHING SHUT. See the note at the top: an expanded section
      is what made this sheet as tall as the screen. */
@@ -151,7 +151,20 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
   const [prefs, setPrefs] = useState(() => getSoundPrefs());
 
   useEffect(() => onSoundPrefs(setPrefs), []);
-  useBackToClose(true, onClose);
+  /* ── BACK STEPS EXACTLY ONE LEVEL ──────────────────────────────
+
+     The owner's rule for the whole game world, and a menu with an
+     expanded section is TWO levels deep: the panel, and the thing
+     open inside it. Back closed the panel outright from there,
+     which skips a level — he was two steps in and came out three.
+
+     So the section registers its own entry while it is open, and
+     the panel's is registered only when nothing is expanded.
+     Registering both at once would make one press close both, and
+     the hook runs the innermost first, so the two are deliberately
+     exclusive rather than nested. */
+  useBackToClose(open != null, () => setOpen(null));
+  useBackToClose(open == null, onClose);
   const put = (patch) => setPrefs(setSoundPrefs(patch));
 
   return (
@@ -194,14 +207,30 @@ export default function GameSettings({ rules, editable, onClose, hints, onHints 
                tap. ── */
           position: "fixed",
           top: 0,
-          insetInlineEnd: 12,
+          /* THE SIDE THE HAMBURGER IS ON, measured from the button
+             itself rather than assumed from the writing direction —
+             see the note on openSettings. A menu that drops down the
+             far side of the screen from its own button is not that
+             button's menu. */
+          ...(side === "left"
+            ? { left: 12 }
+            : side === "right"
+            ? { right: 12 }
+            : { insetInlineEnd: 12 }),
           width: 320,
           maxWidth: "86vw",
           zIndex: 77,
           /* A CLEAR BAND OF BOARD ABOVE IT. 62 rather than 88: the
              gap is not decoration, it is the target you tap to
              dismiss the thing, and at 88dvh there was not one. */
-          maxHeight: "78dvh",
+          /* ── A REACHABLE SCRIM IS PART OF THE PANEL ────────────
+               With Sound expanded this grew until there was nothing
+               left to tap beside it, which is the same trap the
+               sheet fell into two rounds ago and the same fix:
+               the panel is capped and scrolls inside itself, so the
+               band of board below and beside it is always there to
+               be pressed. ── */
+          maxHeight: "68dvh",
           overflowY: "auto",
           overscrollBehavior: "contain",
           background: GAME.panel,

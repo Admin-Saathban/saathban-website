@@ -671,6 +671,36 @@ function EntryDetail({ entry, value, prefs }) {
 
 /* ─── The card ─── */
 
+/* ── THE LOG HAS ITS OWN SURFACE ──────────────────────────────────
+
+   Owner: the card blends into the feed — same white as every post, so
+   his eye skips it. It is not another post; it is the one thing on the
+   page that is his and is today's, so it stops sharing their surface.
+
+   His colour, and it holds up: on #E3EEF7 the near-black heading is
+   14.19:1, the teal 5.44:1 and the muted intro line 4.81:1 — all clear
+   of the 4.5 the body text needs. Nothing on the card changes colour.
+
+   ONE MEASURED SURPRISE, because it runs the other way to intuition.
+   Against the sage ground (#EFF3EE) this blue separates LESS by
+   lightness than the white it replaces — 1.050 against 1.121 — so what
+   makes it read as a different kind of thing is HUE, not brightness,
+   helped by an edge that is now doing real work: #A9C7E0 is 1.57
+   against the ground where the old warm grey hairline was far quieter.
+
+   A deeper sky (#D9E7F5) would match white's lightness separation
+   exactly while staying blue, but it lands the intro line on 4.51 —
+   AA by a hundredth, with no headroom for a text-size change. Recorded
+   for the owner to choose by eye; not taken unilaterally, because
+   "passes by 0.01" is a thing that stops passing later.
+
+   The card is drawn in ONE place — IconHome renders it and nothing
+   else does; IconHub imports only its helpers — so this is Home-only
+   by construction rather than by a flag. Both states share this
+   section, so finishing the day cannot make it jump colour. ── */
+const LOG_SURFACE = "#E3EEF7";
+const LOG_EDGE = "#A9C7E0";
+
 export default function DailyLogCard({ iconId, log, onChange, editable, restDay, dayLabel, isToday, date }) {
   const { t, ts, meta } = useI18n();
   const prefs = useIconPrefs(iconId);
@@ -779,7 +809,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
   return (
     <section
       aria-label={isToday ? t("home.log.titleToday") : t("home.log.titleFor", { day: dayLabel })}
-      style={{ background: C.white, borderRadius: 22, border: `1.5px solid ${C.warmGray}`, boxShadow: "0 4px 20px rgba(87, 52, 37, 0.07)", padding: "22px 20px", marginBottom: 20 }}
+      style={{ background: LOG_SURFACE, borderRadius: 22, border: `1.5px solid ${LOG_EDGE}`, boxShadow: "0 4px 20px rgba(87, 52, 37, 0.07)", padding: "22px 20px", marginBottom: 20 }}
     >
       <div style={{ marginBottom: 6 }}>
         <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(25), fontWeight: 700, color: C.brown, margin: 0 }}>

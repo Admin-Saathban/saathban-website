@@ -63,6 +63,7 @@ import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
 import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 import UpdateNotice from "./components/UpdateNotice.jsx";
+import SwipeDebug from "./components/SwipeDebug.jsx";
 import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
 import TabPanes, { paneFor } from "./components/TabPanes.jsx";
@@ -281,6 +282,7 @@ export default function AppRoot() {
             navigation — the person who needs it most is the one who
             has been in the app for hours. */}
         <UpdateNotice />
+        <SwipeDebug />
 
         {/* Visited tabs stay mounted here; see TabPanes. */}
         <TabPanes />

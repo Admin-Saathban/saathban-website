@@ -51,6 +51,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { wantsLessMotion } from "./motion.jsx";
 import { paneFor as paneKeyFor } from "./TabPanes.jsx";
 import { freezeShutter, thawShutter } from "./useShutter.js";
+import { swipeLog, swipeDebugOn } from "./swipeDebug.js";
 
 /* Below ENGAGE the gesture is still undecided and the page scrolls
    normally; past it the drag owns the finger. 12px is small enough to
@@ -318,6 +319,18 @@ export default function useTabSwipe(items, enabled = true) {
         !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
       s.idx = indexOfPath();
       if (s.idx < 0) s.dead = true;
+      if (swipeDebugOn()) {
+        swipeLog("DOWN", {
+          x: e.touches[0].clientX, y: e.touches[0].clientY,
+          tag: el ? el.tagName.toLowerCase() : "none",
+          dead: s.dead,
+          why: !el ? "no-target" : scrollsSideways(el) ? "sideways-scroller"
+               : el.closest(TAPPABLE) ? "tappable"
+               : el.closest("input, textarea, select, [contenteditable='true'], [role='slider']") ? "field"
+               : s.idx < 0 ? "not-a-tab" : "-",
+          idx: s.idx,
+        });
+      }
       /* THE BAR STOPS LISTENING THE MOMENT A FINGER LANDS.
 
          Not at engage and not at the switch: the damage happens in
@@ -352,13 +365,14 @@ export default function useTabSwipe(items, enabled = true) {
 
            The test is >= rather than >: a perfectly diagonal drag is
            not a swipe, and on a real thumb it is common. */
-        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; thaw(); return; }
+        if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; thaw(); swipeLog("VERTICAL", { dx, dy }); return; }
         if (Math.abs(dx) < ENGAGE) return;
         /* Sideways ENOUGH. Passing ENGAGE is not the same as meaning
            it — a thumb arcing down the screen crosses 12px of x while
            crossing 11px of y, and that is a scroll. */
         if (Math.abs(dx) < Math.abs(dy) * DOMINANCE) return;
         s.on = true;
+        swipeLog("ENGAGE", { dx, dy });
         outEl = findOut();
         if (!wantsLessMotion()) {
           root.classList.add("sb-dragging");
@@ -388,7 +402,7 @@ export default function useTabSwipe(items, enabled = true) {
         /* Owns the finger now, so the page must stop scrolling under it.
            Only once ENGAGED — before that the listener is passive in
            spirit and vertical scrolling is untouched. */
-        if (e.cancelable) e.preventDefault();
+        if (e.cancelable) e.preventDefault(); else swipeLog("NOT-CANCELABLE", { dx: s.dx });
       }
     };
 
@@ -406,6 +420,7 @@ export default function useTabSwipe(items, enabled = true) {
       const flick = Math.abs(s.v) > FLICK_V && Math.abs(dx) > FLICK_MIN &&
                     (s.v < 0) === (dx < 0);
       const going = (far || flick) && n >= 0 && n < items.length && idx >= 0;
+      swipeLog("UP", { dx, v: Math.round(s.v * 100) / 100, far, flick, going, to: going && items[n] ? items[n].to : "-" });
 
       if (wantsLessMotion()) {
         clear();
@@ -429,6 +444,10 @@ export default function useTabSwipe(items, enabled = true) {
 
     /* Put it back and forget it: no navigation, no committed state. */
     const abandon = () => {
+      /* THE ONE THAT SYNTHETIC INPUT NEVER FIRES. If this appears in
+         the trace, the browser claimed the gesture — overscroll
+         navigation, the system edge zone, or a scrolling child. */
+      swipeLog("CANCEL", { on: st.current.on, dx: st.current.dx });
       const s = st.current;
       const on = s.on;
       s.on = false; s.dead = true; s.v = 0;

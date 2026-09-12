@@ -52,21 +52,50 @@ export default function SurveyPage() {
   const { profile } = useSession();
   const navigate = useNavigate();
 
-  const [stage, setStage] = useState("consent"); // consent | q | done
+  /* checking | answered | consent | q | done
+
+     CHECKING COMES FIRST, and it is not a spinner for its own sake. This
+     used to open on the consent screen and look the answer up behind
+     it, so the "I'm happy to answer" button was on screen — and
+     pressable — for the length of a round trip before anybody knew
+     whether this person had already answered. Nothing is offered until
+     that is known. */
+  const [stage, setStage] = useState("checking");
   const [i, setI] = useState(0);
   const [answers, setAnswers] = useState({});
   const [busy, setBusy] = useState(false);
-  const [already, setAlready] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    supabase
+  const hasAnswered = async () => {
+    const { data } = await supabase
       .from("survey_responses")
       .select("submitted_at")
       .eq("profile_id", profile.id)
-      .maybeSingle()
-      .then(({ data }) => alive && data?.submitted_at && setAlready(true));
+      .maybeSingle();
+    return !!data?.submitted_at;
+  };
+
+  /* ── SOMEBODY WHO HAS ANSWERED IS THANKED, NOT ASKED AGAIN ──
+
+     The owner found he could open this after finishing it and submit as
+     many times as he liked. The database never kept more than one row per
+     person, so the research was not filling with duplicates — each
+     submission overwrote the last. And the person was told, in so many
+     words, "Answering again replaces what you said", which is an
+     invitation to do it.
+
+     So there is no second pass through the questions at all. A submitted
+     response is final at the database (0118), and this screen says so
+     warmly instead of offering a form the database would refuse. If the
+     check itself fails the consent screen shows, because the database
+     is what actually holds the line and a failed read should not lock a
+     first-time person out. */
+  useEffect(() => {
+    let alive = true;
+    hasAnswered()
+      .then((done) => alive && setStage(done ? "answered" : "consent"))
+      .catch(() => alive && setStage("consent"));
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id]);
 
   const q = QUESTIONS[i];
@@ -97,6 +126,13 @@ export default function SurveyPage() {
     );
     setBusy(false);
     if (error) {
+      /* Refused because it was already answered — a second tab, or a
+         submission that landed while this one was on the last question.
+         That is not a failure to report; the person's answers are in. */
+      if (await hasAnswered().catch(() => false)) {
+        setStage("answered");
+        return;
+      }
       pushToast(t("grow.survey.saveFailed"), { tone: "error", key: "survey" });
       return;
     }
@@ -132,6 +168,36 @@ export default function SurveyPage() {
       }}
     >
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        {stage === "checking" && (
+          /* Quiet, and nothing in it can be pressed. */
+          <div aria-busy="true" style={{ minHeight: 240 }} />
+        )}
+
+        {/* No submit control and no way back into the questions. One way
+            out, the same one the finished screen has. */}
+        {stage === "answered" && (
+          <section data-stage="answered">
+            <h1
+              style={{
+                fontFamily: meta.fonts.heading,
+                fontSize: ts(26),
+                fontWeight: 800,
+                color: C.green,
+                lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
+                margin: "0 0 12px",
+              }}
+            >
+              {t("grow.survey.answeredTitle")}
+            </h1>
+            <p style={{ fontSize: ts(20), color: C.textMain, lineHeight: 1.6, margin: "0 0 20px" }}>
+              {t("grow.survey.answeredBody")}
+            </p>
+            <button type="button" style={btn(true)} onClick={() => navigate("/app/skills")}>
+              {t("grow.survey.back")}
+            </button>
+          </section>
+        )}
+
         {stage === "consent" && (
           <section data-stage="consent">
             <h1
@@ -150,11 +216,6 @@ export default function SurveyPage() {
             <p style={{ fontSize: ts(20), color: C.textMain, lineHeight: 1.6, margin: "0 0 20px" }}>
               {t("grow.survey.consent")}
             </p>
-            {already && (
-              <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px" }}>
-                {t("grow.survey.alreadyDone")}
-              </p>
-            )}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button type="button" style={btn(true)} onClick={() => setStage("q")}>
                 {t("grow.survey.begin")}

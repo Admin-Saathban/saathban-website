@@ -80,7 +80,7 @@ function SkillCard({ skill, s, interested, busy, onToggle }) {
    linked to them — so a person could not reach either. They now sit
    ABOVE the three not-yet-open sections, because a page whose every
    card says "coming soon" teaches people to stop opening it. */
-function OpenCard({ title, desc, cta, to, note }) {
+function OpenCard({ title, desc, cta, to, note, icon = "🏅" }) {
   const { ts } = useI18n();
   return (
     <section
@@ -99,7 +99,7 @@ function OpenCard({ title, desc, cta, to, note }) {
       </p>
       {note && (
         <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green, margin: "0 0 12px" }}>
-          🏅 {note}
+          {icon} {note}
         </p>
       )}
       <Link
@@ -128,6 +128,9 @@ export default function SkillsPage() {
   const s = STRINGS[lang] || STRINGS.en;
   const { profile } = useSession();
   const [courseBadge, setCourseBadge] = useState(false);
+  /* Whether they have already answered the research survey, so the card
+     stops asking "Answer the questions" of somebody who has. */
+  const [surveyDone, setSurveyDone] = useState(false);
 
   const [interested, setInterestedSet] = useState(null); // null = loading; else Set
   const [busy, setBusy] = useState(null); // skill id currently saving
@@ -161,6 +164,18 @@ export default function SkillsPage() {
       .then(({ data }) => alive && setCourseBadge(!!data?.badge_at));
     return () => { alive = false; };
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id || profile?.role !== "saath_icon") return undefined;
+    let alive = true;
+    supabase
+      .from("survey_responses")
+      .select("submitted_at")
+      .eq("profile_id", profile.id)
+      .maybeSingle()
+      .then(({ data }) => alive && setSurveyDone(!!data?.submitted_at));
+    return () => { alive = false; };
+  }, [profile?.id, profile?.role]);
 
   const toggle = async (skill) => {
     if (!profile?.id) return;
@@ -231,7 +246,14 @@ export default function SkillsPage() {
         {/* §16: the survey is Icons only — no Fam version. The card is
             absent for everyone else rather than shown and refused. */}
         {profile?.role === "saath_icon" && (
-          <OpenCard title={s.surveyName} desc={s.surveyDesc} cta={s.surveyCta} to="/app/skills/survey" />
+          <OpenCard
+            title={s.surveyName}
+            desc={s.surveyDesc}
+            cta={surveyDone ? s.surveyDoneCta : s.surveyCta}
+            to="/app/skills/survey"
+            note={surveyDone ? s.surveyDone : null}
+            icon="✓"
+          />
         )}
 
         <p

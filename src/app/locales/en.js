@@ -1415,7 +1415,11 @@ const en = {
       next: "Next",
       finish: "Finish",
       step: "Question {n} of {total}",
-      alreadyDone: "You've answered before. Answering again replaces what you said.",
+      /* Replaces alreadyDone, which invited a second pass ("Answering
+         again replaces what you said"). A submitted response is final
+         now (0118), so this thanks rather than offers. */
+      answeredTitle: "You've already helped",
+      answeredBody: "Your answers reached the Saathban team. Thank you — there is nothing more to do here.",
       saveFailed: "That didn't save. Try once more?",
       thanksTitle: "Thank you",
       thanksBody: "That genuinely helps decide what Saathban builds next.",

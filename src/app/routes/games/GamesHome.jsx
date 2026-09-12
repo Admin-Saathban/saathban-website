@@ -446,7 +446,7 @@ export default function GamesHome() {
       {resting && (
         <Card
           role="status"
-          style={{ background: C.creamDark ?? C.bg, borderColor: C.olive, borderWidth: 2 }}
+          style={{ background: C.cream, borderColor: C.greenMuted, borderWidth: 2 }}
         >
           <BodyText style={{ margin: 0, fontWeight: 600 }}>{t("games.parked.restingNote")}</BodyText>
         </Card>
@@ -657,7 +657,13 @@ export default function GamesHome() {
                       style={{
                         display: "inline-block",
                         marginTop: 6,
-                        background: C.olive ?? C.brown,
+                        /* The accent family, softened. C.olive is grey in
+                           this palette — it is a LABEL colour, not a warm one —
+                           and grey on a dimmed tile reads as a control that has
+                           failed rather than a game that is coming. The muted
+                           green is warm enough to invite and quiet enough not to
+                           compete with the riddle's Open button below. */
+                        background: C.greenMuted,
                         color: C.cream,
                         borderRadius: 50,
                         padding: "4px 12px",

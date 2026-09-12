@@ -18,6 +18,8 @@
    array work, nothing retained.
    ════════════════════════════════════════════════ */
 
+import { safeBottomNow } from "./safeArea.js";
+
 let on = false;
 try {
   on = typeof window !== "undefined" &&
@@ -52,6 +54,50 @@ export function swipeLog(tag, data) {
 
 export function swipeLines() { return lines; }
 
+/* ── THE BAR'S BOX, WATCHED ──
+
+   Frame-stepping the owner's recording is how the real symptom was
+   found: the bar's BOTTOM edge never moves and its TOP edge drops, so
+   it is getting shorter rather than sliding. That is a measurement
+   nobody could have made from a description, and it is the measurement
+   the phone should be making for itself.
+
+   So while the overlay is on, the bar's height and position are read
+   every frame and a line is written whenever either changes, with the
+   inset the height is built from. One swipe, one screenshot, and the
+   trace says whether the height moved and what moved with it —
+   instead of a fourth round of somebody watching and guessing.
+
+   Only while the overlay is on. Off, this function is never called. */
+export function watchBar() {
+  if (!on || typeof document === "undefined") return () => {};
+  let last = "";
+  let raf = 0;
+  const tick = () => {
+    const bar = document.querySelector("[data-sb-bar]");
+    if (bar) {
+      const r = bar.getBoundingClientRect();
+      const now = Math.round(r.height) + ":" + Math.round(r.top) + ":" + Math.round(r.bottom);
+      if (now !== last) {
+        if (last) {
+          const [h, t, b] = now.split(":");
+          const [ph, pt] = last.split(":");
+          swipeLog("BAR-BOX", {
+            h, top: t, bottom: b,
+            dh: Number(h) - Number(ph),
+            dtop: Number(t) - Number(pt),
+            inset: Math.round(safeBottomNow().live),
+          });
+        }
+        last = now;
+      }
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}
+
 export function onSwipeLog(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
@@ -77,16 +123,29 @@ export function swipeFacts() {
        about, and the DOM is the only account of it that cannot be
        out of date. */
     "bar=" + barWhere(),
+    /* pinned is what the app now uses; live is what the browser says
+       this instant. If those two ever differ on his phone, the inset
+       really does move under the bar and pinning it was the fix. */
+    "inset=" + (() => { const s = safeBottomNow(); return s.pinned + "/" + Math.round(s.live); })(),
+    "docH=" + document.documentElement.scrollHeight,
   ];
 }
 
 /* The bottom bar's actual vertical offset. 0 is where it belongs; a
    positive number is it displaced downwards, which is exactly what the
    recordings show and what no amount of synthetic input reproduced. */
+/* ── THE MEASUREMENT THE RECORDINGS FORCED ──
+
+   The owner is right that the bar is DISPLACED rather than repainted,
+   and the recordings say more than that: its bottom edge never moves
+   and its top edge drops, which means it is getting SHORTER, not
+   sliding. So the trace reports the height and the inset the height is
+   built from, not just an offset — a number that says "down 24" would
+   have sent us looking at the shutter for a fourth time. */
 function barWhere() {
   const bar = document.querySelector("[data-sb-bar]");
   if (!bar) return "none";
   const r = bar.getBoundingClientRect();
-  const off = Math.round(r.bottom - window.innerHeight);
-  return off === 0 ? "home" : "down" + off;
+  const below = Math.round(r.bottom - window.innerHeight);
+  return "h" + Math.round(r.height) + (below === 0 ? " home" : " down" + below);
 }

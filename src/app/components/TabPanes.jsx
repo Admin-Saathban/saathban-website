@@ -107,6 +107,71 @@ export default function TabPanes() {
     if (active && !visited.includes(active)) setVisited((v) => [...v, active]);
   }, [active, visited]);
 
+  /* ── AND THE TWO NEXT DOOR, ONCE NOBODY IS DOING ANYTHING ──
+
+     The owner reports that only ONE swipe direction misbehaves, and
+     that is the fact this exists to answer. Going BACK reaches a pane
+     that has been visited: it is in the document, it has its data, it
+     is as tall as it was. Going FORWARD often reaches one that is not
+     there at all — so the commit mounts a whole screen, which arrives
+     empty and grows as it fetches. A page that briefly cannot scroll is
+     a page whose browser re-reports its own insets, and that is the
+     twenty-four pixels the bar drops. One direction changes the
+     document's height and the other does not; only one of them moves
+     the bar.
+
+     Mounting on arrival would trade the swipe's problem for the launch
+     problem this file was written to avoid — five screens fetching
+     before anybody has asked for anything. So the neighbours are
+     mounted only AFTER the person has settled on a tab and the browser
+     has nothing else to do. Launch still costs exactly one screen; by
+     the time a finger lands, the screens either side of it are already
+     there and no gesture ever mounts anything.
+
+     Idle, not a timer: on a phone that is still painting the screen
+     somebody just opened, this must be the last thing that happens. */
+  useEffect(() => {
+    if (!active) return undefined;
+    const here = PANES.findIndex((p) => p.key === active);
+    if (here < 0) return undefined;
+    const want = [PANES[here - 1], PANES[here + 1]].filter(Boolean).map((p) => p.key);
+    if (want.every((k) => visited.includes(k))) return undefined;
+
+    let cancelled = false;
+    const add = () => {
+      if (cancelled) return;
+      /* A LOCATION FIRST, OR THE PANE MOUNTS EMPTY AND NOTHING IS SAVED.
+
+         Every pane renders <Routes location={the one it was last active
+         at}>, and a pane that has never been active has none — so it
+         falls back to the CURRENT location, which belongs to a
+         different tab and matches none of its routes. The div appears,
+         renders nothing, costs nothing, and the screen is still mounted
+         from scratch on arrival. The pre-mount would have been a
+         no-op that looked like a fix, which is the failure mode this
+         whole session is about.
+
+         So an unvisited neighbour is given its own root as the place it
+         is standing. The line above — frozen.current[active] = location
+         — overwrites this with the real thing the moment the person
+         actually goes there. */
+      want.forEach((k) => {
+        if (!frozen.current[k]) {
+          const base = PANES.find((p) => p.key === k).base;
+          frozen.current[k] = { pathname: base, search: "", hash: "", state: null, key: "pre-" + k };
+        }
+      });
+      setVisited((v) => (want.every((k) => v.includes(k)) ? v : [...v, ...want.filter((k) => !v.includes(k))]));
+    };
+    const ric = window.requestIdleCallback;
+    const id = ric ? ric(add, { timeout: 4000 }) : window.setTimeout(add, 1500);
+    return () => {
+      cancelled = true;
+      if (ric) window.cancelIdleCallback?.(id);
+      else window.clearTimeout(id);
+    };
+  }, [active, visited]);
+
   /* The location each pane should keep rendering while it is away. */
   const frozen = useRef({});
   if (active) frozen.current[active] = location;

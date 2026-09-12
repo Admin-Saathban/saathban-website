@@ -70,6 +70,35 @@ import { swipeLog, swipeDebugOn } from "./swipeDebug.js";
    pane start moving WITH the finger rather than after it. */
 const ENGAGE = 12;
 
+/* ── AND THE SAME THRESHOLD, RAISED, FOR A GESTURE THAT BEGAN ON A
+   CONTROL ──
+
+   The owner reports that on the Games screen a swipe takes two or three
+   attempts before it moves. It does, and the cause is one line further
+   down: a gesture beginning on anything tappable was killed outright.
+   The Games screen is a heading and then tiles — Ludo, Snakes, the
+   riddle card, the code button — so almost every square inch of it
+   refused the gesture, and the attempts that "worked" were the ones
+   that happened to land in a gap between cards.
+
+   The outright refusal was there so a drag could never steal a press
+   however far a thumb rolls. It does not have to be outright to do
+   that, and the reason is already written in RESPONSIVENESS.md: a touch
+   that travels more than about 16px is a scroll as far as Chrome is
+   concerned, and it CANCELS the click it would otherwise synthesise.
+   That happens with or without this hook.
+
+   So a gesture that starts on a control engages at 24px instead of 12.
+   By 24px the browser has already thrown away the click — there is no
+   press left to steal, and the guarantee is arithmetic rather than a
+   threshold somebody has to feel good about. Under 24px nothing moves
+   and the press lands exactly as it does today.
+
+   The outright refusal stays for the things where it is not about
+   presses at all: a field, a slider, a contenteditable, and anything
+   that scrolls sideways. Those own the horizontal axis themselves. */
+const ENGAGE_ON_CONTROL = 24;
+
 /* ── THE DRAG STYLESHEET LIVES HERE, WITH THE HOOK THAT USES IT ──
 
    It was in lib/motion.jsx, the shared motion vocabulary. That file is
@@ -199,7 +228,7 @@ export default function useTabSwipe(items, enabled = true) {
      second to move one element is how a smooth gesture becomes a janky
      one. */
   const st = useRef({ x: 0, y: 0, dx: 0, on: false, dead: true, idx: -1,
-                      t: 0, lastX: 0, lastT: 0, v: 0, timer: 0 });
+                      t: 0, lastX: 0, lastT: 0, v: 0, timer: 0, samples: [] });
 
   useEffect(() => {
     if (!enabled || !items || items.length < 2) return undefined;
@@ -373,14 +402,19 @@ export default function useTabSwipe(items, enabled = true) {
       if (s.timer) { window.clearTimeout(s.timer); s.timer = 0; }
       root.classList.remove("sb-settling");
       root.style.removeProperty("--sb-drag");
-      s.on = false; s.dx = 0; s.v = 0;
+      s.on = false; s.dx = 0; s.v = 0; s.samples = [];
       if (e.touches.length !== 1) { s.dead = true; return; }
       const el = e.target instanceof Element ? e.target : null;
-      s.dead =
-        !el ||
-        scrollsSideways(el) ||
-        !!el.closest(TAPPABLE) ||
+      /* Refused outright: it owns the horizontal axis, or it is a field. */
+      s.dead =
+        !el ||
+        scrollsSideways(el) ||
         !!el.closest("input, textarea, select, [contenteditable='true'], [role='slider']");
+      /* Allowed, but it has to mean it. A disabled control is not one of
+         these at all — there is no press to protect, so a resting game's
+         tile is as swipeable as the ground beside it. */
+      const onControl = !s.dead && !!el.closest(TAPPABLE) && !el.closest("[disabled], [aria-disabled='true']");
+      s.engage = onControl ? ENGAGE_ON_CONTROL : ENGAGE;
       s.idx = indexOfPath();
       if (s.idx < 0) s.dead = true;
       if (swipeDebugOn()) {
@@ -389,9 +423,9 @@ export default function useTabSwipe(items, enabled = true) {
           tag: el ? el.tagName.toLowerCase() : "none",
           dead: s.dead,
           why: !el ? "no-target" : scrollsSideways(el) ? "sideways-scroller"
-               : el.closest(TAPPABLE) ? "tappable"
                : el.closest("input, textarea, select, [contenteditable='true'], [role='slider']") ? "field"
                : s.idx < 0 ? "not-a-tab" : "-",
+          engage: s.engage,
           idx: s.idx,
         });
       }
@@ -427,6 +461,7 @@ export default function useTabSwipe(items, enabled = true) {
       s.y = e.touches[0].clientY;
       s.lastX = s.x;
       s.lastT = e.timeStamp || Date.now();
+      s.samples = [{ x: s.x, t: s.lastT }];
     };
 
     const move = (e) => {
@@ -444,7 +479,7 @@ export default function useTabSwipe(items, enabled = true) {
            The test is >= rather than >: a perfectly diagonal drag is
            not a swipe, and on a real thumb it is common. */
         if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; thaw(); swipeLog("VERTICAL", { dx, dy }); return; }
-        if (Math.abs(dx) < ENGAGE) return;
+        if (Math.abs(dx) < (s.engage || ENGAGE)) return;
         /* Sideways ENOUGH. Passing ENGAGE is not the same as meaning
            it — a thumb arcing down the screen crosses 12px of x while
            crossing 11px of y, and that is a scroll. */
@@ -467,10 +502,31 @@ export default function useTabSwipe(items, enabled = true) {
       /* Velocity over the gap since the last move, not over the whole
        gesture: a slow drag that ends in a flick should commit on the
        flick, which is what a thumb actually does. */
+      /* ── OVER A WINDOW, NOT OVER THE LAST GAP ──
+
+         This measured the distance since the PREVIOUS touchmove divided
+         by the time since it, which is the instantaneous speed at the
+         instant the finger stopped. A real thumb decelerates into the
+         lift: the last move of a genuinely fast flick is often its
+         SLOWEST, and a flick that everybody watching would call fast
+         then failed the velocity test and sprang back. The owner's
+         words are that a fast swipe does not work, and this is a
+         mechanism that would do exactly that.
+
+         Sampling over the last 110ms takes the speed of the flick
+         rather than of its final millisecond. Where there is only one
+         sample — a flick so quick that touchend follows the first move
+         — it falls back to that one, which is the old behaviour and
+         correct there: one sample IS the whole gesture. */
       const now = e.timeStamp || Date.now();
-      const gap = now - (s.lastT || now);
-      if (gap > 0) s.v = (e.touches[0].clientX - s.lastX) / gap;
-      s.lastX = e.touches[0].clientX;
+      const x = e.touches[0].clientX;
+      s.samples.push({ x, t: now });
+      while (s.samples.length > 2 && now - s.samples[0].t > 110) s.samples.shift();
+      const first = s.samples[0];
+      const span = now - first.t;
+      if (span > 0) s.v = (x - first.x) / span;
+      else { const gap = now - (s.lastT || now); if (gap > 0) s.v = (x - s.lastX) / gap; }
+      s.lastX = x;
       s.lastT = now;
 
       const n = neighbour(dx);
@@ -500,7 +556,8 @@ export default function useTabSwipe(items, enabled = true) {
       const flick = Math.abs(s.v) > FLICK_V && Math.abs(dx) > FLICK_MIN &&
                     (s.v < 0) === (dx < 0);
       const going = (far || flick) && n >= 0 && n < items.length && idx >= 0;
-      swipeLog("UP", { dx, v: Math.round(s.v * 100) / 100, far, flick, going, to: going && items[n] ? items[n].to : "-" });
+      swipeLog("UP", { dx, v: Math.round(s.v * 100) / 100, far, flick, going,
+                       n: s.samples.length, to: going && items[n] ? items[n].to : "-" });
 
       if (wantsLessMotion()) {
         clear();

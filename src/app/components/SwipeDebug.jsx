@@ -12,11 +12,15 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { swipeDebugOn, swipeLines, onSwipeLog, swipeFacts } from "./swipeDebug.js";
+import { swipeDebugOn, swipeLines, onSwipeLog, swipeFacts, watchBar } from "./swipeDebug.js";
 
 export default function SwipeDebug() {
   const [, bump] = useState(0);
   useEffect(() => onSwipeLog(() => bump((n) => n + 1)), []);
+  /* The bar measures itself while the overlay is up. dh is the number
+     that matters: a negative dh with dtop positive is the bar getting
+     SHORTER from underneath, which is what the recordings show. */
+  useEffect(() => watchBar(), []);
 
   if (!swipeDebugOn()) return null;
 
@@ -62,6 +66,9 @@ export default function SwipeDebug() {
       </div>
       <div style={{ color: "#8FA6BC" }}>
         {"WARM/SHOW-IN ms=cost of readying the incoming pane"}
+      </div>
+      <div style={{ color: "#8FA6BC" }}>
+        {"BAR-BOX dh=height change (negative = bar shrank)  inset=live env()"}
       </div>
       {lines.length === 0 ? (
         <div style={{ color: "#F2F3F5" }}>{"swipe once, then screenshot this"}</div>

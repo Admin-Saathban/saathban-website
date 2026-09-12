@@ -41,6 +41,7 @@ import useShutter from "./useShutter.js";
 import useTabSwipe from "./useTabSwipe.js";
 import { useDrawer } from "./Drawer.jsx";
 import { MotionStyles } from "./motion.jsx";
+import pinSafeArea from "./safeArea.js";
 
 const HIDDEN_PREFIXES = ["/app/auth", "/app/admin", "/app/g/", "/app/join/"];
 
@@ -131,6 +132,20 @@ export default function AppShellBar() {
      different: it is a surface over the tabs, so swiping beneath it
      would move the ground under an open thing. */
   useTabSwipe(swipeItems, !moreOpen);
+
+  /* ── THE BAR'S HEIGHT STOPS BEING THE BROWSER'S TO CHANGE ──
+
+     Read the file. The short version is that the bar's bottom padding
+     is env(safe-area-inset-bottom), env() is live, and on the owner's
+     recording it goes to zero for three hundred milliseconds during a
+     tab change — which pins the bar's bottom edge, drops its top edge
+     twenty-four pixels and takes the labels off the bottom of the
+     screen. Pinned to the largest value ever seen, re-read only when
+     the screen genuinely changes shape.
+
+     Unconditional and above the early return, like the swipe above it,
+     so the hook count cannot change between renders. */
+  useEffect(() => pinSafeArea(), []);
 
   /* A FIXED BAR RESERVES NO SPACE, so the last thing on every screen
      would sit underneath it — which for a screen ending in a button

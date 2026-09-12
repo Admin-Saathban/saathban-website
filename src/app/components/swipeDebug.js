@@ -26,7 +26,11 @@ try {
 
 export const swipeDebugOn = () => on;
 
-const MAX = 22;
+/* Enough to hold a whole gesture AND what the bar did afterwards. The
+   owner's recording shows the bar misbehaving about four tenths of a
+   second after the tab has already changed, so a trace that stops at
+   the finger lifting stops one line before the evidence. */
+const MAX = 30;
 const lines = [];
 const listeners = new Set();
 const t0 = typeof performance !== "undefined" ? performance.now() : 0;
@@ -68,5 +72,21 @@ export function swipeFacts() {
     "body overscroll-x=" + body.overscrollBehaviorX,
     "dpr=" + (window.devicePixelRatio || 1),
     "vw=" + window.innerWidth,
+    /* What the bar is doing right now, read off the element rather
+       than off the hook's state — this is the thing being complained
+       about, and the DOM is the only account of it that cannot be
+       out of date. */
+    "bar=" + barWhere(),
   ];
+}
+
+/* The bottom bar's actual vertical offset. 0 is where it belongs; a
+   positive number is it displaced downwards, which is exactly what the
+   recordings show and what no amount of synthetic input reproduced. */
+function barWhere() {
+  const bar = document.querySelector("[data-sb-bar]");
+  if (!bar) return "none";
+  const r = bar.getBoundingClientRect();
+  const off = Math.round(r.bottom - window.innerHeight);
+  return off === 0 ? "home" : "down" + off;
 }

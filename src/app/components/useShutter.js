@@ -27,6 +27,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
+import { swipeLog } from "./swipeDebug.js";
 
 /* A real push down; a nudge up. Asymmetric on purpose — see §5. */
 const HIDE_AFTER = 28;
@@ -79,8 +80,54 @@ const revealers = new Set();
    still holding. */
 let frozen = 0;
 
-export function freezeShutter() { frozen += 1; }
-export function thawShutter() { if (frozen > 0) frozen -= 1; }
+export function freezeShutter() { frozen += 1; swipeLog("FREEZE", { n: frozen }); }
+export function thawShutter() { if (frozen > 0) frozen -= 1; swipeLog("THAW", { n: frozen }); }
+
+/* ════════════════════════════════════════════════
+   AND THE RULE UNDERNEATH ALL OF IT: A SCROLL WITH NO FINGER BEHIND IT
+   IS NOT A GESTURE.
+
+   Freeze and quieten are both lists of the occasions the app scrolls
+   itself, and the list has been wrong three times — it did not have the
+   keyboard on it, then it did not have the pane swap on it, then it had
+   the pane swap but released one line too early. Every entry was added
+   after somebody watched the bar misbehave. That is a list that will go
+   on being incomplete, because the next thing that scrolls the document
+   without being asked has not been written yet.
+
+   This hook's own first sentence says it reads scrolling as INTENT.
+   Intent has a thumb behind it. So rather than enumerating the app's
+   self-inflicted scrolls for ever, the shutter now asks the only
+   question that actually distinguishes them: has anybody touched the
+   screen recently enough for this scroll to be theirs?
+
+   A pane arriving with its content, a keyboard resizing the viewport, a
+   scrollTo restoring a position, an image finishing and pushing the page
+   down — none of them have a finger behind them, and all of them are
+   answered by this one line rather than by a fourth special case.
+
+   WHY THE WINDOW IS GENEROUS. Momentum after a flick is the person's
+   gesture still travelling and must still hide the bar, and on iOS it
+   can run for seconds. 1500ms covers the part of a fling where the
+   decision is actually made; past that the bar has already decided and
+   holding it still is the right answer anyway.
+
+   WHEEL AND KEYS COUNT TOO, so the bars still work for anybody on a
+   desktop or a keyboard — this is about whether a HUMAN caused the
+   scroll, not about touch specifically. That distinction is also why
+   this is not a touch-only guard bolted on for the phone. */
+const HUMAN_WINDOW = 1500;
+let lastHuman = 0;
+const noteHuman = () => { lastHuman = Date.now(); };
+
+if (typeof document !== "undefined") {
+  /* Capture, so a handler that stops propagation cannot make the
+     shutter believe nobody is there. Passive, so none of this can
+     make a scroll slower than it already is. */
+  const opts = { passive: true, capture: true };
+  ["touchstart", "touchmove", "touchend", "wheel", "keydown", "pointerdown"]
+    .forEach((ev) => document.addEventListener(ev, noteHuman, opts));
+}
 
 export function quietenShutter(ms = 450) {
   quietUntil = Date.now() + ms;
@@ -177,13 +224,40 @@ export default function useShutter(scrollerRef) {
         return;
       }
 
+      /* ── NOBODY ASKED FOR THIS SCROLL ──
+
+         BELOW the two guards above, and that placement is the whole
+         point of where it sits. Those two only ever BRING THE BAR
+         BACK — a page too short to scroll, and a page scrolled to the
+         top — and they are §5's safety net: the failure worth
+         engineering against is somebody stranded on a short screen
+         with no navigation and nothing to scroll to get it back. A
+         guard that skipped them would mean a page that SHRANK without
+         a finger involved kept a hidden bar for ever, which is that
+         exact failure arriving by a new road.
+
+         So: never decide to hide on a scroll nobody made, and always
+         stay willing to show. Positions still track, so the next real
+         gesture measures from where the page actually is. */
+      if (Date.now() - lastHuman > HUMAN_WINDOW) {
+        if (Math.abs(y - lastY.current) > 2) swipeLog("NOT-HUMAN", { dy: y - lastY.current });
+        lastY.current = y;
+        anchor.current = y;
+        return;
+      }
+
       /* The anchor resets whenever the direction changes, so the
          thresholds measure THIS gesture rather than the whole page. */
       if ((dy > 0) !== (y - anchor.current > 0)) anchor.current = y;
       const travelled = y - anchor.current;
 
-      if (dy > 0 && travelled > HIDE_AFTER && !hidden) setHidden(true);
-      else if (dy < 0 && anchor.current - y > SHOW_AFTER && hidden) setHidden(false);
+      if (dy > 0 && travelled > HIDE_AFTER && !hidden) {
+        swipeLog("BAR-HIDE", { y, dy, travelled });
+        setHidden(true);
+      } else if (dy < 0 && anchor.current - y > SHOW_AFTER && hidden) {
+        swipeLog("BAR-SHOW", { y, dy, up: anchor.current - y });
+        setHidden(false);
+      }
 
       lastY.current = y;
     };
@@ -207,6 +281,7 @@ export default function useShutter(scrollerRef) {
     const onReveal = () => {
       lastY.current = posY();
       anchor.current = posY();
+      if (hidden) swipeLog("BAR-SHOW", { why: "reveal" });
       setHidden(false);
     };
     revealers.add(onReveal);

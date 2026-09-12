@@ -131,6 +131,20 @@ html.sb-settling [data-sb-pane][data-sb-into] {
   z-index: 1;
   /* likewise: offset by a viewport, then dragged, both inline */
 }
+/* Laid out, not drawn. visibility:hidden still costs the browser the
+   layout — which is the point, that is the cost being moved — but no
+   paint and no compositing, so a touch that turns out to be a tap or a
+   scroll has spent almost nothing. */
+[data-sb-pane][data-sb-warm]:not([data-sb-into]) {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
 html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
 
 /* ACROSS A TAB CHANGE THE CHROME DOES NOT ANIMATE. The bars are shown at
@@ -230,6 +244,48 @@ export default function useTabSwipe(items, enabled = true) {
     };
     /* Reveal the neighbour on the side the finger is heading, if that
        pane is already in the document. */
+    /* ── THE LAYOUT IS PAID WHILE NOTHING IS MOVING ──
+
+       showIncoming() takes a pane out of display:none, and a pane is a
+       whole screen. The browser has to lay that screen out before it
+       can draw a pixel of it, and this was happening INSIDE the
+       touchmove that crosses the twelfth pixel — the first frame of the
+       drag, the one whose smoothness decides whether the gesture feels
+       attached to the finger. One screen's layout in that frame is the
+       stutter at the start of the slide.
+
+       So both neighbours are made ready at touchstart instead, laid out
+       but not painted. A finger resting on the glass before it moves is
+       several frames of doing nothing, and that is where the cost
+       belongs. Engaging then only flips visibility on one of them and
+       drops the other, which is a paint rather than a layout.
+
+       Both, because touchstart does not yet know which way the finger
+       is going — the direction is the first thing a drag tells you and
+       it arrives too late to be useful here. Neither adds a pixel of
+       height: they are the same fixed, inset:0 layers the drag uses, so
+       the document is exactly as tall as it was and the fixed bar has
+       nothing new to resolve against.
+
+       Only for a gesture that could still become a swipe. A touch that
+       began on a button or inside a sideways scroller is already dead
+       by this point and pays none of it. */
+    const warmOff = () => {
+      document.querySelectorAll("[data-sb-warm]")
+        .forEach((el) => el.removeAttribute("data-sb-warm"));
+    };
+    const warmNeighbours = () => {
+      warmOff();
+      const i = st.current.idx;
+      if (i < 0) return;
+      [i - 1, i + 1].forEach((n) => {
+        if (n < 0 || n >= items.length) return;
+        const key = paneKeyFor(items[n].to);
+        const el = key && document.querySelector('[data-sb-pane="' + key + '"]');
+        if (el && !el.hasAttribute("data-sb-into")) el.setAttribute("data-sb-warm", "");
+      });
+    };
+
     const hideIncoming = () => {
       document.querySelectorAll("[data-sb-into]")
         .forEach((el) => { el.removeAttribute("data-sb-into"); el.style.transform = ""; });
@@ -258,13 +314,21 @@ export default function useTabSwipe(items, enabled = true) {
       thawShutter();
     };
 
-    const clear = () => {
+    /* The visuals only. Split out because the ONE path that commits has
+       to put the pane down and navigate while the bar is still held,
+       and every other path can let go immediately. */
+    const clearVisuals = () => {
       dropTransforms();
-      thaw();
       root.classList.remove("sb-dragging", "sb-settling");
       root.style.removeProperty("--sb-drag");
       root.style.removeProperty("--sb-side");
       hideIncoming();
+      warmOff();
+    };
+
+    const clear = () => {
+      clearVisuals();
+      thaw();
     };
 
     /* Longest match wins: /app/games/ludo must resolve to the Games tab,
@@ -345,6 +409,20 @@ export default function useTabSwipe(items, enabled = true) {
          be a scroll thaws immediately below, so vertical scrolling
          still hides the bar exactly as it did. */
       if (!s.dead && !s.froze) { s.froze = true; freezeShutter(); }
+      if (!s.dead) {
+        /* Measured, not assumed. If this number is large on the owner's
+           phone then the layout is the stutter and moving it here is
+           the fix; if it is small, the stutter is somewhere else and
+           the trace says so rather than another round of guessing. */
+        const t0 = performance.now();
+        warmNeighbours();
+        /* Reading a layout property forces the work to happen NOW
+           rather than at the next style pass, which is the only way the
+           number above means anything and also the only way the cost is
+           actually paid before the finger moves. */
+        document.documentElement.clientHeight;
+        if (swipeDebugOn()) swipeLog("WARM", { ms: Math.round(performance.now() - t0) });
+      }
       s.x = e.touches[0].clientX;
       s.y = e.touches[0].clientY;
       s.lastX = s.x;
@@ -377,7 +455,9 @@ export default function useTabSwipe(items, enabled = true) {
         if (!wantsLessMotion()) {
           root.classList.add("sb-dragging");
           root.classList.remove("sb-settling");
+          const t0 = performance.now();
           showIncoming(dx);
+          if (swipeDebugOn()) swipeLog("SHOW-IN", { ms: Math.round(performance.now() - t0) });
         }
       }
 
@@ -437,8 +517,33 @@ export default function useTabSwipe(items, enabled = true) {
 
       s.timer = window.setTimeout(() => {
         s.timer = 0;
-        clear();
+        /* ── THE ORDER WAS BACKWARDS, AND THAT IS THE WHOLE BUG ──
+
+           This read clear(); navigate(). clear() releases the shutter's
+           hold, so the hold was let go ONE LINE BEFORE the thing it
+           exists to cover. Swapping panes is what moves the document
+           under the shutter; that happens inside navigate(), and the
+           bar was already listening again by the time it did.
+
+           It matches the owner's recording exactly. The bar is steady
+           for the whole of his finger's travel and then, about four
+           tenths of a second AFTER the tab has already changed, slides
+           down with its labels clipped off the bottom of the screen for
+           three frames and snaps back. Nothing was wrong during the
+           gesture. The freeze was simply not still on when the pane
+           swapped, and a 450ms quieten timer in TabPanes was carrying a
+           job that a timer cannot be relied on to finish.
+
+           So: navigate while still held, put the pane down, and let go
+           only once the arrival has stopped moving the page. TabPanes
+           takes its own hold the moment the new tab mounts and releases
+           it when its scroll restore has finished, so the two overlap
+           and there is no instant in between with nobody holding. The
+           frames below are the belt for the gap before that effect
+           runs — the counter exists precisely so two holders are fine. */
         if (going) navigate(items[n].to);
+        clearVisuals();
+        requestAnimationFrame(() => requestAnimationFrame(thaw));
       }, going ? SETTLE_MS : SETTLE_MS + 40);
     };
 

@@ -53,11 +53,32 @@ export default function SwipeDebug() {
       <div style={{ color: "#8FA6BC" }}>
         {"CANCEL=browser took it  UP=released  going=did it commit"}
       </div>
+      {/* The bar's own lines. Every state change it makes is in the
+          trace with what caused it, so the screenshot answers "did the
+          bar move, when, and who told it to" rather than only "what did
+          the finger do" — which is the half that was missing. */}
+      <div style={{ color: "#8FA6BC" }}>
+        {"FREEZE/THAW=bar held  BAR-HIDE/SHOW=bar moved  NOT-HUMAN=ignored"}
+      </div>
+      <div style={{ color: "#8FA6BC" }}>
+        {"WARM/SHOW-IN ms=cost of readying the incoming pane"}
+      </div>
       {lines.length === 0 ? (
         <div style={{ color: "#F2F3F5" }}>{"swipe once, then screenshot this"}</div>
       ) : (
         lines.map((l, i) => (
-          <div key={i} style={{ color: /CANCEL|NOT-CANCELABLE/.test(l) ? "#FF9A9A" : /VERTICAL/.test(l) ? "#FFE9A8" : "#7FD99A" }}>
+          <div
+            key={i}
+            style={{
+              color: /CANCEL|NOT-CANCELABLE/.test(l)
+                ? "#FF9A9A"
+                : /BAR-/.test(l)
+                  ? "#9ACBFF"
+                  : /VERTICAL|NOT-HUMAN/.test(l)
+                    ? "#FFE9A8"
+                    : "#7FD99A",
+            }}
+          >
             {l}
           </div>
         ))

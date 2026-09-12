@@ -45,7 +45,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "../lib/session.jsx";
-import { quietenShutter, revealBars } from "./useShutter.js";
+import { quietenShutter, revealBars, freezeShutter, thawShutter } from "./useShutter.js";
 import HomeRoutes from "../routes/home/HomeRoutes.jsx";
 import GamesRoutes from "../routes/games/GamesRoutes.jsx";
 import OutdoorRoutes from "../routes/outdoor/OutdoorRoutes.jsx";
@@ -155,6 +155,27 @@ export default function TabPanes() {
        And hold the chrome still while both happen, so the bar does not
        animate up the screen while the pane is still arriving — two
        movements arguing is exactly what reads as jitter. */
+    /* ── THE HOLD IS HANDED OVER HERE, NOT DROPPED ──
+
+       quietenShutter is a 450ms timer and the arrival is not a fixed
+       450ms — it is a pane coming back from display:none, a scroll
+       restore that takes as many frames as the layout needs, and on a
+       first visit a fetch. A timer that expires in the middle of that
+       is the bar deciding it has heard a gesture, and the gesture it
+       heard was the page settling.
+
+       So the arrival TAKES A HOLD of its own and gives it back when it
+       is genuinely finished. useTabSwipe is still holding when this
+       runs — it lets go two frames later — so the two overlap and
+       there is never an instant with nobody holding, which is the
+       whole reason the shutter counts holders rather than flagging one.
+
+       The quieten stays underneath as the floor: this effect also runs
+       for a tab change that was a TAP on the bar rather than a swipe,
+       and that one has no gesture holding anything. */
+    freezeShutter();
+    let held = true;
+    const release = () => { if (held) { held = false; thawShutter(); } };
     quietenShutter(450);
     revealBars();
     const root = document.documentElement;
@@ -165,7 +186,13 @@ export default function TabPanes() {
        the top — without this it would inherit the previous tab's scroll,
        because ScrollToTop stands down for tab switches. */
     const y = scrolls.current[active] ?? 0;
-    if (y === 0) { window.scrollTo(0, 0); return settle; }
+    if (y === 0) {
+      window.scrollTo(0, 0);
+      /* A new tab starts at the top and has nothing to restore, so the
+         only thing left to settle is the scrollTo above. One frame. */
+      const go = requestAnimationFrame(release);
+      return () => { cancelAnimationFrame(go); release(); settle(); };
+    }
 
     /* RESTORING TAKES MORE THAN A FRAME, and one frame is what my first
        version gave it. A pane coming back from display:none has no
@@ -180,12 +207,20 @@ export default function TabPanes() {
     let raf = 0;
     const attempt = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (max >= y || tries > 12) { window.scrollTo(0, Math.min(y, Math.max(max, 0))); return; }
+      if (max >= y || tries > 12) {
+        window.scrollTo(0, Math.min(y, Math.max(max, 0)));
+        /* One more frame before letting go: the scrollTo above fires
+           its scroll event after this function returns, and releasing
+           on the same line would hand the shutter the app's own
+           restore as the first thing it hears. */
+        raf = requestAnimationFrame(release);
+        return;
+      }
       tries += 1;
       raf = requestAnimationFrame(attempt);
     };
     raf = requestAnimationFrame(attempt);
-    return () => { cancelAnimationFrame(raf); settle(); };
+    return () => { cancelAnimationFrame(raf); release(); settle(); };
   }, [active]);
 
   if (!visited.length) return null;

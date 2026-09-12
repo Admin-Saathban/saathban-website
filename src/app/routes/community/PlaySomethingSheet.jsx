@@ -49,6 +49,7 @@ import { MotionStyles } from "../../lib/motion.jsx";
 import { GhostBtn, BodyText } from "./ui.jsx";
 import { openQuickTable } from "../games/quickTable.js";
 import { inviteToSeat, fetchGames } from "../../lib/games.js";
+import { isParkedGame } from "../games/parked.js";
 import { useSession } from "../../lib/session.jsx";
 import { playedTogether, playedWhen } from "./playedTogether.js";
 import Icon from "../../components/Icon.jsx";
@@ -95,7 +96,12 @@ export default function PlaySomethingSheet({ person, onClose }) {
          list of three had hidden rather than answered. The criterion is
          not a name and not a kind: it is whether a second person can sit
          down, which is the only thing this sheet is for. */
-      .then((rows) => { if (alive) setGames((rows || []).filter((g) => g.enabled && (g.max_seats || 0) >= 2)); })
+      /* Resting games are dropped here rather than shown inert: this
+         sheet exists to answer "play something with this person", and
+         an unpickable row in a list of three is a worse answer than a
+         list of two. The Games screen keeps the tiles, because that is
+         the shelf and this is a suggestion. */
+      .then((rows) => { if (alive) setGames((rows || []).filter((g) => g.enabled && (g.max_seats || 0) >= 2 && !isParkedGame(g.key))); })
       /* A failure here used to read as "there are no games", which is
          a statement about the app rather than about the request that
          failed. The shared-games map below keeps its empty fallback on

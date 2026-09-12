@@ -43,6 +43,7 @@ import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
 import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
 import SnakesRoutes from "./routes/games/snakes/SnakesRoutes.jsx";
 import GamesRoutes from "./routes/games/GamesRoutes.jsx";
+import { RESTING_TO } from "./routes/games/parked.js";
 import JoinByLink from "./routes/games/JoinByLink.jsx";
 import PublicResult from "./routes/games/PublicResult.jsx";
 import SharedScore from "./routes/home/SharedScore.jsx";
@@ -443,28 +444,46 @@ export default function AppRoot() {
           {/* Ludo (routes/games/ludo, migration 0020). Any signed-in
               role; sessions are participants-only via RLS. Plugs into
               the games-rails shell when that lane lands (0022). */}
-          <Route
-            path="games/ludo/*"
-            element={
-              <RequireAuth>
-                <LudoRoutes />
-              </RequireAuth>
-            }
-          />
+          {/* ── PARKED (2026-09-12) ──
+
+              LudoRoutes is still imported and still whole; what changed
+              is what this path renders. Bringing ludo back is putting
+              <LudoRoutes /> back in the element below and taking "ludo"
+              out of routes/games/parked.js.
+
+              A REDIRECT RATHER THAN A REMOVED ROUTE. Deleting the path
+              would drop the URL through to games/* and its catch-all,
+              which lands on the games screen with no explanation at
+              all. This lands on the same screen carrying the reason. */}
+          <Route path="games/ludo/*" element={<Navigate to={RESTING_TO} replace />} />
+          {false && (
+            <Route
+              path="games/ludo/*"
+              element={
+                <RequireAuth>
+                  <LudoRoutes />
+                </RequireAuth>
+              }
+            />
+          )}
           {/* Snakes & Ladders (routes/games/snakes, migration 0105).
               Its own full-screen world for the same reason ludo has
               one: a board with an app header over it and a tab bar
               under it is a picture of a game, not a game. Declared
               ABOVE the games shell, which would otherwise swallow it
               as games/*. */}
-          <Route
-            path="games/snakes/*"
-            element={
-              <RequireAuth>
-                <SnakesRoutes />
-              </RequireAuth>
-            }
-          />
+          {/* Parked with ludo, and restored the same way. */}
+          <Route path="games/snakes/*" element={<Navigate to={RESTING_TO} replace />} />
+          {false && (
+            <Route
+              path="games/snakes/*"
+              element={
+                <RequireAuth>
+                  <SnakesRoutes />
+                </RequireAuth>
+              }
+            />
+          )}
           {/* Games shell: registry, lobbies + live boards, Daily
               Riddle (routes/games, migrations 0022/0022b). Any
               signed-in role; RLS keeps sessions participants-only.

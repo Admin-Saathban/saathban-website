@@ -24,6 +24,7 @@
    ════════════════════════════════════════════════ */
 
 import { createSession, startWithBots, fetchGames } from "../../lib/games.js";
+import { isParkedGame } from "./parked.js";
 
 /* HOW MANY SEATS COMES FROM THE REGISTRY, not from a map keyed by
    the game's name.
@@ -103,6 +104,11 @@ function defaultHouseRules(gameKey) {
 export async function openQuickTable(gameOrKey) {
   let game = typeof gameOrKey === "string" ? null : gameOrKey;
   const gameKey = game ? game.key : gameOrKey;
+  /* BEFORE ANY WRITE. Every other parked door turns somebody around at
+     the screen; this one would have made a real table first and then
+     turned them around, leaving a row in the database for a game
+     nobody can open. Parking a feature should not litter. */
+  if (isParkedGame(gameKey)) throw new Error("game-parked");
   if (!game) {
     game = (await fetchGames().catch(() => [])).find((g) => g.key === gameKey) || null;
   }

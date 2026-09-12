@@ -66,6 +66,7 @@ import { SoundButton, SoundPanel } from "./SoundControls.jsx";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import CollisionNote from "./CollisionNote.jsx";
+import { isParkedGame, RESTING_TO } from "./parked.js";
 
 const POLL_MS = 2500;
 
@@ -395,6 +396,21 @@ export default function SessionPage() {
       </GamesScreen>
     );
   }
+  /* ── THE ONE GATE EVERY SESSION LINK GOES THROUGH ──
+
+     A table's URL does not say which game it is, so this is the first
+     place that CAN know. That makes it the choke point: the feed's
+     "watch this table", a Fam dashboard's presence row, a person's
+     page, a message carrying a table, join-by-code, a seat link and a
+     claim link all resolve to this page, and all of them are parked by
+     these three lines rather than by seven separate edits.
+
+     The session is left exactly as it is — not cancelled, not left,
+     not touched. It keeps its seats and its moves and waits. */
+  if (isParkedGame(session.game_key)) {
+    return <Navigate to={RESTING_TO} replace />;
+  }
+
   // After every hook: a ludo table lives on the ludo lane's own screen —
   // never the generic board (which reads as Race to 100).
   // The LOBBY stays on the rails (invite card, picker, spoken code —

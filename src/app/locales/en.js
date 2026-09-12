@@ -3011,6 +3011,7 @@ const en = {
       theirs: "{name}'s turn.",
       rollCta: "Roll the dice",
       pickDie: "Tap a die, then tap the goti it should move.",
+      noMove: "Nothing you can do with that one — the turn passes.",
       pickPiece: "Tap the goti you'd like to move.",
       autoPlayed: "Only one move was possible — played it for you.",
     },
@@ -3427,6 +3428,16 @@ const en = {
       waitsForSomeone: "Waits for someone to join you",
       puzzleSolved: "Solved — a new one arrives tomorrow",
       puzzleCta: "Today's riddle awaits",
+    },
+    /* ── THE TWO GAMES THAT ARE RESTING ──
+       Owner decision: Ludo and Snakes & Ladders are parked while the
+       core app is finished. The words say "resting", not "removed" and
+       not "unavailable" — nothing has been taken away, and the tables
+       people are at are still in the database. See routes/games/parked.js. */
+    parked: {
+      badge: "Coming soon",
+      tileHint: "Resting while we finish the rest of the app",
+      restingNote: "These games are resting for now — everything else on this page is open.",
     },
     create: {
       title: "Open a table",

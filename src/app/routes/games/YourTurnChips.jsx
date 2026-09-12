@@ -8,6 +8,7 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { fetchGames, fetchMySessions, isDormant } from "../../lib/games.js";
+import { isParkedGame } from "./parked.js";
 
 export default function YourTurnChips() {
   const { t, ts, lang } = useI18n();
@@ -34,6 +35,11 @@ export default function YourTurnChips() {
                  It was wrong that there was a game going on. */
               .filter(
                 (s) =>
+                  /* A "your move" chip for a resting game is a summons
+                     to a door that does not open. The table is still
+                     there and still that person's move; what is gone is
+                     the claim that they can do anything about it. */
+                  !isParkedGame(s.game_key) &&
                   s.status === "active" &&
                   s.current_seat != null &&
                   s.my_seat != null &&

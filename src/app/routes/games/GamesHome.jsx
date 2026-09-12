@@ -28,6 +28,7 @@ import { SEAT_COLORS, SEAT_INK } from "./seatColors.js";
 import BoardThumb from "./BoardThumb.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import useBackToClose from "../../components/useBackToClose.js";
+import { isParkedGame, withoutParked } from "./parked.js";
 
 function gameName(g, lang) {
   return lang === "ur" ? g.name_ur : g.name_en;
@@ -115,6 +116,9 @@ export default function GamesHome() {
      tapping is concerned. Same lesson as the goti walk: the
      response to a tap has to begin with the tap. */
   const openTable = async (game) => {
+    /* The tile is already inert; this is the second lock, for every
+       other caller — a code, a link, a chip written later. */
+    if (isParkedGame(game?.key)) return;
     const key = game.key;
     /* Only the SAME game is refused. Tapping Snakes while Ludo is
        still opening is somebody changing their mind, not a double
@@ -177,6 +181,31 @@ export default function GamesHome() {
 
   const [games, setGames] = useState([]);
   const [sessions, setSessions] = useState([]);
+  /* ── ARRIVING FROM A PARKED DOOR ──
+
+     A deep link into a resting game lands here rather than nowhere, and
+     this is the sentence that says why. Read once into state and the
+     query stripped immediately, so a reload does not repeat an
+     explanation the person has already had — a note that reappears
+     every time reads as an error, and this is not one. */
+  const [resting, setResting] = useState(false);
+  useEffect(() => {
+    let hit = false;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      hit = q.get("resting") === "1";
+      if (hit) {
+        q.delete("resting");
+        const rest = q.toString();
+        window.history.replaceState(
+          window.history.state, "", window.location.pathname + (rest ? "?" + rest : "")
+        );
+      }
+    } catch {
+      /* no URL to read is not an error worth a screen */
+    }
+    if (hit) setResting(true);
+  }, []);
   const fresh = useFresh();
   const [solvedToday, setSolvedToday] = useState(false);
   const [solvedCount, setSolvedCount] = useState(0);
@@ -238,7 +267,7 @@ export default function GamesHome() {
         if (!alive) return;
         setGames(g);
         setSessions(s);
-        setLeftTables(left);
+        setLeftTables(withoutParked(left));
         /* The faces, for the live tables only — a history page's
            worth of seats is not worth fetching to draw two rows. */
         fetchTablePeople(
@@ -287,7 +316,11 @@ export default function GamesHome() {
   }, [profile.id]);
 
   const byKey = useMemo(() => Object.fromEntries(games.map((g) => [g.key, g])), [games]);
-  const tables = sessions.filter((s) => byKey[s.game_key]?.kind === "turns");
+  /* PARKED TABLES KEEP EXISTING AND STOP HAVING A DOOR. They are still
+     in the database with their seats and their moves; what goes is the
+     row that opens them. Filtered here rather than in the fetch so the
+     data this screen holds stays a true picture of what is there. */
+  const tables = withoutParked(sessions).filter((s) => byKey[s.game_key]?.kind === "turns");
   /* Games with a table: taken in turns, and with room for more
      than one person. `kind` alone was enough today — the daily
      riddle is kind 'daily' and falls out — but the seat test is
@@ -403,6 +436,21 @@ export default function GamesHome() {
           product explaining itself to somebody who had already
           arrived. The tables below say it by existing. */}
       {loadError && <BodyText role="alert">{t("games.loadError")}</BodyText>}
+
+      {/* ── A LINK INTO A RESTING GAME LANDS HERE ──
+
+         role="status" rather than "alert": nothing has gone wrong, and
+         a screen reader should not interrupt to say so. It answers the
+         question the person just asked — where did the game go — and
+         then the page underneath is the answer to what else there is. */}
+      {resting && (
+        <Card
+          role="status"
+          style={{ background: C.creamDark ?? C.bg, borderColor: C.olive, borderWidth: 2 }}
+        >
+          <BodyText style={{ margin: 0, fontWeight: 600 }}>{t("games.parked.restingNote")}</BodyText>
+        </Card>
+      )}
 
       {/* Nothing until everything. The heading above is already
           drawn and does not move, so the screen reads as settled
@@ -529,13 +577,30 @@ export default function GamesHome() {
           only controls for reaching them. It is also why §8's
           tap-to-open-a-table had nothing to tap. */}
           <SectionLabel>{t("games.home.pickTitle")}</SectionLabel>
-          {turnGames.map((g) => (
+          {turnGames.map((g) => {
+          /* ── A RESTING GAME IS STILL ON THE SHELF ──
+
+             It keeps its board, its name and its place in the list,
+             because taking the tile away would say the game is gone and
+             it is not. What it loses is the tap. Dimmed and badged is
+             the honest state: here, recognisable, not open yet.
+
+             A <button disabled> rather than a <div>: the tile is still
+             the same control, so a screen reader announces it as a
+             button that is unavailable and says the badge underneath.
+             Swapping the element for a non-control would have taken it
+             out of the tab order entirely and left somebody wondering
+             where the game went. */
+          const parked = isParkedGame(g.key);
+          const shut = parked || !g.enabled;
+          return (
             <button
               key={g.key}
               type="button"
-              disabled={!g.enabled}
+              disabled={shut}
+              aria-disabled={shut || undefined}
               aria-busy={opening === g.key}
-              onClick={() => openTable(g)}
+              onClick={() => { if (!shut) openTable(g); }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -549,8 +614,12 @@ export default function GamesHome() {
                 borderRadius: 18,
                 fontFamily: "inherit",
                 textAlign: "start",
-                cursor: g.enabled ? "pointer" : "default",
-                opacity: g.enabled ? 1 : 0.5,
+                cursor: shut ? "default" : "pointer",
+                /* Softly, not greyed out of readability. 0.62 keeps the
+                   board's colours and the name legible at arm's length,
+                   which 0.5 does not — this is a game that is coming,
+                   not a control that has failed. */
+                opacity: shut ? 0.62 : 1,
                 /* The tap is answered before the network is. This
                    press is the whole of what somebody gets for the
                    second or two of round trips behind opening a
@@ -579,10 +648,35 @@ export default function GamesHome() {
                 <span style={{ display: "block", fontSize: ts(24), fontWeight: 800, color: C.textMain }}>
                   {gameName(g, lang)}
                 </span>
-                {!g.enabled && (
-                  <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
-                    {t("games.home.comingSoon")}
-                  </span>
+                {parked ? (
+                  <>
+                    {/* The warm badge: cream on olive, the same family
+                        as the riddle's "Open" pill, so it reads as a
+                        label on the shelf rather than a warning. */}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginTop: 6,
+                        background: C.olive ?? C.brown,
+                        color: C.cream,
+                        borderRadius: 50,
+                        padding: "4px 12px",
+                        fontSize: ts(15),
+                        fontWeight: 700,
+                      }}
+                    >
+                      {t("games.parked.badge")}
+                    </span>
+                    <span style={{ display: "block", marginTop: 4, fontSize: ts(16), color: C.textMuted }}>
+                      {t("games.parked.tileHint")}
+                    </span>
+                  </>
+                ) : (
+                  !g.enabled && (
+                    <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>
+                      {t("games.home.comingSoon")}
+                    </span>
+                  )
                 )}
                 {/* The one fact that changes what the tap does.
 
@@ -602,11 +696,16 @@ export default function GamesHome() {
                   </span>
                 )}
               </span>
-              <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
-                ›
-              </span>
+              {/* No chevron on a resting tile. An arrow is a promise
+                  that something is through there. */}
+              {!parked && (
+                <span aria-hidden="true" style={{ fontSize: ts(22), color: C.green, fontWeight: 700 }}>
+                  ›
+                </span>
+              )}
             </button>
-          ))}
+          );
+          })}
 
       {/* ── Past games: folded away. Finished tables must never
              stack up the screen; three at a time, behind a link. ── */}

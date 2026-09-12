@@ -72,6 +72,7 @@ export function swipeLines() { return lines; }
 export function watchBar() {
   if (!on || typeof document === "undefined") return () => {};
   let last = "";
+  let lastWorld = "";
   let raf = 0;
   const tick = () => {
     const bar = document.querySelector("[data-sb-bar]");
@@ -90,6 +91,19 @@ export function watchBar() {
           });
         }
         last = now;
+      }
+    }
+    /* The Messages world as well. Leaving Messages used to empty it to
+       zero height the moment a drag began, because the swipe's transform
+       became its containing block. A WORLD-BOX line reading h0 mid-swipe
+       means that has come back. */
+    const world = document.querySelector("[data-world]");
+    if (world) {
+      const wr = world.getBoundingClientRect();
+      const nowWorld = world.getAttribute("data-world") + ":" + Math.round(wr.height);
+      if (nowWorld !== lastWorld) {
+        if (lastWorld) swipeLog("WORLD-BOX", { world: nowWorld.split(":")[0], h: nowWorld.split(":")[1], top: Math.round(wr.top) });
+        lastWorld = nowWorld;
       }
     }
     raf = requestAnimationFrame(tick);

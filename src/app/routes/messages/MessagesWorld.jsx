@@ -61,6 +61,36 @@ import useShutter from "../../components/useShutter.js";
 
 export const WORLD_BAR_HEIGHT = 66;
 
+/* ── SIZED BY THE SCREEN, NOT BY WHATEVER IS HOLDING IT ──
+
+   The owner: swiping OUT of Messages has a small pause, and no other tab
+   does. Measured on a warm app with every pane already mounted, at 6x
+   CPU: the Messages world is 739px tall before the finger moves and 0px
+   tall from the second touchmove until the slide ends. No request, no
+   presence touch and no subscription fires on that gesture — the one
+   thing Messages does that no other tab does is disappear.
+
+   The cause is a CSS rule, not this app. A position:fixed element is
+   positioned against the viewport UNLESS an ancestor has a transform or
+   will-change:transform, in which case that ancestor becomes its
+   containing block. The swipe transforms the outgoing pane, and every
+   other tab is ordinary content that simply moves with it. This world is
+   the only tab that is a fixed layer, and its pane has almost no height
+   of its own — so top:0 and bottom:<bar> against a pane a few pixels
+   tall resolved to a height of zero. The chats list emptied the instant
+   the drag began, and the whole world was laid out again when it next
+   showed.
+
+   A height taken from the viewport does not care what its containing
+   block is. top:0 still places it where it was, because the pane starts
+   at the top of the page, and now it slides away whole instead of
+   collapsing first. vh first as the fallback, dvh where it exists, so a
+   phone's own toolbar is accounted for the same way the fixed insets
+   accounted for it. */
+const WORLD_HEIGHT_CSS =
+  '[data-world="messages"]{height:calc(100vh - var(--sb-bar-h, 92px));' +
+  'height:calc(100dvh - var(--sb-bar-h, 92px))}';
+
 function WorldTab({ to, end, icon, label, badge }) {
   const { ts } = useI18n();
   return (
@@ -265,7 +295,10 @@ export default function MessagesWorld() {
 
            BAR_HEIGHT is no longer used here: it is what the shell
            RESERVES, and the bar is taller than that by a label line. */
-        bottom: "var(--sb-bar-h, 92px)",
+        /* Height, not a bottom inset — see WORLD_HEIGHT_CSS at the top.
+           Set in a stylesheet rather than here because an inline style
+           cannot carry the vh fallback beside the dvh value. */
+        bottom: "auto",
         /* ABOVE THE APP'S BOTTOM BAR, which is also fixed and also sat
            at 60 — same layer, and it mounts after the routes, so it won
            and drew its five tabs across the bottom of the world. §2 is
@@ -291,6 +324,7 @@ export default function MessagesWorld() {
           lib/motion.jsx. Two files, one vocabulary. */}
       <FullScreenStyles />
       <MotionStyles />
+      <style>{WORLD_HEIGHT_CSS}</style>
       {confirmLeave && (
         <DiscardDialog
           onKeep={() => setConfirmLeave(false)}

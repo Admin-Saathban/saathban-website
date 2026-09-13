@@ -33,7 +33,7 @@ import { chromium } from "playwright-core";
 
 const PREVIEW = process.argv.includes("--preview");
 const BASE = PREVIEW
-  ? "https://saathban-website-git-feature-app-basil-farooqs-projects.vercel.app"
+  ? "https://app.saathban.com"
   : "http://[::1]:5173";
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");

@@ -180,7 +180,7 @@ export default function BuddyHome() {
               </h2>
               <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: 0 }}>
                 A person at Saathban will be in touch. If you'd like to talk
-                sooner, write to team@saathban.org.
+                sooner, write to admin@saathban.com.
               </p>
             </section>
           ) : (

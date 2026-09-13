@@ -98,7 +98,7 @@ export default function AppHome() {
           </Link>
         </div>
 
-        <a href="/" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
+        <a href="https://saathban.com" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
           {t("auth.roleSelect.backToSite")}
         </a>
       </div>

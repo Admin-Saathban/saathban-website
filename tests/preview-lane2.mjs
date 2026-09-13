@@ -1,6 +1,6 @@
 import { chromium } from "playwright-core";
 
-const BASE = "https://saathban-website-git-feature-app-basil-farooqs-projects.vercel.app";
+const BASE = "https://app.saathban.com";
 const S = process.env.SCRATCH;
 const PW = "SaathTest!2026";
 const EMAIL = "smoke-icon@saathban.dev";

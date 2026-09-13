@@ -15,7 +15,7 @@ There is no test suite, linter, or formatter configured.
 
 ## Architecture
 
-A single-page marketing site for Saathban (a non-profit combating elderly loneliness), deployed to Vercel (`saathban.vercel.app`). Stack is deliberately minimal: React 18 + Vite, **no router, no CSS framework, no component library, no state manager**.
+A single-page marketing site for Saathban (a non-profit combating elderly loneliness), served at `https://saathban.com` from the Vercel project `saathban-website` (production branch `main`). The authenticated app under `/app` ships from `feature/app` and is served at `https://app.saathban.com` (a Vercel domain tied to that branch; until it is assigned, the branch preview URL). Stack is deliberately minimal: React 18 + Vite, **no router, no CSS framework, no component library, no state manager**.
 
 `src/main.jsx` mounts one default export from `src/App.jsx` (~2000 lines). Everything lives in that one file. Do not split it into a component tree or add dependencies unless asked — the single-file layout is the working convention here.
 

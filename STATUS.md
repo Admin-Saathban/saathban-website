@@ -86,7 +86,7 @@ this lane. The owner is testing them on his phone. Move a line to
 ## Integration queue
 - Wire carrom's DM inline-board when the community lane lands that piece (GAMES_CONTRACT_ASKS.md A4 + CARROM_WIRING.md).
 - Groups lane (0026) will extend community_reports kinds — add its kinds to ModerationQueue KIND_LABEL/HIDE_TABLE on integration.
-- Supabase dashboard (not doable from here): fix the email templates' redirect (see round log), add saathban.vercel.app + a preview wildcard to the redirect allow-list, revisit Site URL before prod cutover.
+- Supabase dashboard (not doable from here): fix the email templates' redirect ({{ .RedirectTo }} instead of {{ .SiteURL }}; see round log), set Site URL to https://app.saathban.com, and add https://app.saathban.com/** (plus the preview wildcard during the switch) to the redirect allow-list. saathban.vercel.app is dead and is not the address for anything.
 
 ## Pre-launch test-data purge — THERE IS NOW A SCRIPT
 

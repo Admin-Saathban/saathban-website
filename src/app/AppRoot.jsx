@@ -132,7 +132,7 @@ function AppConfigError() {
           {supabaseConfigError}
         </p>
         <a
-          href="/"
+          href="https://saathban.com"
           style={{
             display: "inline-flex",
             alignItems: "center",

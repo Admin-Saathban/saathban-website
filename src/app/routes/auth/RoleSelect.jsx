@@ -168,7 +168,7 @@ export default function RoleSelect() {
 
       <p style={{ textAlign: "center", marginTop: 8 }}>
         <a
-          href="/"
+          href="https://saathban.com"
           style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}
         >
           {t("auth.roleSelect.backToSite")}

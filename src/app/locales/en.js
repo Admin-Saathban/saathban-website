@@ -241,7 +241,7 @@ const en = {
       deleteHint: "Leaving Saathban removes your account and everything in it.",
       deleteCta: "Delete my account",
       deleteTitle: "Deleting your account",
-      deleteBody: "We do this by hand so nothing is lost by accident. Write to hello@saathban.org from this address and we'll remove your account and everything in it within a few days. You can change your mind any time before then.",
+      deleteBody: "We do this by hand so nothing is lost by accident. Write to admin@saathban.com from this address and we'll remove your account and everything in it within a few days. You can change your mind any time before then.",
     },
     privacy: {
       profileTitle: "Who can see my profile",
@@ -1121,7 +1121,7 @@ const en = {
       suspendedTitle: "Your volunteering is paused",
       suspendedBody:
         "We've paused things while we look into something — that's all this screen can say, and we know that's uncomfortable. Someone from Saathban will contact you directly to talk it through.",
-      suspendedFooter: "If you'd rather not wait, write to us and we'll pick it up: team@saathban.org",
+      suspendedFooter: "If you'd rather not wait, write to us and we'll pick it up: admin@saathban.com",
     },
     refused: {
       under18Title: "Not just yet",
@@ -1132,14 +1132,14 @@ const en = {
       cooldownBody:
         "A previous application was decided recently, and our rule is the same for everyone: {days} days before a fresh start. This isn't a judgement of you — it's how we keep every review fair and unhurried.",
       cooldownFooter:
-        "If you believe something was missed, write to team@saathban.org and a person will look at it.",
+        "If you believe something was missed, write to admin@saathban.com and a person will look at it.",
       blockedTitle: "We can't take this application",
       blockedBody:
-        "Something on the account is stopping applications right now. This screen can't see why — but a person can. Write to team@saathban.org and we'll explain directly.",
+        "Something on the account is stopping applications right now. This screen can't see why — but a person can. Write to admin@saathban.com and we'll explain directly.",
       genericTitle: "That didn't go through",
       genericBody:
         "Something went wrong on our side while sending your application. Nothing you entered was lost — please try again in a moment.",
-      genericFooter: "If it keeps happening, write to team@saathban.org.",
+      genericFooter: "If it keeps happening, write to admin@saathban.com.",
       applyAgainOne: "You can apply again in 1 day.",
       applyAgainMany: "You can apply again in {n} days.",
       backToForm: "Back to my application",

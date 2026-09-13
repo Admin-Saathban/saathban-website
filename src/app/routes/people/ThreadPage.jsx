@@ -19,12 +19,24 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import FirstMessageBox from "./FirstMessageBox.jsx";
-import { fetchLikes, toggleLike } from "../messages/messagesData.js";
+import {
+  fetchLikes,
+  toggleLike,
+  fetchThreadState,
+  muteChat,
+  archiveChat,
+  reportConversation,
+  refreshUnreadChats,
+  WORLD,
+} from "../messages/messagesData.js";
+import { blockOrMute, unblock } from "../community/communityData.js";
+import ConfirmDialog from "../messages/ConfirmDialog.jsx";
+import ThreadMenu from "../messages/ThreadMenu.jsx";
 import { copyToEvidence } from "../community/communityData.js";
 import { VoiceRecorder, VoicePlayer } from "./VoiceNote.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -76,6 +88,7 @@ export default function ThreadPage() {
   const { t, ts, meta, lang } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
+  const navigate = useNavigate();
 
   const [person, setPerson] = useState(null);
   const [requestId, setRequestId] = useState(null);
@@ -100,6 +113,14 @@ export default function ThreadPage() {
   const [starting, setStarting] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
   const [lastGame, setLastGame] = useState(null);
+  const [gameStatus, setGameStatus] = useState({});  // game session id -> status
+  /* The thread menu (Messages rework): what has been done to this
+     conversation by me, so each row offers the act or its undo. */
+  const [threadState, setThreadState] = useState({ blocked: false, hushed: false, archived: false, muted: false });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [ask, setAsk] = useState(null);              // "block" | "report" | null
+  const [actBusy, setActBusy] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   // Chat depth (0034): reply quote, per-message action menu, photos.
@@ -140,6 +161,7 @@ export default function ThreadPage() {
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
   const endRef = useRef(null);
+  const paneRef = useRef(null);
   const openedRef = useRef(false);
   const reqRef = useRef(null);
 
@@ -155,11 +177,13 @@ export default function ThreadPage() {
       if (played.length) {
         const { data: sess } = await supabase
           .from("game_sessions")
-          .select("id, game_key, created_at")
+          .select("id, game_key, status, created_at")
           .in("id", played)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .order("created_at", { ascending: false });
         setLastGame(sess?.[0]?.game_key || null);
+        /* What each game link says depends on whether its table is still
+           open — "A game is on here" under a finished game was untrue. */
+        setGameStatus(Object.fromEntries((sess || []).map((s) => [s.id, s.status])));
       } else {
         setLastGame(null);
       }
@@ -202,13 +226,28 @@ export default function ThreadPage() {
   useEffect(() => {
     let cancelled = false;
     let timer;
+    if (!myId) return undefined;
     (async () => {
       try {
-        const [p, reqId] = await Promise.all([fetchPerson(profileId), openDmWith(profileId)]);
+        /* CLOSED BY ME, FIRST. A person I blocked (or chose to see less
+           from in the feed) cannot be opened at the database — open_dm_with
+           refuses — and the honest screen says so and offers the way back,
+           rather than an error line over an empty pane. */
+        const [p, mine] = await Promise.all([fetchPerson(profileId), fetchThreadState(myId, profileId, null)]);
         if (cancelled) return;
         setPerson(p);
+        if (mine.blocked || mine.hushed) {
+          setThreadState(mine);
+          setMessages([]);
+          return;
+        }
+        const reqId = await openDmWith(profileId);
+        if (cancelled) return;
         setRequestId(reqId);
         reqRef.current = reqId;
+        fetchThreadState(myId, profileId, reqId)
+          .then((s) => { if (!cancelled) setThreadState(s); })
+          .catch(() => {});
         await refresh(reqId);
         // Arriving from the bell with everything already read still
         // has to clear the notification that brought us here.
@@ -225,7 +264,7 @@ export default function ThreadPage() {
       if (timer) clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileId, myId]);
+  }, [profileId, myId, reloadKey]);
 
   useEffect(() => {
     // Open at the LATEST message and follow growth. A single post-
@@ -233,18 +272,37 @@ export default function ThreadPage() {
     // the jump repeats briefly until layout is stable. After the first
     // open, only follow when already near the bottom — never yank a
     // reader who scrolled up to reread.
-    if (!messages?.length) return undefined;
-    const nearBottom =
-      window.scrollY + window.innerHeight >= document.body.scrollHeight - 200;
+    //
+    // THE PANE SCROLLS NOW, NOT THE WINDOW. The thread fills the Messages
+    // world and the conversation scrolls inside its own box with the
+    // composer beneath it, so this measures and moves that box. The old
+    // scrollIntoView moved the whole page too, which is part of how the
+    // composer ended up under the app bar.
+    const pane = paneRef.current;
+    if (!pane || (!messages?.length && !pendingMsgs.length)) return undefined;
+    const nearBottom = pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 240;
     if (openedRef.current && !nearBottom) return undefined;
     openedRef.current = true;
+    pane.scrollTop = pane.scrollHeight;
     let tries = 0;
     const timer = setInterval(() => {
-      endRef.current?.scrollIntoView({ block: "end" });
+      const el = paneRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
       if (++tries >= 6) clearInterval(timer);
     }, 150);
     return () => clearInterval(timer);
-  }, [messages?.length]);
+  }, [messages?.length, pendingMsgs.length]);
+
+  /* The per-message ⋯ list opens beneath its message. On the last
+     message that was below the fold of the pane, so a tap appeared to do
+     nothing. Bring the opened list into view. */
+  useEffect(() => {
+    if (!menuFor) return undefined;
+    const raf = requestAnimationFrame(() => {
+      msgRefs.current[menuFor]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [menuFor]);
 
   /* Optimistic send: the bubble is on screen before the round trip,
      marked "sending", and the real row replaces it on confirm. A
@@ -369,6 +427,66 @@ export default function ThreadPage() {
     }
   };
 
+  /* ── The thread's own menu (Messages rework) ──
+     Each act says what it did, and each can be undone from where it was
+     done: Unmute and Bring back sit in the same menu; Unblock sits on the
+     closed thread and in Menu → Blocked and muted. */
+  const act = async (fn, okKey, vars) => {
+    setActBusy(true);
+    try {
+      await fn();
+      if (okKey) pushToast(t(okKey, vars));
+      return true;
+    } catch {
+      pushToast(t("msg.thread.failed"), { tone: "error" });
+      return false;
+    } finally {
+      setActBusy(false);
+    }
+  };
+  const toggleMute = async () => {
+    setMenuOpen(false);
+    if (!requestId) return;
+    const on = !threadState.muted;
+    const ok = await act(() => muteChat(myId, requestId, on), on ? "msg.thread.mutedToast" : "msg.thread.unmutedToast", { name: first });
+    if (ok) {
+      setThreadState((s) => ({ ...s, muted: on }));
+      refreshUnreadChats();
+    }
+  };
+  const toggleArchive = async () => {
+    setMenuOpen(false);
+    if (!requestId) return;
+    const on = !threadState.archived;
+    const ok = await act(() => archiveChat(myId, requestId, on), on ? "msg.thread.archivedToast" : "msg.thread.unarchivedToast");
+    if (ok) {
+      setThreadState((s) => ({ ...s, archived: on }));
+      /* Archiving tidies it away, so the person lands where it went from. */
+      if (on) navigate(WORLD, { replace: true });
+    }
+  };
+  const confirmBlock = async () => {
+    const ok = await act(() => blockOrMute(myId, profileId, "block"), "msg.thread.blockedToast", { name: first });
+    if (ok) {
+      setAsk(null);
+      navigate(WORLD, { replace: true });
+    }
+  };
+  const confirmReport = async () => {
+    if (!requestId) return;
+    const ok = await act(() => reportConversation(myId, requestId, profileId, messages), "msg.thread.reportedToast");
+    if (ok) setAsk(null);
+  };
+  const liftBlock = async (kind) => {
+    const ok = await act(() => unblock(myId, profileId, kind), kind === "block" ? "msg.thread.unblockedToast" : null, { name: first });
+    if (ok) {
+      setThreadState({ blocked: false, hushed: false, archived: false, muted: false });
+      setMessages(null);
+      openedRef.current = false;
+      setReloadKey((k) => k + 1);
+    }
+  };
+
   /* Delete for me: a per-person hide. Delete for everyone: sender-only,
      15 minutes, server-enforced — the row becomes a "removed" stub. */
   const deleteForMe = async (m) => {
@@ -472,24 +590,50 @@ export default function ThreadPage() {
   const gameName = (k) => t(`people.thread.game_${k}`);
   const first = person?.full_name?.split(" ")[0] || "";
   const open = status === "accepted";
+  const closedByMe = threadState.blocked || threadState.hushed;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+    /* FILLS ITS BOX rather than setting a minimum height. The Messages
+       world gives a thread the whole space between its header and the
+       app bar; the conversation pane takes what is left after the name
+       row and the composer, so the composer is on screen on open. */
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8, flexShrink: 0 }}>
         <h1
           style={{
             fontFamily: meta.fonts.heading,
-            fontSize: ts(26),
+            fontSize: ts(24),
             fontWeight: 700,
             color: C.green,
             margin: 0,
-            flex: 1,
+            flex: "1 1 0",
+            minWidth: 0,
+            overflowWrap: "anywhere",
           }}
         >
           <Icon name="messages" size={22} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 8 }} />
           {person?.full_name || "…"}
         </h1>
-        {open && (
+        {threadState.muted && (
+          <span style={{ flexShrink: 0, fontSize: ts(14), color: C.textMuted, border: `1px solid ${C.warmGray}`, borderRadius: 50, padding: "2px 10px" }}>
+            {t("msg.thread.mutedChip")}
+          </span>
+        )}
+        {/* BLOCK, MUTE AND REPORT, in every conversation. One labelled
+            control in the header, so it is in the same place whether the
+            thread is open, waiting on a request, or closed. */}
+        <GhostBtn
+          onClick={() => setMenuOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          aria-label={t("msg.thread.menuLabel", { name: person?.full_name || "" })}
+          style={{ padding: "0 14px", gap: 6, flexShrink: 0 }}
+        >
+          <span aria-hidden="true" style={{ fontSize: ts(22), lineHeight: 1 }}>⋯</span>
+          {t("msg.thread.more")}
+        </GhostBtn>
+        {open && !closedByMe && <div aria-hidden="true" style={{ flexBasis: "100%", height: 0 }} />}
+        {open && !closedByMe && (
           <GhostBtn
             disabled={starting}
             onClick={() => (lastGame ? playGame(lastGame) : setChooserOpen(true))}
@@ -506,7 +650,7 @@ export default function ThreadPage() {
             {lastGame ? t(`people.thread.playAgainNamed`, { game: gameName(lastGame) }) : t("people.thread.playCta")}
           </GhostBtn>
         )}
-        {open && lastGame && (
+        {open && !closedByMe && lastGame && (
           <GhostBtn disabled={starting} onClick={() => setChooserOpen(true)} style={{ padding: "0 14px" }}>
             {t("people.thread.playOther")}
           </GhostBtn>
@@ -590,6 +734,44 @@ export default function ThreadPage() {
         </div>
       )}
 
+      {menuOpen && (
+        <ThreadMenu
+          name={first || person?.full_name || ""}
+          open={open}
+          canReport={!!requestId}
+          state={threadState}
+          busy={actBusy}
+          onClose={() => setMenuOpen(false)}
+          onMute={toggleMute}
+          onArchive={toggleArchive}
+          onReport={() => { setMenuOpen(false); setAsk("report"); }}
+          onBlock={() => { setMenuOpen(false); setAsk("block"); }}
+        />
+      )}
+      {ask === "block" && (
+        <ConfirmDialog
+          danger
+          title={t("msg.thread.blockTitle", { name: first })}
+          body={t("msg.thread.blockBody", { name: first })}
+          confirmLabel={t("msg.thread.blockConfirm", { name: first })}
+          cancelLabel={t("msg.thread.back")}
+          busy={actBusy}
+          onConfirm={confirmBlock}
+          onCancel={() => setAsk(null)}
+        />
+      )}
+      {ask === "report" && (
+        <ConfirmDialog
+          title={t("msg.thread.reportTitle", { name: first })}
+          body={t("msg.thread.reportBody", { name: first })}
+          confirmLabel={t("msg.thread.reportConfirm")}
+          cancelLabel={t("msg.thread.back")}
+          busy={actBusy}
+          onConfirm={confirmReport}
+          onCancel={() => setAsk(null)}
+        />
+      )}
+
       {error && (
         <BodyText role="alert" style={{ fontWeight: 700, color: C.brown }}>
           ⚠ {error}
@@ -601,18 +783,34 @@ export default function ThreadPage() {
         </BodyText>
       )}
 
-      {/* The conversation */}
+      {closedByMe ? (
+        <div style={{ padding: "12px 2px" }}>
+          <BodyText>
+            {t(threadState.blocked ? "msg.thread.blockedHere" : "msg.thread.hushedHere", { name: first })}
+          </BodyText>
+          <PrimaryBtn disabled={actBusy} onClick={() => liftBlock(threadState.blocked ? "block" : "mute")}>
+            {t(threadState.blocked ? "msg.thread.unblockHere" : "msg.thread.unhushHere", { name: first })}
+          </PrimaryBtn>
+        </div>
+      ) : (<>
+      {/* The conversation — its own scrolling box, filling what the name
+          row and the composer leave. */}
       <div
+        ref={paneRef}
         aria-live="polite"
         style={{
-          flex: 1,
+          flex: "1 1 0",
+          /* Small on purpose: with the keyboard up the space left is
+             short, and it is the pane that gives way, never the box
+             being typed in. Measured at 390x520 — 120 pushed Send out. */
+          minHeight: 48,
           background: "rgba(255,255,255,0.55)",
           border: `1.5px solid ${C.warmGray}`,
           borderRadius: 18,
-          padding: "16px 14px",
-          marginBottom: 12,
+          padding: "12px 10px",
+          marginBottom: 8,
           overflowY: "auto",
-          maxHeight: "52vh",
+          overscrollBehavior: "contain",
         }}
       >
         {messages === null ? (
@@ -802,7 +1000,15 @@ export default function ThreadPage() {
                       to={`/app/games/s/${m.game_session_id}`}
                       style={{ color: C.green, fontWeight: 600 }}
                     >
-                      {t("community.dm.gameOpenBoard")}
+                      {t(
+                        gameStatus[m.game_session_id] === "lobby" || gameStatus[m.game_session_id] === "active"
+                          ? "community.dm.gameOpenBoard"
+                          : gameStatus[m.game_session_id] === "finished"
+                            ? "people.thread.gameFinished"
+                            : gameStatus[m.game_session_id] === "cancelled"
+                              ? "people.thread.gameCancelled"
+                              : "people.thread.gameLink"
+                      )}
                     </Link>
                   </BodyText>
                   {m.body && <BodyText style={{ margin: "6px 0 0" }}><RichText text={m.body} /></BodyText>}
@@ -877,27 +1083,11 @@ export default function ThreadPage() {
                     <RichText text={m.body} />
                   </div>
                 )}
-                {/* Report is a safety affordance: full tap target,
-                    full-size text, on every incoming message. */}
-                {!mine && !svgSticker && (
-                  <button
-                    type="button"
-                    onClick={() => reportMessage(m)}
-                    style={{
-                      minHeight: A11Y.minTapTargetPx,
-                      background: "none",
-                      border: "none",
-                      color: C.textMuted,
-                      fontSize: ts(18),
-                      fontFamily: "inherit",
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                      padding: "2px 8px",
-                    }}
-                  >
-                    {t("community.dm.reportMessage")}
-                  </button>
-                )}
+                {/* The inline "Report this message" link under every
+                    incoming message is gone: Report is in the thread's own
+                    menu for the conversation, and in this message's ⋯ list
+                    for the message. Two identical links per message was
+                    the duplicate the audit found. */}
                 {menu}
               </div>
             );
@@ -1002,62 +1192,78 @@ export default function ThreadPage() {
         </div>
       )}
 
-      {/* Composer */}
+      {/* Composer — two rows, pinned at the foot of the thread: the
+          attachments on top, the text box and Send beneath them where the
+          thumb is. It used to be one wrapping row that could take three
+          lines, below a 52vh pane in a scrolling page. */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           send(draft);
         }}
-        style={{ display: "flex", gap: 8, alignItems: "stretch", flexWrap: "wrap" }}
+        style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}
       >
-        <GhostBtn
-          onClick={() => setPickerOpen((o) => !o)}
-          aria-expanded={pickerOpen}
-          aria-label={t("people.thread.stickerCta")}
-          disabled={!open}
-          style={{ padding: "0 16px", gap: 8 }}
-        >
-          <Icon name="good" size={22} />
-          {t("people.thread.stickerCta")}
-        </GhostBtn>
-        {/* §6 — the third labelled button. It asks for the microphone
-            at the moment it is tapped, never before. */}
-        <VoiceRecorder disabled={!open || uploading} onRecorded={onRecorded} />
-        {/* ONE Photo button, not two. The phone's own sheet already
-            offers the camera, and two controls for one idea is exactly
-            what §6 replaces. */}
-        <GhostBtn
-          onClick={() => galleryRef.current?.click()}
-          aria-label={t("people.thread.photoCta")}
-          disabled={!open || uploading}
-          style={{ padding: "0 16px", gap: 8 }}
-        >
-          <Icon name="photo" size={22} />
-          {t("people.thread.photoCta")}
-        </GhostBtn>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={t("people.thread.placeholder")}
-          aria-label={t("people.thread.placeholder")}
-          disabled={!open}
-          maxLength={2000}
-          style={{
-            flex: "1 1 180px",
-            minHeight: 56,
-            padding: "0 16px",
-            borderRadius: 50,
-            border: `1.5px solid ${C.warmGray}`,
-            background: C.white,
-            fontSize: ts(A11Y.minBodyPx),
-            fontFamily: "inherit",
-            color: C.textMain,
-          }}
-        />
-        <PrimaryBtn type="submit" disabled={!open || !draft.trim() || sending}>
-          {sending ? t("feedback.sending") : t("people.thread.sendCta")}
-        </PrimaryBtn>
+        <div style={{ display: "flex", gap: 8, alignItems: "stretch", flexWrap: "wrap" }}>
+          <GhostBtn
+            onClick={() => setPickerOpen((o) => !o)}
+            aria-expanded={pickerOpen}
+            aria-label={t("people.thread.stickerCta")}
+            disabled={!open}
+            style={{ padding: "0 14px", gap: 8 }}
+          >
+            <Icon name="good" size={22} />
+            {t("people.thread.stickerCta")}
+          </GhostBtn>
+          {/* §6 — the third labelled button. It asks for the microphone
+              at the moment it is tapped, never before. */}
+          <VoiceRecorder disabled={!open || uploading} onRecorded={onRecorded} />
+          {/* ONE Photo button, not two. The phone's own sheet already
+              offers the camera, and two controls for one idea is exactly
+              what §6 replaces. */}
+          <GhostBtn
+            onClick={() => galleryRef.current?.click()}
+            aria-label={t("people.thread.photoCta")}
+            disabled={!open || uploading}
+            style={{ padding: "0 14px", gap: 8 }}
+          >
+            <Icon name="photo" size={22} />
+            {t("people.thread.photoCta")}
+          </GhostBtn>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            /* With the keyboard up the pane shrinks; keep the newest
+               message in sight above the box being typed in. */
+            onFocus={() => window.setTimeout(() => {
+              const el = paneRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
+            }, 250)}
+            placeholder={t("people.thread.placeholder")}
+            aria-label={t("people.thread.placeholder")}
+            disabled={!open}
+            maxLength={2000}
+            style={{
+              flex: "1 1 0",
+              minWidth: 0,
+              minHeight: 56,
+              boxSizing: "border-box",
+              padding: "0 16px",
+              borderRadius: 50,
+              border: `1.5px solid ${C.warmGray}`,
+              background: C.white,
+              fontSize: ts(A11Y.minBodyPx),
+              fontFamily: "inherit",
+              color: C.textMain,
+            }}
+          />
+          <PrimaryBtn type="submit" disabled={!open || !draft.trim() || sending} style={{ padding: "0 20px", flexShrink: 0 }}>
+            {sending ? t("feedback.sending") : t("people.thread.sendCta")}
+          </PrimaryBtn>
+        </div>
       </form>
+      </>)}
     </div>
   );
 }

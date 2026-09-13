@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { fetchChats, previewOf, archiveChat } from "./messagesData.js";
+import { fetchChats, previewOf, archiveChat, WORLD } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
 
 export default function ArchivedChats() {
@@ -56,7 +56,7 @@ export default function ArchivedChats() {
         return (
           <li key={c.requestId} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 68 }}>
             <Link
-              to={`/app/people/${c.otherId}/chat`}
+              to={`${WORLD}/with/${c.otherId}`}
               style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", padding: "8px 4px" }}
             >
               <Avatar person={c.person} size={48} />

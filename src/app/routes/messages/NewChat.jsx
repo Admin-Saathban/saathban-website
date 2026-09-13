@@ -22,12 +22,64 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { fetchMyPeople } from "../people/myPeopleStore.js";
 import { openDmWith } from "../people/peopleStore.js";
+import Icon from "../../components/Icon.jsx";
+import { WORLD } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
+
+/* INVITE LIVES HERE NOW (Messages rework). It used to be a fourth tab,
+   plus a door on empty Chats, plus a mislabelled door on empty Requests
+   — three routes to one page. New chat is where somebody goes when they
+   want to write to a person, and "they are not here yet" is the answer
+   to that question the list cannot give. It is also what turns the
+   nobody-connected-yet screen from a paragraph into a way forward. */
+function InviteDoor({ primary }) {
+  const { t, ts } = useI18n();
+  return (
+    <div
+      style={{
+        marginTop: primary ? 4 : 18,
+        padding: "14px 16px",
+        background: C.white,
+        border: `1px solid ${C.warmGray}`,
+        borderRadius: 16,
+        boxSizing: "border-box",
+      }}
+    >
+      <p style={{ margin: "0 0 4px", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+        {t("msg.newChat.inviteTitle")}
+      </p>
+      <p style={{ margin: "0 0 12px", fontSize: ts(16), color: C.textMuted, lineHeight: 1.45 }}>
+        {t("msg.newChat.inviteBody")}
+      </p>
+      <Link
+        to={`${WORLD}/invite`}
+        className="sb-press"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          minHeight: A11Y.minTapTargetPx,
+          padding: "0 22px",
+          borderRadius: 50,
+          background: primary ? C.green : "transparent",
+          border: `2px solid ${C.green}`,
+          color: primary ? C.cream : C.green,
+          fontSize: ts(A11Y.minBodyPx),
+          fontWeight: 700,
+          textDecoration: "none",
+        }}
+      >
+        <Icon name="add" size={20} />
+        {t("msg.newChat.inviteCta")}
+      </Link>
+    </div>
+  );
+}
 
 export default function NewChat() {
   const { t, ts } = useI18n();
@@ -92,6 +144,7 @@ export default function NewChat() {
         <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, lineHeight: 1.55, margin: "0 0 14px" }}>
           {t("msg.newChat.nobodyYet")}
         </p>
+        <InviteDoor primary />
       </div>
     );
   }
@@ -171,6 +224,8 @@ export default function NewChat() {
           </li>
         ))}
       </ul>
+
+      <InviteDoor />
 
       {error ? (
         <p role="alert" style={{ fontSize: ts(16), fontWeight: 700, color: C.brown }}>⚠ {error}</p>

@@ -26,7 +26,9 @@
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { pushToast } from "../../lib/feedback.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -50,6 +52,8 @@ export default function RequestsList({ onCount }) {
   const [common, setCommon] = useState({});
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [reported, setReported] = useState({});   // request id -> true once sent
+  const [blockAsk, setBlockAsk] = useState(null); // the request whose sender may be blocked
 
   const load = useCallback(async () => {
     if (!myId) return;
@@ -84,26 +88,49 @@ export default function RequestsList({ onCount }) {
       /* §4 — accepting lands you IN THE CHAT (MOTION_SPEC §7). No
          toast: the conversation opening is the confirmation, and the
          first message is already in it (0073). */
-      if (outcome === "accepted") navigate(`/app/people/${r.senderId}/chat`);
+      if (outcome === "accepted") navigate(`${WORLD}/with/${r.senderId}`);
     } catch {
       setError("msg.req.error");
     }
     setBusy("");
   };
 
+  /* REPORT ONLY REPORTS. It used to file a report, block the sender and
+     decline the request in one unconfirmed tap, with nothing on screen to
+     say any of it had happened — and the report half never landed,
+     because 'dm_request' was not an allowed report kind until 0135.
+     Now it sends the report and says so on the card; Block and Not now
+     are separate choices the person makes for themselves. */
   const report = async (r) => {
     setBusy(r.id);
     setError("");
     try {
       await fileReport(myId, "dm_request", r.id, r.senderId, r.firstMessage, "message request");
-      await blockOrMute(myId, r.senderId, "block").catch(() => {});
-      await decideDmRequest(r.id, false).catch(() => {});
+      setReported((cur) => ({ ...cur, [r.id]: true }));
+    } catch {
+      setError("msg.req.error");
+    }
+    setBusy("");
+  };
+
+  const block = async () => {
+    const r = blockAsk;
+    if (!r) return;
+    setBusy(r.id);
+    setError("");
+    try {
+      await blockOrMute(myId, r.senderId, "block");
+      setBlockAsk(null);
+      /* A blocked sender's request is hidden from me at the database
+         (caller_hides), so the card goes; the request is not declined. */
       setRows((cur) => {
         const next = (cur || []).filter((x) => x.id !== r.id);
         onCount?.(next.length);
         return next;
       });
+      pushToast(t("msg.thread.blockedToast", { name: (r.name || "").split(" ")[0] }));
     } catch {
+      setBlockAsk(null);
       setError("msg.req.error");
     }
     setBusy("");
@@ -120,19 +147,12 @@ export default function RequestsList({ onCount }) {
         <p style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: "0 0 8px" }}>
           {t("msg.req.emptyTitle")}
         </p>
-        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px" }}>
+        {/* No button. It read "Write to someone you know" and went to the
+            invite page — the wrong words for the wrong door. Requests are
+            what arrives; writing and inviting are New chat's. */}
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: 0 }}>
           {t("msg.req.emptyBody")}
         </p>
-        <Link
-          to={`${WORLD}/invite`}
-          style={{
-            display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx,
-            padding: "0 24px", borderRadius: 50, background: C.green, color: C.cream,
-            fontSize: ts(A11Y.minBodyPx), fontWeight: 700, textDecoration: "none",
-          }}
-        >
-          {t("msg.emptyCta")}
-        </Link>
       </div>
     );
   }
@@ -251,20 +271,49 @@ export default function RequestsList({ onCount }) {
               </button>
             </div>
 
-            {/* Quieter, and deliberately not one of the two. */}
-            <button
-              type="button"
-              onClick={() => report(r)}
-              disabled={busy === r.id}
-              style={{
-                marginTop: 10, minHeight: A11Y.minTapTargetPx, padding: "0 16px",
-                borderRadius: 50, border: "none", background: "transparent",
-                color: C.brown, fontFamily: "inherit", fontSize: ts(16),
-                fontWeight: 600, textDecoration: "underline", cursor: "pointer",
-              }}
-            >
-              {t("msg.req.report")}
-            </button>
+            {/* Quieter, and deliberately not one of the two: Report and
+                Block, each doing only what it says. */}
+            {reported[r.id] && (
+              <p
+                role="status"
+                style={{
+                  margin: "10px 0 0", padding: "10px 12px", borderRadius: 12,
+                  background: C.cream, fontSize: ts(16), color: C.textMain, lineHeight: 1.45,
+                }}
+              >
+                ✓ {t("msg.req.reportedNote", { name: first })}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+              {!reported[r.id] && (
+                <button
+                  type="button"
+                  onClick={() => report(r)}
+                  disabled={busy === r.id}
+                  style={{
+                    minHeight: A11Y.minTapTargetPx, padding: "0 14px",
+                    borderRadius: 50, border: "none", background: "transparent",
+                    color: C.brown, fontFamily: "inherit", fontSize: ts(16),
+                    fontWeight: 600, textDecoration: "underline", cursor: "pointer",
+                  }}
+                >
+                  {t("msg.req.report")}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setBlockAsk(r)}
+                disabled={busy === r.id}
+                style={{
+                  minHeight: A11Y.minTapTargetPx, padding: "0 14px",
+                  borderRadius: 50, border: "none", background: "transparent",
+                  color: C.brown, fontFamily: "inherit", fontSize: ts(16),
+                  fontWeight: 600, textDecoration: "underline", cursor: "pointer",
+                }}
+              >
+                {t("msg.req.block", { name: first })}
+              </button>
+            </div>
 
             {/* §6 — a small grey detail, never the headline. */}
             {!r.senderProfileComplete && (
@@ -280,6 +329,22 @@ export default function RequestsList({ onCount }) {
           </section>
         );
       })}
+
+      {blockAsk && (() => {
+        const bf = (blockAsk.name || "").split(" ")[0];
+        return (
+          <ConfirmDialog
+            danger
+            title={t("msg.thread.blockTitle", { name: bf })}
+            body={t("msg.thread.blockBody", { name: bf })}
+            confirmLabel={t("msg.thread.blockConfirm", { name: bf })}
+            cancelLabel={t("msg.thread.back")}
+            busy={busy === blockAsk.id}
+            onConfirm={block}
+            onCancel={() => setBlockAsk(null)}
+          />
+        );
+      })()}
     </>
   );
 }

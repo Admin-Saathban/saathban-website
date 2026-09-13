@@ -315,6 +315,12 @@ export default function ChatsList() {
                       {t(pv.key, pv.values)}
                     </span>
                   </span>
+                  {/* Muted (0135), said in a word — never an icon alone. */}
+                  {c.muted && (
+                    <span style={{ flexShrink: 0, fontSize: ts(14), color: C.textMuted, border: `1px solid ${C.warmGray}`, borderRadius: 50, padding: "2px 10px" }}>
+                      {t("msg.thread.mutedChip")}
+                    </span>
+                  )}
                   {/* The dot. Never a number. */}
                   {c.unread && (
                     <span

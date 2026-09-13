@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   Menu — MESSAGES_SPEC.md §5. Seven rows, no group headers.
+   Menu — MESSAGES_SPEC.md §5.
 
    NO "DELETE CHAT" HERE, and that is the spec's own emphasis:
    "deleting is per-conversation, not a global tool, and a row called
@@ -8,85 +8,114 @@
    Rows that carry a value SHOW that value beneath them rather than
    making somebody open the row to find out what it is currently set
    to. "Who can write to you" especially — it is the setting that keeps
-   Requests small rather than a spam pile, so it has to be legible at a
-   glance, and its three options are §6's, not invented here.
+   Requests small rather than a spam pile.
+
+   WHAT CHANGED IN THE MESSAGES REWORK, row by row:
+   · Archived chats and Blocked people were relative links, and the world
+     is mounted on a splat route, so they resolved to …/menu/menu/… and
+     opened blank screens. Absolute now. Blocked people also lists muted
+     chats, because both are undone from there.
+   · Who can write to you and Text size open the setting itself, inside
+     Messages, instead of the top of the long Settings page.
+   · Read receipts is gone until the thread draws read ticks — a switch
+     that changes nothing anybody can see is a placeholder. The column is
+     left alone.
+   · "Sound and notifications" is "Notifications": there is no sound
+     setting, and the row goes straight to the notification settings.
+   · The online switch saved twice per tap (the row and the switch both
+     handled it). The whole row is the switch now, once.
+   · Rows had no box-sizing, so padding and border pushed them 16px past
+     the screen and clipped the switch — on the right in English and the
+     left in Urdu.
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
-import { useI18n } from "../../lib/i18n.jsx";
+import { useI18n, TEXT_SIZES } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { fetchMessageSettings, saveMessageSetting } from "./messagesData.js";
+import Icon from "../../components/Icon.jsx";
+import { fetchMessageSettings, saveMessageSetting, WORLD } from "./messagesData.js";
 
-function Row({ to, onClick, label, value, children, danger }) {
+const rowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  width: "100%",
+  boxSizing: "border-box",
+  minHeight: 62,
+  padding: "10px 14px",
+  background: C.white,
+  border: `1px solid ${C.warmGray}`,
+  borderRadius: 14,
+  marginBottom: 10,
+  textDecoration: "none",
+  color: "inherit",
+  fontFamily: "inherit",
+  textAlign: "start",
+  cursor: "pointer",
+};
+
+function Words({ label, value }) {
   const { ts } = useI18n();
-  const inner = (
-    <>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: danger ? C.brown : C.textMain }}>
-          {label}
-        </span>
-        {value && (
-          <span style={{ display: "block", fontSize: ts(16), color: C.textMuted, marginTop: 2 }}>
-            {value}
-          </span>
-        )}
-      </span>
-      {children}
-    </>
-  );
-  const style = {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    width: "100%",
-    minHeight: 62,
-    padding: "10px 14px",
-    background: C.white,
-    border: `1px solid ${C.warmGray}`,
-    borderRadius: 14,
-    marginBottom: 10,
-    textDecoration: "none",
-    color: "inherit",
-    fontFamily: "inherit",
-    textAlign: "start",
-    cursor: onClick || to ? "pointer" : "default",
-  };
-  if (to) return <Link to={to} style={style}>{inner}</Link>;
   return (
-    <div style={style} onClick={onClick}>
-      {inner}
-    </div>
+    <span style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>
+        {label}
+      </span>
+      {value && (
+        <span style={{ display: "block", fontSize: ts(16), color: C.textMuted, marginTop: 2 }}>
+          {value}
+        </span>
+      )}
+    </span>
   );
 }
 
-function Switch({ on, onChange, label, busy }) {
-  const { ts } = useI18n();
+function LinkRow({ to, label, value }) {
+  const { meta } = useI18n();
+  return (
+    <Link to={to} style={rowStyle}>
+      <Words label={label} value={value} />
+      <Icon name={meta.dir === "rtl" ? "chevronBack" : "chevron"} size={22} style={{ color: C.textMuted, flexShrink: 0 }} />
+    </Link>
+  );
+}
+
+function SwitchRow({ label, value, on, busy, onToggle }) {
+  const { t, ts } = useI18n();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={label}
       disabled={busy}
-      onClick={onChange}
-      style={{
-        minWidth: 64,
-        minHeight: A11Y.minTapTargetPx,
-        borderRadius: 50,
-        border: `2px solid ${on ? C.green : C.warmGray}`,
-        background: on ? "#EEF3E8" : C.white,
-        color: on ? C.green : C.textMuted,
-        fontFamily: "inherit",
-        fontSize: ts(16),
-        fontWeight: 800,
-        cursor: "pointer",
-        flexShrink: 0,
-      }}
+      onClick={onToggle}
+      style={{ ...rowStyle, border: `1px solid ${C.warmGray}`, opacity: busy ? 0.7 : 1 }}
     >
-      {/* Never colour alone: the state is a word as well as a tint. */}
-      {on ? "✓" : "○"}
+      <Words label={label} value={value} />
+      <span
+        aria-hidden="true"
+        style={{
+          flexShrink: 0,
+          minWidth: 64,
+          minHeight: A11Y.minTapTargetPx,
+          boxSizing: "border-box",
+          padding: "0 12px",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 50,
+          border: `2px solid ${on ? C.green : C.warmGray}`,
+          background: on ? C.selected : C.white,
+          color: on ? C.green : C.textMuted,
+          fontSize: ts(16),
+          fontWeight: 800,
+        }}
+      >
+        {/* Never colour alone: the state is a word as well as a tint. */}
+        {on ? `✓ ${t("msg.menu.on")}` : t("msg.menu.off")}
+      </span>
     </button>
   );
 }
@@ -98,7 +127,7 @@ const WHO_KEYS = {
 };
 
 export default function MessagesMenu() {
-  const { t, ts } = useI18n();
+  const { t, ts, textSize } = useI18n();
   const { profile } = useSession();
   const myId = profile?.id;
 
@@ -112,23 +141,24 @@ export default function MessagesMenu() {
   }, [myId]);
   useEffect(() => { load(); }, [load]);
 
-  const flip = async (field) => {
+  const flipPresence = async () => {
     if (!s || busy) return;
     setBusy(true);
     setError("");
-    const next = !s[field];
-    const col = field === "showPresence" ? "show_presence" : "read_receipts";
-    setS((cur) => ({ ...cur, [field]: next }));
+    const next = !s.showPresence;
+    setS((cur) => ({ ...cur, showPresence: next }));
     try {
-      await saveMessageSetting(myId, { [col]: next });
+      await saveMessageSetting(myId, { show_presence: next });
     } catch {
-      setS((cur) => ({ ...cur, [field]: !next }));
+      setS((cur) => ({ ...cur, showPresence: !next }));
       setError("msg.menu.saveFailed");
     }
     setBusy(false);
   };
 
   if (!s) return <p role="status" style={{ color: C.textMuted, fontSize: ts(A11Y.minBodyPx) }}>···</p>;
+
+  const sizeKey = TEXT_SIZES.find((x) => x.id === textSize)?.labelKey;
 
   return (
     <>
@@ -138,35 +168,31 @@ export default function MessagesMenu() {
         </p>
       )}
 
-      <Row to="menu/archived" label={t("msg.menu.archived")} />
-      <Row to="menu/blocked" label={t("msg.menu.blocked")} />
+      <LinkRow to={`${WORLD}/menu/archived`} label={t("msg.menu.archived")} />
+      <LinkRow to={`${WORLD}/menu/blocked`} label={t("msg.menu.blocked")} />
 
       {/* The setting that keeps Requests small. Its current value is
           on the row, in words, not behind it. */}
-      <Row
-        to="/app/settings"
+      <LinkRow
+        to={`${WORLD}/menu/who`}
         label={t("msg.menu.whoCanWrite")}
         value={t(WHO_KEYS[s.whoCanMessage] || WHO_KEYS.met)}
       />
 
-      <Row
+      <SwitchRow
         label={t("msg.menu.presence")}
         value={t("msg.menu.presenceSub")}
-        onClick={() => flip("showPresence")}
-      >
-        <Switch on={s.showPresence} busy={busy} label={t("msg.menu.presence")} onChange={() => flip("showPresence")} />
-      </Row>
+        on={s.showPresence}
+        busy={busy}
+        onToggle={flipPresence}
+      />
 
-      <Row
-        label={t("msg.menu.receipts")}
-        value={t("msg.menu.receiptsSub")}
-        onClick={() => flip("readReceipts")}
-      >
-        <Switch on={s.readReceipts} busy={busy} label={t("msg.menu.receipts")} onChange={() => flip("readReceipts")} />
-      </Row>
-
-      <Row to="/app/notifications/settings" label={t("msg.menu.sound")} />
-      <Row to="/app/settings" label={t("msg.menu.textSize")} />
+      <LinkRow to="/app/notifications/settings" label={t("msg.menu.sound")} />
+      <LinkRow
+        to={`${WORLD}/menu/text-size`}
+        label={t("msg.menu.textSize")}
+        value={sizeKey ? t(sizeKey) : null}
+      />
     </>
   );
 }

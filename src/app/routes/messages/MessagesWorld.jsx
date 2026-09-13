@@ -56,6 +56,8 @@ import RequestsList from "./RequestsList.jsx";
 import MessagesMenu from "./MessagesMenu.jsx";
 import ArchivedChats from "./ArchivedChats.jsx";
 import BlockedPeople from "./BlockedPeople.jsx";
+import TextSizePage from "./TextSizePage.jsx";
+import WhoCanMessage from "../WhoCanMessage.jsx";
 import Thread from "../community/Thread.jsx";
 import useShutter from "../../components/useShutter.js";
 
@@ -167,13 +169,43 @@ export default function MessagesWorld() {
   const { profile } = useSession();
   const navigate = useNavigate();
   const rootRef = useRef(null);
-  const { state } = useLocation();
+  const { pathname } = useLocation();
   const [confirmLeave, setConfirmLeave] = useState(false);
+
+  /* WHERE BACK GOES IS DECIDED BY WHERE YOU ARE, not by browser history.
+     navigate(-1) could walk out of Messages altogether from a tab's first
+     screen — to whatever happened to be before it in history. So:
+       · Chats, Requests and Menu are first screens: no arrow at all;
+       · a thread, New chat and the old request links go to Chats;
+       · Invite goes to New chat, which is where it is offered;
+       · a page inside Menu goes to Menu.
+     When the screen we are going back to is the one we just came from,
+     history is popped instead, so the phone's own back stays in step. */
+  const sub = pathname.startsWith(WORLD) ? pathname.slice(WORLD.length).replace(/^\/+|\/+$/g, "") : "";
+  const inThread = sub.startsWith("with/");
+  const backTo =
+    sub === "" || sub === "requests" || sub === "menu" ? null
+      : sub.startsWith("menu/") ? `${WORLD}/menu`
+        : sub === "invite" ? `${WORLD}/new`
+          : WORLD;
+  const lastPath = useRef(pathname);
+  const prevPath = useRef(null);
+  useEffect(() => {
+    if (lastPath.current !== pathname) {
+      prevPath.current = lastPath.current;
+      lastPath.current = pathname;
+    }
+  }, [pathname]);
+  const goBack = () => {
+    if (!backTo) return;
+    if (prevPath.current === backTo) navigate(-1);
+    else navigate(backTo, { replace: true });
+  };
 
   /* One arrow, one question. Whatever screen the world is holding
      registers whether it has unsent words; the arrow asks before it
      closes anything. See draftGuard.js. */
-  const askBack = () => { if (hasUnsentDraft()) setConfirmLeave(true); else navigate(-1); };
+  const askBack = () => { if (hasUnsentDraft()) setConfirmLeave(true); else goBack(); };
 
   /* MOTION_SPEC §1: this world arrives from the side that was touched.
      Decided at DISPATCH — MessagesButton passes the logical "end" and
@@ -337,7 +369,7 @@ export default function MessagesWorld() {
       {confirmLeave && (
         <DiscardDialog
           onKeep={() => setConfirmLeave(false)}
-          onDiscard={() => { setConfirmLeave(false); navigate(-1); }}
+          onDiscard={() => { setConfirmLeave(false); goBack(); }}
         />
       )}
 
@@ -368,6 +400,7 @@ export default function MessagesWorld() {
           flexShrink: 0,
         }}
       >
+        {backTo ? (
         <button
           type="button"
           onClick={askBack}
@@ -390,6 +423,11 @@ export default function MessagesWorld() {
         >
           <span aria-hidden="true">{meta.dir === "rtl" ? "→" : "←"}</span>
         </button>
+        ) : (
+          /* A first screen has no way back inside Messages, so there is
+             no arrow pretending to be one — only the gutter it stood in. */
+          <span aria-hidden="true" style={{ width: 6, flexShrink: 0 }} />
+        )}
         <h1
           style={{
             flex: 1,
@@ -484,7 +522,11 @@ export default function MessagesWorld() {
              setting in this app and Nastaliq needs a taller line box
              than Latin at the same nominal size, so a constant here
              would be wrong in one language, at one size, silently. */
-          marginTop: worldShut ? -worldNavH : 0,
+          /* Folded away inside a conversation, the way a chat app does:
+             the back arrow is the way out of a thread, and the 66px this
+             row took is what kept the composer off the screen. */
+          marginTop: worldShut || inThread ? -worldNavH : 0,
+          visibility: inThread ? "hidden" : "visible",
           transition: "margin-top 180ms ease-out",
         }}
       >
@@ -510,12 +552,29 @@ export default function MessagesWorld() {
             An absolute path cannot drift with the location. */}
         <WorldTab to={WORLD} end icon="messages" label={t("msg.tab.chats")} />
         <WorldTab to={`${WORLD}/requests`} icon="letter" label={t("msg.tab.requests")} badge={pending} />
-        <WorldTab to={`${WORLD}/invite`} icon="add" label={t("people.list.inviteCta")} />
+        {/* No Invite tab. It was not in MESSAGES_SPEC §2, wrapped to two
+            lines, and was one of three routes to the same page. Invite now
+            lives inside New chat ("Not here yet?") and on empty Chats. */}
         <WorldTab to={`${WORLD}/menu`} icon="settings" label={t("msg.tab.menu")} />
       </nav>
 
-      <main ref={worldScroller} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}>
+      {/* A THREAD FILLS THE SCREEN INSTEAD OF SCROLLING IT. The
+          conversation scrolls inside its own pane and the composer sits at
+          the foot, so the text box and Send are visible the moment a chat
+          opens. Before, the thread was a 52%-height pane inside this
+          scrolling <main>, and at 390x844 the composer opened hidden
+          behind the app's bottom bar. */}
+      <main
+        ref={worldScroller}
+        style={inThread
+          ? { flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }
+          : { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}
+      >
+        <div
+          style={inThread
+            ? { width: "100%", maxWidth: 640, margin: "0 auto", padding: "8px 12px", boxSizing: "border-box", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
+            : { maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}
+        >
           <Routes>
             <Route index element={<ChatsList />} />
             {/* THE THREAD LIVES HERE NOW. It used to be reached at
@@ -536,6 +595,10 @@ export default function MessagesWorld() {
             <Route path="menu" element={<MessagesMenu />} />
             <Route path="menu/archived" element={<ArchivedChats />} />
             <Route path="menu/blocked" element={<BlockedPeople />} />
+            {/* The setting itself, inside Messages — not the top of a
+                5,800px Settings page. The same components Settings uses. */}
+            <Route path="menu/who" element={<WhoCanMessage />} />
+            <Route path="menu/text-size" element={<TextSizePage />} />
             {/* An old /app/community/messages/<requestId> link. Thread is
                 itself a redirect to the canonical thread, so this only
                 exists so those links keep landing somewhere real. It sits

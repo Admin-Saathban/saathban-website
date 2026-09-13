@@ -17,9 +17,11 @@
    (§9.1, and MOTION_SPEC §7: every action ends where its result
    lives). No toast — the message sitting in the thread is the receipt.
 
-   The mic and photo glyphs sit beside Send and take you into the chat
-   with those tools, rather than growing a second recorder and a second
-   uploader inside a sheet that is meant to hold one decision.
+   THE MIC AND PHOTO GLYPHS ARE GONE (Messages rework). They were labelled
+   "Say it out loud instead" and "Send a photo instead" and did neither —
+   both only opened the chat. A button that promises a voice note and
+   delivers a text box is a placeholder. Voice and Photo are in the chat,
+   one tap after Send.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +32,7 @@ import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { openDmWith } from "../people/peopleStore.js";
 import { sendDeep } from "../people/myPeopleStore.js";
+import { WORLD } from "./messagesData.js";
 import useBackToClose from "../../components/useBackToClose.js";
 
 const VARIANTS = ["a", "b", "c", "d"];
@@ -73,7 +76,7 @@ export default function SayHelloSheet({ person, onClose }) {
         await sendDeep(requestId, profile.id, { body: text.trim() });
       }
       onClose?.();
-      navigate(`/app/people/${person.id}/chat`);
+      navigate(`${WORLD}/with/${person.id}`);
     } catch (err) {
       setError(err.message || t("msg.hello.failed"));
       setBusy(false);
@@ -166,12 +169,6 @@ export default function SayHelloSheet({ person, onClose }) {
         )}
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
-          <button type="button" style={glyph} aria-label={t("msg.hello.voice")} onClick={() => goToChat(false)}>
-            <span aria-hidden="true">🎤</span>
-          </button>
-          <button type="button" style={glyph} aria-label={t("msg.hello.photo")} onClick={() => goToChat(false)}>
-            <span aria-hidden="true">📷</span>
-          </button>
           <button
             type="button"
             onClick={() => goToChat(true)}

@@ -168,7 +168,7 @@ export function moduleSummary(rows, monthKey) {
     } else if (module === "medication") {
       stat = { kind: "ticks", value: list.reduce((n, r) => n + (r.payload?.taken?.length || 0), 0) };
     } else if (module === "diet") {
-      stat = { kind: "meals", value: list.reduce((n, r) => n + (r.payload?.meals?.length || 0), 0) };
+      stat = { kind: "meals", value: list.reduce((n, r) => n + (r.payload?.meals?.length || Object.values(r.payload?.entries || {}).flat().length || 0), 0) };
     } else if (module === "mood") {
       const vals = list.map((r) => r.mood_value).filter((v) => v != null);
       stat = { kind: "mood", value: avg(vals) };

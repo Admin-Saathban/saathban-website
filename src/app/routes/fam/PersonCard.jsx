@@ -49,7 +49,7 @@ const MODULES = [
     } },
   { key: "exercise", icon: "🚶", value: (r) => (r.payload?.minutes != null ? `${r.payload.minutes}m` : null) },
   { key: "diet", icon: "🍲", value: (r) => {
-      const n = (r.payload?.items || r.payload?.meals || []).length;
+      const n = (r.payload?.items || r.payload?.meals || Object.values(r.payload?.entries || {}).flat()).length;
       return n ? `${n}` : null;
     } },
 ];

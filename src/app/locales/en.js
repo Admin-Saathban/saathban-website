@@ -584,7 +584,7 @@ const en = {
       medsNote:
         "Reminders can nudge you, but this list is the reliable record — please don't depend on the reminder alone.",
       moveQ: "What did you do?",
-      howLongQ: "For about how long?",
+      howLongQ: "For about how long? You can leave this out.",
       minutesAria: "{m} minutes",
       minShort: "{m} min",
       dietEmpty:
@@ -628,6 +628,10 @@ const en = {
       newItemPh: "What did you have? e.g. Aloo gosht",
       newItemAdd: "Add and tick it",
       newItemCancel: "Not now",
+      /* Shown in place of a food that was ticked on a day and has since
+         been removed from the list, when the log from before the fix kept
+         only a pointer to it. Honest about what is known. */
+      itemGone: "a food no longer on your list",
       waterFewer: "A little less",
       waterMore: "A little more",
       ofGoal: "of about {n} {unit}",
@@ -2773,7 +2777,7 @@ const en = {
          list on day one is a bad first impression. */
       medication: "Medicines",
       diet: "Meals",
-      exercise: "Moving about",
+      exercise: "Movement",
     },
     invite: {
       title: "Who should we let in?",

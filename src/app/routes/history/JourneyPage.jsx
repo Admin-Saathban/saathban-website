@@ -465,7 +465,7 @@ function DayDetail({ date, rows, dateLocale, moodFace, t, ts }) {
         return `💊 ${n === 1 ? t("history.day.medsOne") : t("history.day.meds", { n })}`;
       }
       case "diet": {
-        const n = (p.meals || []).length;
+        const n = (p.meals || Object.values(p.entries || {}).flat()).length;
         return `🍲 ${n === 1 ? t("history.day.mealsOne") : t("history.day.meals", { n })}`;
       }
       case "exercise":

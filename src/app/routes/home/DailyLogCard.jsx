@@ -345,7 +345,10 @@ function ExerciseEditor({ value, onChange, iconId, dateIso }) {
           </Chip>
         ))}
       </ChipRow>
-      {value.type && value.minutes && (
+      {/* From the moment an activity is chosen, not after the time as
+          well. How long is optional now (see isEntryDone), so the note
+          must not wait behind it. */}
+      {value.type && (
         <div style={{ marginTop: 14 }}>
           <NoteArea
             value={value.note}
@@ -378,16 +381,32 @@ function DietEditor({ value, onChange, items, iconId }) {
   const [tags, setTags] = useState([]);
 
   const chosen = entries[slot] || [];
-  const toggleItem = (id) =>
+
+  /* ── THE DAY KEEPS WHAT WAS EATEN, NOT A POINTER TO IT ──
+
+     A tick stored only the food's id, and the name lived in the list in
+     Settings. Remove a food from the list and every day it was eaten
+     lost its name: the closed row read "Breakfast: …". Measured on the
+     live database before this fix — 9 of 22 ticked foods, on 3 days,
+     for 1 person, already pointed at nothing.
+
+     So the name goes into the day's record at the moment it is ticked,
+     beside the id. The list can change however it likes afterwards;
+     the record says what was entered. */
+  const labels = value.labels || {};
+  const toggleItem = (id) => {
+    const item = items.find((m) => m.id === id);
     onChange({
       ...value,
       entries: { ...entries, [slot]: chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id] },
+      labels: item ? { ...labels, [id]: item.label } : labels,
     });
+  };
 
   const submitNew = () => {
     const item = addMealItem(iconId, { label, tags });
     if (!item) return;
-    onChange({ ...value, entries: { ...entries, [slot]: [...chosen, item.id] } });
+    onChange({ ...value, entries: { ...entries, [slot]: [...chosen, item.id] }, labels: { ...labels, [item.id]: item.label } });
     setLabel("");
     setTags([]);
     setAdding(false);
@@ -438,6 +457,15 @@ function DietEditor({ value, onChange, items, iconId }) {
                     {m.tags.map((tg) => TAG_EMOJI[tg]).join("")}
                   </span>
                 )}
+              </Chip>
+            ))}
+            {/* Ticked on this day but no longer on the list: still shown,
+                by the name the day kept, and still untickable. Before this
+                they vanished from the chips while the meal's count said
+                they were there. */}
+            {chosen.filter((id) => !items.some((m) => m.id === id)).map((id) => (
+              <Chip key={id} selected onClick={() => toggleItem(id)}>
+                {labels[id] || t("home.log.itemGone")}
               </Chip>
             ))}
           </ChipRow>
@@ -568,7 +596,10 @@ export function isEntryDone(entry, log) {
     case "mood": return moodChoices(v).length > 0;
     case "sleep": return !!v.hours && !!v.quality;
     case "medication": return (v.taken || []).length > 0;
-    case "exercise": return !!v.type && !!v.minutes;
+    /* An activity is an answer. How long is extra, and asked as
+       optional: requiring both meant somebody who chose "A walk" saw
+       "Tap to add" with nothing saying what was still missing. */
+    case "exercise": return !!v.type;
     case "diet": return dietItemIds(v).length > 0;
     case "water": return waterMlOf(v) > 0;
     default: return false;
@@ -612,13 +643,14 @@ function summaryFor(entry, log, prefs, t) {
     }
     case "exercise": {
       const et = EXERCISE_TYPES.find((x) => x.id === v.type);
-      return et && v.minutes ? `${t(et.labelKey)} · ${t("home.log.minShort", { m: v.minutes })}${v.voice?.path ? " 🎙️" : ""}` : null;
+      if (!et) return null;
+      return [t(et.labelKey), v.minutes ? t("home.log.minShort", { m: v.minutes }) : null].filter(Boolean).join(" · ") + (v.voice?.path ? " 🎙️" : "");
     }
     case "diet": {
       const byId = Object.fromEntries((prefs.mealItems || []).map((m) => [m.id, m.label]));
       if (v.entries) {
         const parts = MEAL_SLOTS.filter((s) => (v.entries[s] || []).length).map(
-          (s) => `${t(`home.log.slots.${s}`)}: ${v.entries[s].map((id) => byId[id] || "…").join(", ")}`
+          (s) => `${t(`home.log.slots.${s}`)}: ${v.entries[s].map((id) => v.labels?.[id] || byId[id] || t("home.log.itemGone")).join(", ")}`
         );
         return parts.length ? parts.join(" · ") : null;
       }
@@ -660,7 +692,7 @@ function EntryDetail({ entry, value, prefs }) {
         {slots.map((s) => (
           <p key={s} style={{ fontSize: ts(A11Y.minBodyPx), margin: "4px 0 0", lineHeight: 1.55 }}>
             <span aria-hidden="true">{SLOT_ICON[s]}</span> <strong>{t(`home.log.slots.${s}`)}</strong>:{" "}
-            {v.entries[s].map((id) => byId[id]?.label || "…").join(", ")}
+            {v.entries[s].map((id) => v.labels?.[id] || byId[id]?.label || t("home.log.itemGone")).join(", ")}
           </p>
         ))}
       </div>

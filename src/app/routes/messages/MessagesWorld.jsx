@@ -42,7 +42,7 @@ import { APP_COLORS as C, A11Y, CHIP } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
-import { MotionStyles as FullScreenStyles, arrivalClass } from "../../components/motion.jsx";
+import { MotionStyles as FullScreenStyles } from "../../components/motion.jsx";
 import { touchPresence, WORLD } from "./messagesData.js";
 import Icon from "../../components/Icon.jsx";
 import { BAR_HEIGHT } from "../../components/BottomBar.jsx";
@@ -188,7 +188,17 @@ export default function MessagesWorld() {
      URL. That is fixed in the helper now (it mirrors to the inline-end),
      so the workaround is gone: a local patch that outlives the bug it
      was written for is how one vocabulary becomes two again. */
-  const arrival = arrivalClass(state);
+  /* NO ARRIVAL ANIMATION ANY MORE. This world used to slide in from the
+     edge (sb-full-right) because it was once opened from a header glyph.
+     It is a bar tab now, and no other tab slides in when you reach it.
+
+     Kept, it was the owner's "slides twice". A CSS animation restarts
+     whenever its element comes back from display:none, and the shell
+     hides and shows this pane at the touch (to lay the neighbour out)
+     and again when the tab lands. Traced frame by frame at 6x CPU on
+     Groups -> Messages: the pane slid in under the finger, then the
+     world played its own 200ms slide from x=390 to x=0 inside it. Two
+     translations where every other tab gets one. */
 
   /* §5.4 presence: touched while the world is open, and again on a
      slow interval. No socket, no heartbeat storm — see 0076. */
@@ -317,7 +327,6 @@ export default function MessagesWorld() {
         flexDirection: "column",
         fontFamily: meta.fonts.body,
       }}
-      className={arrival}
     >
       {/* Both style blocks on purpose: the full-screen arrival lives in
           components/motion.jsx, the sheets this world opens live in
@@ -338,7 +347,17 @@ export default function MessagesWorld() {
           display: "flex",
           alignItems: "center",
           gap: 10,
-          padding: "10px 12px",
+          /* THE SAME RIBBON AS THE OTHER FOUR TABS, measured rather than
+             eyeballed. The app header (AppHeader.jsx) is 6px + the phone's
+             top inset above a 44px row and 6px below it: 57px with no
+             inset, 81px under a 24px status bar. This was 10px all round
+             with no inset — 65px in English, 71px in Urdu, and 65px under
+             ANY status bar, which is why it read as the smaller one on a
+             phone while the others grew into the inset.
+
+             Same padding here, and a row held at 44px by the controls and
+             by the title's line box below. */
+          padding: "calc(6px + var(--sb-safe-top, 0px)) 10px 6px",
           /* C.nav + C.navEdge — the chrome tones the rest of the app
              uses. This header and the bar below were the last white
              chrome left, so on a phone the Messages world read as a
@@ -374,9 +393,18 @@ export default function MessagesWorld() {
         <h1
           style={{
             flex: 1,
+            minWidth: 0,
             margin: 0,
             fontFamily: meta.fonts.heading,
-            fontSize: ts(24),
+            /* A fixed size and a fixed 44px line box, so the ribbon is the
+               same height in both scripts and at every text-size setting —
+               the same rule the wordmark in the app header follows. At
+               24px with a normal line box, Nastaliq alone made this row
+               50px tall. The ink may reach past the line box; the box, and
+               so the ribbon, does not move. */
+            fontSize: 20,
+            lineHeight: "44px",
+            whiteSpace: "nowrap",
             fontWeight: 800,
             color: CHIP.activeInk,
           }}

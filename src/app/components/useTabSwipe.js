@@ -176,6 +176,22 @@ html.sb-settling [data-sb-pane][data-sb-into] {
 
 html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
 
+/* A PANE MOVED RIGHT MUST NOT MAKE THE PAGE WIDER.
+
+   The outgoing pane is ordinary content with a transform on it, and a
+   transform that pushes content past the right edge adds to the
+   document's scrollable width. Measured on a phone-sized touch viewport:
+   scrollWidth went 390, 430, 450, 470 as the finger moved right, and
+   window.innerWidth grew with it, because a mobile browser widens the
+   layout viewport to fit what overflows. Moving LEFT overflows nothing
+   scrollable, which is why only one direction misbehaved.
+
+   clip rather than hidden: hidden on the root turns it into a scroll
+   container and the sticky header stops sticking; clip trims the paint
+   and creates nothing. Only for as long as something is moving. */
+html.sb-dragging, html.sb-dragging body,
+html.sb-settling, html.sb-settling body { overflow-x: clip; }
+
 /* ACROSS A TAB CHANGE THE CHROME DOES NOT ANIMATE. The bars are shown at
    the moment the tab lands; letting that 180ms transition run means the
    bar slides up the screen while the new pane is still arriving, which
@@ -196,6 +212,10 @@ function ensureStyles() {
 /* How far it has to travel to commit, as a share of the screen. */
 const COMMIT = 0.28;
 const SETTLE_MS = 200;
+/* The longest the incoming pane is held in place waiting for the route to
+   commit before it is let go regardless. Only reached if a navigation is
+   refused outright; a normal commit clears it long before. */
+const LANDING_MS = 700;
 
 /* SIDEWAYS ENOUGH TO BE A SWIPE. Requiring only that dx exceeds dy was
    not enough: a first touchmove of dx=14, dy=13 passed it, and a thumb
@@ -253,16 +273,57 @@ export default function useTabSwipe(items, enabled = true) {
     let outEl = null;
     let inEl = null;
     let side = 1;
+    /* Set by this effect's cleanup. A landing timer from this instance must
+       not clear visuals that belong to the next one. */
+    let disposed = false;
 
+    /* ── THE PANE ON SCREEN, NOT THE FIRST ONE THAT HAS LAYOUT ──
+
+       This took the first pane in document order whose display was not
+       none. That was the screen you are on while every other pane was
+       display:none — and stopped being true when b296373 began laying the
+       two neighbours out at touchstart (display:block, visibility:hidden)
+       to take their layout cost off the first frame of the drag.
+
+       From then on the "outgoing" pane was whichever warmed neighbour came
+       first in tab order. Traced at 6x CPU on every transition: the screen
+       you were leaving stood perfectly still while an invisible neighbour
+       slid under it. On the four look-alike tabs that read as the new
+       screen sliding over the old one. Out of Messages it was worse — the
+       first warmed pane is Groups, which is ALSO the incoming pane, so one
+       element was given two transforms on every move and was caught at
+       x=-110 before snapping to -350. A double movement, from one pane
+       playing both parts.
+
+       TabPanes marks the active pane with an inline display:block and
+       every other with display:none; the warm and incoming layers get their
+       display from a stylesheet. So the inline value is the one reading
+       that cannot be confused with a neighbour being prepared. */
     const findOut = () =>
       [...document.querySelectorAll("[data-sb-pane]")].find(
-        (el) => !el.hasAttribute("data-sb-into") && getComputedStyle(el).display !== "none"
+        (el) => el.style.display === "block" && !el.hasAttribute("data-sb-into")
       ) || null;
 
+    /* ── THE SCREEN'S WIDTH, READ ONCE, WHEN THE FINGER LANDS ──
+
+       This read window.innerWidth on every move, and innerWidth is not
+       the width of the glass: it is the layout viewport, and a mobile
+       browser grows that when content overflows. Swiping right pushed the
+       outgoing pane past the edge, innerWidth went 390 -> 430, and the
+       incoming pane was placed 430px away instead of 390 — so it trailed
+       the finger by exactly the distance already dragged. Traced on
+       Messages -> Groups at 6x CPU: outgoing at +40, incoming at -390
+       where it belonged at -350. The screen slid, and the pane meant to
+       be joined to it slid behind it: a double movement.
+
+       The visual viewport is the width of what the person can see and
+       does not grow with overflow. Taken at touchstart, before anything
+       has moved, and used for every position in that gesture. */
+    const screenW = () => st.current.w || window.innerWidth;
     const setDrag = (px) => {
       if (outEl) outEl.style.transform = "translate3d(" + px + "px,0,0)";
       if (inEl) inEl.style.transform =
-        "translate3d(" + (side * window.innerWidth + px) + "px,0,0)";
+        "translate3d(" + (side * screenW() + px) + "px,0,0)";
     };
 
     const dropTransforms = () => {
@@ -400,6 +461,9 @@ export default function useTabSwipe(items, enabled = true) {
          interrupted navigation is dropped rather than queued, because a
          finger back on the glass is somebody changing their mind. */
       if (s.timer) { window.clearTimeout(s.timer); s.timer = 0; }
+      /* A landing that never committed: let it go before this gesture
+         starts laying out panes of its own. */
+      if (s.landing) { window.clearTimeout(s.landing); s.landing = 0; clear(); }
       root.classList.remove("sb-settling");
       root.style.removeProperty("--sb-drag");
       s.on = false; s.dx = 0; s.v = 0; s.samples = [];
@@ -457,6 +521,7 @@ export default function useTabSwipe(items, enabled = true) {
         document.documentElement.clientHeight;
         if (swipeDebugOn()) swipeLog("WARM", { ms: Math.round(performance.now() - t0) });
       }
+      s.w = Math.round(window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth);
       s.x = e.touches[0].clientX;
       s.y = e.touches[0].clientY;
       s.lastX = s.x;
@@ -549,7 +614,7 @@ export default function useTabSwipe(items, enabled = true) {
       if (dead || !on) { clear(); return; }
 
       const n = neighbour(dx);
-      const far = Math.abs(dx) >= Math.min(window.innerWidth * COMMIT, 140);
+      const far = Math.abs(dx) >= Math.min(screenW() * COMMIT, 140);
       /* A flick commits on speed even when it is short — but only if it
          is still travelling the way the pane is, so a drag that reverses
          at the last instant lands back where it started. */
@@ -570,7 +635,7 @@ export default function useTabSwipe(items, enabled = true) {
          somewhere under its own power rather than snapping. */
       root.classList.remove("sb-dragging");
       root.classList.add("sb-settling");
-      setDrag(going ? (dx < 0 ? -window.innerWidth : window.innerWidth) : 0);
+      setDrag(going ? (dx < 0 ? -screenW() : screenW()) : 0);
 
       s.timer = window.setTimeout(() => {
         s.timer = 0;
@@ -598,9 +663,31 @@ export default function useTabSwipe(items, enabled = true) {
            and there is no instant in between with nobody holding. The
            frames below are the belt for the gap before that effect
            runs — the counter exists precisely so two holders are fine. */
-        if (going) navigate(items[n].to);
-        clearVisuals();
-        requestAnimationFrame(() => requestAnimationFrame(thaw));
+        if (!going) {
+          clearVisuals();
+          requestAnimationFrame(() => requestAnimationFrame(thaw));
+          return;
+        }
+        /* ── THE INCOMING PANE STAYS WHERE IT IS UNTIL THE ROUTE LANDS ──
+
+           This navigated and cleared the visuals on the same line. The
+           router commits a navigation a beat later, not on that line, so
+           for the frames in between the incoming layer was already gone
+           and the tab the person had just swiped AWAY from was back on
+           screen. Traced at 6x CPU, every transition did it: Groups ->
+           Home showed Groups again for 200ms after the slide finished,
+           Home -> Groups for 300ms. On the four look-alike tabs that is a
+           flicker of a similar screen. Out of Messages it is a completely
+           different screen returning, and it read as a second movement.
+
+           Nothing is cleared here now. This effect depends on the
+           pathname, so its cleanup runs AT the commit — after the new
+           pane is the active one in the DOM — and that cleanup already
+           calls clear(). The pane is let go at exactly the moment there
+           is something to let go onto. The timer below only matters if
+           the navigation never commits. */
+        navigate(items[n].to);
+        s.landing = window.setTimeout(() => { s.landing = 0; if (!disposed) clear(); }, LANDING_MS);
       }, going ? SETTLE_MS : SETTLE_MS + 40);
     };
 
@@ -640,6 +727,8 @@ export default function useTabSwipe(items, enabled = true) {
        navigates. */
     document.addEventListener("touchcancel", abandon, { passive: true });
     return () => {
+      disposed = true;
+      if (st.current.landing) { window.clearTimeout(st.current.landing); st.current.landing = 0; }
       document.removeEventListener("touchstart", start);
       document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", end);

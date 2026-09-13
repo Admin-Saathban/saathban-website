@@ -38,10 +38,34 @@ export const LANG_STORAGE_KEY = "saathban.app.lang";
 export const NASTALIQ_FONT_URL =
   "https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap";
 
+/* ─── AREA FILES, MERGED OVER THE MAIN FILE ───
+   Strings for an area built in parallel (admin, grow, streaks, messages,
+   media) live in locales/parts/<area>.<lang>.js and are deep-merged over
+   en.js / ur.js when the language loads, so two builders never write the
+   same 4,000-line file at once. A key in a part overrides the same key in
+   the main file; everything else is added. Still one chunk per language. */
+function deepMerge(base, extra) {
+  if (!extra || typeof extra !== "object") return base;
+  const out = { ...base };
+  for (const [k, v] of Object.entries(extra)) {
+    const b = base ? base[k] : undefined;
+    out[k] =
+      v && typeof v === "object" && !Array.isArray(v) && b && typeof b === "object" && !Array.isArray(b)
+        ? deepMerge(b, v)
+        : v;
+  }
+  return out;
+}
+
+const withParts = (main, parts) =>
+  Promise.all([main(), parts()]).then(([m, p]) => ({
+    default: (p.default || []).reduce((acc, part) => deepMerge(acc, part), m.default),
+  }));
+
 /* Static specifiers, so the bundler gives each language its own chunk. */
 const LOADERS = {
-  en: () => import("./en.js"),
-  ur: () => import("./ur.js"),
+  en: () => withParts(() => import("./en.js"), () => import("./parts/index.en.js")),
+  ur: () => withParts(() => import("./ur.js"), () => import("./parts/index.ur.js")),
 };
 
 const loaded = {};

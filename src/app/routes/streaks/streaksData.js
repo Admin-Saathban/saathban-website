@@ -39,13 +39,33 @@ export function rangeSpecFor(itemKey, tracker) {
 export const MODULE_KEYS = ["water", "sleep", "exercise", "diet", "medication", "mood"];
 
 /* The item's name as a heading ("Water") and as a word inside a sentence
-   ("water"). A tracker's name is the person's own words, verbatim. */
+   ("water"). A tracker's name is the person's own words, verbatim.
+
+   RENAMED (0171). A module streak keeps the usual name it was made with
+   ("Water", "پانی") until its owner renames it. A name that is one of the
+   usual names, in either language, is shown in the reader's language; any
+   other name is the owner's own words and is shown as written — to them
+   and to the people it goes to. The list is kept here, not read from the
+   locale files, because only one language is downloaded. */
+const USUAL_NAMES = {
+  water: ["water", "پانی"],
+  sleep: ["sleep", "نیند"],
+  exercise: ["movement", "exercise", "چلنا پھرنا", "چلنے پھرنے"],
+  diet: ["meals", "diet", "کھانا", "کھانے"],
+  medication: ["medicines", "medication", "medicine", "دوائیں", "دوا"],
+  mood: ["mood", "مزاج"],
+};
+export function isUsualName(itemKey, itemName) {
+  const n = String(itemName || "").trim().toLowerCase();
+  if (!n) return true;
+  return n === String(itemKey) || (USUAL_NAMES[itemKey] || []).includes(n);
+}
 export function itemTitle(t, itemKey, itemName) {
-  if (MODULE_KEYS.includes(itemKey)) return t(`settings.dailyLog.modules.${itemKey}`);
+  if (MODULE_KEYS.includes(itemKey) && isUsualName(itemKey, itemName)) return t(`settings.dailyLog.modules.${itemKey}`);
   return itemName || "";
 }
 export function itemNoun(t, itemKey, itemName) {
-  if (MODULE_KEYS.includes(itemKey)) return t(`streaks.noun.${itemKey}`);
+  if (MODULE_KEYS.includes(itemKey) && isUsualName(itemKey, itemName)) return t(`streaks.noun.${itemKey}`);
   return itemName || "";
 }
 export function unitWord(t, unit) {
@@ -246,7 +266,7 @@ export function streakFor(rows, itemKey) {
 /* ─── Errors, by the words the server raises ─── */
 export function errorKind(e) {
   const m = String((e && e.message) || e || "");
-  for (const k of ["streak_exists", "not_counted_today", "already_sent", "already_nudged", "no_rest_day_left", "Nothing to rest", "Not connected"]) {
+  for (const k of ["streak_left", "name_length", "range_invalid", "streak_exists", "not_counted_today", "already_sent", "already_nudged", "no_rest_day_left", "Nothing to rest", "Not connected"]) {
     if (m.includes(k)) return k;
   }
   return "other";
@@ -258,7 +278,8 @@ async function rpc(name, args) {
   return data;
 }
 
-export const peopleOptions = (streakId = null) => rpc("streak_people_options", { p_streak: streakId }).then((d) => d || []);
+export const peopleOptions = (streakId = null, itemKey = null) =>
+  rpc("streak_people_options", { p_streak: streakId, p_item: itemKey }).then((d) => d || []);
 
 export const createStreak = ({ itemKey, itemName, kind, min, max, unit, isPrivate, people }) =>
   rpc("create_streak", {
@@ -284,6 +305,24 @@ export const nudgeStreak = (streakId, personId, title, body) =>
 export const takeRestDay = (streakId) => rpc("use_rest_day", { p_streak: streakId });
 export const restartStreak = (streakId) => rpc("restart_streak", { p_streak: streakId });
 export const personLoggedToday = (profileId) => rpc("person_logged_today", { p_profile: profileId });
+
+/* ─── Changing, deleting and stepping away (0170 / 0171) ───
+   Owner only for rename / update / delete — the server refuses anyone
+   else. Leaving and rejoining are about SOMEONE ELSE's streak for one
+   item, named by its owner and the item. */
+export const renameStreak = (streakId, name) => rpc("rename_streak", { p_streak: streakId, p_name: name });
+export const updateStreak = (streakId, { kind, min, max, unit }) =>
+  rpc("update_streak", {
+    p_streak: streakId,
+    p_kind: kind,
+    p_min: kind === "range" ? min : null,
+    p_max: kind === "range" ? max : null,
+    p_unit: kind === "range" ? unit : null,
+  });
+export const deleteStreak = (streakId) => rpc("delete_streak", { p_streak: streakId });
+export const leaveStreak = (ownerId, itemKey) => rpc("leave_streak", { p_owner: ownerId, p_item: itemKey });
+export const rejoinStreak = (ownerId, itemKey) => rpc("rejoin_streak", { p_owner: ownerId, p_item: itemKey });
+export const myStreakLeaves = () => rpc("my_streak_leaves").then((d) => d || []);
 
 /* "Mona", "Mona and Tariq", "Mona, Tariq and Nasreen". */
 export function namesLine(t, names) {

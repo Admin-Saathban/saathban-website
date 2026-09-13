@@ -162,15 +162,19 @@ export function Tick({ state }) {
 }
 
 /* One person with a tick. role=checkbox for choosing; a locked row is
-   disabled and says why in words. */
+   disabled and says why in words. "away" is someone this streak no longer
+   goes to (they stepped away, 0170): disabled, unticked, and said in the
+   sub line. */
 export function PersonRow({ person, sub, state, onToggle }) {
   const { ts } = useI18n();
-  const locked = state === "lock";
+  const away = state === "away";
+  const locked = state === "lock" || away;
   return (
     <button
       type="button"
       role="checkbox"
-      aria-checked={state === "on" || locked}
+      data-person-state={state}
+      aria-checked={state === "on" || state === "lock"}
       aria-disabled={locked ? "true" : undefined}
       onClick={locked ? undefined : onToggle}
       style={{

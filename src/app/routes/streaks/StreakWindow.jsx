@@ -13,12 +13,19 @@
    server counts what is on the screen.
 
    Notification links for kind 'streak' land here.
+
+   STEPPING AWAY (0170). "Stop getting {name}'s streak" is always on this
+   screen. After it, the window says so plainly and offers to undo; what
+   it sent is put away and the owner is not told. If the sender stepped
+   away from YOUR streak for this item, nothing can go back to them and
+   the screen says so instead of offering a button that would fail.
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
+import { pushToast } from "../../lib/feedback.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useDailyLogs } from "../home/logStore.js";
@@ -38,9 +45,11 @@ import {
   errorKind,
   fmtNum,
   tn,
+  rejoinStreak,
 } from "./streaksData.js";
 import { StreakScreen, Focus, Label, Card, Btn, Muted, Note } from "./ui.jsx";
 import { SendStreakSheet } from "./StreakSheets.jsx";
+import { LeaveStreakSheet } from "./StreakLeave.jsx";
 
 export default function StreakWindow() {
   const { sendId } = useParams();
@@ -54,6 +63,9 @@ export default function StreakWindow() {
   const [win, setWin] = useState(undefined); // undefined loading · null gone
   const [state, setState] = useState({ status: "idle", note: null });
   const [moreOpen, setMoreOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [left, setLeft] = useState(false);
+  const [undoBusy, setUndoBusy] = useState(false);
 
   const load = useCallback(
     () => streakWindow(sendId).then((w) => setWin(w || null)).catch(() => setWin(null)),
@@ -72,6 +84,35 @@ export default function StreakWindow() {
     return (
       <StreakScreen title="" onBack={back} backLabel={t("streaks.window.back")}>
         <Muted>…</Muted>
+      </StreakScreen>
+    );
+  }
+  if (win && left) {
+    const n = itemNoun(t, win.item_key, win.item_name);
+    const who = win.sender_first_name || "";
+    const undo = async () => {
+      if (undoBusy) return;
+      setUndoBusy(true);
+      try {
+        const res = await rejoinStreak(win.sender_id, win.item_key);
+        pushToast(t(res?.back_on_list ? "streaks.left.rejoined" : "streaks.left.rejoinedOpen", { name: who, noun: n }));
+        setLeft(false);
+        refreshStreaks();
+        load();
+      } catch {
+        pushToast(t("streaks.left.failed"), { tone: "error" });
+      } finally {
+        setUndoBusy(false);
+      }
+    };
+    return (
+      <StreakScreen title={t("streaks.window.title", { item: itemTitle(t, win.item_key, win.item_name), name: who })} onBack={back} backLabel={t("streaks.window.back")}>
+        <div data-left-done="">
+          <Note tone="done">{t("streaks.leave.done", { name: who, noun: n })}</Note>
+          <Muted style={{ marginTop: 10 }}>{t("streaks.leave.doneSub")}</Muted>
+          <Btn kind="secondary" onClick={undo} disabled={undoBusy} data-undo-leave="">{t("streaks.leave.undo")}</Btn>
+          <Btn kind="quiet" onClick={() => navigate("/app/streaks/left")}>{t("streaks.leave.seeLeft")}</Btn>
+        </div>
       </StreakScreen>
     );
   }
@@ -101,6 +142,7 @@ export default function StreakWindow() {
   const sentBack = !!win.already_sent_back || state.status === "sent";
   const notMine = String(key).startsWith("tracker:") && !entryForKey(prefs, key);
   const myStreak = streakFor(rows, key);
+  const cannotSendBack = !!win.cannot_send_back;
 
   const refusal = () =>
     rule.kind === "range" && value != null
@@ -126,7 +168,12 @@ export default function StreakWindow() {
       const kind = errorKind(e);
       setState({
         status: "refused",
-        note: kind === "not_counted_today" ? refusal() : t("streaks.window.failed"),
+        note:
+          kind === "not_counted_today"
+            ? refusal()
+            : kind === "streak_left"
+            ? t("streaks.leave.cannotSendBack", { name, noun })
+            : t("streaks.window.failed"),
       });
     }
   };
@@ -163,7 +210,8 @@ export default function StreakWindow() {
 
         {state.note && <Note tone="error">{state.note}</Note>}
 
-        {!notMine && (
+        {!notMine && cannotSendBack && <Note>{t("streaks.leave.cannotSendBack", { name, noun })}</Note>}
+        {!notMine && !cannotSendBack && (
           <Btn onClick={record} disabled={sentBack || state.status === "sending"} data-reply="">
             {sentBack
               ? t("streaks.window.sentBack", { name })
@@ -179,7 +227,30 @@ export default function StreakWindow() {
         )}
 
         <Muted style={{ marginTop: 14, textAlign: "center" }}>{t("streaks.window.onlyThis", { name, noun })}</Muted>
+
+        <button
+          type="button"
+          data-leave-open=""
+          onClick={() => setLeaveOpen(true)}
+          style={{ display: "block", margin: "4px auto 0", minHeight: 48, padding: "0 8px", background: "none", border: "none", color: C.textMuted, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, textDecoration: "underline", fontFamily: "inherit", cursor: "pointer" }}
+        >
+          {t("streaks.leave.open", { name, noun })}
+        </button>
       </div>
+
+      <LeaveStreakSheet
+        open={leaveOpen}
+        onClose={() => setLeaveOpen(false)}
+        ownerId={win.sender_id}
+        ownerFirstName={name}
+        itemKey={key}
+        itemName={win.item_name}
+        onLeft={() => {
+          setLeaveOpen(false);
+          setMoreOpen(false);
+          setLeft(true);
+        }}
+      />
 
       {myStreak && (
         <SendStreakSheet
@@ -189,6 +260,7 @@ export default function StreakWindow() {
           itemName={win.item_name}
           localValue={value}
           flushLogs={flushNow}
+          tracker={entryForKey(prefs, key)?.tracker}
         />
       )}
     </StreakScreen>

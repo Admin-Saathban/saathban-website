@@ -11,6 +11,12 @@
    language being used, and goes only when Send is pressed. Never
    automatic, never on anyone's behalf.
 
+   CHANGING AND STEPPING AWAY (0170 / 0171). "Change this streak" opens
+   the same settings as the log's pill. "Streaks that come to you" lists
+   the members whose own streak for this item reaches you, each with
+   "Stop getting it" (or "Start getting it again" once stepped away).
+   Someone who stepped away from YOUR streak is simply not listed here.
+
    A MISSED DAY IS NEVER DECIDED FOR YOU. The rest day is offered only
    when one is available; either way the days with Saathban are
    untouched and nobody is told which was chosen.
@@ -25,6 +31,7 @@ import { pushToast } from "../../lib/feedback.jsx";
 import supabase from "../../lib/supabase.js";
 import Avatar from "../messages/Avatar.jsx";
 import { useDailyLogs } from "../home/logStore.js";
+import { useIconPrefs } from "../../lib/iconPrefs.js";
 import {
   streakGroup,
   nudgeStreak,
@@ -37,7 +44,10 @@ import {
   itemValueFromLog,
   errorKind,
   tn,
+  rejoinStreak,
 } from "./streaksData.js";
+import { StreakSettingsSheet } from "./StreakSheets.jsx";
+import { LeaveStreakSheet, LeftStreaks } from "./StreakLeave.jsx";
 import { StreakScreen, Focus, Label, Card, Btn, Muted, Note, Sheet, SheetTitle, ItemIcon, AMBER, TAP } from "./ui.jsx";
 
 const goBack = (navigate, fallback) => {
@@ -139,6 +149,11 @@ function StreakGroup() {
   const locale = lang === "ur" ? "ur-PK" : "en-GB";
   const [g, setG] = useState(undefined);
   const [nudging, setNudging] = useState(null);
+  const { rows } = useMyStreaks(profile?.id);
+  const prefs = useIconPrefs(profile?.id);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [leaving, setLeaving] = useState(null);
+  const [rejoining, setRejoining] = useState(null);
 
   const load = useCallback(() => streakGroup(streakId).then((d) => setG(d || null)).catch(() => setG(null)), [streakId]);
   useEffect(() => {
@@ -155,10 +170,34 @@ function StreakGroup() {
 
   const members = g.members || [];
   const item = itemTitle(t, g.item_key, g.item_name);
+  const noun = itemNoun(t, g.item_key, g.item_name);
+  const mine = (rows || []).find((r) => r.id === g.streak_id) || null;
+  const tracker = String(g.item_key).startsWith("tracker:")
+    ? (prefs.trackers || []).find((x) => "tracker:" + x.id === g.item_key)
+    : undefined;
+  const coming = members.filter((m) => !m.is_me && (m.sends_me || m.i_left));
+
+  const rejoin = async (m) => {
+    if (rejoining) return;
+    setRejoining(m.id);
+    const first = (m.name || "").split(" ")[0];
+    try {
+      const res = await rejoinStreak(m.id, g.item_key);
+      pushToast(t(res?.back_on_list ? "streaks.left.rejoined" : "streaks.left.rejoinedOpen", { name: first, noun }));
+      refreshStreaks();
+      load();
+    } catch {
+      pushToast(t("streaks.left.failed"), { tone: "error" });
+    } finally {
+      setRejoining(null);
+    }
+  };
   const [my, mm] = String(g.month || g.today).split("-").map(Number);
   const daysInMonth = new Date(my, mm, 0).getDate();
 
   const statusOf = (m) => {
+    // You stopped getting theirs: nothing of theirs is shown, and nothing is "still to come".
+    if (!m.is_me && m.i_left) return t("streaks.leave.youLeft");
     if (m.sent_today) {
       if (m.is_me) return t("streaks.group.youSent", { n: m.run ?? 0 });
       const h = m.sent_at ? new Date(m.sent_at).getHours() : 9;
@@ -183,7 +222,7 @@ function StreakGroup() {
                   <p style={{ margin: 0, fontSize: ts(18), fontWeight: 700, overflowWrap: "anywhere" }}>{m.is_me ? t("streaks.group.you") : m.name}</p>
                   <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: m.sent_today ? C.green : C.textMuted }}>{statusOf(m)}</p>
                 </div>
-                {!m.is_me && !m.sent_today &&
+                {!m.is_me && !m.sent_today && !m.i_left &&
                   (m.nudged_today ? (
                     <span style={{ fontSize: ts(15), color: C.textMuted, border: `1px solid ${C.warmGray}`, borderRadius: 50, padding: "4px 10px", whiteSpace: "nowrap" }}>
                       {t("streaks.group.nudged")}
@@ -224,7 +263,66 @@ function StreakGroup() {
             })}
           </div>
         </Card>
+
+        {coming.length > 0 && (
+          <div data-coming="">
+            <Label>{t("streaks.leave.comingLabel")}</Label>
+            <Muted>{t("streaks.leave.comingSub", { noun })}</Muted>
+            {coming.map((m) => {
+              const first = (m.name || "").split(" ")[0];
+              return (
+                <div key={m.id} data-coming-row={m.id} style={{ display: "flex", alignItems: "center", gap: 10, background: C.surface, borderRadius: 14, padding: "10px 12px", marginBottom: 8, flexWrap: "wrap" }}>
+                  <Avatar person={{ full_name: m.name, avatar_url: m.avatar_url }} size={42} />
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <p style={{ margin: 0, fontSize: ts(18), fontWeight: 700, overflowWrap: "anywhere" }}>{t("streaks.left.line", { name: first, noun })}</p>
+                    {m.i_left && <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>{t("streaks.leave.youLeft")}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    data-coming-action={m.i_left ? "rejoin" : "leave"}
+                    disabled={rejoining === m.id}
+                    onClick={() => (m.i_left ? rejoin(m) : setLeaving(m))}
+                    style={{ minHeight: TAP, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "0 14px", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+                  >
+                    {m.i_left ? t("streaks.left.rejoin") : t("streaks.leave.stop")}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {mine && (
+          <Btn kind="secondary" onClick={() => setSettingsOpen(true)} style={{ marginTop: 16 }} data-group-settings="">
+            {t("streaks.settings.open")}
+          </Btn>
+        )}
       </div>
+
+      <StreakSettingsSheet
+        open={settingsOpen}
+        onClose={() => {
+          setSettingsOpen(false);
+          load();
+        }}
+        streak={mine}
+        tracker={tracker}
+        onDeleted={() => navigate("/app/home/log", { replace: true })}
+      />
+
+      <LeaveStreakSheet
+        open={!!leaving}
+        onClose={() => setLeaving(null)}
+        ownerId={leaving?.id}
+        ownerFirstName={(leaving?.name || "").split(" ")[0]}
+        itemKey={g.item_key}
+        itemName={g.item_name}
+        onLeft={() => {
+          pushToast(t("streaks.leave.done", { name: (leaving?.name || "").split(" ")[0], noun }));
+          setLeaving(null);
+          load();
+        }}
+      />
 
       <NudgeSheet
         open={!!nudging}
@@ -341,6 +439,7 @@ function MissedDay() {
 export default function StreakGroupRoutes() {
   return (
     <Routes>
+      <Route path="left" element={<LeftStreaks />} />
       <Route path=":streakId" element={<StreakGroup />} />
       <Route path=":streakId/missed" element={<MissedDay />} />
     </Routes>

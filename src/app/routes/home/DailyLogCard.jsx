@@ -1201,6 +1201,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
               localValue={itemValueFromLog(streakSheet.entry.key, log)}
               flushLogs={flushLogs}
               onLogNow={() => logNow(streakSheet.entry.key)}
+              tracker={streakSheet.entry.tracker}
             />
           )}
         </>

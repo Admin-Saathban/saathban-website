@@ -100,6 +100,11 @@ const ENGAGE = 12;
    that scrolls sideways. Those own the horizontal axis themselves. */
 const ENGAGE_ON_CONTROL = 24;
 
+/* The least travel a sideways-leaning move needs before this hook claims
+   it from the browser's scroll, while the gesture is still undecided. See
+   "CLAIM A SIDEWAYS MOVE" in move(). */
+const CLAIM_MIN = 6;
+
 /* ── THE DRAG STYLESHEET LIVES HERE, WITH THE HOOK THAT USES IT ──
 
    It was in lib/motion.jsx, the shared motion vocabulary. That file is
@@ -504,6 +509,10 @@ export default function useTabSwipe(items, enabled = true) {
       root.classList.remove("sb-settling");
       root.style.removeProperty("--sb-drag");
       s.on = false; s.dx = 0; s.v = 0; s.samples = [];
+      /* Where the page stood when the finger landed, so move() can tell a
+         browser that has started scrolling from one that merely sent an
+         uncancelable event. */
+      s.sy = window.scrollY; s.claimed = false;
       if (e.touches.length !== 1) { s.dead = true; return; }
       const el = e.target instanceof Element ? e.target : null;
       /* Refused outright: it owns the horizontal axis, or it is a field. */
@@ -573,6 +582,21 @@ export default function useTabSwipe(items, enabled = true) {
       const dy = e.touches[0].clientY - s.y;
 
       if (!s.on) {
+        /* ── THE BROWSER ALREADY TOOK IT ──
+
+           An uncancelable move before this gesture engaged means the
+           browser has begun scrolling the page with this finger (see
+           the claim below for how that happens). Engaging now would
+           drag a pane that cannot stop the page moving under it, so
+           the gesture is the browser's: a scroll, and nothing else. The
+           scroll position is checked rather than the flag alone because
+           Chrome also sends uncancelable moves when a touch lands
+           during a fling, and that swipe is still a swipe. */
+        if (!e.cancelable && Math.abs(window.scrollY - (s.sy ?? window.scrollY)) >= 1) {
+          s.dead = true; thaw();
+          swipeLog("NOT-CANCELABLE", { why: "browser-scrolling", dx, dy });
+          return;
+        }
         /* VERTICAL INTENT WINS INSTANTLY, and it wins for good — once
            this gesture is a scroll it is never reconsidered, because a
            hook that keeps re-testing every frame will grab the page
@@ -581,11 +605,55 @@ export default function useTabSwipe(items, enabled = true) {
            The test is >= rather than >: a perfectly diagonal drag is
            not a swipe, and on a real thumb it is common. */
         if (Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) > ENGAGE) { s.dead = true; thaw(); swipeLog("VERTICAL", { dx, dy }); return; }
-        if (Math.abs(dx) < (s.engage || ENGAGE)) return;
+        /* ── CLAIM A SIDEWAYS MOVE BEFORE THE BROWSER DECIDES IT IS A
+           SCROLL ──
+
+           The owner: swiping on Home or Groups shifts the feed upward a
+           little every time. Nothing re-measured and nothing re-anchored
+           — every box, height and header was traced still, frame by
+           frame. The PAGE SCROLLED, by the finger, and the cause is the
+           order in which two decisions are made.
+
+           The browser decides whether a touch is a scroll on the FIRST
+           move it delivers, and it delivers nothing until the finger has
+           left its slop circle (about 8px on Android, 15 in desktop
+           emulation). If that first move is not prevented, a native
+           scroll starts, and from then on every touchmove arrives
+           cancelable=false — the preventDefault further down becomes a
+           no-op for the rest of the gesture. This hook only prevented a
+           move once the drag had ENGAGED: 12px of x (24 on a control)
+           AND 1.4x dominance. A thumb's first delivered move is usually
+           less than that — 9px sideways, or 14 across with 12 of roll —
+           so it went through unprevented, the page began to scroll, and
+           the pane then slid while the feed followed the thumb's
+           vertical drift. Traced at 390x844 touch: first move dx=-14
+           dy=-12 cancelable=true prevented=false; every move after it
+           cancelable=false; scrollY 700 -> 702 in the same frame, on
+           Home and on Groups, left and right, English and Urdu.
+
+           So a move that LEANS SIDEWAYS is claimed while the gesture is
+           still undecided, which keeps the page exactly where it is;
+           whether the pane moves is still decided by the thresholds
+           below. A move that leans vertical is left to the browser, so
+           scrolling is untouched. The 6px floor is for browsers that
+           deliver every pixel (iOS): a jitter at the very start of a
+           vertical scroll is not claimed.
+
+           No press is stolen by this: a move the browser delivers is
+           already outside its slop, and outside the slop the browser has
+           cancelled the tap itself. */
+        const claim = () => {
+          if (e.cancelable && !wantsLessMotion() &&
+              Math.abs(dx) > Math.abs(dy) && Math.hypot(dx, dy) >= CLAIM_MIN) {
+            e.preventDefault();
+            if (!s.claimed) { s.claimed = true; swipeLog("CLAIM", { dx, dy }); }
+          }
+        };
+        if (Math.abs(dx) < (s.engage || ENGAGE)) { claim(); return; }
         /* Sideways ENOUGH. Passing ENGAGE is not the same as meaning
            it — a thumb arcing down the screen crosses 12px of x while
            crossing 11px of y, and that is a scroll. */
-        if (Math.abs(dx) < Math.abs(dy) * DOMINANCE) return;
+        if (Math.abs(dx) < Math.abs(dy) * DOMINANCE) { claim(); return; }
         s.on = true;
         swipeLog("ENGAGE", { dx, dy });
         outEl = findOut();

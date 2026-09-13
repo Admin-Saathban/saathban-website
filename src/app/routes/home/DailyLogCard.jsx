@@ -34,13 +34,12 @@ import {
   EXERCISE_TYPES,
   EXERCISE_MINUTES,
 } from "./homeMock.js";
-import { useIconPrefs, trackerDueOn, addMealItem } from "../../lib/iconPrefs.js";
+import { useIconPrefs, trackerDueOn, addMealCategory, addMovementOption, listItemName } from "../../lib/iconPrefs.js";
 import { WATER_GOAL_ML, waterToDisplay, waterStepMl, waterMlOf } from "../../lib/units.js";
 import VoiceNote, { VoicePlayer } from "./VoiceNote.jsx";
-import { TagChips, TAG_EMOJI } from "./LogSetupPanel.jsx";
-
 export const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"];
-const SLOT_ICON = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍵" };
+/* Drawn icons, matching the rest of the log (were emoji). */
+const SLOT_ICON = { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" };
 
 /* ─── Small shared pieces ─── */
 
@@ -325,184 +324,318 @@ function MedicationEditor({ value, onChange, meds }) {
   );
 }
 
-function ExerciseEditor({ value, onChange, iconId, dateIso }) {
-  const { t } = useI18n();
+/* ════════════════════════════════════════════════
+   MOVEMENT AND MEALS — the person's own lists (2026-09-13)
+
+   Owner: movement is customised from Settings exactly as meals are, and
+   the meal log asks ONE category at a time — did you have it, and if
+   so, roughly how many portions of fibre, protein and carbs, any of
+   which may be left blank. No counts exactly as Yes.
+
+   THE RECORD KEEPS WHAT WAS ENTERED. Every answer stores the name (or,
+   for an untouched default, the key its name is translated from)
+   beside it, so renaming or removing a meal or an activity later can
+   never rewrite a day that has already been lived. The database refuses
+   a meal or movement entry that carries no name (0119), so this holds
+   for every build of the app, not only this one.
+
+   PORTIONS ARE A RECORD, NOT A PRESCRIPTION. 0 to 5, no targets, no
+   totals, no colour that could read as pass or fail. Somebody who eats
+   a lot of rice is never judged by their own log.
+   ════════════════════════════════════════════════ */
+
+const MEAL_OWN_ICONS = ["breakfast", "lunch", "dinner"];
+const mealIcon = (id) => (MEAL_OWN_ICONS.includes(id) ? id : "diet");
+const mealName = (cat, t) => listItemName(cat, t, "home.log.slots");
+const movementName = (opt, t) => listItemName(opt, t, "home.exercise");
+
+/* A name as the DAY recorded it: a default's key shown in the reader's
+   language, the person's own words verbatim. */
+function recordedName(rec, t, ns) {
+  if (!rec) return "";
+  if (rec.key) {
+    const s = t(ns + "." + rec.key);
+    if (s && s !== ns + "." + rec.key) return s;
+  }
+  return rec.name || "";
+}
+
+const PORTION_KINDS = ["fibre", "protein", "carbs"];
+const PORTION_MAX = 5;
+
+function portionsLine(a, t) {
+  return PORTION_KINDS.filter((k) => a && a[k] != null)
+    .map((k) => t("home.log.portions." + k) + " " + a[k])
+    .join(" · ");
+}
+
+function answerLine(a, t) {
+  if (!a || typeof a.had !== "boolean") return t("home.log.notYet");
+  if (!a.had) return t("home.log.mealNo");
+  return [t("home.log.mealYes"), portionsLine(a, t)].filter(Boolean).join(" · ");
+}
+
+/* Meals are done when every category on the list has a Yes or a No.
+   Older days that ticked foods count as they always did. */
+function mealsDone(entry, v) {
+  const answers = v && v.answers && typeof v.answers === "object" ? v.answers : null;
+  if (answers) {
+    const cats = entry.categories || [];
+    return cats.length > 0 && cats.every((c) => typeof (answers[c.id] || {}).had === "boolean");
+  }
+  return dietItemIds(v).length > 0;
+}
+
+/* "2 of 3" on the closed row until the last meal is answered. */
+function progressFor(entry, log, t) {
+  if (entry.kind !== "module" || entry.id !== "diet") return null;
+  const v = log[entry.key];
+  const answers = v && v.answers;
+  const cats = entry.categories || [];
+  if (!answers || !cats.length) return null;
+  const n = cats.filter((c) => typeof (answers[c.id] || {}).had === "boolean").length;
+  return n > 0 ? t("home.log.mealsProgress", { n, total: cats.length }) : null;
+}
+
+/* Add to your own list from inside the log, so an empty list is never a
+   dead end. It is the same list Settings edits. */
+function InlineAdd({ placeholder, cta, onAdd }) {
+  const { ts } = useI18n();
+  const [text, setText] = useState("");
+  const submit = () => {
+    if (!text.trim()) return;
+    onAdd(text.trim());
+    setText("");
+  };
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } }}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        style={{ flex: "1 1 200px", minWidth: 0, minHeight: A11Y.minTapTargetPx, padding: "0 14px", borderRadius: 12, border: "2px solid " + C.warmGray, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit", background: C.white, color: C.textMain }}
+      />
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!text.trim()}
+        style={{ minHeight: A11Y.minTapTargetPx, padding: "0 20px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit", opacity: text.trim() ? 1 : 0.5 }}
+      >
+        {cta}
+      </button>
+    </div>
+  );
+}
+
+function MovementEditor({ value, onChange, options, iconId, dateIso }) {
+  const { t, ts } = useI18n();
+  const chosenId = (value.activity && value.activity.id) || value.type || null;
+  const choose = (opt) =>
+    onChange({
+      ...value,
+      type: opt.id,
+      activity: { id: opt.id, key: opt.key || null, name: movementName(opt, t) },
+    });
+  const orphan = !!chosenId && !options.some((o) => o.id === chosenId);
   return (
     <div>
       <EditorLabel>{t("home.log.moveQ")}</EditorLabel>
-      <ChipRow>
-        {EXERCISE_TYPES.map((et) => (
-          <Chip key={et.id} role="radio" selected={value.type === et.id} onClick={() => onChange({ ...value, type: et.id })}>
-            <span aria-hidden="true">{et.icon}</span> {t(et.labelKey)}
-          </Chip>
-        ))}
-      </ChipRow>
-      <EditorLabel>{t("home.log.howLongQ")}</EditorLabel>
-      <ChipRow>
-        {EXERCISE_MINUTES.map((m) => (
-          <Chip key={m} role="radio" selected={value.minutes === m} onClick={() => onChange({ ...value, minutes: m })} label={t("home.log.minutesAria", { m })}>
-            {t("home.log.minShort", { m })}
-          </Chip>
-        ))}
-      </ChipRow>
-      {/* From the moment an activity is chosen, not after the time as
-          well. How long is optional now (see isEntryDone), so the note
-          must not wait behind it. */}
-      {value.type && (
-        <div style={{ marginTop: 14 }}>
-          <NoteArea
-            value={value.note}
-            onChange={(note) => onChange({ ...value, note })}
-            placeholder={t("home.log.exerciseNotePh")}
-            ariaLabel={t("home.log.exerciseNoteAria")}
+      {options.length === 0 && !orphan ? (
+        <>
+          <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "4px 0 0", lineHeight: 1.55 }}>{t("home.log.movementEmpty")}</p>
+          <InlineAdd
+            placeholder={t("home.log.addMovementPh")}
+            cta={t("home.log.addToList")}
+            onAdd={(name) => { const o = addMovementOption(iconId, name); if (o) choose(o); }}
           />
-          <VoiceNote
-            iconId={iconId}
-            dateIso={dateIso}
-            moduleKey="exercise"
-            value={value.voice || null}
-            onChange={(voice) => onChange({ ...value, voice })}
-          />
-        </div>
+        </>
+      ) : (
+        <ChipRow>
+          {options.map((opt) => (
+            <Chip key={opt.id} role="radio" selected={chosenId === opt.id} onClick={() => choose(opt)}>
+              <Icon name="exercise" size={20} /> {movementName(opt, t)}
+            </Chip>
+          ))}
+          {/* Chosen on this day and no longer on the list: still shown, by
+              the name the day recorded. */}
+          {orphan && (
+            <Chip role="radio" selected onClick={() => {}}>
+              <Icon name="exercise" size={20} /> {recordedName(value.activity || { key: value.type }, t, "home.exercise")}
+            </Chip>
+          )}
+        </ChipRow>
+      )}
+      {/* How long is asked AFTER the activity and is optional: the activity
+          is the answer. Tapping the chosen time again clears it. */}
+      {chosenId && (
+        <>
+          <EditorLabel>{t("home.log.howLongQ")}</EditorLabel>
+          <ChipRow>
+            {EXERCISE_MINUTES.map((m) => (
+              <Chip key={m} role="radio" selected={value.minutes === m} onClick={() => onChange({ ...value, minutes: value.minutes === m ? null : m })} label={t("home.log.minutesAria", { m })}>
+                {t("home.log.minShort", { m })}
+              </Chip>
+            ))}
+          </ChipRow>
+          <div style={{ marginTop: 14 }}>
+            <NoteArea
+              value={value.note}
+              onChange={(note) => onChange({ ...value, note })}
+              placeholder={t("home.log.exerciseNotePh")}
+              ariaLabel={t("home.log.exerciseNoteAria")}
+            />
+            <VoiceNote
+              iconId={iconId}
+              dateIso={dateIso}
+              moduleKey="exercise"
+              value={value.voice || null}
+              onChange={(voice) => onChange({ ...value, voice })}
+            />
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-/* Meals: one row per slot (breakfast/lunch/dinner/snack), many items
-   per slot from the person's own library, with an inline "add a new
-   item" that lands in the library AND today's slot in one tap. */
-function DietEditor({ value, onChange, items, iconId }) {
+/* A portion count that starts BLANK. Blank and 0 are different answers:
+   "didn't say" is not "none". Down from blank is 0, down from 0 is blank
+   again, up stops at 5. Neutral ink — nothing here is good or bad. */
+function PortionCounter({ kind, value, onChange }) {
   const { t, ts } = useI18n();
-  const entries = value.entries || {};
-  const [slot, setSlot] = useState(MEAL_SLOTS[0]);
-  const [adding, setAdding] = useState(false);
-  const [label, setLabel] = useState("");
-  const [tags, setTags] = useState([]);
+  const label = t("home.log.portions." + kind);
+  const blank = value == null;
+  const atMax = !blank && value >= PORTION_MAX;
+  const down = () => onChange(blank ? 0 : value === 0 ? null : value - 1);
+  const up = () => onChange(blank ? 1 : Math.min(PORTION_MAX, value + 1));
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0" }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, color: C.textMain }}>{label}</span>
+      <button type="button" onClick={down} aria-label={t("home.log.portionFewer", { what: label })} style={{ ...counterBtn(ts), width: 52, height: 52 }}>−</button>
+      <span
+        role="status"
+        aria-label={blank ? t("home.log.portionBlankAria", { what: label }) : t("home.log.portionAria", { what: label, n: value })}
+        style={{ minWidth: 44, textAlign: "center", fontSize: ts(28), fontWeight: 700, color: C.textMain }}
+      >
+        {blank ? "—" : value}
+      </span>
+      <button type="button" onClick={up} disabled={atMax} aria-label={t("home.log.portionMore", { what: label })} style={{ ...counterBtn(ts), width: 52, height: 52, opacity: atMax ? 0.4 : 1 }}>+</button>
+    </div>
+  );
+}
 
-  const chosen = entries[slot] || [];
+function MealEditor({ value, onChange, categories, iconId }) {
+  const { t, ts } = useI18n();
+  const answers = value.answers && typeof value.answers === "object" ? value.answers : {};
+  const answered = (cat) => typeof (answers[cat.id] || {}).had === "boolean";
+  const [currentId, setCurrentId] = useState(() => {
+    const first = categories.find((c) => !answered(c));
+    return first ? first.id : null;
+  });
+  const doneCount = categories.filter(answered).length;
 
-  /* ── THE DAY KEEPS WHAT WAS EATEN, NOT A POINTER TO IT ──
-
-     A tick stored only the food's id, and the name lived in the list in
-     Settings. Remove a food from the list and every day it was eaten
-     lost its name: the closed row read "Breakfast: …". Measured on the
-     live database before this fix — 9 of 22 ticked foods, on 3 days,
-     for 1 person, already pointed at nothing.
-
-     So the name goes into the day's record at the moment it is ticked,
-     beside the id. The list can change however it likes afterwards;
-     the record says what was entered. */
-  const labels = value.labels || {};
-  const toggleItem = (id) => {
-    const item = items.find((m) => m.id === id);
-    onChange({
-      ...value,
-      entries: { ...entries, [slot]: chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id] },
-      labels: item ? { ...labels, [id]: item.label } : labels,
-    });
+  /* Every save carries the meal's name as shown now, so the day keeps it
+     whatever happens to the list afterwards. */
+  const save = (cat, patch) => {
+    const prev = answers[cat.id] || {};
+    onChange({ ...value, answers: { ...answers, [cat.id]: { ...prev, key: cat.key || null, name: mealName(cat, t), ...patch } } });
+  };
+  const nextAfter = (catId) => {
+    const i = categories.findIndex((c) => c.id === catId);
+    const later = categories.slice(i + 1).find((c) => !answered(c));
+    const earlier = categories.slice(0, Math.max(i, 0)).find((c) => !answered(c) && c.id !== catId);
+    const n = later || earlier;
+    return n ? n.id : null;
   };
 
-  const submitNew = () => {
-    const item = addMealItem(iconId, { label, tags });
-    if (!item) return;
-    onChange({ ...value, entries: { ...entries, [slot]: [...chosen, item.id] }, labels: { ...labels, [item.id]: item.label } });
-    setLabel("");
-    setTags([]);
-    setAdding(false);
-  };
+  if (categories.length === 0) {
+    return (
+      <div>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "4px 0 0", lineHeight: 1.55 }}>{t("home.log.mealsEmpty")}</p>
+        <InlineAdd
+          placeholder={t("home.log.addMealPh")}
+          cta={t("home.log.addToList")}
+          onAdd={(name) => { const c = addMealCategory(iconId, name); if (c) setCurrentId(c.id); }}
+        />
+      </div>
+    );
+  }
+
+  const orphans = Object.keys(answers).filter((id) => !categories.some((c) => c.id === id) && typeof (answers[id] || {}).had === "boolean");
 
   return (
     <div>
-      <EditorLabel>{t("home.log.dietQ")}</EditorLabel>
-      <div role="tablist" aria-label={t("home.log.slotLabel")} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {MEAL_SLOTS.map((s) => {
-          const n = (entries[s] || []).length;
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "4px 0 10px" }}>
+        {t("home.log.mealsProgress", { n: doneCount, total: categories.length })}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {categories.map((cat) => {
+          const a = answers[cat.id];
+          const isCurrent = currentId === cat.id;
           return (
-            <button
-              key={s}
-              type="button"
-              role="tab"
-              aria-selected={slot === s}
-              onClick={() => setSlot(s)}
-              style={{
-                minHeight: A11Y.minTapTargetPx,
-                padding: "8px 14px",
-                borderRadius: 50,
-                border: `2px solid ${slot === s ? C.green : C.warmGray}`,
-                background: slot === s ? C.green : C.white,
-                color: slot === s ? C.cream : C.textMain,
-                fontSize: ts(17),
-                fontWeight: 600,
-                fontFamily: "inherit",
-              }}
-            >
-              <span aria-hidden="true">{SLOT_ICON[s]}</span> {t(`home.log.slots.${s}`)}
-              {n > 0 ? ` · ${n}` : ""}
-            </button>
+            <div key={cat.id} style={{ border: "2px solid " + (isCurrent ? C.greenMuted : C.warmGray), borderRadius: 14, background: C.white }}>
+              <button
+                type="button"
+                aria-expanded={isCurrent}
+                onClick={() => setCurrentId(isCurrent ? null : cat.id)}
+                style={{ width: "100%", minHeight: 56, display: "flex", alignItems: "center", gap: 12, padding: "8px 14px", background: "none", border: "none", fontFamily: "inherit", textAlign: "start", cursor: "pointer" }}
+              >
+                <Icon name={mealIcon(cat.id)} size={22} style={{ color: C.green }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain }}>{mealName(cat, t)}</span>
+                  <span style={{ display: "block", fontSize: ts(16), color: C.textMuted }}>{answerLine(a, t)}</span>
+                </span>
+              </button>
+              {isCurrent && (
+                <div style={{ padding: "0 14px 14px" }}>
+                  <p style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: "4px 0 10px", lineHeight: 1.4 }}>
+                    {t("home.log.mealQ", { name: mealName(cat, t) })}
+                  </p>
+                  <div role="radiogroup" aria-label={t("home.log.mealQ", { name: mealName(cat, t) })} style={{ display: "flex", gap: 10 }}>
+                    <Chip role="radio" selected={!!a && a.had === true} onClick={() => save(cat, { had: true })}>
+                      {t("home.log.yes")}
+                    </Chip>
+                    <Chip role="radio" selected={!!a && a.had === false} onClick={() => { save(cat, { had: false, fibre: null, protein: null, carbs: null }); setCurrentId(nextAfter(cat.id)); }}>
+                      {t("home.log.no")}
+                    </Chip>
+                  </div>
+                  {a && a.had === true && (
+                    <div style={{ marginTop: 12 }}>
+                      <p style={{ fontSize: ts(16), color: C.textMuted, margin: "0 0 4px", lineHeight: 1.5 }}>{t("home.log.portionsHint")}</p>
+                      {PORTION_KINDS.map((kind) => (
+                        <PortionCounter key={kind} kind={kind} value={a[kind] == null ? null : a[kind]} onChange={(n) => save(cat, { [kind]: n })} />
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentId(nextAfter(cat.id))}
+                        style={{ minHeight: A11Y.minTapTargetPx, marginTop: 10, padding: "0 22px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit" }}
+                      >
+                        {nextAfter(cat.id) ? t("home.log.nextMeal") : t("home.log.mealsFinish")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
+        {/* Answered on this day for a meal since taken off the list: kept,
+            by the name the day recorded. */}
+        {orphans.map((id) => (
+          <p key={id} style={{ fontSize: ts(16), color: C.textMuted, margin: "2px 4px" }}>
+            {recordedName(answers[id], t, "home.log.slots")}: {answerLine(answers[id], t)}
+          </p>
+        ))}
       </div>
-
-      {items.length === 0 && !adding ? (
-        <SettingsDoor>{t("home.log.dietEmpty")}</SettingsDoor>
-      ) : (
-        <div style={{ marginTop: 12 }}>
-          <ChipRow>
-            {items.map((m) => (
-              <Chip key={m.id} selected={chosen.includes(m.id)} onClick={() => toggleItem(m.id)}>
-                {m.label}
-                {m.tags?.length > 0 && (
-                  <span aria-hidden="true" style={{ fontSize: ts(14), opacity: 0.85 }}>
-                    {m.tags.map((tg) => TAG_EMOJI[tg]).join("")}
-                  </span>
-                )}
-              </Chip>
-            ))}
-            {/* Ticked on this day but no longer on the list: still shown,
-                by the name the day kept, and still untickable. Before this
-                they vanished from the chips while the meal's count said
-                they were there. */}
-            {chosen.filter((id) => !items.some((m) => m.id === id)).map((id) => (
-              <Chip key={id} selected onClick={() => toggleItem(id)}>
-                {labels[id] || t("home.log.itemGone")}
-              </Chip>
-            ))}
-          </ChipRow>
-        </div>
+      {doneCount === categories.length && (
+        <p role="status" style={{ fontSize: ts(A11Y.minBodyPx), color: C.green, fontWeight: 700, margin: "12px 0 0" }}>
+          {t("home.log.mealsDoneLine")}
+        </p>
       )}
-
-      {adding ? (
-        <div style={{ marginTop: 12, padding: 14, borderRadius: 14, border: `2px dashed ${C.sage}`, background: "#f8faf5" }}>
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitNew(); } }}
-            placeholder={t("home.log.newItemPh")}
-            aria-label={t("home.log.newItemPh")}
-            style={{ width: "100%", boxSizing: "border-box", minHeight: A11Y.minTapTargetPx, padding: "0 14px", borderRadius: 12, border: `2px solid ${C.warmGray}`, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit", background: C.white, color: C.textMain, marginBottom: 10 }}
-          />
-          <TagChips value={tags} onChange={setTags} ts={ts} compact />
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button type="button" onClick={submitNew} disabled={!label.trim()} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 20px", borderRadius: 50, border: "none", background: C.green, color: C.cream, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit", opacity: label.trim() ? 1 : 0.5 }}>
-              ✓ {t("home.log.newItemAdd")}
-            </button>
-            <button type="button" onClick={() => { setAdding(false); setLabel(""); setTags([]); }} style={{ minHeight: A11Y.minTapTargetPx, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.warmGray}`, background: C.white, color: C.textMuted, fontSize: ts(A11Y.minBodyPx), fontFamily: "inherit" }}>
-              {t("home.log.newItemCancel")}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          style={{ minHeight: A11Y.minTapTargetPx, marginTop: 10, padding: "0 16px", borderRadius: 50, border: `2px solid ${C.green}`, background: C.white, color: C.green, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, fontFamily: "inherit" }}
-        >
-          ＋ {t("home.log.newItemCta")}
-        </button>
-      )}
-      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "12px 0 0", lineHeight: 1.5 }}>{t("home.log.dietNote")}</p>
+      <p style={{ fontSize: ts(16), color: C.textMuted, margin: "10px 0 0", lineHeight: 1.5 }}>{t("home.log.mealsNote")}</p>
     </div>
   );
 }
@@ -569,7 +702,7 @@ function WaterEditor({ value, onChange, unit }) {
 const TRACKER_ICONS = { yesno: "☑️", count: "🔢", note: "📝" };
 
 export function dayEntries(prefs, date) {
-  const mods = MODULES.filter((m) => prefs.enabledModules.includes(m.id)).map((m) => ({ kind: "module", key: m.id, id: m.id, icon: m.icon }));
+  const mods = MODULES.filter((m) => prefs.enabledModules.includes(m.id)).map((m) => ({ kind: "module", key: m.id, id: m.id, icon: m.icon, categories: m.id === "diet" ? prefs.mealCategories : undefined }));
   const trackers = (prefs.trackers || [])
     .filter((tr) => trackerDueOn(tr, date))
     .map((tr) => ({ kind: "tracker", key: `tracker:${tr.id}`, id: tr.id, name: tr.name, icon: TRACKER_ICONS[tr.type] || "☑️", tracker: tr }));
@@ -599,8 +732,8 @@ export function isEntryDone(entry, log) {
     /* An activity is an answer. How long is extra, and asked as
        optional: requiring both meant somebody who chose "A walk" saw
        "Tap to add" with nothing saying what was still missing. */
-    case "exercise": return !!v.type;
-    case "diet": return dietItemIds(v).length > 0;
+    case "exercise": return !!(v.activity || v.type);
+    case "diet": return mealsDone(entry, v);
     case "water": return waterMlOf(v) > 0;
     default: return false;
   }
@@ -642,15 +775,24 @@ function summaryFor(entry, log, prefs, t) {
       return ticks > 0 ? t("home.log.sumDone") : null;
     }
     case "exercise": {
-      const et = EXERCISE_TYPES.find((x) => x.id === v.type);
-      if (!et) return null;
-      return [t(et.labelKey), v.minutes ? t("home.log.minShort", { m: v.minutes }) : null].filter(Boolean).join(" · ") + (v.voice?.path ? " 🎙️" : "");
+      const rec = v.activity || (v.type ? { key: v.type, name: null } : null);
+      const name = recordedName(rec, t, "home.exercise");
+      if (!name) return null;
+      return [name, v.minutes ? t("home.log.minShort", { m: v.minutes }) : null].filter(Boolean).join(" · ");
     }
     case "diet": {
+      if (v.answers && typeof v.answers === "object") {
+        const cats = entry.categories || [];
+        const ids = [...cats.map((c) => c.id), ...Object.keys(v.answers).filter((id) => !cats.some((c) => c.id === id))];
+        const parts = ids
+          .filter((id) => typeof (v.answers[id] || {}).had === "boolean")
+          .map((id) => recordedName(v.answers[id], t, "home.log.slots") + ": " + (v.answers[id].had ? t("home.log.mealYes") : t("home.log.mealNo")));
+        return parts.length ? parts.join(" · ") : null;
+      }
       const byId = Object.fromEntries((prefs.mealItems || []).map((m) => [m.id, m.label]));
       if (v.entries) {
         const parts = MEAL_SLOTS.filter((s) => (v.entries[s] || []).length).map(
-          (s) => `${t(`home.log.slots.${s}`)}: ${v.entries[s].map((id) => v.labels?.[id] || byId[id] || t("home.log.itemGone")).join(", ")}`
+          (s) => t("home.log.slots." + s) + ": " + v.entries[s].map((id) => (v.labels && v.labels[id]) || byId[id] || t("home.log.itemGone")).join(", ")
         );
         return parts.length ? parts.join(" · ") : null;
       }
@@ -683,16 +825,27 @@ function EntryDetail({ entry, value, prefs }) {
       </div>
     );
   }
-  if (entry.id === "diet" && v.entries) {
+  if (entry.id === "diet") {
+    const answerIds = v.answers && typeof v.answers === "object"
+      ? Object.keys(v.answers).filter((id) => typeof (v.answers[id] || {}).had === "boolean")
+      : [];
     const byId = Object.fromEntries((prefs.mealItems || []).map((m) => [m.id, m]));
-    const slots = MEAL_SLOTS.filter((s) => (v.entries[s] || []).length);
-    if (!slots.length) return null;
+    const slots = v.entries ? MEAL_SLOTS.filter((s) => (v.entries[s] || []).length) : [];
+    if (!answerIds.length && !slots.length) return null;
+    const line = { fontSize: ts(A11Y.minBodyPx), margin: "4px 0 0", lineHeight: 1.55, display: "flex", alignItems: "center", gap: 8 };
     return (
       <div style={{ padding: "0 16px 14px" }}>
+        {answerIds.map((id) => (
+          <p key={"a-" + id} style={line}>
+            <Icon name={mealIcon(id)} size={18} style={{ color: C.green }} />
+            <span><strong>{recordedName(v.answers[id], t, "home.log.slots")}</strong>: {answerLine(v.answers[id], t)}</span>
+          </p>
+        ))}
+        {/* Days logged before the meal flow: foods by the names they kept. */}
         {slots.map((s) => (
-          <p key={s} style={{ fontSize: ts(A11Y.minBodyPx), margin: "4px 0 0", lineHeight: 1.55 }}>
-            <span aria-hidden="true">{SLOT_ICON[s]}</span> <strong>{t(`home.log.slots.${s}`)}</strong>:{" "}
-            {v.entries[s].map((id) => v.labels?.[id] || byId[id]?.label || t("home.log.itemGone")).join(", ")}
+          <p key={"s-" + s} style={line}>
+            <Icon name={SLOT_ICON[s]} size={18} style={{ color: C.green }} />
+            <span><strong>{t("home.log.slots." + s)}</strong>: {v.entries[s].map((id) => (v.labels && v.labels[id]) || (byId[id] && byId[id].label) || t("home.log.itemGone")).join(", ")}</span>
           </p>
         ))}
       </div>
@@ -906,7 +1059,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: ts(20), fontWeight: 700, color: C.textMain }}>{entryName(mod)}</span>
                   <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: done ? C.green : C.textMuted, overflowWrap: "anywhere" }}>
-                    {done ? `✓ ${summary || t("home.log.sumDone")}` : editable ? t("home.log.tapToAdd") : "—"}
+                    {done ? "✓ " + (summary || t("home.log.sumDone")) : progressFor(mod, log, t) || (editable ? t("home.log.tapToAdd") : "—")}
                   </span>
                 </span>
                 {editable && (
@@ -941,8 +1094,8 @@ function EntryEditor({ entry, prefs, iconId, dateIso, value, onChange }) {
     case "mood": return <MoodEditor value={value} onChange={onChange} iconId={iconId} dateIso={dateIso} />;
     case "sleep": return <SleepEditor value={value} onChange={onChange} />;
     case "medication": return <MedicationEditor value={value} onChange={onChange} meds={prefs.medications} />;
-    case "exercise": return <ExerciseEditor value={value} onChange={onChange} iconId={iconId} dateIso={dateIso} />;
-    case "diet": return <DietEditor value={value} onChange={onChange} items={prefs.mealItems} iconId={iconId} />;
+    case "exercise": return <MovementEditor value={value} onChange={onChange} options={prefs.movementOptions} iconId={iconId} dateIso={dateIso} />;
+    case "diet": return <MealEditor value={value} onChange={onChange} categories={prefs.mealCategories} iconId={iconId} />;
     case "water": return <WaterEditor value={value} onChange={onChange} unit={prefs.units?.water || "glasses"} />;
     default: return null;
   }

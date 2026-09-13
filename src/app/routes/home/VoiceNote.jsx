@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
+import Icon from "../../components/Icon.jsx";
 
 export const VOICE_BUCKET = "voice-notes";
 export const VOICE_MAX_SECONDS = 120;
@@ -87,7 +88,7 @@ export function VoicePlayer({ voice, compact }) {
   }
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: compact ? 6 : 10 }}>
-      <span aria-hidden="true" style={{ fontSize: ts(20) }}>🎙️</span>
+      <Icon name="voice" size={20} style={{ color: C.green }} />
       {url ? (
         <audio controls src={url} preload="none" style={{ minHeight: A11Y.minTapTargetPx, maxWidth: "100%" }}>
           {t("home.log.voiceUnavailable")}
@@ -275,7 +276,7 @@ export default function VoiceNote({ iconId, value, onChange, dateIso, moduleKey,
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: saved ? 8 : 0 }}>
           {pill(
             <>
-              <span aria-hidden="true">🎤</span>
+              <Icon name="voice" size={20} />
               {value?.path ? t("home.log.recordAgain") : t("home.log.speakInstead")}
             </>,
             start

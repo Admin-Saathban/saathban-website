@@ -32,9 +32,12 @@ import {
   setUnit,
   addTracker,
   removeTracker,
+  addMealCategory, renameMealCategory, removeMealCategory,
+  addMovementOption, renameMovementOption, removeMovementOption, listItemName,
 } from "../../lib/iconPrefs.js";
 import { WATER_UNITS, WEIGHT_UNITS } from "../../lib/units.js";
 import { pushToast } from "../../lib/feedback.jsx";
+import Icon from "../../components/Icon.jsx";
 
 export const TAG_EMOJI = {
   protein: "🥚",
@@ -205,6 +208,80 @@ export function TagChips({ value, onChange, ts, compact }) {
   );
 }
 
+/* ── ONE LIST, EDITED THE SAME WAY WHEREVER IT APPEARS ──
+   Meals and movement both: add, rename in place, remove. The owner's
+   rule was "whatever meals do, movement does too; do not invent a
+   second pattern", so there is exactly one component. */
+const smallBtn = (ts) => ({
+  minHeight: A11Y.minTapTargetPx,
+  minWidth: A11Y.minTapTargetPx,
+  padding: "0 12px",
+  borderRadius: 10,
+  border: "1.5px solid " + C.warmGray,
+  background: "transparent",
+  color: C.brown,
+  fontFamily: "inherit",
+  fontSize: ts(16),
+  fontWeight: 600,
+  cursor: "pointer",
+});
+
+function EditableList({ items, nameOf, iconOf, onRename, onRemove, onAdd, addPlaceholder, addCta, emptyText, ts }) {
+  const { t } = useI18n();
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState("");
+  const saveRename = () => {
+    if (editing && draft.trim()) onRename(editing, draft.trim());
+    setEditing(null);
+    setDraft("");
+  };
+  const submitAdd = () => {
+    if (!adding.trim()) return;
+    onAdd(adding.trim());
+    setAdding("");
+  };
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {items.length === 0 && (
+        <p style={{ fontSize: ts(16), color: C.textMuted, margin: 0, lineHeight: 1.6 }}>{emptyText}</p>
+      )}
+      {items.map((it) =>
+        editing === it.id ? (
+          <div key={it.id} style={{ display: "grid", gap: 8, padding: "10px 14px", borderRadius: 12, border: "2px solid " + C.green, background: C.white }}>
+            <TextInput value={draft} onChange={setDraft} onEnter={saveRename} label={t("settings.dailyLog.list.renameLabel", { name: nameOf(it) })} ts={ts} />
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <AddBtn ts={ts} disabled={!draft.trim()} onClick={saveRename}>
+                {t("settings.dailyLog.list.save")}
+              </AddBtn>
+              <button type="button" onClick={() => { setEditing(null); setDraft(""); }} style={{ ...smallBtn(ts), color: C.textMain, borderRadius: 50, padding: "0 18px" }}>
+                {t("settings.dailyLog.list.cancel")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", paddingInlineStart: 14, borderRadius: 12, border: "1.5px solid " + C.warmGray, background: C.white }}>
+            <Icon name={iconOf(it)} size={22} style={{ color: C.green }} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, overflowWrap: "anywhere" }}>{nameOf(it)}</span>
+            <button type="button" onClick={() => { setEditing(it.id); setDraft(nameOf(it)); }} style={smallBtn(ts)}>
+              {t("settings.dailyLog.list.rename")}
+            </button>
+            <button type="button" onClick={() => onRemove(it.id)} style={smallBtn(ts)}>
+              {t("common.remove")}
+            </button>
+          </div>
+        )
+      )}
+      <TextInput value={adding} onChange={setAdding} onEnter={submitAdd} placeholder={addPlaceholder} ts={ts} />
+      <div>
+        <AddBtn ts={ts} disabled={!adding.trim()} onClick={submitAdd}>
+          {addCta}
+        </AddBtn>
+      </div>
+    </div>
+  );
+}
+
 /* "Set up by {name}" — resolved to a first name through safe_profiles. */
 function SetupByLine({ configuredBy, ts }) {
   const { t } = useI18n();
@@ -265,6 +342,7 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
 
   const medOn = prefs.enabledModules.includes("medication");
   const dietOn = prefs.enabledModules.includes("diet");
+  const exerciseOn = prefs.enabledModules.includes("exercise");
   const waterOn = prefs.enabledModules.includes("water");
 
   /* Prefs write straight through to the server row; the line
@@ -394,38 +472,45 @@ export default function LogSetupPanel({ iconId, isOwn = true, personName }) {
         </>
       )}
 
-      {/* ── Meal library (label + tags) ── */}
+      {/* ── Your meals: the categories the log asks about, one at a time ──
+          This replaced the tagged food list (2026-09-13). The food list's
+          data is not deleted — days logged with it keep their names. */}
       {dietOn && (
         <>
-          <SubHeading ts={ts}>{t("settings.dailyLog.diet.title")}</SubHeading>
-          <Hint ts={ts}>{t("settings.dailyLog.diet.hint")}</Hint>
-          <div style={{ display: "grid", gap: 10 }}>
-            {prefs.mealItems.map((d) => (
-              <ListRow key={d.id} onRemove={() => removeMealItem(iconId, d.id)} removeLabel={t("common.remove")} ts={ts}>
-                <strong>{d.label}</strong>
-                {d.tags?.length > 0 && (
-                  <span style={{ color: C.textMuted }}>
-                    {" — "}
-                    {d.tags.map((tg) => `${TAG_EMOJI[tg]} ${t(`settings.dailyLog.diet.tags.${tg}`)}`).join(" · ")}
-                  </span>
-                )}
-              </ListRow>
-            ))}
-            <TextInput
-              value={mealLabel}
-              onChange={setMealLabel}
-              onEnter={submitMeal}
-              placeholder={t("settings.dailyLog.diet.addPlaceholder")}
-              ts={ts}
-            />
-            <Hint ts={ts}>{t("settings.dailyLog.diet.tagsHint")}</Hint>
-            <TagChips value={mealTags} onChange={setMealTags} ts={ts} />
-            <div>
-              <AddBtn ts={ts} disabled={!mealLabel.trim()} onClick={submitMeal}>
-                {t("settings.dailyLog.diet.addCta")}
-              </AddBtn>
-            </div>
-          </div>
+          <SubHeading ts={ts}>{t("settings.dailyLog.meals.title")}</SubHeading>
+          <Hint ts={ts}>{t("settings.dailyLog.meals.hint")}</Hint>
+          <EditableList
+            items={prefs.mealCategories}
+            nameOf={(c) => listItemName(c, t, "home.log.slots")}
+            iconOf={(c) => (["breakfast", "lunch", "dinner"].includes(c.id) ? c.id : "diet")}
+            onRename={(id, name) => { renameMealCategory(iconId, id, name); saved(); }}
+            onRemove={(id) => { removeMealCategory(iconId, id); saved(); }}
+            onAdd={(name) => { addMealCategory(iconId, name); saved(); }}
+            addPlaceholder={t("settings.dailyLog.meals.addPlaceholder")}
+            addCta={t("settings.dailyLog.meals.addCta")}
+            emptyText={t("settings.dailyLog.meals.empty")}
+            ts={ts}
+          />
+        </>
+      )}
+
+      {/* ── Your movement: what the log offers, the same kind of list ── */}
+      {exerciseOn && (
+        <>
+          <SubHeading ts={ts}>{t("settings.dailyLog.movement.title")}</SubHeading>
+          <Hint ts={ts}>{t("settings.dailyLog.movement.hint")}</Hint>
+          <EditableList
+            items={prefs.movementOptions}
+            nameOf={(o) => listItemName(o, t, "home.exercise")}
+            iconOf={() => "exercise"}
+            onRename={(id, name) => { renameMovementOption(iconId, id, name); saved(); }}
+            onRemove={(id) => { removeMovementOption(iconId, id); saved(); }}
+            onAdd={(name) => { addMovementOption(iconId, name); saved(); }}
+            addPlaceholder={t("settings.dailyLog.movement.addPlaceholder")}
+            addCta={t("settings.dailyLog.movement.addCta")}
+            emptyText={t("settings.dailyLog.movement.empty")}
+            ts={ts}
+          />
         </>
       )}
 

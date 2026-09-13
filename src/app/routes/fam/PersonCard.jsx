@@ -49,7 +49,8 @@ const MODULES = [
     } },
   { key: "exercise", icon: "🚶", value: (r) => (r.payload?.minutes != null ? `${r.payload.minutes}m` : null) },
   { key: "diet", icon: "🍲", value: (r) => {
-      const n = (r.payload?.items || r.payload?.meals || Object.values(r.payload?.entries || {}).flat()).length;
+      const answers = r.payload?.answers && typeof r.payload.answers === "object" ? Object.values(r.payload.answers).filter((a) => a && a.had === true) : null;
+      const n = answers ? answers.length : (r.payload?.items || r.payload?.meals || Object.values(r.payload?.entries || {}).flat()).length;
       return n ? `${n}` : null;
     } },
 ];

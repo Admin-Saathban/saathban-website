@@ -42,6 +42,43 @@ export const OPTIONAL_MODULES = ["sleep", "medication", "exercise", "diet", "wat
 export const TRACKER_TYPES = ["yesno", "count", "note"];
 export const MEAL_TAGS = ["protein", "carbs", "veg", "fruit", "dairy", "sweet"];
 
+/* ── MEALS AND MOVEMENT ARE THE PERSON'S OWN LISTS (2026-09-13) ──
+
+   Owner: movement is customised from Settings exactly as meals are, and
+   the meal log asks one category at a time. Both lists ship with a
+   sensible default set that anyone can rename, remove or add to.
+
+   A DEFAULT CARRIES A KEY, NOT A WORD, until it is renamed: "breakfast"
+   shows as Breakfast in English and in Urdu as the Urdu word. Renaming
+   replaces the key with the person's own words, which then show
+   verbatim in whatever language they were typed — like medicines and
+   trackers. Default ids ARE the keys, so days logged before this change
+   ("walk", "breakfast") still line up with them.
+
+   null in the row means never set, which is the defaults; an empty list
+   means somebody removed everything, which is kept as their choice. */
+export const MEAL_DEFAULT_KEYS = ["breakfast", "lunch", "dinner"];
+export const MOVEMENT_DEFAULT_KEYS = ["walk", "stretch", "garden", "house", "other"];
+const defaultList = (keys) => keys.map((k) => ({ id: k, key: k, name: null }));
+
+function cleanList(list, defaults) {
+  if (!Array.isArray(list)) return defaultList(defaults);
+  return list
+    .filter((o) => o && o.id && ((o.name || "").trim() || o.key))
+    .map((o) => {
+      const name = (o.name || "").trim() || null;
+      return { id: String(o.id), key: name ? null : o.key || null, name };
+    });
+}
+
+/* The name to show for a list item: the person's own words, or the
+   default's translation. */
+export function listItemName(item, t, defaultsNs) {
+  if (!item) return "";
+  if (item.name) return item.name;
+  return item.key ? t(defaultsNs + "." + item.key) : "";
+}
+
 const DEFAULTS = Object.freeze({
   /* §5's defaults. Three on, not one: a log with a single question is
      not yet a habit. Medicines, meals and movement stay OFF —
@@ -51,6 +88,8 @@ const DEFAULTS = Object.freeze({
   medications: [],
   mealItems: [],
   trackers: [],
+  mealCategories: defaultList(MEAL_DEFAULT_KEYS),
+  movementOptions: defaultList(MOVEMENT_DEFAULT_KEYS),
   units: { water: "glasses", weight: "kg" },
   configuredBy: null,
   configuredAt: null,
@@ -95,6 +134,8 @@ function normalize(p) {
   if (!Array.isArray(merged.enabledModules)) merged.enabledModules = ["mood"];
   if (!merged.enabledModules.includes("mood")) merged.enabledModules = ["mood", ...merged.enabledModules];
   merged.mealItems = (merged.mealItems || []).map((m) => ({ ...m, tags: Array.isArray(m.tags) ? m.tags : [] }));
+  merged.mealCategories = cleanList(p && p.mealCategories, MEAL_DEFAULT_KEYS);
+  merged.movementOptions = cleanList(p && p.movementOptions, MOVEMENT_DEFAULT_KEYS);
   return merged;
 }
 
@@ -104,6 +145,8 @@ function rowToPrefs(row) {
     enabledModules: row.enabled_modules,
     medications: row.medications,
     mealItems: row.meal_items,
+    mealCategories: row.meal_categories,
+    movementOptions: row.movement_options,
     trackers: row.trackers,
     units: row.units,
     configuredBy: row.configured_by,
@@ -116,6 +159,8 @@ function prefsToRow(iconId, p) {
     enabled_modules: p.enabledModules,
     medications: p.medications,
     meal_items: p.mealItems,
+    meal_categories: p.mealCategories,
+    movement_options: p.movementOptions,
     trackers: p.trackers,
     units: p.units,
   };
@@ -292,6 +337,48 @@ export function addMealItem(iconId, { label, tags }) {
 export function removeMealItem(iconId, id) {
   const p = getIconPrefs(iconId);
   update(iconId, { mealItems: p.mealItems.filter((m) => m.id !== id) });
+}
+
+/* ── One pattern for both lists: add, rename, remove ──
+   Renaming drops the default's key, so the person's words are shown
+   from then on. Removing takes it off the list only; any day that
+   already recorded it keeps the name it recorded. */
+function listAdd(list, name) {
+  const n = (name || "").trim();
+  if (!n) return null;
+  const item = { id: newId(), key: null, name: n };
+  return { item, next: [...list, item] };
+}
+function listRename(list, id, name) {
+  const n = (name || "").trim();
+  if (!n) return list;
+  return list.map((o) => (o.id === id ? { ...o, key: null, name: n } : o));
+}
+
+export function addMealCategory(iconId, name) {
+  const r = listAdd(getIconPrefs(iconId).mealCategories, name);
+  if (!r) return null;
+  update(iconId, { mealCategories: r.next });
+  return r.item;
+}
+export function renameMealCategory(iconId, id, name) {
+  update(iconId, { mealCategories: listRename(getIconPrefs(iconId).mealCategories, id, name) });
+}
+export function removeMealCategory(iconId, id) {
+  update(iconId, { mealCategories: getIconPrefs(iconId).mealCategories.filter((o) => o.id !== id) });
+}
+
+export function addMovementOption(iconId, name) {
+  const r = listAdd(getIconPrefs(iconId).movementOptions, name);
+  if (!r) return null;
+  update(iconId, { movementOptions: r.next });
+  return r.item;
+}
+export function renameMovementOption(iconId, id, name) {
+  update(iconId, { movementOptions: listRename(getIconPrefs(iconId).movementOptions, id, name) });
+}
+export function removeMovementOption(iconId, id) {
+  update(iconId, { movementOptions: getIconPrefs(iconId).movementOptions.filter((o) => o.id !== id) });
 }
 
 export function setUnit(iconId, kind, unit) {

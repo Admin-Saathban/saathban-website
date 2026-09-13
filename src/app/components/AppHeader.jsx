@@ -17,7 +17,7 @@
    appears only where there is something to go back to.
    ════════════════════════════════════════════════ */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
@@ -30,7 +30,8 @@ import { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
 import SearchButton from "./SearchButton.jsx";
 import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDrawer.jsx";
 import { useDrawer } from "./Drawer.jsx";
-import useShutter from "./useShutter.js";
+import useShutter, { isShutterFrozen, onShutterThaw } from "./useShutter.js";
+import { NO_HEADER } from "./headerRoutes.js";
 
 /* WHERE THE HEADER DOES NOT BELONG.
 
@@ -42,7 +43,8 @@ import useShutter from "./useShutter.js";
    The Messages world is here because it draws its own header. Two
    headers stacked is what lifting this into the shell would otherwise
    have produced on that one route. */
-const NO_HEADER = ["/app/auth", "/app/g/", "/app/join/", "/app/community/messages"];
+/* The list itself lives in headerRoutes.js, so the tab swipe can ask it
+   about the tab a finger is heading to. */
 /* THE GAME WORLD. A ludo session at /app/games/ludo/<id>, and the
    setup room at /app/games/new/<game> that opens onto it — both
    are full-screen, both have the game's own ground under them,
@@ -68,6 +70,39 @@ export default function AppHeader() {
   const { open: notifOpen, closeDrawer: closeNotif } = useDrawer(NOTIFICATIONS_DRAWER_ID);
   /* Both bars move together, so the frame behaves as one thing (§5). */
   const shuttered = useShutter() && !notifOpen;
+
+  /* ── THE HEADER PUBLISHES ITS HEIGHT, AND STOPS WHILE A FINGER IS DOWN ──
+
+     The same measurement the bottom bar has published for weeks as
+     --sb-bar-h. The swipe needs it: a screen brought in by a swipe is a
+     layer pinned to the top of the glass, but once it lands it sits BELOW
+     this header. Measured leaving Messages at a 24px status bar, Groups'
+     content slid in at y=0 and dropped to y=81 the frame the route landed —
+     which, together with this header appearing above it in that same
+     frame, is the shutter the owner saw. With this height the incoming
+     layer starts where the content will land, and nothing drops.
+
+     FROZEN FROM TOUCHSTART UNTIL THE SLIDE SETTLES, by the same counter
+     the shutter uses. A height re-read mid-gesture is exactly the class of
+     bug the bottom bar had — an edge-anchored bar changing its own size
+     while panes swap — so the number is not allowed to move while
+     anything is moving. A hidden header reports 0 and is ignored; the
+     last real height stands. */
+  const hdrRef = useRef(null);
+  useEffect(() => {
+    const el = hdrRef.current;
+    if (!el) return undefined;
+    const write = () => {
+      if (isShutterFrozen()) return;
+      const h = el.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty("--sb-hdr-h", h + "px");
+    };
+    write();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(write) : null;
+    ro?.observe(el, { box: "border-box" });
+    const off = onShutterThaw(write);
+    return () => { ro?.disconnect(); off(); };
+  }, [profile]);
 
   /* ── THE STATUS BAR FOLLOWS THE CONTENT (Android) ──
 
@@ -185,6 +220,7 @@ export default function AppHeader() {
   return (
     <>
     <header
+      ref={hdrRef}
       className="sb-header"
       style={{
         position: "sticky",

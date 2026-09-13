@@ -43,16 +43,20 @@
    ════════════════════════════════════════════════ */
 
 let biggest = 0;
+/* THE TOP INSET TOO. The header pads calc(6px + var(--sb-safe-top)), and
+   a live env() there is the same edge-anchored-bar-changing-its-own-size
+   hazard the bottom inset was. Same ratchet, same reasons. */
+let biggestTop = 0;
 
 /* env() cannot be read from JS, so it is read the only way it can be:
    put it on a real element as a length and measure the element. Hidden
    from everything — no size, no paint, no accessibility tree. */
-function measure() {
+function measure(side = "bottom") {
   const probe = document.createElement("div");
   probe.setAttribute("aria-hidden", "true");
   probe.style.cssText =
     "position:fixed;left:-9999px;bottom:0;width:0;visibility:hidden;" +
-    "pointer-events:none;height:env(safe-area-inset-bottom, 0px)";
+    "pointer-events:none;height:env(safe-area-inset-" + side + ", 0px)";
   document.body.appendChild(probe);
   const px = probe.getBoundingClientRect().height;
   probe.remove();
@@ -60,10 +64,15 @@ function measure() {
 }
 
 function apply(reset) {
-  const now = measure();
-  if (reset) biggest = now;
-  else if (now > biggest) biggest = now;
+  const now = measure("bottom");
+  const nowTop = measure("top");
+  if (reset) { biggest = now; biggestTop = nowTop; }
+  else {
+    if (now > biggest) biggest = now;
+    if (nowTop > biggestTop) biggestTop = nowTop;
+  }
   document.documentElement.style.setProperty("--sb-safe-bottom", biggest + "px");
+  document.documentElement.style.setProperty("--sb-safe-top", biggestTop + "px");
 }
 
 /* Returns its own teardown, so the shell can own it like any effect. */
@@ -107,6 +116,7 @@ export default function pinSafeArea() {
     window.removeEventListener("orientationchange", onShape);
     mq?.removeEventListener?.("change", onShape);
     document.documentElement.style.removeProperty("--sb-safe-bottom");
+    document.documentElement.style.removeProperty("--sb-safe-top");
   };
 }
 

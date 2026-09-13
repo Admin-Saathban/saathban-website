@@ -52,6 +52,7 @@ import { wantsLessMotion } from "./motion.jsx";
 import { paneFor as paneKeyFor } from "./TabPanes.jsx";
 import { freezeShutter, thawShutter } from "./useShutter.js";
 import { swipeLog, swipeDebugOn } from "./swipeDebug.js";
+import { headerShownOn } from "./headerRoutes.js";
 
 /* Below ENGAGE the gesture is still undecided and the page scrolls
    normally; past it the drag owns the finger. 12px is small enough to
@@ -191,6 +192,38 @@ html.sb-dragging, html.sb-dragging body { overscroll-behavior-x: none; }
    and creates nothing. Only for as long as something is moving. */
 html.sb-dragging, html.sb-dragging body,
 html.sb-settling, html.sb-settling body { overflow-x: clip; }
+
+/* ── THE SCREEN COMING IN STARTS WHERE IT WILL LAND ──
+
+   An incoming pane is a layer pinned to the top of the glass, but a tab
+   that has the app header lands BELOW it. Measured at a 24px status bar:
+   its content slid in at y=0 and dropped to y=81 in the frame the route
+   landed. Every tab did it; leaving Messages it coincided with the header
+   appearing and read as a shutter coming down. Offset by the header's own
+   published height, which is frozen for the length of the gesture. */
+html.sb-into-hdr [data-sb-pane][data-sb-into] {
+  top: var(--sb-hdr-h, calc(57px + var(--sb-safe-top, 0px)));
+}
+
+/* ── LEAVING A SCREEN WITHOUT THE HEADER, FOR ONE THAT HAS IT ──
+
+   Messages draws its own header, so the app header is display:none there.
+   It used to reappear only when the route landed — at full height, in one
+   frame. Now it is put in place the moment the drag engages, fixed at the
+   top and BENEATH the pane being dragged away (z-index 0; the dragged pane
+   paints after it), so Messages slides off it and it is simply uncovered,
+   still. No transform and no transition: whatever state its shutter was
+   in, it holds completely still for the whole gesture. */
+html.sb-hdr-reveal header.sb-header {
+  display: block !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0 !important;
+  transform: none !important;
+  transition: none !important;
+}
 
 /* ACROSS A TAB CHANGE THE CHROME DOES NOT ANIMATE. The bars are shown at
    the moment the tab lands; letting that 180ms transition run means the
@@ -388,6 +421,9 @@ export default function useTabSwipe(items, enabled = true) {
       const key = paneKeyFor(items[n].to);
       const el = key && document.querySelector('[data-sb-pane="' + key + '"]');
       if (!el) return;
+      const dest = items[n].to;
+      root.classList.toggle("sb-into-hdr", headerShownOn(dest));
+      root.classList.toggle("sb-hdr-reveal", headerShownOn(dest) && !headerShownOn(pathname));
       el.setAttribute("data-sb-into", "");
       inEl = el;
       side = dx < 0 ? 1 : -1;
@@ -414,6 +450,7 @@ export default function useTabSwipe(items, enabled = true) {
       root.style.removeProperty("--sb-side");
       hideIncoming();
       warmOff();
+      root.classList.remove("sb-into-hdr", "sb-hdr-reveal");
     };
 
     const clear = () => {

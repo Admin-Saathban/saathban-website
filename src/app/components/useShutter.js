@@ -81,7 +81,19 @@ const revealers = new Set();
 let frozen = 0;
 
 export function freezeShutter() { frozen += 1; swipeLog("FREEZE", { n: frozen }); }
-export function thawShutter() { if (frozen > 0) frozen -= 1; swipeLog("THAW", { n: frozen }); }
+export function thawShutter() {
+  if (frozen > 0) frozen -= 1;
+  swipeLog("THAW", { n: frozen });
+  /* The last holder let go: anything that deferred a measurement while
+     frozen takes it now (the header's height, for one). */
+  if (frozen === 0) thawers.forEach((fn) => { try { fn(); } catch { /* a listener's failure is its own */ } });
+}
+
+/* Measurements that must not move while a finger is moving panes read
+   this, and re-take themselves when the hold is released. */
+const thawers = new Set();
+export function isShutterFrozen() { return frozen > 0; }
+export function onShutterThaw(fn) { thawers.add(fn); return () => thawers.delete(fn); }
 
 /* ════════════════════════════════════════════════
    AND THE RULE UNDERNEATH ALL OF IT: A SCROLL WITH NO FINGER BEHIND IT

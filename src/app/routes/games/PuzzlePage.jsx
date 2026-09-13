@@ -4,7 +4,7 @@
    answer table is unreachable by clients — guessing goes through the
    server RPC. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
@@ -35,7 +35,18 @@ export default function PuzzlePage() {
   const [loadError, setLoadError] = useState(false);
   const [guess, setGuess] = useState("");
   const [result, setResult] = useState(null); // {correct, guesses, solved}
-  const [showHint, setShowHint] = useState(false);
+  /* How many hints are showing: one more each time the person asks, never
+     on its own. Remembered for the day on this device, so coming back to
+     the riddle does not take away help already given. */
+  const [hintsShown, setHintsShown] = useState(0);
+  const [lockH, setLockH] = useState(0);
+  /* 0 while the height is being HELD: the transition must only run on
+     release. With it always on, setting the hold eased the height up from
+     nothing and the swap landed before it got there — measured as a
+     685→262px snap in one frame. */
+  const [settleMs, setSettleMs] = useState(0);
+  const answerRef = useRef(null);
+  const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
   const [tell, setTell] = useState(null);
@@ -82,20 +93,107 @@ export default function PuzzlePage() {
     (result?.correct && !todayAttempt?.solved_at ? 1 : 0);
 
   const riddle = puzzle ? (lang === "ur" ? puzzle.riddle_ur : puzzle.riddle_en) : "";
-  const hint = puzzle ? (lang === "ur" ? puzzle.hint_ur : puzzle.hint_en) : "";
+  /* ── HINTS ARE A LADDER (0121) ──
+     Each step nudges further and the last is close enough that almost
+     anyone gets there, without the answer ever being written. A riddle
+     authored before the ladder still has its one hint. Hints never reach
+     the server and are not counted anywhere, and the screen says so
+     before the first one is taken. */
+  const hints = (() => {
+    if (!puzzle) return [];
+    const ladder = lang === "ur" ? puzzle.hints_ur : puzzle.hints_en;
+    if (Array.isArray(ladder) && ladder.filter(Boolean).length) return ladder.filter(Boolean);
+    const one = lang === "ur" ? puzzle.hint_ur : puzzle.hint_en;
+    return one ? [one] : [];
+  })();
+  const hintKey = "saathban.riddle.hints." + today;
+  useEffect(() => {
+    try {
+      const n = Number(localStorage.getItem(hintKey));
+      if (n > 0) setHintsShown(n);
+    } catch { /* nothing remembered is the same as no hints yet */ }
+  }, [hintKey]);
+  const revealHint = () => {
+    setHintsShown((n) => {
+      const next = Math.min(n + 1, Math.max(hints.length, 1));
+      try { localStorage.setItem(hintKey, String(next)); } catch { /* still shows */ }
+      return next;
+    });
+  };
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const calm = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  /* Tapping a button takes focus from the field, and on a phone that
+     closes the keyboard and resizes the page under the person's thumb.
+     Try it and the hint button leave the field focused, so a wrong guess
+     or a hint changes nothing but the words. */
+  const keepFocus = (ev) => ev.preventDefault();
+
+  /* A keyboard that IS closing takes a moment to finish resizing the
+     viewport. Wait for it (briefly, and not at all if nothing resizes)
+     so that its resize and the answer's are never the same frames. */
+  const keyboardSettled = () =>
+    new Promise((resolve) => {
+      const vv = window.visualViewport;
+      let timer = setTimeout(done, 180);
+      function onResize() {
+        clearTimeout(timer);
+        timer = setTimeout(done, 120);
+      }
+      function done() {
+        vv?.removeEventListener?.("resize", onResize);
+        resolve();
+      }
+      vv?.addEventListener?.("resize", onResize);
+    });
+
+  const submit = async (ev) => {
+    ev?.preventDefault?.();
     if (!guess.trim() || busy) return;
     setBusy(true);
+    let r;
     try {
-      const r = await guessPuzzle(today, guess.trim());
-      setResult(r);
-      setGuess("");
-      if (r.correct) loadTogether(); // the named strip unlocks on solve
+      r = await guessPuzzle(today, guess.trim());
     } catch {
       pushToast(t("games.actionError"), { tone: "error", key: "games" });
+      setBusy(false);
+      return;
     }
+    if (r.correct) {
+      /* ── A RIGHT ANSWER SETTLES IN PLACE ──
+         The form (field, buttons, hints) became one line in a single
+         frame, and on a phone the keyboard closed in that same frame:
+         two resizes stacked, which is the flicker. So: hold the area's
+         height, let the keyboard go and finish, put the answer in, then
+         let the held height ease away. */
+      const held = answerRef.current ? answerRef.current.offsetHeight : 0;
+      const typing = document.activeElement === inputRef.current;
+      setLockH(held);
+      /* Measured: with three hints open the area gives back 400+px, and a
+         fixed 320ms moved 69px in a single frame at the fastest point. The
+         ease is as long as the distance needs, so no frame moves much. */
+      const ms = calm ? 0 : Math.round(Math.min(900, Math.max(300, held * 1.6)));
+      setSettleMs(0);
+      if (typing) {
+        inputRef.current.blur();
+        await keyboardSettled();
+      }
+      setResult(r);
+      setGuess("");
+      setBusy(false);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          setSettleMs(ms);
+          setLockH(0);
+        })
+      );
+      /* the named strip unlocks on solve — after the card has settled,
+         so its arrival is a separate, single change */
+      setTimeout(loadTogether, ms + 40);
+      return;
+    }
+    setResult(r);
+    setGuess("");
     setBusy(false);
   };
 
@@ -178,6 +276,7 @@ export default function PuzzlePage() {
             {riddle}
           </p>
 
+          <div ref={answerRef} style={{ minHeight: lockH + "px", transition: calm || !settleMs ? "none" : "min-height " + settleMs + "ms cubic-bezier(0.4, 0, 0.2, 1)" }}>
           {solved ? (
             <BodyText style={{ fontWeight: 700, color: C.green }} aria-live="polite">
               ✓{" "}
@@ -189,11 +288,11 @@ export default function PuzzlePage() {
             </BodyText>
           ) : (
             <>
-              {result && !result.correct && (
-                <BodyText role="status" style={{ fontWeight: 600, color: C.brown }}>
-                  {t("games.puzzle.wrong")}
-                </BodyText>
-              )}
+              {/* Always present, so "not that one" writes into space that
+                  is already there instead of pushing the field down. */}
+              <BodyText role="status" style={{ fontWeight: 600, color: C.brown, minHeight: lang === "ur" ? "2.2em" : "1.55em" }}>
+                {result && !result.correct ? t("games.puzzle.wrong") : ""}
+              </BodyText>
               <form onSubmit={submit}>
                 <label
                   htmlFor="sb-riddle-guess"
@@ -207,6 +306,7 @@ export default function PuzzlePage() {
                   {t("games.puzzle.guessLabel")}
                 </label>
                 <input
+                  ref={inputRef}
                   id="sb-riddle-guess"
                   type="text"
                   value={guess}
@@ -215,20 +315,41 @@ export default function PuzzlePage() {
                   style={{ marginBottom: 12 }}
                 />
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <PrimaryBtn disabled={busy || !guess.trim()} onClick={submit}>
+                  <PrimaryBtn disabled={busy || !guess.trim()} onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={submit}>
                     {t("games.puzzle.guessCta")}
                   </PrimaryBtn>
-                  {hint && !showHint && (
-                    <GhostBtn onClick={() => setShowHint(true)}>
-                      {t("games.puzzle.hintCta")}
+                  {hintsShown < hints.length && (
+                    <GhostBtn onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={revealHint}>
+                      {hintsShown === 0 ? t("games.puzzle.hintCta") : t("games.puzzle.hintMore")}
                     </GhostBtn>
                   )}
                 </div>
               </form>
-              {showHint && (
-                <BodyText muted style={{ marginTop: 12 }}>
-                  💡 {hint}
+              {hints.length > 0 && hintsShown === 0 && (
+                <BodyText muted style={{ marginTop: 10, fontSize: ts(16) }}>
+                  {hints.length === 1 ? t("games.puzzle.hintFreeOne") : t("games.puzzle.hintFree", { n: hints.length })}
                 </BodyText>
+              )}
+              {hintsShown > 0 && (
+                <ol style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+                  {hints.slice(0, hintsShown).map((h, i) => (
+                    <li
+                      key={i}
+                      aria-live={i === hintsShown - 1 ? "polite" : undefined}
+                      style={{ padding: "10px 14px", borderRadius: 14, background: C.ground, border: "1px solid " + C.warmGray, marginBottom: 8 }}
+                    >
+                      <span style={{ display: "block", fontSize: ts(15), fontWeight: 700, color: C.textMuted }}>
+                        💡 {t("games.puzzle.hintLabel", { n: i + 1, total: hints.length })}
+                      </span>
+                      <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), lineHeight: 1.55, color: C.textMain, overflowWrap: "anywhere" }}>
+                        {h}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {hints.length > 1 && hintsShown >= hints.length && (
+                <BodyText muted style={{ fontSize: ts(16) }}>{t("games.puzzle.hintsAll")}</BodyText>
               )}
             </>
           )}
@@ -249,6 +370,7 @@ export default function PuzzlePage() {
                 📣 {t("games.puzzle.together.boastCta")}
               </GhostBtn>
             )}
+          </div>
           </div>
           {tell && (
             <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "2px solid " + C.warmGray, background: C.white }}>

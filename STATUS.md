@@ -66,6 +66,23 @@ Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
 - SOS: deferred by design (SPEC — PWA push limits).
 - Email onboarding blocked on custom SMTP (QUESTIONS.md #3).
 
+## Shipped but unwitnessed (recorded 2026-09-12)
+Built, deployed in `60d19f1`, and NOT seen working on a deployed build by
+this lane. The owner is testing them on his phone. Move a line to
+"Working / verified" only when someone has watched it work.
+- **Riddle → "Share with the community".** Should open the community
+  composer with the riddle result card and words pre-filled, then land on
+  the post. Not seen: the test account had not solved that day's riddle,
+  so the button was never offered. (The riddle's "Tell your people" panel
+  is unwitnessed for the same reason.)
+- **Share today → My Circle / Friends on Saathban → Send.** The step
+  naming who it goes to, with editable words, WAS seen in both languages.
+  Send was never pressed, so the sent state (who it went to, how many get
+  such notifications, the page they will open) is unwitnessed.
+- **Share today → Copy a link → Make the link.** The preview of what the
+  link shows WAS seen. The link itself, Copy, and "See the page they will
+  open" are unwitnessed.
+
 ## Integration queue
 - Wire carrom's DM inline-board when the community lane lands that piece (GAMES_CONTRACT_ASKS.md A4 + CARROM_WIRING.md).
 - Groups lane (0026) will extend community_reports kinds — add its kinds to ModerationQueue KIND_LABEL/HIDE_TABLE on integration.

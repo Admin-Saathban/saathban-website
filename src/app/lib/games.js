@@ -555,7 +555,7 @@ export async function sendChat(sessionId, senderId, { body = null, sticker = nul
 export async function fetchPuzzle(date = puzzleToday()) {
   const { data, error } = await supabase
     .from("daily_puzzles")
-    .select("puzzle_date, riddle_en, riddle_ur, hint_en, hint_ur")
+    .select("puzzle_date, riddle_en, riddle_ur, hint_en, hint_ur, hints_en, hints_ur")
     .eq("puzzle_date", date)
     .maybeSingle();
   if (error) throw error;

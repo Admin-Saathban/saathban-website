@@ -67,6 +67,11 @@ const Worklist = lazyScreen(() => import("./routes/admin/Worklist.jsx"));
 const BroadcastsPage = lazyScreen(() => import("./routes/admin/BroadcastsPage.jsx"));
 const QuestionsQueue = lazyScreen(() => import("./routes/admin/QuestionsQueue.jsx"));
 const PlaceAccess = lazyScreen(() => import("./routes/admin/PlaceAccess.jsx"));
+const PeopleList = lazyScreen(() => import("./routes/admin/PeopleList.jsx"));
+const PersonPage = lazyScreen(() => import("./routes/admin/PersonPage.jsx"));
+const ActivityPage = lazyScreen(() => import("./routes/admin/ActivityPage.jsx"));
+const ContentPage = lazyScreen(() => import("./routes/admin/ContentPage.jsx"));
+const TestDataPage = lazyScreen(() => import("./routes/admin/TestDataPage.jsx"));
 const VettingForm = lazyScreen(() => import("./routes/vetting/VettingForm.jsx"));
 const BuddyHome = lazyScreen(() => import("./routes/buddy/BuddyHome.jsx"));
 const FamRoutes = lazyScreen(() => import("./routes/fam/FamRoutes.jsx"));
@@ -464,6 +469,15 @@ export default function AppRoot() {
                 The screen's real job is confirming guesses, since an
                 unverified note never reaches a place row (0065). */}
             <Route path="places" element={<PlaceAccess />} />
+            {/* Running the app alone (0150–0154): every account, plain
+                activity numbers, recent content, and test-data cleanup.
+                Each screen calls definer functions that check the level
+                and write the audit log; a moderator is refused by them. */}
+            <Route path="people" element={<PeopleList />} />
+            <Route path="people/:id" element={<PersonPage />} />
+            <Route path="activity" element={<ActivityPage />} />
+            <Route path="content" element={<ContentPage />} />
+            <Route path="test-data" element={<TestDataPage />} />
           </Route>
           {/* Milestones (0017): Icons get badges and celebrations;
               admins get the message desk on the same path. */}

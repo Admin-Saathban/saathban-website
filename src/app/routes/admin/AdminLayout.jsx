@@ -112,6 +112,12 @@ export default function AdminLayout() {
         { to: "questions", label: t("admin.questions"), count: openQuestions },
         { to: "broadcasts", label: t("admin.broadcasts"), count: 0 },
         { to: "moderation", label: t("admin.moderation"), count: openReportCount },
+        { to: "people", label: t("admin.navPeople"), count: 0 },
+        { to: "activity", label: t("admin.navActivity"), count: 0 },
+        { to: "content", label: t("admin.navContent"), count: 0 },
+        { to: "test-data", label: t("admin.navTestData"), count: 0 },
+        // Built by the Grow lane; the admin desk only links to it.
+        { to: "/app/skills/admin", label: t("admin.navGrow"), count: 0 },
         // The milestone-message desk lives outside the admin shell
         // (shared route with the Icon view — 0017).
         { to: "/app/milestones", label: t("admin.navMilestones"), count: 0 },
@@ -141,6 +147,9 @@ export default function AdminLayout() {
         .sb-admin-shell { flex-direction: column; }
         .sb-admin-side {
           width: 100% !important;
+          /* 100% plus the strip's own side padding was 24px wider than
+             the phone, so every admin page scrolled sideways. */
+          box-sizing: border-box;
           flex-direction: row !important;
           overflow-x: auto;
           padding: 10px 12px !important;
@@ -281,8 +290,9 @@ export default function AdminLayout() {
 
         {/* Coming later in the build order — visible so the shape of the
             admin area is legible, disabled so nothing dead-ends.
-            (Milestone messages went live — it's in the nav above.) */}
-        {[t("admin.soonAccounts"), t("admin.soonAudit")].map(
+            (Milestone messages went live — it's in the nav above. Accounts
+            went live as People; the audit log is still to come.) */}
+        {(isModerator ? [] : [t("admin.soonAudit")]).map(
           (label) => (
             <div
               key={label}

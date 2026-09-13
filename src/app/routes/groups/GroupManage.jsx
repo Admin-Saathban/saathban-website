@@ -48,6 +48,8 @@ import {
 import ReportedMedia from "../admin/ReportedMedia.jsx";
 import GroupCover, { COVER_PRESETS, coverMark } from "./GroupCover.jsx";
 import Icon from "../../components/Icon.jsx";
+/* Photo uploads are parked (owner ruling) — see lib/features.js. */
+import { MEDIA_UPLOADS } from "../../lib/features.js";
 
 export default function GroupManage() {
   const { id } = useParams();
@@ -247,6 +249,10 @@ export default function GroupManage() {
             </button>
           ))}
         </div>
+        {/* A photo of your own is parked with every other picture upload
+            (MEDIA_UPLOADS, lib/features.js). The drawn covers above still
+            give every group a cover; one already uploaded still shows. */}
+        {MEDIA_UPLOADS ? (
         <label
           style={{
             display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx,
@@ -266,6 +272,7 @@ export default function GroupManage() {
             }}
           />
         </label>
+        ) : <div style={{ height: 6 }} />}
 
         <label style={{ display: "block", fontSize: ts(16), fontWeight: 700, marginBottom: 6 }}>
           {t("groups.new.nameTitle")}

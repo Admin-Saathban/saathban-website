@@ -44,6 +44,8 @@ import { VoiceRecorder, VoicePlayer } from "../people/VoiceNote.jsx";
 import { createPost } from "./communityData.js";
 import { useToast } from "../../lib/feedback.jsx";
 import useBackToClose from "../../components/useBackToClose";
+/* Photo attachments are parked (owner ruling) — see lib/features.js. */
+import { MEDIA_UPLOADS } from "../../lib/features.js";
 
 /* ── The row that lives in the feed ── */
 export function ComposerRow({ onOpen }) {
@@ -78,6 +80,9 @@ export function ComposerRow({ onOpen }) {
       >
         {t("posts.rowPlaceholder")}
       </button>
+      {/* The camera here only ever meant "add a photo". Parked with
+          MEDIA_UPLOADS; the row itself still opens the composer. */}
+      {MEDIA_UPLOADS && (
       <button
         type="button"
         onClick={() => onOpen("photo")}
@@ -94,6 +99,7 @@ export function ComposerRow({ onOpen }) {
       >
         <Icon name="camera" size={20} style={{ color: C.textMuted }} />
       </button>
+      )}
     </div>
   );
 }
@@ -420,7 +426,10 @@ export default function Composer({ open, startWith, onClose, onShare, busy, atta
             </div>
           )}
 
-          {/* §1's three attachments */}
+          {/* §1's three attachments — two while photos are parked
+              (MEDIA_UPLOADS, lib/features.js). With the input not rendered,
+              file can never be set, so a post never carries one. */}
+          {MEDIA_UPLOADS && (
           <input
             ref={fileRef}
             type="file"
@@ -428,11 +437,14 @@ export default function Composer({ open, startWith, onClose, onShare, busy, atta
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
           />
+          )}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+            {MEDIA_UPLOADS && (
             <button type="button" onClick={() => fileRef.current?.click()} style={chip(!!file)}>
               <Icon name="camera" size={18} />{" "}
               {file ? t("posts.photoChosen") : t("posts.photo")}
             </button>
+            )}
             <button type="button" onClick={() => setPickPeople((v) => !v)} style={chip(tagged.length > 0)}>
               <Icon name="people" size={18} />{" "}
               {tagged.length ? t("posts.withCount", { n: tagged.length }) : t("posts.withSomeone")}

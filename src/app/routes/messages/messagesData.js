@@ -407,12 +407,17 @@ export async function friendsInCommon(myId, otherId) {
 
 /* read_receipts is no longer read here: the switch was removed until the
    thread draws read ticks. The column is left alone. */
+/* THROWS ON A FAILED READ. It used to answer the defaults ("met", online
+   shown) when the read failed, which is indistinguishable from a person
+   who chose them — and the Menu now holds what this returns, so a failure
+   would have been remembered as a choice. */
 export async function fetchMessageSettings(myId) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("who_can_message, show_presence")
     .eq("id", myId)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   return {
     whoCanMessage: data?.who_can_message || "met",
     showPresence: data?.show_presence !== false,
@@ -470,6 +475,18 @@ export function driftedRowAllowed(now = Date.now()) {
     return !seen || now - seen > DAY;
   } catch {
     return true;   // storage off: showing it is the kinder failure
+  }
+}
+
+/* New chat shows the faces whenever there are some, because a person
+   who opened it came to start a conversation — the once-a-day rest was
+   for Chats, where nobody asked. A dismissal still rests them. */
+export function driftedHushed(now = Date.now()) {
+  try {
+    const hushed = Number(localStorage.getItem(HUSH_KEY) || 0);
+    return !!hushed && now - hushed < 5 * DAY;
+  } catch {
+    return false;
   }
 }
 

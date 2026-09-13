@@ -43,6 +43,7 @@ export const SIGNED_IN_CACHE_PREFIXES = [
   "saathban.app.iconPrefs",
   "saathban.app.dailyLogs.",
   "saathban.app.dailyLogQueue.",
+  "saathban.app.messages.",
 ];
 
 function forgetSignedInCaches() {

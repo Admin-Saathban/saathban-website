@@ -27,6 +27,9 @@
    · Rows had no box-sizing, so padding and border pushed them 16px past
      the screen and clipped the switch — on the right in English and the
      left in Urdu.
+   · It waited for the server on every visit before drawing a single row.
+     It draws the settings it last saw now (heldData.js) and refreshes
+     them behind the rows.
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
@@ -35,7 +38,8 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n, TEXT_SIZES } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import Icon from "../../components/Icon.jsx";
-import { fetchMessageSettings, saveMessageSetting, WORLD } from "./messagesData.js";
+import { saveMessageSetting, WORLD } from "./messagesData.js";
+import { heldFor, holdFor, loadSettings } from "./heldData.js";
 
 const rowStyle = {
   display: "flex",
@@ -131,13 +135,20 @@ export default function MessagesMenu() {
   const { profile } = useSession();
   const myId = profile?.id;
 
-  const [s, setS] = useState(null);
+  const [s, setS] = useState(() => heldFor("settings", myId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     if (!myId) return;
-    setS(await fetchMessageSettings(myId).catch(() => null));
+    try {
+      setS(await loadSettings(myId));
+      setFailed(false);
+    } catch {
+      /* Held rows stay as they are; only an empty screen says so. */
+      setFailed(true);
+    }
   }, [myId]);
   useEffect(() => { load(); }, [load]);
 
@@ -149,6 +160,7 @@ export default function MessagesMenu() {
     setS((cur) => ({ ...cur, showPresence: next }));
     try {
       await saveMessageSetting(myId, { show_presence: next });
+      holdFor("settings", myId, { ...s, showPresence: next });
     } catch {
       setS((cur) => ({ ...cur, showPresence: !next }));
       setError("msg.menu.saveFailed");
@@ -156,7 +168,11 @@ export default function MessagesMenu() {
     setBusy(false);
   };
 
-  if (!s) return <p role="status" style={{ color: C.textMuted, fontSize: ts(A11Y.minBodyPx) }}>···</p>;
+  if (!s) {
+    return failed
+      ? <p role="alert" style={{ color: C.brown, fontWeight: 700, fontSize: ts(A11Y.minBodyPx) }}>⚠ {t("common.loadError")}</p>
+      : <p role="status" style={{ color: C.textMuted, fontSize: ts(A11Y.minBodyPx) }}>···</p>;
+  }
 
   const sizeKey = TEXT_SIZES.find((x) => x.id === textSize)?.labelKey;
 

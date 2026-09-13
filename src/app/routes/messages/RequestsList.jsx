@@ -23,9 +23,16 @@
 
    Everything one-shot, permanent-decline, money-pattern and
    sparse-profile is 0073's and §6's, unchanged.
+
+   DRAWN FROM WHAT IS HELD (heldData.js). It mounted with null and waited
+   for the server on every visit — about a second on a phone, each time.
+   It now draws the last requests it saw on the first frame and replaces
+   them when the refresh lands. A change made here (accept, not now,
+   block) is written back at once, so a return never shows a card that
+   was already dealt with.
    ════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pushToast } from "../../lib/feedback.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
@@ -34,12 +41,12 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { MONEY_PATTERN } from "../community/communityCopy.js";
 import {
-  fetchMessageRequests,
   decideDmRequest,
   fileReport,
   blockOrMute,
 } from "../community/communityData.js";
-import { friendsInCommon, WORLD } from "./messagesData.js";
+import { WORLD } from "./messagesData.js";
+import { heldFor, holdFor, loadRequests } from "./heldData.js";
 import Avatar from "./Avatar.jsx";
 
 export default function RequestsList({ onCount }) {
@@ -48,8 +55,15 @@ export default function RequestsList({ onCount }) {
   const navigate = useNavigate();
   const myId = profile?.id;
 
-  const [rows, setRows] = useState(null);
-  const [common, setCommon] = useState({});
+  const [rows, setRows] = useState(() => heldFor("requests", myId)?.rows ?? null);
+  const [common, setCommon] = useState(() => heldFor("requests", myId)?.common ?? {});
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const commonRef = useRef(common);
+  commonRef.current = common;
+  /* What is left after a card goes, written back to the held copy so
+     the next visit does not bring it back for a moment. */
+  const keep = (next) => holdFor("requests", myId, { rows: next, common: commonRef.current });
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [reported, setReported] = useState({});   // request id -> true once sent
@@ -58,18 +72,20 @@ export default function RequestsList({ onCount }) {
   const load = useCallback(async () => {
     if (!myId) return;
     try {
-      const list = await fetchMessageRequests(myId);
+      /* Friends in common come with the rows (heldData.loadRequests), one
+         lookup each, failures silent — a helpful detail, never a reason
+         the screen does not load. */
+      const { rows: list, common: counts } = await loadRequests(myId);
       setRows(list);
+      setCommon(counts);
       onCount?.(list.length);
-      /* Friends in common, one lookup each, failures silent — it is a
-         helpful detail, never a reason the screen does not load. */
-      const pairs = await Promise.all(
-        list.map(async (r) => [r.id, await friendsInCommon(myId, r.senderId).catch(() => 0)])
-      );
-      setCommon(Object.fromEntries(pairs));
     } catch {
-      setRows([]);
-      setError("msg.req.error");
+      /* A failed refresh leaves held cards where they are. Only with
+         nothing to show does it say so. */
+      if (rowsRef.current === null) {
+        setRows([]);
+        setError("msg.req.error");
+      }
     }
   }, [myId, onCount]);
 
@@ -83,6 +99,7 @@ export default function RequestsList({ onCount }) {
       setRows((cur) => {
         const next = (cur || []).filter((x) => x.id !== r.id);
         onCount?.(next.length);
+        keep(next);
         return next;
       });
       /* §4 — accepting lands you IN THE CHAT (MOTION_SPEC §7). No
@@ -127,6 +144,7 @@ export default function RequestsList({ onCount }) {
       setRows((cur) => {
         const next = (cur || []).filter((x) => x.id !== r.id);
         onCount?.(next.length);
+        keep(next);
         return next;
       });
       pushToast(t("msg.thread.blockedToast", { name: (r.name || "").split(" ")[0] }));

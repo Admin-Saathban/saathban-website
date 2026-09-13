@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   Chats — MESSAGES_SPEC.md §3, and the drifted-faces row of §9.
+   Chats — MESSAGES_SPEC.md §3. (§9's "Not heard from" faces are in New chat.)
 
    NO BORDERS ON ROWS (§3). Avatar, name, preview, held apart by
    whitespace rather than by lines. Row height ~68px, comfortably over
@@ -14,6 +14,14 @@
    THE PREVIEW ALWAYS SAYS SOMETHING. "Voice note · 0:12", "Photo",
    "Liked your message" — never a blank line, because a row that says
    nothing is the one a person taps to find out what it was.
+
+   ONLY CONVERSATIONS (owner, 2026-09-13). Chats shows the conversations
+   a person has and nothing that starts one. Everything about starting —
+   the people you know, finding someone new, inviting, and the "Not heard
+   from" faces that open a hello — lives in + New chat, so the two screens
+   no longer offer the same doors. Empty is said plainly: "No
+   conversations yet", with no buttons under it. Received streaks and
+   streak groups stay, because those are conversations already.
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
@@ -25,10 +33,6 @@ import {
   fetchChats,
   previewOf,
   isAbout,
-  driftedFrom,
-  driftedRowAllowed,
-  markDriftedSeen,
-  hushDriftedRow,
   cachedChats,
   rememberChatsScroll,
   rememberedChatsScroll,
@@ -69,7 +73,6 @@ function StreakMailRow({ r, onOpen }) {
     </li>
   );
 }
-import SayHelloSheet from "./SayHelloSheet.jsx";
 
 export default function ChatsList() {
   const { t, ts, meta } = useI18n();
@@ -83,8 +86,6 @@ export default function ChatsList() {
   const [chats, setChats] = useState(() => cachedChats(myId));
   const [mail, setMail] = useState(() => cachedStreakMail(myId));
   const [q, setQ] = useState("");
-  const [hello, setHello] = useState(null);   // the person the sheet is for
-  const [showDrifted, setShowDrifted] = useState(false);
 
   const load = useCallback(async () => {
     if (!myId) return;
@@ -131,19 +132,6 @@ export default function ChatsList() {
   const leaving = () => rememberChatsScroll(window.scrollY || 0);
 
   const open = useMemo(() => (chats || []).filter((c) => !c.archived), [chats]);
-
-  /* §9 — at most once a day, and a dismissal rests it for some days.
-     The decision is taken once when the list arrives so the row cannot
-     appear and disappear as things re-render. */
-  useEffect(() => {
-    if (!chats) return;
-    if (driftedFrom(chats).length && driftedRowAllowed()) {
-      setShowDrifted(true);
-      markDriftedSeen();
-    }
-  }, [chats]);
-
-  const drifted = useMemo(() => (chats ? driftedFrom(chats) : []), [chats]);
 
   /* §3 — search by NAME. Not message content: searching what people
      said to you is a different and much heavier promise. */
@@ -200,126 +188,26 @@ export default function ChatsList() {
       />
       )}
 
-      {/* ── §9 the faces you have drifted from ── */}
-      {showDrifted && drifted.length > 0 && (
-        <section style={{ marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ flex: 1, fontSize: ts(16), fontWeight: 700, color: C.textMuted }}>
-              {t("msg.drifted.label")}
-            </span>
-            <button
-              type="button"
-              onClick={() => { hushDriftedRow(); setShowDrifted(false); }}
-              aria-label={t("msg.drifted.dismiss")}
-              style={{
-                minWidth: A11Y.minTapTargetPx,
-                minHeight: A11Y.minTapTargetPx,
-                border: "none",
-                background: "transparent",
-                color: C.textMuted,
-                fontSize: ts(20),
-                cursor: "pointer",
-              }}
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 4 }}>
-            {drifted.map((c) => (
-              <button
-                key={c.requestId}
-                type="button"
-                onClick={() => setHello(c.person ? { ...c.person, id: c.otherId } : { id: c.otherId })}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 6,
-                  minWidth: 72,
-                }}
-              >
-                {/* No ring, no presence dot (§9): these are people you
-                    have drifted from, not people who are active, and a
-                    liveness ring is the wrong signal entirely. */}
-                <Avatar person={c.person} size={56} />
-                <span style={{ fontSize: ts(14), color: C.textMain, maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {(c.person?.full_name || "").split(" ")[0]}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* The "Not heard from" faces moved to New chat: a face there opens a
+          hello, which is starting a conversation, and Chats no longer
+          offers ways to start one. */}
 
       {chats === null ? (
         <p role="status" style={{ color: C.textMuted, fontSize: ts(A11Y.minBodyPx) }}>···</p>
       ) : items.length === 0 && (q || groups.length === 0) ? (
-        /* A door, not a scoreboard (§4, PRODUCT_DECISIONS §0.6).
-           PARITY.md records this empty state was fixed once already. */
-        <div style={{ padding: "28px 8px", textAlign: "center" }}>
+        /* Said plainly, with no buttons (owner, 2026-09-13): starting a
+           conversation is + New chat's, in the header above, and a second
+           set of doors here was the overlap he asked to remove. Still not
+           a scoreboard — it says where conversations will appear, not
+           that there is nobody. */
+        <div data-chats-empty="" style={{ padding: "28px 8px", textAlign: "center" }}>
           <p style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: "0 0 8px" }}>
             {q ? t("msg.noMatches") : t("msg.emptyTitle")}
           </p>
           {!q && (
-            <>
-              <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px" }}>
-                {t("msg.emptyBody")}
-              </p>
-              {/* TWO DOORS, NOT ONE WITH A VAGUE NAME.
-
-                  This was a single button reading "Find someone to write
-                  to" that went to the same picker as "New chat" — so the
-                  owner met one destination under two names and read both
-                  as placeholders. Worse, when the list is empty the
-                  reason may be that he knows nobody here yet, and the
-                  picker he was sent to would have been empty as well.
-
-                  So: write to someone already connected, or invite
-                  somebody who isn't here. Each says which it is. */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                <Link
-                  to={`${WORLD}/new`}
-                  className="sb-press"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minHeight: A11Y.minTapTargetPx,
-                    padding: "0 24px",
-                    borderRadius: 50,
-                    background: C.green,
-                    color: C.cream,
-                    fontSize: ts(A11Y.minBodyPx),
-                    fontWeight: 700,
-                    textDecoration: "none",
-                  }}
-                >
-                  {t("msg.emptyCta")}
-                </Link>
-                <Link
-                  to={`${WORLD}/invite`}
-                  className="sb-press"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minHeight: A11Y.minTapTargetPx,
-                    padding: "0 24px",
-                    borderRadius: 50,
-                    background: "transparent",
-                    border: `1px solid ${C.green}`,
-                    color: C.green,
-                    fontSize: ts(A11Y.minBodyPx),
-                    fontWeight: 700,
-                    textDecoration: "none",
-                  }}
-                >
-                  {t("msg.emptyInvite")}
-                </Link>
-              </div>
-            </>
+            <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: 0 }}>
+              {t("msg.emptyBody")}
+            </p>
           )}
         </div>
       ) : (
@@ -437,7 +325,6 @@ export default function ChatsList() {
         </section>
       )}
 
-      {hello && <SayHelloSheet person={hello} onClose={() => setHello(null)} />}
     </>
   );
 }

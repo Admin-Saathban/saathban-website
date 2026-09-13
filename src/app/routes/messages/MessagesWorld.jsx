@@ -44,6 +44,7 @@ import { useSession } from "../../lib/session.jsx";
 import { MotionStyles } from "../../lib/motion.jsx";
 import { MotionStyles as FullScreenStyles } from "../../components/motion.jsx";
 import { touchPresence, WORLD } from "./messagesData.js";
+import { heldFor, warmMessages } from "./heldData.js";
 import Icon from "../../components/Icon.jsx";
 import { BAR_HEIGHT } from "../../components/BottomBar.jsx";
 import { hasUnsentDraft } from "./draftGuard.js";
@@ -276,7 +277,22 @@ export default function MessagesWorld() {
   /* Requests carries a count (§2) — a queue you clear, unlike Chats,
      where a count would be a debt. Lifted here so the badge and the
      screen cannot disagree. */
-  const [pending, setPending] = useState(0);
+  const [pending, setPending] = useState(() => heldFor("requests", profile?.id)?.rows?.length || 0);
+
+  /* WARM THE OTHER TABS. A moment after the world opens — after Chats has
+     asked for its own rows — fetch what Requests, Menu and New chat will
+     draw, so the first tap on any of them finds it already held
+     (heldData.js). It also makes the Requests badge true before Requests
+     has been opened, which it was not: the count only arrived on a visit. */
+  useEffect(() => {
+    const id = profile?.id;
+    if (!id) return undefined;
+    let alive = true;
+    const timer = setTimeout(() => {
+      warmMessages(id).then((r) => { if (alive && r) setPending(r.rows.length); });
+    }, 250);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [profile?.id]);
 
   /* The world scrolls inside its own <main>, not the window, so the
      shutter is given that element to watch. */
@@ -554,7 +570,8 @@ export default function MessagesWorld() {
         <WorldTab to={`${WORLD}/requests`} icon="letter" label={t("msg.tab.requests")} badge={pending} />
         {/* No Invite tab. It was not in MESSAGES_SPEC §2, wrapped to two
             lines, and was one of three routes to the same page. Invite now
-            lives inside New chat ("Not here yet?") and on empty Chats. */}
+            lives inside New chat ("Not on Saathban yet?") and only there —
+            Chats holds conversations, New chat holds starting one. */}
         <WorldTab to={`${WORLD}/menu`} icon="settings" label={t("msg.tab.menu")} />
       </nav>
 

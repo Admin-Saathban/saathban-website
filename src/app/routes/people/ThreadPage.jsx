@@ -64,6 +64,8 @@ import Icon from "../../components/Icon.jsx";
 import { registerDraftGuard } from "../messages/draftGuard.js";
 import RichText from "../../lib/richText.jsx";
 import useBackToClose from "../../components/useBackToClose.js";
+/* Photo attachments are parked (owner ruling) — see lib/features.js. */
+import { MEDIA_UPLOADS } from "../../lib/features.js";
 
 const POLL_MS = 4000;
 
@@ -1178,9 +1180,16 @@ export default function ThreadPage() {
         </div>
       )}
 
-      {/* Photo inputs: camera (capture on mobile) and gallery. No filters (v2). */}
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
-      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
+      {/* Photo inputs: camera (capture on mobile) and gallery. No filters (v2).
+          Parked behind MEDIA_UPLOADS (lib/features.js): not rendered at all,
+          so there is no input left to open. Photos already in a thread
+          still draw above — only adding one is gone. */}
+      {MEDIA_UPLOADS && (
+        <>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
+          <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPickImage} style={{ display: "none" }} aria-hidden="true" tabIndex={-1} />
+        </>
+      )}
       {uploading && <BodyText muted role="status" style={{ margin: "0 0 8px" }}>{t("people.thread.uploading")}</BodyText>}
 
       {lightbox && (
@@ -1220,6 +1229,7 @@ export default function ThreadPage() {
           {/* ONE Photo button, not two. The phone's own sheet already
               offers the camera, and two controls for one idea is exactly
               what §6 replaces. */}
+          {MEDIA_UPLOADS && (
           <GhostBtn
             onClick={() => galleryRef.current?.click()}
             aria-label={t("people.thread.photoCta")}
@@ -1229,6 +1239,7 @@ export default function ThreadPage() {
             <Icon name="photo" size={22} />
             {t("people.thread.photoCta")}
           </GhostBtn>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
           <input

@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
 import { APP_COLORS as C, APP_FONT, A11Y, MEANING } from "../../../shared/tokens.js";
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 import { Card, AdminBtn, fmtDateTime, hoursAgo } from "./ui.jsx";
 import ReportedMedia from "./ReportedMedia.jsx";
 import Icon from "../../components/Icon.jsx";
@@ -112,7 +112,7 @@ export default function ModerationQueue() {
     const table = HIDE_TABLE[report.target_kind];
     if (!table) return;
     try {
-      const { data: me } = await supabase.auth.getUser();
+      const me = { user: await sessionUser() };
       const { error: err } = await supabase
         .from(table)
         .update({ hidden_at: new Date().toISOString(), hidden_by: me?.user?.id || null })

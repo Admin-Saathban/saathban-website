@@ -9,8 +9,9 @@
    presence, never the full profiles row.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { currentUserId, SIGNED_IN_CACHE_PREFIXES } from "../../lib/supabase.js";
 import { fetchProfileCards, searchPeopleByName } from "../../lib/profileCards.js";
+import { SURFACE } from "../../../shared/tokens.js";
 
 const BUCKET = "community-images";
 
@@ -58,6 +59,66 @@ export async function fetchFeed(limit = 50) {
     .limit(limit);
   if (error) throw error;
   return data || [];
+}
+
+/* ─── The feed in one request (0130) ───
+
+   Everything the feed card needs for one page, as the caller: the posts,
+   reactions, joins, this reader's hides, offers, saves, follows, tags,
+   group neighbours, connections, group posts and the profile_cards of
+   everyone named. SECURITY INVOKER — row security judges each part
+   exactly as it judged the separate queries this replaces. Returns
+   {access:false} for somebody who may not use the community, and null
+   when there is no session. */
+export async function fetchHomeFeed(limit = 50) {
+  const { data, error } = await supabase.rpc("home_feed", { p_limit: limit });
+  if (error) throw error;
+  return data || null;
+}
+
+/* ─── The last feed, kept on this device ───
+
+   One copy per person, keyed by their id, so a phone two people share
+   never shows one of them the other's feed; cleared on sign-out because
+   the prefix is in SIGNED_IN_CACHE_PREFIXES (lib/supabase.js). Only a
+   feed the person was allowed to see is kept, and an old copy is
+   ignored rather than shown as if it were today's. */
+const HOME_CACHE_PREFIX = "saathban.app.homeFeed.";
+const HOME_CACHE_VERSION = 1;
+const HOME_CACHE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+if (import.meta.env.DEV && !SIGNED_IN_CACHE_PREFIXES.includes(HOME_CACHE_PREFIX)) {
+  console.error("communityData: the home feed cache would survive sign-out — add its prefix to SIGNED_IN_CACHE_PREFIXES");
+}
+
+export function readHomeFeedCache(userId) {
+  if (!userId) return null;
+  try {
+    const raw = window.localStorage.getItem(HOME_CACHE_PREFIX + userId);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c || c.v !== HOME_CACHE_VERSION || c.uid !== userId || !c.data || c.data.access !== true) return null;
+    if (!(Date.now() - c.at < HOME_CACHE_MAX_AGE_MS)) return null;
+    return c.data;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeHomeFeedCache(userId, data) {
+  if (!userId || !data || data.access !== true) return;
+  try {
+    /* The request may have been in flight across a sign-out. Whoever is
+       signed in NOW must be the person this feed was fetched for, or it
+       is not written — otherwise signing out could be undone by a late
+       answer re-creating the copy it had just removed. */
+    if ((await currentUserId()) !== userId) return;
+    window.localStorage.setItem(
+      HOME_CACHE_PREFIX + userId,
+      JSON.stringify({ v: HOME_CACHE_VERSION, uid: userId, at: Date.now(), data })
+    );
+  } catch {
+    /* storage full or unavailable — the next open waits for the network */
+  }
 }
 
 /* §7 — NEIGHBOURHOOD FIRST, WIDENING ON ITS OWN.
@@ -129,6 +190,150 @@ export function imageUrl(path) {
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
+/* ─── Feed photos at the size they are shown ───
+
+   The renderer is Supabase Storage image transformation (measured
+   working on this project). resize=contain with a width alone scales in
+   proportion — a width with the default mode CROPS to the original
+   height, which is why the mode is spelled out. It never upscales, and
+   it sends WebP to browsers that accept it: the 1536x2048 photo that was
+   461KB arrives as 93KB at 720 wide. */
+const FEED_WIDTHS = [480, 720, 1080];
+const SIZE_IN_NAME = /_(\d{1,5})x(\d{1,5})\.[a-z0-9]+$/i;
+/* Under the signed-in prefix, so sign-out clears it with the feed. */
+const IMAGE_SIZES_KEY = HOME_CACHE_PREFIX + "imageSizes";
+let sizeMemo = null;
+
+function sizeMemory() {
+  if (sizeMemo) return sizeMemo;
+  try {
+    sizeMemo = JSON.parse(window.localStorage.getItem(IMAGE_SIZES_KEY) || "{}") || {};
+  } catch {
+    sizeMemo = {};
+  }
+  return sizeMemo;
+}
+
+/* Photos uploaded before sizes were written into their names: learn the
+   shape the first time one loads, so the next open reserves its box. */
+export function rememberImageSize(path, width, height) {
+  if (!path || !width || !height || SIZE_IN_NAME.test(path)) return;
+  /* Only the shape matters (see FeedImage), so it is stored on a fixed
+     base: the same photo seen at two widths is one entry, not two. */
+  const w = 1000;
+  const h = Math.max(1, Math.round((1000 * height) / width));
+  const m = sizeMemory();
+  if (m[path] && m[path][0] === w && m[path][1] === h) return;
+  m[path] = [w, h];
+  const keys = Object.keys(m);
+  if (keys.length > 300) keys.slice(0, keys.length - 300).forEach((k) => delete m[k]);
+  try {
+    window.localStorage.setItem(IMAGE_SIZES_KEY, JSON.stringify(m));
+  } catch {
+    /* the box is simply not reserved next time */
+  }
+}
+
+export function feedImageSources(path) {
+  if (!path) return null;
+  const store = supabase.storage.from(BUCKET);
+  const variant = (width) =>
+    store.getPublicUrl(path, { transform: { width, quality: 75, resize: "contain" } }).data.publicUrl;
+  const named = path.match(SIZE_IN_NAME);
+  const known = named ? [Number(named[1]), Number(named[2])] : sizeMemory()[path] || null;
+  return {
+    src: variant(720),
+    srcSet: FEED_WIDTHS.map((w) => `${variant(w)} ${w}w`).join(", "),
+    /* The feed column is 600px at most with 16px page insets. */
+    sizes: "(min-width: 632px) 568px, calc(100vw - 32px)",
+    width: known ? known[0] : null,
+    height: known ? known[1] : null,
+  };
+}
+
+/* ─── A photo is made the right size BEFORE it is uploaded ───
+
+   Phones hand over 3-12MB originals — the largest object in this bucket
+   is an 8584x5723 JPEG of 3.67MB. Uploading that over a Pakistani mobile
+   connection is slow for the person posting, and every reader then pays
+   for it. The long edge is brought down to 1600px and re-encoded as JPEG
+   at 0.82, which is indistinguishable at feed size.
+
+   ORIENTATION: decoded with imageOrientation "from-image", so a portrait
+   photo whose pixels are stored sideways (EXIF rotate) is drawn upright
+   before it is re-encoded; the canvas output carries no EXIF to disagree
+   with. A transparent PNG is flattened onto the card surface, not black.
+
+   Anything that goes wrong returns the original file untouched — a
+   photo that is too big is better than a post that fails. The displayed
+   size goes into the file name (…_WxH.jpg) so the feed can reserve the
+   box before the image arrives, without a schema change. */
+const UPLOAD_LONG_EDGE = 1600;
+const UPLOAD_QUALITY = 0.82;
+const KEEP_AS_IS_BYTES = 350 * 1024;
+
+async function decodeImage(file) {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+      return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close && bmp.close() };
+    } catch {
+      /* fall through to an <img>, which also applies EXIF orientation */
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight, close: () => URL.revokeObjectURL(url) };
+  } catch (err) {
+    URL.revokeObjectURL(url);
+    throw err;
+  }
+}
+
+export async function prepareImageForUpload(file) {
+  const asIs = { blob: file, type: file?.type, ext: null, width: null, height: null };
+  if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type || "")) return asIs;
+  let decoded;
+  try {
+    decoded = await decodeImage(file);
+  } catch {
+    return asIs;
+  }
+  try {
+    const w0 = decoded.width;
+    const h0 = decoded.height;
+    if (!w0 || !h0) return asIs;
+    const scale = Math.min(1, UPLOAD_LONG_EDGE / Math.max(w0, h0));
+    if (scale === 1 && file.size <= KEEP_AS_IS_BYTES) return { ...asIs, width: w0, height: h0 };
+    const w = Math.max(1, Math.round(w0 * scale));
+    const h = Math.max(1, Math.round(h0 * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return asIs;
+    ctx.fillStyle = SURFACE.content;
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(decoded.source, 0, 0, w, h);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", UPLOAD_QUALITY));
+    if (!blob) return asIs;
+    /* Not smaller and not resized: the original was already fine. */
+    if (scale === 1 && blob.size >= file.size) return { ...asIs, width: w0, height: h0 };
+    return { blob, type: "image/jpeg", ext: "jpg", width: w, height: h };
+  } catch {
+    return asIs;
+  } finally {
+    decoded.close();
+  }
+}
+
 /* ONE way to make a post, extended rather than forked (POSTS_SPEC
    §1-§6). A second create function would be a second set of defaults
    for visibility, and visibility is the thing that must never differ
@@ -148,11 +353,17 @@ export async function createPost(userId, body, file, opts = {}) {
 
   let image_path = null;
   if (file) {
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    image_path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    /* Downscaled first (prepareImageForUpload); its displayed size rides
+       in the name so the feed can reserve the box. The first folder is
+       still the author's id, which is what the bucket's insert policy
+       checks. */
+    const ready = await prepareImageForUpload(file);
+    const ext = ready.ext || (file.name.split(".").pop() || "jpg").toLowerCase();
+    const size = ready.width && ready.height ? `_${ready.width}x${ready.height}` : "";
+    image_path = `${userId}/${crypto.randomUUID()}${size}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from(BUCKET)
-      .upload(image_path, file, { contentType: file.type });
+      .upload(image_path, ready.blob, { contentType: ready.type || file.type });
     if (upErr) throw upErr;
   }
 

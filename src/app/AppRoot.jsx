@@ -15,67 +15,100 @@
        locales/       en + ur translation files       (Urdu from day one)
 
    See SPEC.md for the full specification and build order.
+
+   ─── WHAT IS IN THE FIRST DOWNLOAD, AND WHAT IS NOT ───
+
+   Eager: the shell (header, bar, feedback, language, session), Home and
+   the daily log, and the people screens the feed opens into. That is
+   what an Icon lands on and what has to open offline.
+
+   Everything else is lazyScreen (lib/lazyScreen.jsx) and arrives when
+   first opened: the admin console, Buddy vetting and home, the Saath-Fam
+   area, the circle, the other four tabs (see TabPanes), settings, more,
+   notifications, profile, journey, calendar, search, the link landings
+   and the sign-in flow. The parked ludo and snakes worlds are not
+   downloaded at all while parked. The screens reachable from the header
+   and the bar are fetched at idle once somebody is signed in, so the
+   first tap on them does not wait.
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { APP_COLORS as C, APP_FONT, GOOGLE_FONTS_URL, A11Y } from "../shared/tokens.js";
 import { supabaseConfigError } from "./lib/supabase.js";
 import AppHome from "./routes/AppHome.jsx";
-import AdminLayout from "./routes/admin/AdminLayout.jsx";
-import BuddyQueue from "./routes/admin/BuddyQueue.jsx";
-import BuddyApplication from "./routes/admin/BuddyApplication.jsx";
-import ModerationQueue from "./routes/admin/ModerationQueue.jsx";
-import Worklist from "./routes/admin/Worklist.jsx";
-import BroadcastsPage from "./routes/admin/BroadcastsPage.jsx";
-import QuestionsQueue from "./routes/admin/QuestionsQueue.jsx";
-import PlaceAccess from "./routes/admin/PlaceAccess.jsx";
 import HomeRoutes from "./routes/home/HomeRoutes.jsx";
 import { LanguageProvider } from "./lib/i18n.jsx";
-import AuthRoutes from "./routes/auth/AuthRoutes.jsx";
-import AppSettings from "./routes/AppSettings.jsx";
 import { AuthProvider, RequireAuth, useSession } from "./lib/session.jsx";
 import FeedbackProvider from "./lib/feedback.jsx";
-import VettingForm from "./routes/vetting/VettingForm.jsx";
-import FamRoutes from "./routes/fam/FamRoutes.jsx";
-import CircleRoutes from "./routes/circle/CircleRoutes.jsx";
-import PeopleRoutes from "./routes/people/PeopleRoutes.jsx";
-import LudoRoutes from "./routes/games/ludo/LudoRoutes.jsx";
-import SnakesRoutes from "./routes/games/snakes/SnakesRoutes.jsx";
-import GamesRoutes from "./routes/games/GamesRoutes.jsx";
 import { RESTING_TO } from "./routes/games/parked.js";
-import JoinByLink from "./routes/games/JoinByLink.jsx";
-import PublicResult from "./routes/games/PublicResult.jsx";
-import SharedScore from "./routes/home/SharedScore.jsx";
-import ClaimSeat from "./routes/games/ClaimSeat.jsx";
-import CalendarPage from "./routes/calendar/CalendarPage.jsx";
 import { readPendingJoin, clearPendingJoin } from "./routes/games/joinLink.js";
-import HelloInvite from "./routes/people/HelloInvite.jsx";
 import { readPendingInvite, clearPendingInvite } from "./lib/invites.js";
-import HistoryRoutes from "./routes/history/HistoryRoutes.jsx";
-import CommunityRoutes from "./routes/community/CommunityRoutes.jsx";
-import OutdoorRoutes from "./routes/outdoor/OutdoorRoutes.jsx";
-import EventsRoutes from "./routes/events/EventsRoutes.jsx";
-import SkillsRoutes from "./routes/skills/SkillsRoutes.jsx";
-import NotificationsRoutes from "./routes/notifications/NotificationsRoutes.jsx";
-import ProfileRoutes from "./routes/profile/ProfileRoutes.jsx";
-import BuddyHome from "./routes/buddy/BuddyHome.jsx";
-import MilestonesRoutes from "./routes/milestones/MilestonesRoutes.jsx";
-import GroupsRoutes from "./routes/groups/GroupsRoutes.jsx";
 import { registerAppServiceWorker } from "./lib/pwa.js";
 import UpdateNotice from "./components/UpdateNotice.jsx";
 import SwipeDebug from "./components/SwipeDebug.jsx";
-import MorePage from "./routes/MorePage.jsx";
 import AppShellBar from "./components/AppShellBar.jsx";
-import TabPanes, { paneFor } from "./components/TabPanes.jsx";
+import TabPanes, {
+  paneFor,
+  GamesRoutes,
+  OutdoorRoutes,
+  GroupsRoutes,
+  CommunityRoutes,
+} from "./components/TabPanes.jsx";
 import AppHeader from "./components/AppHeader.jsx";
+import { lazyScreen, whenIdle, ScreenArriving, ScreenLoadBoundary } from "./lib/lazyScreen.jsx";
+
+/* ── Role areas nobody else opens ── */
+const AdminLayout = lazyScreen(() => import("./routes/admin/AdminLayout.jsx"));
+const BuddyQueue = lazyScreen(() => import("./routes/admin/BuddyQueue.jsx"));
+const BuddyApplication = lazyScreen(() => import("./routes/admin/BuddyApplication.jsx"));
+const ModerationQueue = lazyScreen(() => import("./routes/admin/ModerationQueue.jsx"));
+const Worklist = lazyScreen(() => import("./routes/admin/Worklist.jsx"));
+const BroadcastsPage = lazyScreen(() => import("./routes/admin/BroadcastsPage.jsx"));
+const QuestionsQueue = lazyScreen(() => import("./routes/admin/QuestionsQueue.jsx"));
+const PlaceAccess = lazyScreen(() => import("./routes/admin/PlaceAccess.jsx"));
+const VettingForm = lazyScreen(() => import("./routes/vetting/VettingForm.jsx"));
+const BuddyHome = lazyScreen(() => import("./routes/buddy/BuddyHome.jsx"));
+const FamRoutes = lazyScreen(() => import("./routes/fam/FamRoutes.jsx"));
+const CircleRoutes = lazyScreen(() => import("./routes/circle/CircleRoutes.jsx"));
+const MilestonesRoutes = lazyScreen(() => import("./routes/milestones/MilestonesRoutes.jsx"));
+
+/* ── Parked (2026-09-12): kept whole and restorable, never downloaded ── */
+const LudoRoutes = lazyScreen(() => import("./routes/games/ludo/LudoRoutes.jsx"));
+const SnakesRoutes = lazyScreen(() => import("./routes/games/snakes/SnakesRoutes.jsx"));
+
+/* ── Link landings and the sign-in flow ── */
+const AuthRoutes = lazyScreen(() => import("./routes/auth/AuthRoutes.jsx"));
+const JoinByLink = lazyScreen(() => import("./routes/games/JoinByLink.jsx"));
+const PublicResult = lazyScreen(() => import("./routes/games/PublicResult.jsx"));
+const SharedScore = lazyScreen(() => import("./routes/home/SharedScore.jsx"));
+const ClaimSeat = lazyScreen(() => import("./routes/games/ClaimSeat.jsx"));
+const HelloInvite = lazyScreen(() => import("./routes/people/HelloInvite.jsx"));
+
+/* ── Reached from the header, the bar and More ── */
+/* A person's page and the chat thread under it. The Messages world opens
+   into these, so they are fetched at idle with the rest of ONE_TAP_AWAY;
+   what loads is only the code — the routes and screens are unchanged. */
+const PeopleRoutes = lazyScreen(() => import("./routes/people/PeopleRoutes.jsx"));
+const AppSettings = lazyScreen(() => import("./routes/AppSettings.jsx"));
+const MorePage = lazyScreen(() => import("./routes/MorePage.jsx"));
+const NotificationsRoutes = lazyScreen(() => import("./routes/notifications/NotificationsRoutes.jsx"));
+const ProfileRoutes = lazyScreen(() => import("./routes/profile/ProfileRoutes.jsx"));
+const HistoryRoutes = lazyScreen(() => import("./routes/history/HistoryRoutes.jsx"));
+const CalendarPage = lazyScreen(() => import("./routes/calendar/CalendarPage.jsx"));
+const EventsRoutes = lazyScreen(() => import("./routes/events/EventsRoutes.jsx"));
+const SkillsRoutes = lazyScreen(() => import("./routes/skills/SkillsRoutes.jsx"));
 /* NAVIGATION_SPEC §5 and §6 — four destinations the new bar and
    More rows point at. Every one of them was a live link to nothing
    until this commit. */
-import SearchPage from "./routes/search/SearchPage.jsx";
-import BadgesPage from "./routes/badges/BadgesPage.jsx";
-import SavedPage from "./routes/saved/SavedPage.jsx";
-import HelpPage from "./routes/help/HelpPage.jsx";
+const SearchPage = lazyScreen(() => import("./routes/search/SearchPage.jsx"));
+const BadgesPage = lazyScreen(() => import("./routes/badges/BadgesPage.jsx"));
+const SavedPage = lazyScreen(() => import("./routes/saved/SavedPage.jsx"));
+const HelpPage = lazyScreen(() => import("./routes/help/HelpPage.jsx"));
+
+/* The screens one tap away from anywhere signed in. Fetched at idle so
+   that first tap opens the screen instead of waiting on a download. */
+const ONE_TAP_AWAY = [PeopleRoutes, MorePage, AppSettings, NotificationsRoutes, ProfileRoutes, SearchPage];
 
 // App-shell offline caching + installability (production only; no-op
 // in dev). Module level so it runs once, and only for /app visitors.
@@ -206,6 +239,19 @@ function PendingJoinRedirect() {
   return null;
 }
 
+/* Fetches the code for the screens one tap away, once somebody is signed
+   in and the screen they opened has settled. Never the role areas: an
+   Icon's phone has no business downloading the admin console. */
+function PreloadOneTapAway() {
+  const { profile } = useSession();
+  const signedIn = Boolean(profile);
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    return whenIdle(() => ONE_TAP_AWAY.forEach((s) => s.preload()), 8000);
+  }, [signedIn]);
+  return null;
+}
+
 /* Milestones merged into My Journey (see the route below). An Icon
    is sent to /app/history, which holds the badges, the streaks and
    the calendar together. An admin stays on the message desk, which
@@ -248,6 +294,20 @@ function RoutesUnlessTab({ children }) {
   return paneFor(pathname) ? null : children;
 }
 
+/* The boundary around the non-tab routes. ALWAYS MOUNTED, even while a
+   tab is showing and RoutesUnlessTab renders nothing — which is what
+   makes a navigation to a screen whose code is still downloading keep
+   the current screen up (navigations run as transitions) instead of
+   blanking to a placeholder for the length of the download. */
+function RoutesBoundary({ children }) {
+  const { pathname } = useLocation();
+  return (
+    <ScreenLoadBoundary resetKey={pathname}>
+      <Suspense fallback={<ScreenArriving />}>{children}</Suspense>
+    </ScreenLoadBoundary>
+  );
+}
+
 export default function AppRoot() {
   if (supabaseConfigError) return <AppConfigError />;
   return (
@@ -259,9 +319,14 @@ export default function AppRoot() {
         <FeedbackProvider>
           <ScrollToTop />
           <PendingJoinRedirect />
+          <PreloadOneTapAway />
         {/* The marketing site loads its own fonts inside its own components,
-            so /app has to ask for them itself. */}
-        <style>{`@import url('${GOOGLE_FONTS_URL}');`}</style>
+            so /app has to ask for them itself. index.html already asked
+            before any script ran on a direct load of /app; this covers an
+            in-app arrival from the marketing site and is served from cache
+            otherwise. A <link>, not an @import inside <style>, so the
+            browser can fetch it without first parsing a stylesheet. */}
+        <link rel="stylesheet" href={GOOGLE_FONTS_URL} />
 
         {/* THE HEADER, MOUNTED ONCE FOR THE WHOLE APP.
 
@@ -288,6 +353,7 @@ export default function AppRoot() {
         {/* Visited tabs stay mounted here; see TabPanes. */}
         <TabPanes />
 
+        <RoutesBoundary>
         <RoutesUnlessTab>
         <Routes>
           <Route index element={<AppHome />} />
@@ -446,10 +512,11 @@ export default function AppRoot() {
               the games-rails shell when that lane lands (0022). */}
           {/* ── PARKED (2026-09-12) ──
 
-              LudoRoutes is still imported and still whole; what changed
+              LudoRoutes is still defined and still whole; what changed
               is what this path renders. Bringing ludo back is putting
               <LudoRoutes /> back in the element below and taking "ludo"
-              out of routes/games/parked.js.
+              out of routes/games/parked.js. While parked its code is
+              never downloaded — it is a lazyScreen nobody renders.
 
               A REDIRECT RATHER THAN A REMOVED ROUTE. Deleting the path
               would drop the URL through to games/* and its catch-all,
@@ -663,6 +730,7 @@ export default function AppRoot() {
           <Route path="*" element={<AppHome />} />
         </Routes>
         </RoutesUnlessTab>
+        </RoutesBoundary>
 
         {/* THE BOTTOM BAR, mounted once for the whole app (§3). It
             decides for itself where it must not appear — see

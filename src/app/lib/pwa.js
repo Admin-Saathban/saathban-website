@@ -86,61 +86,117 @@ async function compareWithController() {
   if (reply.builtAt > BUILD.time) announce();
 }
 
+/* ── HAND THE WORKER WHAT THIS PAGE ALREADY LOADED ──
+
+   The first visit's scripts are fetched before any worker controls the
+   page, so none of them passed through its cache. Without this, the
+   language file and the screens opened on that first visit would not be
+   there offline the next morning. Resource timing lists exactly what
+   was loaded; the worker stores whichever of those it does not already
+   hold, out of the browser's HTTP cache. Asked again whenever control
+   changes, for anything loaded in between. */
+function handOverLoadedFiles() {
+  try {
+    const own = (href) => {
+      try {
+        const u = new URL(href, window.location.href);
+        return u.origin === window.location.origin && u.pathname.startsWith("/assets/") ? u.href : null;
+      } catch {
+        return null;
+      }
+    };
+    const urls = new Set();
+    for (const e of performance.getEntriesByType("resource")) {
+      const u = own(e.name);
+      if (u) urls.add(u);
+    }
+    document.querySelectorAll('script[src], link[rel="modulepreload"][href]').forEach((el) => {
+      const u = own(el.getAttribute("src") || el.getAttribute("href"));
+      if (u) urls.add(u);
+    });
+    if (!urls.size) return;
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        if (reg && reg.active) reg.active.postMessage({ type: "SB_CACHE_URLS", urls: [...urls] });
+      })
+      .catch(() => {});
+  } catch {
+    /* progressive: nothing lost but offline coverage */
+  }
+}
+
+async function register() {
+  let reg;
+  try {
+    /* updateViaCache "none": the browser must not answer an update
+       check out of its own HTTP cache. The worker is the one file
+       whose freshness the whole scheme rests on. */
+    reg = await navigator.serviceWorker.register("/sw.js", {
+      scope: "/app",
+      updateViaCache: "none",
+    });
+  } catch {
+    return;
+  }
+
+  askWaitingToActivate(reg);
+  handOverLoadedFiles();
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    compareWithController();
+    handOverLoadedFiles();
+  });
+
+  reg.addEventListener("updatefound", () => {
+    const incoming = reg.installing;
+    if (!incoming) return;
+    incoming.addEventListener("statechange", () => {
+      /* The worker calls skipWaiting, so a new one reaches
+         "activated" on its own and takes over. Both states are
+         checked because a browser that ignores skipWaiting parks it
+         at "installed" instead, and a person on that browser should
+         still be told. */
+      if (incoming.state !== "installed" && incoming.state !== "activated") return;
+      askWaitingToActivate(reg);
+      if (!navigator.serviceWorker.controller) return;  // first ever install
+      askVersion(incoming).then((reply) => {
+        if (reply && reply.builtAt && BUILD.time && reply.builtAt > BUILD.time) announce();
+        else compareWithController();
+      });
+    });
+  });
+
+  const recheck = () => { try { reg.update(); } catch { /* offline */ } };
+
+  /* Coming back to the app is the moment worth checking: a phone PWA
+     is resumed far more often than it is launched. */
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    recheck();
+    askWaitingToActivate(reg);
+    compareWithController();
+  });
+  window.setInterval(recheck, RECHECK_MS);
+
+  compareWithController();
+}
+
+let registered = false;
+
 export function registerAppServiceWorker() {
   if (!import.meta.env.PROD) return;
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  if (registered) return;
+  registered = true;
 
-  window.addEventListener("load", async () => {
-    let reg;
-    try {
-      /* updateViaCache "none": the browser must not answer an update
-         check out of its own HTTP cache. The worker is the one file
-         whose freshness the whole scheme rests on. */
-      reg = await navigator.serviceWorker.register("/sw.js", {
-        scope: "/app",
-        updateViaCache: "none",
-      });
-    } catch {
-      return;
-    }
+  /* THE APP NOW ARRIVES AFTER THE PAGE HAS LOADED.
 
-    askWaitingToActivate(reg);
-
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      compareWithController();
-    });
-
-    reg.addEventListener("updatefound", () => {
-      const incoming = reg.installing;
-      if (!incoming) return;
-      incoming.addEventListener("statechange", () => {
-        /* The worker calls skipWaiting, so a new one reaches
-           "activated" on its own and takes over. Both states are
-           checked because a browser that ignores skipWaiting parks it
-           at "installed" instead, and a person on that browser should
-           still be told. */
-        if (incoming.state !== "installed" && incoming.state !== "activated") return;
-        askWaitingToActivate(reg);
-        if (!navigator.serviceWorker.controller) return;  // first ever install
-        askVersion(incoming).then((reply) => {
-          if (reply && reply.builtAt && BUILD.time && reply.builtAt > BUILD.time) announce();
-          else compareWithController();
-        });
-      });
-    });
-
-    const recheck = () => { try { reg.update(); } catch { /* offline */ } };
-
-    /* Coming back to the app is the moment worth checking: a phone PWA
-       is resumed far more often than it is launched. */
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) return;
-      recheck();
-      askWaitingToActivate(reg);
-      compareWithController();
-    });
-    window.setInterval(recheck, RECHECK_MS);
-
-    compareWithController();
-  });
+     This file is imported by AppRoot, which main.jsx loads as a separate
+     chunk. The window "load" event can fire BEFORE that chunk has run —
+     and a listener added after "load" never hears it, so the worker
+     would silently never register and offline support would vanish
+     without an error anywhere. Registering straight away when the page
+     has already loaded is what keeps it. */
+  if (document.readyState === "complete") register();
+  else window.addEventListener("load", register, { once: true });
 }

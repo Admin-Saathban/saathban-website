@@ -8,7 +8,7 @@
    every community member (Icons included) may read.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 /* Places the Icon can pick from, grouped-friendly (city then name). */
 export async function fetchPlaces() {
@@ -23,9 +23,7 @@ export async function fetchPlaces() {
 
 /* Icon submits a proposal. proposer_id must be the caller (RLS with-check). */
 export async function submitProposal({ title, place_id, place_text, event_date, start_time, note }) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase.from("event_proposals").insert({
     proposer_id: user?.id,
     title: title.trim(),

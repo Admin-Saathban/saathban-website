@@ -8,10 +8,10 @@
    another person's name), fetched and merged in a second query.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 async function myId() {
-  const { data } = await supabase.auth.getUser();
+  const data = { user: await sessionUser() };
   return data?.user?.id;
 }
 
@@ -283,7 +283,7 @@ export async function reportTarget({ kind, targetId, authorId, excerpt, reason }
    event would silently become city-wide, which is the exact leak
    tests/group-event-privacy.mjs exists to catch. */
 export async function createGroupEvent(groupId, { placeId, startsAt, note }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { data, error } = await supabase
     .from("outdoor_outings")
     .insert({
@@ -389,7 +389,7 @@ export async function requestToJoinGroup(groupId, message = null) {
    deserves to see what happened in the place they asked, rather than
    watching the row quietly vanish and wondering if it ever sent. */
 export async function fetchMyJoinRequest(groupId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user) return null;
   const { data } = await supabase
     .from("group_join_requests")
@@ -552,7 +552,7 @@ export async function joinPublicGroup(groupId) {
 /* Am I in this group at all? Cheaper and clearer than fetching the
    whole member list to look for myself. */
 export async function amIMember(groupId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user) return false;
   const { data } = await supabase
     .from("group_members")
@@ -575,7 +575,7 @@ export async function amIMember(groupId) {
    joined. §6 is "public groups YOU HAVE JOINED", not every public
    group. */
 export async function fetchFeedGroupPosts(limit = 40) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user) return [];
   const { data: mine } = await supabase
     .from("group_members").select("group_id").eq("member_id", user.id);

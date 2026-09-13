@@ -35,7 +35,7 @@
 
 import { useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
-import { useI18n } from "../../lib/i18n.jsx";
+import { useI18n, useLocaleStrings } from "../../lib/i18n.jsx";
 import { LOCALES } from "../../locales/index.js";
 import { MOODS, isoDate, greetingKeyForHour } from "../home/homeMock.js";
 import { useDailyLogs } from "../home/logStore.js";
@@ -141,6 +141,10 @@ function BigButton({ onClick, children, primary = true, disabled }) {
 
 export default function FirstRun({ profile, onDone }) {
   const { t, ts, lang, setLang } = useI18n();
+  /* The chooser shows a real sample in each language, and only the
+     active one is otherwise downloaded (locales/index.js), so both are
+     asked for here. The samples fill in as each arrives. */
+  const samples = useLocaleStrings(["en", "ur"]);
   const { writeEntry } = useDailyLogs(profile.id);
   const prefs = useIconPrefs(profile.id);
 
@@ -201,8 +205,8 @@ export default function FirstRun({ profile, onDone }) {
       font: LOCALES[code].meta.fonts.body,
       /* The REAL greeting for the real hour, so the preview is the
          screen they are about to see rather than a specimen. */
-      greeting: LOCALES[code].strings.home[greetingKeyForHour(new Date().getHours()).split(".")[1]],
-      line: LOCALES[code].strings.hub.logLine
+      greeting: samples[code]?.home?.[greetingKeyForHour(new Date().getHours()).split(".")[1]] || "",
+      line: (samples[code]?.hub?.logLine || "")
         .replace("{done}", code === "ur" ? "١" : "1")
         .replace("{total}", code === "ur" ? "٢" : "2"),
       label: LOCALES[code].meta.label,

@@ -16,7 +16,7 @@
    ludo_join (by code), ludo_rematch (0023).
    ════════════════════════════════════════════════ */
 
-import supabase from "../../../lib/supabase.js";
+import supabase, { sessionUser } from "../../../lib/supabase.js";
 import { fetchProfileCards } from "../../../lib/profileCards.js";
 
 export const DEFAULT_RULES = {
@@ -265,9 +265,7 @@ export async function fetchChat(sessionId) {
 }
 
 export async function sendChat(sessionId, body) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase.from("game_messages").insert({
     session_id: sessionId,
     sender_id: user?.id,

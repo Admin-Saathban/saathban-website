@@ -20,13 +20,13 @@ import useBackToClose from "../../components/useBackToClose.js";
 import { useSession } from "../../lib/session.jsx";
 import { REACTIONS, REACTION_ICON, REACTION_LABEL, REACTION_TONE, HEART } from "./communityCopy.js";
 import {
-  canUseCommunity,
-  canPostCommunity,
-  fetchFeed,
   widenFeed,
-  fetchGroupNeighbourIds,
+  fetchHomeFeed,
+  readHomeFeedCache,
+  writeHomeFeedCache,
+  feedImageSources,
+  rememberImageSize,
   fetchAuthors,
-  fetchReactions,
   fetchComments,
   createPost,
   deleteOwnPost,
@@ -37,14 +37,11 @@ import {
   blockOrMute,
   unblock,
   sendDmRequest,
-  imageUrl,
   fetchPlacesLite,
   shareActivity,
   createShare,
   joinActivity,
-  fetchJoins,
   joinWalk,
-  fetchConnections,
 } from "./communityData.js";
 import { CommunityScreen, Card, BodyText, PrimaryBtn, GhostBtn } from "./ui.jsx";
 import Composer, { ComposerRow } from "./Composer.jsx";
@@ -52,7 +49,6 @@ import PostMenu from "./PostMenu.jsx";
 import HelpStrip from "./HelpStrip.jsx";
 import ReconnectRow from "./ReconnectRow.jsx";
 import PlaySomethingSheet from "./PlaySomethingSheet.jsx";
-import { fetchFeedGroupPosts } from "../groups/groupsStore.js";
 import { pickReconnect, rowAllowed, markRowSeen, hushPerson } from "./reconnect.js";
 import { fetchChats } from "../messages/messagesData.js";
 import SayHelloSheet from "../messages/SayHelloSheet.jsx";
@@ -81,7 +77,6 @@ import {
   editBody,
   hidePost,
   unhidePost,
-  fetchMyHiddenPostIds,
 } from "./postsData.js";
 import { useToast, useFresh } from "../../lib/feedback.jsx";
 import RichText from "../../lib/richText.jsx";
@@ -464,6 +459,53 @@ export function ActivityPreview({ activity, placeName, when, note, limit, rsvp }
         onAction={() => {}}
       />
     </div>
+  );
+}
+
+/* ── A PHOTO IN THE FEED ──
+
+   Two photos were 40% of Home's cold bytes: a 1536x2048 original
+   (461KB) drawn 358 pixels wide, and every image fetched at once however
+   far down the feed it sat.
+
+   Now: a width-appropriate variant from Supabase's image renderer
+   (srcset, so a phone takes the 480 or 720 and a wide screen the 1080),
+   loading="lazy" so a photo below the fold waits until it is near, and
+   its box reserved before it arrives so the feed does not jump under a
+   thumb. The box comes from the size written into the file name at
+   upload; for older photos it is learned the first time one loads and
+   remembered on this device, so the second open does not jump either. */
+function FeedImage({ path }) {
+  const img = feedImageSources(path);
+  if (!img) return null;
+  const sized = img.width && img.height;
+  return (
+    <img
+      src={img.src}
+      srcSet={img.srcSet}
+      sizes={img.sizes}
+      width={sized ? img.width : undefined}
+      height={sized ? img.height : undefined}
+      loading="lazy"
+      decoding="async"
+      alt=""
+      onLoad={(ev) => rememberImageSize(path, ev.currentTarget.naturalWidth, ev.currentTarget.naturalHeight)}
+      /* The width/height attributes are a SHAPE, not a size: a srcset
+         image is drawn at the `sizes` width whatever its file measures,
+         so the column decides the width and the ratio decides the height.
+         (Capping at the remembered width was wrong — naturalWidth of a
+         srcset image is density-corrected, 358 for a 480w file.) */
+      style={{
+        display: "block",
+        width: sized ? "100%" : undefined,
+        maxWidth: "100%",
+        height: "auto",
+        aspectRatio: sized ? `${img.width} / ${img.height}` : undefined,
+        borderRadius: 14,
+        marginBottom: 12,
+        background: C.ground,
+      }}
+    />
   );
 }
 
@@ -924,13 +966,7 @@ function PostCard({
           />
         </div>
       )}
-      {post.image_path && (
-        <img
-          src={imageUrl(post.image_path)}
-          alt=""
-          style={{ maxWidth: "100%", borderRadius: 14, marginBottom: 12, display: "block" }}
-        />
-      )}
+      {post.image_path && <FeedImage path={post.image_path} />}
 
       {reporting && (
         <ReportForm
@@ -1313,16 +1349,9 @@ export default function Feed({ composer = true, embedded = false }) {
   const fresh = useFresh();
   // Posts on their way to the server: rendered at once, quietly marked.
   const [pendingPosts, setPendingPosts] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const rows = await fetchFeedGroupPosts();
-        if (alive) setGroupPosts(rows || []);
-      } catch { /* the community feed still stands without them */ }
-    })();
-    return () => { alive = false; };
-  }, [myId]);
+  /* Group posts used to be their own effect and three more requests.
+     They come back inside home_feed now (see load below); the RULE is
+     still §6's — public groups you have joined, not hidden. */
 
   /* §4.3. Deliberately its own effect and deliberately silent on
      failure: this is a courtesy, and a feed that refused to render
@@ -1467,44 +1496,102 @@ export default function Feed({ composer = true, embedded = false }) {
     }
   };
 
+  /* ── THE FEED IN ONE REQUEST, AND THE LAST ONE SHOWN AT ONCE ──
+
+     This was a waterfall: access, write access, the posts, their authors,
+     group neighbours, hides, then authors again with reactions and joins,
+     connections, and — from two effects — offers, saves, follows, tags,
+     their names and the group posts. On Home that was most of the 54
+     Supabase requests a throttled phone made (the last finishing at
+     11.9s).
+
+     home_feed (0130) returns all of it in one round trip. It is SECURITY
+     INVOKER, so row security judges every part exactly as it judged the
+     separate reads, and names still come from profile_cards. The shaping
+     here — §7's widening, 0116's hides — is unchanged; only where the rows
+     come from moved.
+
+     THE LAST ANSWER IS KEPT on this device, under this person's id, and
+     painted before the first frame; the fresh one replaces it when it
+     lands. Signing out removes it (lib/supabase.js). */
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const shownFromCache = useRef(false);
+
+  const applyHome = useCallback((data) => {
+    if (!data) return;
+    if (data.access === false) {
+      setAccess(false);
+      return;
+    }
+    const byId = Object.fromEntries((data.authors || []).map((p) => [p.id, p]));
+    const rows = data.posts || [];
+    /* §7: the feed shows the neighbourhood first and widens on its own
+       until there is something to read. The band is a fact about the
+       author, which is why the authors come back with the posts. */
+    const widened = widenFeed(rows, byId, profileRef.current, new Set(data.neighbours || []));
+    /* 0116. A post hidden by this reader is gone for this reader
+       only — the author is never told and nobody else is affected. */
+    const hidden = new Set(data.hidden || []);
+    setHiddenIds(hidden);
+    setPosts(widened.posts.filter((p) => !hidden.has(p.id)));
+    setRadius(widened.radius);
+    setAuthors(byId);
+    setReactions(data.reactions || []);
+    setJoins(
+      Object.fromEntries(
+        (data.joins || []).map((j) => [j.post_id, { count: Number(j.count) || 0, mine: !!j.mine }])
+      )
+    );
+    // Connections are the first band of §4.2's order.
+    setConnections(new Set(data.connections || []));
+    setExtras({
+      offers: data.offers || [],
+      saves: data.saves || [],
+      follows: data.follows || [],
+      tags: data.tags || [],
+    });
+    setGroupPosts(
+      (data.group_posts || []).map((r) => ({
+        ...r,
+        groupName: r.group_name,
+        authorName: byId[r.author_id]?.full_name || "A member",
+      }))
+    );
+    setCanWrite(!!data.can_post);
+    setAccess(true);
+  }, []);
+
+  /* Right after the first paint, not inside it. Applying fifty cached
+     posts in a layout effect made them part of the very first frame, and
+     on a slow phone that frame then waited for all of them — the greeting
+     and the log row above the feed arrived later than before the cache
+     existed (measured). Painted one frame later instead, the top of Home
+     is up at once and the remembered feed follows before any network
+     answer could. */
+  useEffect(() => {
+    const cached = readHomeFeedCache(myId);
+    if (cached) {
+      shownFromCache.current = true;
+      applyHome(cached);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const load = useCallback(async () => {
+    const asked = myId;
     try {
-      const ok = await canUseCommunity();
-      setAccess(ok);
-      if (!ok) return;
-      setCanWrite(await canPostCommunity());
-      const rows = await fetchFeed();
-      /* §7: the feed shows the neighbourhood first and widens on its own
-         until there is something to read. Authors have to be resolved
-         BEFORE the radius can be decided, because the band is a fact
-         about the author rather than about the post. */
-      const authorsForBand = await fetchAuthors(rows.map((p) => p.author_id));
-      const neighbours = await fetchGroupNeighbourIds(myId).catch(() => new Set());
-      const widened = widenFeed(rows, authorsForBand, profile, neighbours);
-      /* 0116. A post hidden by this reader is gone for this reader
-         only — the author is never told and nobody else is affected. */
-      const hidden = await fetchMyHiddenPostIds().catch(() => new Set());
-      setHiddenIds(hidden);
-      setPosts(widened.posts.filter((p) => !hidden.has(p.id)));
-      setRadius(widened.radius);
-      const joinable = rows.filter((p) => p.post_type === "walk" || p.post_type === "activity");
-      const [a, r, j] = await Promise.all([
-        fetchAuthors(rows.map((p) => p.author_id)),
-        fetchReactions(rows.map((p) => p.id)),
-        fetchJoins(joinable.map((p) => p.id), myId).catch(() => ({})),
-      ]);
-      setAuthors(a);
-      setReactions(r);
-      setJoins(j);
-      // Connections are the first band of §4.2's order; a failure just
-      // means everybody sorts into the later bands, never an error.
-      fetchConnections(myId)
-        .then(setConnections)
-        .catch(() => setConnections(new Set()));
+      const data = await fetchHomeFeed();
+      applyHome(data);
+      writeHomeFeedCache(asked, data);
     } catch {
-      setError(t("community.feed.loadError"));
+      /* With the last feed already on screen, a failed refresh is not
+         worth a warning laid over it — the posts are there, and the next
+         open tries again. With nothing on screen, say so. */
+      if (!shownFromCache.current) setError(t("community.feed.loadError"));
       setAccess(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1515,33 +1602,11 @@ export default function Feed({ composer = true, embedded = false }) {
   const postsRef = useRef(posts);
   postsRef.current = posts;
 
-  /* Offers, saves and follows for the posts currently in the feed.
-     Failures are silent: a help post still reads without knowing who
-     has offered, and a feed that will not render because a nicety did
-     not load is the worse trade. */
-  useEffect(() => {
-    let dead = false;
-    const ids = (posts || []).map((p) => p.id);
-    if (!ids.length) return undefined;
-    fetchHelpExtras(ids)
-      .then(async (x) => {
-        if (dead) return;
-        setExtras(x);
-        /* Names for the people tagged and the people offering — they
-           are not post authors, so they are not in `authors` yet, and
-           a tag that renders as an empty string is worse than none. */
-        const extraIds = [
-          ...x.tags.map((r) => r.person_id),
-          ...x.offers.map((r) => r.helper_id),
-        ].filter(Boolean);
-        if (extraIds.length) {
-          const more = await fetchAuthors(extraIds).catch(() => ({}));
-          if (!dead) setAuthors((cur) => ({ ...more, ...cur }));
-        }
-      })
-      .catch(() => {});
-    return () => { dead = true; };
-  }, [posts]);
+  /* Offers, saves, follows and tags — and the names of the people in
+     them — arrive with the feed (home_feed). This used to be an effect
+     that refetched all four tables every time the posts array changed,
+     which included every optimistic edit on screen. The actions that
+     change one of them still refresh it explicitly. */
 
   /* Optimistic share: the words appear the instant they are sent,
      marked "sending", and are replaced by the real row on confirm. A

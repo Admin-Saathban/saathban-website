@@ -72,12 +72,25 @@ export default function IconHub() {
      Milestones card that announced it — badges, streaks and
      celebrations are all My Journey's now — but the award itself still
      belongs here, because this is the screen a person opens. */
+  /* NOT ON THE WAY IN. This was a round trip fired the instant Home
+     mounted, competing for one of a slow phone's few connections with
+     the feed and the log a person actually opened Home to see. Nothing
+     on this screen waits for its answer, so it goes when the browser is
+     idle instead. (Points and badges are due to be removed; this only
+     stops them costing Home anything meanwhile.) */
   useEffect(() => {
     if (!iconId) return undefined;
-    awardMyBadges().catch(() => {
-      /* the hub never blocks on a celebration */
-    });
-    return undefined;
+    const run = () => {
+      awardMyBadges().catch(() => {
+        /* the hub never blocks on a celebration */
+      });
+    };
+    const ric = window.requestIdleCallback;
+    const id = ric ? ric(run, { timeout: 8000 }) : window.setTimeout(run, 4000);
+    return () => {
+      if (ric) window.cancelIdleCallback?.(id);
+      else window.clearTimeout(id);
+    };
   }, [iconId]);
 
 

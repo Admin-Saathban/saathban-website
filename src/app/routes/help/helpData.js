@@ -12,10 +12,10 @@
    admin RPC so the stored reply, the notification and the audit entry
    stay one unit. */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 export async function askQuestion({ subject, body }) {
-  const { data: auth } = await supabase.auth.getUser();
+  const auth = { user: await sessionUser() };
   const uid = auth?.user?.id;
   if (!uid) throw new Error("not signed in");
   /* profile_id is in the policy's WITH CHECK as well as forced by the
@@ -31,7 +31,7 @@ export async function askQuestion({ subject, body }) {
    of ours — but the filter stays anyway, because a query that depends
    on a policy to be correct is one policy edit from leaking. */
 export async function fetchMyQuestions() {
-  const { data: auth } = await supabase.auth.getUser();
+  const auth = { user: await sessionUser() };
   const uid = auth?.user?.id;
   if (!uid) return [];
   const { data, error } = await supabase

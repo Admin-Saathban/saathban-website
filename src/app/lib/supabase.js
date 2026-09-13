@@ -19,12 +19,34 @@ export const supabaseConfigError = missing.length
     `with the Preview and Production environments enabled, then redeploy.`
   : null;
 
+/* ── WHAT A SIGNED-IN PERSON LEAVES ON THE DEVICE ──
+
+   Screens that keep a copy of the last thing they showed, so the next
+   open paints at once instead of waiting on the network, store it
+   under one of these prefixes followed by the person's id. The id in
+   the key is what stops one person's copy being shown to another; this
+   list is what makes signing out take every copy with it, so a shared
+   phone does not keep somebody's feed after they have left. */
+export const SIGNED_IN_CACHE_PREFIXES = ["saathban.app.homeFeed."];
+
+function forgetSignedInCaches() {
+  try {
+    const ls = window.localStorage;
+    for (let i = ls.length - 1; i >= 0; i -= 1) {
+      const k = ls.key(i);
+      if (k && SIGNED_IN_CACHE_PREFIXES.some((p) => k.startsWith(p))) ls.removeItem(k);
+    }
+  } catch {
+    /* storage unavailable — then nothing was stored either */
+  }
+}
+
 /* The client is created LAZILY, on first use — never at module load.
-   This file sits in the /app import graph that main.jsx pulls in for
-   every visitor, so a module-scope throw here would white-screen the
-   marketing site too. Missing env now surfaces only when something
-   actually touches Supabase, and the /app boundary catches it first
-   via supabaseConfigError above. */
+   This file sits in the /app import graph, so a module-scope throw here
+   would white-screen the app boundary before it can explain itself.
+   Missing env now surfaces only when something actually touches
+   Supabase, and the /app boundary catches it first via
+   supabaseConfigError above. */
 let client = null;
 
 function getClient() {
@@ -38,8 +60,39 @@ function getClient() {
         detectSessionInUrl: true, // magic-link callback
       },
     });
+    /* SIGNED_OUT covers both doors out: pressing Sign out, and a
+       session the server has refused to refresh. Storage only — an
+       auth callback must not call back into the client. */
+    client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") forgetSignedInCaches();
+    });
   }
   return client;
+}
+
+/* ── WHO AM I, WITHOUT ASKING THE SERVER ──
+
+   auth.getUser() is a network round trip to the auth server every time
+   it is called, and it was being called about thirty times across the
+   app purely to learn the signed-in person's id — for a filter, or to
+   fill in an author column. On a phone at 150ms latency that is a
+   visible pause before every one of those reads even starts.
+
+   getSession() answers from the session already held on the device
+   (refreshing it first only if it has expired). The id it returns is
+   NOT a security decision: every read and write is still judged by row
+   security on the server against the verified token, so a wrong id
+   here could only ever produce a refused write, never a leak.
+
+   Use getUser() where the server's CURRENT view of the account is the
+   point — linked identities, a just-changed email. */
+export async function sessionUser() {
+  const { data } = await getClient().auth.getSession();
+  return data?.session?.user ?? null;
+}
+
+export async function currentUserId() {
+  return (await sessionUser())?.id ?? null;
 }
 
 /* Call sites keep the exact same shape (`supabase.auth…`,

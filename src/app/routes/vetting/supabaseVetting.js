@@ -13,7 +13,7 @@
      always read their own rows, all versions)
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 export const COOLDOWN_DAYS = 90;
 
@@ -98,7 +98,8 @@ export function classifySubmitError(message) {
 }
 
 export async function currentUserId() {
-  const { data, error } = await supabase.auth.getUser();
+  const data = { user: await sessionUser() };
+  const error = null;
   if (error || !data?.user) throw new Error("Your session has expired — please sign in again.");
   return data.user.id;
 }

@@ -27,11 +27,37 @@
    already right on the login screen. When per-account settings land
    (build step 9's Settings screen), Supabase becomes the source of
    truth and localStorage stays as the pre-login cache.
+
+   ─── STRINGS ARRIVE; KEYS ARE NEVER SHOWN WHILE THEY DO ───
+
+   Only the active language is downloaded (locales/index.js). Two rules
+   keep that invisible:
+
+   1. NOTHING BELOW THE PROVIDER RENDERS UNTIL ITS LANGUAGE HAS ARRIVED.
+      Until then the provider paints the app's ground and nothing else —
+      the same colour as the placeholder main.jsx shows, so the screen
+      does not change until there are real words to put on it. main.jsx
+      starts this download in parallel with the app chunk, so the wait
+      is normally none.
+
+   2. A SWITCH HOLDS THE CURRENT LANGUAGE UNTIL THE NEW ONE IS HERE.
+      Tapping اردو does not flip the page into Urdu with no Urdu strings
+      loaded; it keeps showing English, fetches Urdu, and then changes
+      everything at once. Offline and never fetched, the tap does
+      nothing rather than breaking the screen, and the choice is not
+      saved as if it had worked.
    ════════════════════════════════════════════════ */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { A11Y, APP_COLORS } from "../../shared/tokens.js";
-import { DEFAULT_LANG, LOCALES, NASTALIQ_FONT_URL } from "../locales/index.js";
+import {
+  DEFAULT_LANG,
+  LANG_STORAGE_KEY,
+  LOCALES,
+  NASTALIQ_FONT_URL,
+  loadLocale,
+  localeStrings,
+} from "../locales/index.js";
 
 // The in-app text size control (independent of the phone's setting).
 // `labelKey` points into the locale files; `scale` multiplies every
@@ -45,7 +71,7 @@ export const TEXT_SIZES = [
 ];
 const DEFAULT_SIZE = "standard";
 
-const LANG_KEY = "saathban.app.lang";
+const LANG_KEY = LANG_STORAGE_KEY;
 const SIZE_KEY = "saathban.app.textSize";
 
 // localStorage can throw (private browsing, storage disabled) — the
@@ -68,33 +94,164 @@ function writeStored(key, value) {
 
 const I18nContext = createContext(null);
 
+/* For a screen that shows more than the active language at once — the
+   first-run language chooser renders a real sample in each. Returns
+   { code: strings | null } and re-renders as each one arrives. */
+export function useLocaleStrings(codes) {
+  const key = codes.join(",");
+  const [, bump] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    key.split(",").forEach((code) => {
+      if (localeStrings(code)) return;
+      loadLocale(code)
+        .then(() => { if (alive) bump((n) => n + 1); })
+        .catch(() => { /* the sample stays empty; the label still shows */ });
+    });
+    return () => { alive = false; };
+  }, [key]);
+  return Object.fromEntries(codes.map((code) => [code, localeStrings(code)]));
+}
+
+/* Painted while the first language is on its way, or when it cannot be
+   fetched at all. Wordless while loading. If both languages fail —
+   offline on a device that has never cached them — there are no strings
+   to say so with, so the one line is written in both scripts. */
+function LanguageArriving({ failed, onRetry }) {
+  if (!failed) {
+    return <div aria-busy="true" style={{ minHeight: "100vh", background: APP_COLORS.bg }} />;
+  }
+  return (
+    <div
+      role="alert"
+      style={{
+        minHeight: "100vh",
+        background: APP_COLORS.bg,
+        color: APP_COLORS.textMain,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 18,
+        padding: 24,
+        textAlign: "center",
+        fontSize: A11Y.minBodyPx,
+      }}
+    >
+      <p style={{ margin: 0 }}>Could not load. Check your connection.</p>
+      <p dir="rtl" lang="ur" style={{ margin: 0, fontFamily: LOCALES.ur.meta.fonts.body, lineHeight: 2.1 }}>
+        لوڈ نہیں ہو سکا۔ اپنا کنکشن دیکھیں۔
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        style={{
+          minHeight: A11Y.minTapTargetPx,
+          minWidth: 120,
+          padding: "0 28px",
+          borderRadius: 50,
+          border: "none",
+          background: APP_COLORS.green,
+          color: APP_COLORS.cream,
+          fontSize: A11Y.minBodyPx,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        ↻ Try again · دوبارہ
+      </button>
+    </div>
+  );
+}
+
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() =>
+  const [lang, setLangState] = useState(() =>
     readStored(LANG_KEY, Object.keys(LOCALES), DEFAULT_LANG)
   );
   const [textSize, setTextSize] = useState(() =>
     readStored(SIZE_KEY, TEXT_SIZES.map((s) => s.id), DEFAULT_SIZE)
   );
+  /* Bumped when strings arrive, so t() changes identity and every
+     consumer re-renders with words instead of waiting for a lang change. */
+  const [arrivals, setArrivals] = useState(0);
+  const [failed, setFailed] = useState(false);
+  /* The most recent language asked for. A slow Urdu download that lands
+     after the person has already tapped back to English must not win. */
+  const wanted = useRef(lang);
 
   useEffect(() => writeStored(LANG_KEY, lang), [lang]);
   useEffect(() => writeStored(SIZE_KEY, textSize), [textSize]);
+
+  const ready = !!localeStrings(lang);
+
+  const loadFirst = useCallback(() => {
+    setFailed(false);
+    const first = wanted.current;
+    loadLocale(first)
+      .then(() => setArrivals((n) => n + 1))
+      .catch(() => {
+        /* The stored language is unreachable (offline, never cached).
+           The other one may be cached; showing the app in it beats
+           showing nothing. The stored choice is left alone. */
+        const other = first === DEFAULT_LANG ? "ur" : DEFAULT_LANG;
+        loadLocale(other)
+          .then(() => {
+            wanted.current = other;
+            setLangState(other);
+            setArrivals((n) => n + 1);
+          })
+          .catch(() => setFailed(true));
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!ready) loadFirst();
+    // Only the first language goes through here; switches use setLang.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setLang = useCallback((code) => {
+    if (!LOCALES[code]) return;
+    wanted.current = code;
+    if (localeStrings(code)) {
+      setLangState(code);
+      return;
+    }
+    loadLocale(code)
+      .then(() => {
+        if (wanted.current === code) setLangState(code);
+      })
+      .catch(() => {
+        /* offline and never fetched: stay in the language on screen */
+        if (wanted.current === code) wanted.current = lang;
+      });
+  }, [lang]);
 
   const meta = LOCALES[lang].meta;
   const scale = TEXT_SIZES.find((s) => s.id === textSize)?.scale ?? 1;
 
   // t("a.b.c", {name: "…"}) — active language first, English when the
-  // key is missing or still untranslated-missing, the key itself as a
-  // last resort so a typo is visible on screen, never a blank.
+  // key is missing from it (and English has loaded), the key itself as
+  // a last resort so a typo is visible on screen, never a blank.
   const t = useCallback(
     (path, vars) => {
       const dig = (obj) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
-      let s = dig(LOCALES[lang].strings);
-      if (typeof s !== "string") s = dig(LOCALES[DEFAULT_LANG].strings);
+      let s = dig(localeStrings(lang));
+      if (typeof s !== "string" && lang !== DEFAULT_LANG) {
+        const en = localeStrings(DEFAULT_LANG);
+        if (en) s = dig(en);
+        /* A key the active language lacks: fetch English quietly so the
+           next render has it. The two files are kept in step, so this is
+           a safety net rather than a path anybody normally takes. */
+        else loadLocale(DEFAULT_LANG).then(() => setArrivals((n) => n + 1)).catch(() => {});
+      }
       if (typeof s !== "string") return path;
       if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(v);
       return s;
     },
-    [lang]
+    // arrivals is a dependency on purpose: new strings, new t.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lang, arrivals]
   );
 
   // ts(18) → a CSS length that follows the text size control. Use it
@@ -103,7 +260,7 @@ export function LanguageProvider({ children }) {
 
   const value = useMemo(
     () => ({ lang, setLang, textSize, setTextSize, meta, scale, t, ts }),
-    [lang, textSize, meta, scale, t, ts]
+    [lang, setLang, textSize, meta, scale, t, ts]
   );
 
   return (
@@ -234,7 +391,7 @@ export function LanguageProvider({ children }) {
           fontSize: ts(A11Y.minBodyPx),
         }}
       >
-        {children}
+        {ready ? children : <LanguageArriving failed={failed} onRetry={loadFirst} />}
       </div>
     </I18nContext.Provider>
   );

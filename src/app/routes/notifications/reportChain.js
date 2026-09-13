@@ -26,7 +26,7 @@
    what a person asked for when they asked what happened.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 /* A short, sayable reference. The row's uuid is the real identity; a
    person reading it over the phone to a staffer needs something with
@@ -37,7 +37,7 @@ export function reportRef(id) {
 }
 
 export async function fetchMyReports(limit = 10) {
-  const { data: auth } = await supabase.auth.getUser();
+  const auth = { user: await sessionUser() };
   const uid = auth?.user?.id;
   if (!uid) return [];
   const { data, error } = await supabase

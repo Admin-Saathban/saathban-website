@@ -12,7 +12,7 @@
    still refuse. That is the intended order.
    ════════════════════════════════════════════════ */
 
-import { supabase } from "../../lib/supabase.js";
+import { supabase, sessionUser } from "../../lib/supabase.js";
 
 /* Live right now: in the tab, by the ordinary widening rules. */
 export async function fetchLiveMoments() {
@@ -41,7 +41,7 @@ export async function fetchPastMoments() {
 }
 
 export async function startMoment({ label, visibility = "connections" }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { data, error } = await supabase
     .from("outdoor_moments")
     .insert({ profile_id: user?.id, label: (label || "").trim(), visibility })
@@ -65,7 +65,7 @@ export async function endMoment(id) {
    people who were there — presence is the record, so it can only be
    claimed while the moment is still live (0066 enforces that). */
 export async function joinMoment(momentId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase
     .from("outdoor_moment_presence")
     .upsert({ moment_id: momentId, profile_id: user?.id }, { onConflict: "moment_id,profile_id", ignoreDuplicates: true });

@@ -23,7 +23,7 @@
    stripped: somebody searching for "O'Brien, A" should find them.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 import { searchPeopleByName } from "../../lib/profileCards.js";
 
 const LIMIT = 8;
@@ -85,7 +85,7 @@ export async function searchPosts(q) {
 /* Which groups the caller is already in, so a row can say "Open"
    rather than offering to join something they are standing inside. */
 export async function myGroupIds() {
-  const { data: auth } = await supabase.auth.getUser();
+  const auth = { user: await sessionUser() };
   const uid = auth?.user?.id;
   if (!uid) return new Set();
   const { data } = await supabase
@@ -193,7 +193,7 @@ export async function requestToJoinGroup(groupId, message = null) {
    happened. RLS ("requester reads own") scopes it; the filter is here
    anyway rather than trusting a policy to be the query. */
 export async function myJoinRequests() {
-  const { data: auth } = await supabase.auth.getUser();
+  const auth = { user: await sessionUser() };
   const uid = auth?.user?.id;
   if (!uid) return {};
   const { data, error } = await supabase

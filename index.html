@@ -53,28 +53,62 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://saathban.com" />
 
+    <!-- Both halves use Google Fonts; opening the connection before any
+         script has run saves a round trip on a slow phone. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
     <style>
       body { margin: 0; padding: 0; }
     </style>
-    <!-- Meta Pixel Code -->
+
     <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1866208924335158');
-    fbq('track', 'PageView');
+    /* ── ONE DOCUMENT, TWO SITES, TWO RULES ──
+
+       This file is served for every path: the marketing site at / and
+       the app at /app. They must not be treated alike.
+
+       THE APP IS NEVER TRACKED. Icons log their mood, their medicines,
+       their blood pressure and their pain under /app, and the privacy
+       promise is that what they write is theirs. A third-party
+       advertising pixel firing PageView on those screens contradicts it
+       outright, whatever it does or does not collect. So the Meta Pixel
+       is injected only when this page is NOT under /app — and there is
+       deliberately no <noscript> image beacon either, because that one
+       cannot look at the path and would fire on /app for anybody without
+       scripts.
+
+       THE APP'S FONTS START HERE. They used to arrive as an @import
+       inside a React <style>, which the browser cannot discover until
+       the whole bundle has downloaded and run. Asking for the stylesheet
+       from the document lets it race the script instead. AppRoot still
+       asks as well (a harmless duplicate, served from cache) so a client-
+       side arrival at /app from the marketing site keeps its fonts. */
+    (function () {
+      var isApp = /^\/app(\/|$)/.test(window.location.pathname);
+      if (isApp) {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap';
+        document.head.appendChild(link);
+        return;
+      }
+      /* Meta Pixel Code — marketing site only */
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1866208924335158');
+      fbq('track', 'PageView');
+      /* End Meta Pixel Code */
+    })();
     </script>
-    <!-- End Meta Pixel Code -->
   </head>
   <body>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=1866208924335158&ev=PageView&noscript=1"
-    /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

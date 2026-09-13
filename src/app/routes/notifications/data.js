@@ -7,7 +7,7 @@
    created by staff RPCs / the service role, never written here.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 
 /* Dispatched on window after marking read, so the header bell's badge
    refreshes without a reload. */
@@ -74,7 +74,7 @@ export async function markAllRead() {
    here and can undo it — which is what "reversible from Settings"
    has to mean to be true. */
 export async function muteNotificationPerson(personId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user || !personId) return;
   const { error } = await supabase.from("user_blocks").upsert(
     { blocker_id: user.id, blocked_id: personId, kind: "mute" },
@@ -88,7 +88,7 @@ export async function muteNotificationPerson(personId) {
    a careless write here would silently drop somebody's text size or
    language. */
 export async function muteNotificationKind(kind) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user || !kind) return;
   const { data: me } = await supabase
     .from("profiles").select("settings").eq("id", user.id).maybeSingle();

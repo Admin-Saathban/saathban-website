@@ -8,7 +8,7 @@
    comes from a definer function that only ever exposes a number.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 import { EVENTS as SITE_EVENTS } from "../../../shared/eventsData.js";
 
 /* ─── Shared (marketing) events, normalized ───
@@ -116,9 +116,7 @@ export async function fetchCalendarEntries() {
 }
 
 export async function addCalendarEntry(entry) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase.from("calendar_entries").insert({
     owner_id: user?.id,
     ...entry,
@@ -150,9 +148,7 @@ export async function adminSaveEvent(fields, id) {
     if (error) throw new Error(error.message);
     return id;
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { data, error } = await supabase
     .from("events")
     .insert({ ...fields, created_by: user?.id })

@@ -12,7 +12,7 @@
    through RLS either way.
    ════════════════════════════════════════════════ */
 
-import supabase from "./supabase.js";
+import supabase, { sessionUser } from "./supabase.js";
 
 const MEMBER_COLUMNS =
   "id, icon_id, member_id, is_sos_contact, sos_order, can_see_mood, can_see_health, can_manage_reminders, can_configure_daily_log, quiet_days_notice, location_access, created_at";
@@ -203,9 +203,7 @@ export async function addReminder(
   iconId,
   { label, remind_time, remind_times, days_label, emoji }
 ) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { data, error } = await supabase
     .from("reminders")
     .insert({

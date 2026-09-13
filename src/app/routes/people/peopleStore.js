@@ -10,7 +10,7 @@
    normal request gate. Blocks beat everything, at the database.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 import { fetchPublicProfileRow } from "../../lib/profileCards.js";
 
 /* Warm sticker set — sent as the message body, rendered large. */
@@ -87,9 +87,7 @@ export async function fetchMessages(requestId) {
 }
 
 export async function sendDm(requestId, body) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase.from("dm_messages").insert({
     request_id: requestId,
     sender_id: user?.id,

@@ -5,7 +5,7 @@
    resolve through safe_profiles and render as first names only.
    ════════════════════════════════════════════════ */
 
-import supabase from "../../lib/supabase.js";
+import supabase, { sessionUser } from "../../lib/supabase.js";
 import { fetchProfileCards } from "../../lib/profileCards.js";
 // "Who's up for…" writes delegate to the community lane's own store so
 // there is exactly ONE authority for the activity payload shape
@@ -40,7 +40,7 @@ export async function fetchPlaces() {
    else's id is refused at the database rather than trusted here. New
    places are visible to everyone immediately — no approval queue. */
 export async function addPlace({ name, area, city, placeType, lat = null, lng = null }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { data, error } = await supabase
     .from("outdoor_places")
     .insert({
@@ -326,7 +326,7 @@ export async function fetchAllAccessNotes() {
 /* Add or remove one note. Admin-only at the database (0064), so a
    non-admin calling this is refused there rather than trusted here. */
 export async function setAccessNote(placeId, feature, on, { verified = true } = {}) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!on) {
     const { error } = await supabase
       .from("outdoor_place_access")
@@ -354,7 +354,7 @@ export async function setAccessNote(placeId, feature, on, { verified = true } = 
    the admin screen, since 0064 seeded a handful and every one of them
    is waiting on somebody actually looking. */
 export async function confirmAccessNote(placeId, feature) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   const { error } = await supabase
     .from("outdoor_place_access")
     .update({ verified: true, verified_by: user?.id, verified_at: new Date().toISOString() })
@@ -413,7 +413,7 @@ export async function notifyChosenFriends(ids, { title, body, link, kind = "outi
    they already have an accepted conversation with. Deliberately not
    "everyone nearby" — this list is for the handful who matter. */
 export async function fetchMyPeople() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await sessionUser();
   if (!user) return [];
   const me = user.id;
   const [{ data: circ }, { data: dms }] = await Promise.all([

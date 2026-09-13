@@ -36,6 +36,7 @@
    ════════════════════════════════════════════════ */
 
 import { useMemo, useState } from "react";
+import { ActivityPreview } from "../community/Feed.jsx";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
@@ -176,7 +177,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
     setBusy(true);
     setError("");
     try {
-      await startActivityHere(profile.id, {
+      const res = await startActivityHere(profile.id, {
         activity,
         placeText: where.trim() || null,
         placeId: placeId || null,
@@ -200,7 +201,7 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
           });
         } catch { /* the plan stands */ }
       }
-      onStarted?.({ what: activity });
+      onStarted?.({ what: activity, postId: res && res.postId });
     } catch (e) {
       setError(t("whatson.start.failed"));
       setBusy(false);
@@ -453,6 +454,11 @@ export default function StartSomething({ places = [], me, onClose, onStarted }) 
         <BodyText role="alert" style={{ color: C.brown, fontWeight: 700, margin: "0 0 12px" }}>
           {error}
         </BodyText>
+      )}
+
+      {/* The card as the feed will show it, on the step that sends it. */}
+      {step === TOTAL && (
+        <ActivityPreview activity={what} placeName={where} when={startsAtIso()} limit={limit} rsvp={confirm} />
       )}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

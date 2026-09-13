@@ -99,7 +99,7 @@ export function ComposerRow({ onOpen }) {
 }
 
 /* ── The full screen ── */
-export default function Composer({ open, startWith, onClose, onShare, busy }) {
+export default function Composer({ open, startWith, onClose, onShare, busy, attachment = null, renderAttachment = null, initialBody = "" }) {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
   const fileRef = useRef(null);
@@ -127,7 +127,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
   /* A RECORDING COUNTS. It is the draft that cannot be retyped from
      memory, and the person who chose the microphone over the keyboard
      is usually the one for whom typing it again is the hard part. */
-  const hasDraft = () => !!body.trim() || !!file || !!voice;
+  const hasDraft = () => !!body.trim() || !!file || !!voice || !!attachment;
 
   const askClose = () => { if (hasDraft()) setConfirmDiscard(true); else { reset(); onClose(); } };
 
@@ -145,6 +145,18 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
       .catch(() => { setPeople([]); setPeopleError(t("common.loadError")); });
   }, [pickPeople, people]);
 
+  /* A SHARE ARRIVES WITH ITS WORDS ALREADY WRITTEN (shareDraft.js). They
+     are seeded once per draft, when the composer opens with it, and never
+     over words the person has since typed. */
+  const seeded = useRef(null);
+  useEffect(() => {
+    if (!open || !attachment) return;
+    const key = attachment.at || attachment.type;
+    if (seeded.current === key) return;
+    seeded.current = key;
+    setBody(initialBody || "");
+  }, [open, attachment, initialBody]);
+
   if (!open) return null;
 
   /* §3 — the swatches stop applying once it runs long or carries a
@@ -154,6 +166,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
   const bg = colour != null && colourApplies ? SWATCHES[colour] : C.white;
 
   const reset = () => {
+    seeded.current = null;
     setBody(""); setFile(null); setVisibility("public");
     setColour(null); setStyleTag(null); setHelpWanted(1); setPickVis(false);
     setTagged([]); setPickPeople(false);
@@ -165,9 +178,9 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
     /* A voice post may carry no words at all — that is the point of
        it — so Share is live when there is EITHER something written or
        something recorded. */
-    if ((!body.trim() && !voice) || busy) return;
+    if ((!body.trim() && !voice && !attachment) || busy) return;
     const ok = await onShare({
-      body, file, visibility, colour, styleTag, helpWanted, tagged,
+      body, file, visibility, colour, styleTag, helpWanted, tagged, attachment,
       audio: voice ? { blob: voice.blob, seconds: voice.seconds, mime: voice.mime } : null,
     });
     if (ok) { reset(); onClose(); }
@@ -244,12 +257,12 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
           {t("posts.close")}
         </button>
         <h1 style={{ flex: 1, margin: 0, textAlign: "center", fontSize: ts(20), fontWeight: 800, color: C.textMain }}>
-          {t("posts.newPost")}
+          {attachment ? t("posts.shareTitle") : t("posts.newPost")}
         </h1>
         <button
           type="button"
           onClick={share}
-          disabled={busy || (!body.trim() && !voice)}
+          disabled={busy || (!body.trim() && !voice && !attachment)}
           style={{
             minHeight: A11Y.minTapTargetPx,
             padding: "0 22px",
@@ -260,8 +273,8 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             fontFamily: "inherit",
             fontSize: ts(A11Y.minBodyPx),
             fontWeight: 800,
-            opacity: busy || (!body.trim() && !voice) ? 0.5 : 1,
-            cursor: busy || (!body.trim() && !voice) ? "default" : "pointer",
+            opacity: busy || (!body.trim() && !voice && !attachment) ? 0.5 : 1,
+            cursor: busy || (!body.trim() && !voice && !attachment) ? "default" : "pointer",
           }}
         >
           {busy ? "…" : t("posts.share")}
@@ -315,6 +328,19 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             }}
           />
 
+          {/* THE THING BEING SHARED, AS IT WILL APPEAR. Drawn by the feed's
+              own card from the same payload the post will carry, so what is
+              seen here is what the feed will show. The person presses Share
+              above; nothing has gone anywhere yet. */}
+          {attachment && (
+            <div style={{ marginTop: 12 }}>
+              <p style={{ margin: "0 0 8px", fontSize: ts(16), color: C.textMuted, lineHeight: 1.5 }}>
+                {t("posts.shareCardHint")}
+              </p>
+              {renderAttachment ? renderAttachment(attachment) : null}
+            </div>
+          )}
+
           {/* Said in front of the person, not discovered afterwards. */}
           {colour != null && !colourApplies && (
             <p style={{ margin: "6px 0 0", fontSize: ts(15), color: C.textMuted }}>
@@ -322,6 +348,9 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
             </p>
           )}
 
+          {/* A card post is the card and the words. Colour, tags, photo,
+              voice and mentions belong to a post written from nothing. */}
+          <div hidden={!!attachment}>
           {/* §3 colours */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
             <button
@@ -484,6 +513,7 @@ export default function Composer({ open, startWith, onClose, onShare, busy }) {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 

@@ -82,6 +82,8 @@ function VisibilityChoice({ value, onChange }) {
   );
 }
 
+import { ActivityPreview } from "../community/Feed.jsx";
+
 export default function PlaceView() {
   const { placeId } = useParams();
   const { t, ts, meta, lang } = useI18n();
@@ -255,7 +257,7 @@ export default function PlaceView() {
         if (added) fresh.mark(added.id);
       }, 0);
     },
-    { success: () => t("feedback.activityStarted"), error: () => t("outdoor.place.checkinFailed"), retry: true }
+    { error: () => t("outdoor.place.checkinFailed"), retry: true }
   );
 
   const [postBoard, posting] = useAction(
@@ -668,6 +670,7 @@ export default function PlaceView() {
                     style={{ marginTop: 6 }}
                   />
                 </label>
+                <ActivityPreview activity={actWhat} placeName={place?.name} when={actWhen} note={actNote} limit={actLimit} />
                 <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
                   <PrimaryBtn type="submit" onClick={saveActivity} disabled={!actWhat.trim() || savingActivity}>
                     {savingActivity ? t("feedback.sending") : t("outdoor.place.actSave")}

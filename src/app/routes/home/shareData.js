@@ -51,6 +51,22 @@ export async function shareScoreWithPeople({ points, logs, day, name, title, bod
   return { sent: Number(data) || 0, token };
 }
 
+/* ── The same notification, to ONE audience, in the words the person
+   saw and edited (0120). "circle" or "friends" — the two rows on the
+   share sheet reached the same people through share_score_with_people,
+   which is kept for older builds. Returns how many were actually told. */
+export async function shareScoreToAudience(audience, { points, logs, day, title, body }) {
+  const token = await createScoreShareLink({ points, logs, day });
+  const { data, error } = await supabase.rpc("share_score_to_audience", {
+    p_audience: audience,
+    p_title: title,
+    p_body: body || null,
+    p_link: sharedScoreUrl(token),
+  });
+  if (error) throw new Error(error.message);
+  return { sent: Number(data) || 0, token };
+}
+
 /* ── A link that expires ──
    0114. Minting is idempotent by design: a live link is refreshed and
    handed back, so pressing the button again does not scatter extra

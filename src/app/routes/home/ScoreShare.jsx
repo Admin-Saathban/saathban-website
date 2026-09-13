@@ -12,6 +12,10 @@
    from home.score.badges.*. */
 
 import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Icon from "../../components/Icon.jsx";
+import { startShareDraft } from "../community/shareDraft.js";
+import { fetchShareAudience, namesLine } from "../../lib/shareAudience.js";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { BADGES } from "./homeMock.js";
@@ -19,7 +23,7 @@ import { useSession } from "../../lib/session.jsx";
 import useBackToClose from "../../components/useBackToClose";
 import {
   shareScoreToCommunity,
-  shareScoreWithPeople,
+  shareScoreToAudience,
   createScoreShareLink,
   sharedScoreUrl,
 } from "./shareData.js";
@@ -34,14 +38,81 @@ function nextBadge(totalPoints) {
 
 /* ─── Share sheet ─── */
 
-function ShareRow({ icon, title, sub, onClick, done, busy, disabled }) {
-  const { ts } = useI18n();
+/* ── EVERY ROW SHOWS WHAT GOES OUT BEFORE IT GOES ──
+
+   Owner: a share must show the thing, let it be edited, let the person
+   press the final button, and then show where it landed. This sheet did
+   the work on the tap and reported a line such as "Your score is on the
+   community board ✓" — no artifact, no destination a person could open,
+   and for the people rows no names.
+
+   - Community goes INTO the composer with the real feed card on it
+     (shareDraft.js); the person presses Share there and lands on the
+     post.
+   - My Circle and Friends open a step inside the sheet: who it goes to,
+     the words of the notification (editable), Send, then who it went to,
+     the notification as they will read it, and the page it opens.
+   - The link shows what the link shows first, then the link, a copy
+     button, and the page itself.
+
+   The two people rows used to reach the SAME people (circle and
+   conversations together, 0115). They are separate audiences now
+   (0120). */
+
+const fieldStyle = (ts) => ({
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  minHeight: A11Y.minTapTargetPx,
+  marginTop: 6,
+  padding: "10px 14px",
+  borderRadius: 12,
+  border: "2px solid " + C.warmGray,
+  background: C.white,
+  color: C.textMain,
+  fontFamily: "inherit",
+  fontSize: ts(A11Y.minBodyPx),
+  lineHeight: 1.5,
+});
+
+const primaryBtn = (ts, off) => ({
+  minHeight: A11Y.minTapTargetPx,
+  padding: "0 24px",
+  borderRadius: 50,
+  border: "none",
+  background: C.green,
+  color: C.cream,
+  fontFamily: "inherit",
+  fontSize: ts(A11Y.minBodyPx),
+  fontWeight: 700,
+  opacity: off ? 0.5 : 1,
+  cursor: off ? "default" : "pointer",
+});
+
+const ghostBtn = (ts) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: A11Y.minTapTargetPx,
+  padding: "0 20px",
+  borderRadius: 50,
+  border: "2px solid " + C.warmGray,
+  background: C.white,
+  color: C.textMain,
+  fontFamily: "inherit",
+  fontSize: ts(A11Y.minBodyPx),
+  fontWeight: 600,
+  textDecoration: "none",
+  cursor: "pointer",
+});
+
+function ShareRow({ icon, title, sub, onClick, busy, disabled }) {
+  const { ts, meta } = useI18n();
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled || busy || done}
-      aria-disabled={disabled || busy || done ? "true" : undefined}
+      disabled={disabled || busy}
+      aria-disabled={disabled || busy ? "true" : undefined}
       style={{
         width: "100%",
         minHeight: 64,
@@ -50,43 +121,228 @@ function ShareRow({ icon, title, sub, onClick, done, busy, disabled }) {
         gap: 14,
         padding: "12px 16px",
         borderRadius: 16,
-        /* Done is marked by the glyph AND the words, never colour
-           alone — the row says where it went and stops offering to go
-           there again. */
-        border: `2px solid ${done ? C.green : C.warmGray}`,
+        border: "2px solid " + C.warmGray,
         background: C.white,
         fontFamily: "inherit",
         textAlign: "start",
-        cursor: done || busy || disabled ? "default" : "pointer",
-        opacity: disabled && !done ? 0.55 : 1,
+        cursor: busy || disabled ? "default" : "pointer",
+        opacity: disabled ? 0.55 : 1,
       }}
     >
-      <span aria-hidden="true" style={{ fontSize: ts(26) }}>{done ? "✓" : icon}</span>
+      <Icon name={icon} size={26} style={{ color: C.green }} />
       <span style={{ flex: 1 }}>
-        <span style={{ display: "block", fontSize: ts(17), fontWeight: 700, color: C.textMain }}>
-          {title}
-        </span>
-        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, lineHeight: 1.45 }}>
-          {sub}
-        </span>
+        <span style={{ display: "block", fontSize: ts(17), fontWeight: 700, color: C.textMain }}>{title}</span>
+        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted, lineHeight: 1.45 }}>{sub}</span>
       </span>
+      {!disabled && (
+        <Icon name="chevron" size={20} style={{ color: C.textMuted, transform: meta.dir === "rtl" ? "scaleX(-1)" : undefined }} />
+      )}
     </button>
   );
 }
 
-function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
+/* The notification as the other person will read it. */
+function NoticePreview({ title, body }) {
+  const { ts } = useI18n();
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "12px 14px", borderRadius: 14, background: C.white, border: "1.5px solid " + C.warmGray, margin: "10px 0 14px" }}>
+      <Icon name="bell" size={22} style={{ color: C.green, marginTop: 2 }} />
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.textMain, overflowWrap: "anywhere" }}>{title}</span>
+        {body && <span style={{ display: "block", fontSize: ts(16), color: C.textMuted, marginTop: 2, overflowWrap: "anywhere" }}>{body}</span>}
+      </span>
+    </div>
+  );
+}
+
+/* What the link shows — the same card /app/s/:token draws. */
+function ScoreLinkCard({ name, points, logs }) {
+  const { t, ts, meta } = useI18n();
+  return (
+    <div style={{ background: C.white, borderRadius: 20, padding: "22px 20px", textAlign: "center", border: "1.5px solid " + C.warmGray, margin: "10px 0 14px" }}>
+      <p style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), color: C.green, margin: "0 0 6px", fontWeight: 700 }}>
+        {name ? t("home.score.shared.titleNamed", { name }) : t("home.score.shared.title")}
+      </p>
+      <p style={{ fontSize: ts(40), fontWeight: 800, color: C.brown, margin: "10px 0 2px", lineHeight: 1 }}>{points}</p>
+      <p style={{ fontSize: ts(16), color: C.textMuted, margin: 0 }}>{t("home.score.shared.points")}</p>
+      <p style={{ fontSize: ts(17), color: C.textMain, margin: "12px 0 0", lineHeight: 1.5 }}>
+        {logs === 1 ? t("home.score.shared.logsOne") : t("home.score.shared.logsMany", { n: logs })}
+      </p>
+    </div>
+  );
+}
+
+function StepHeading({ children }) {
+  const { ts } = useI18n();
+  return <h3 style={{ fontSize: ts(20), fontWeight: 700, color: C.textMain, margin: "0 0 6px" }}>{children}</h3>;
+}
+
+function PeopleStep({ audience, summary, firstName, onBack, onClose }) {
+  const { t, ts } = useI18n();
+  const [names, setNames] = useState(null);
+  const [title, setTitle] = useState(
+    firstName ? t("home.score.share.notifyTitle", { name: firstName }) : t("home.score.share.notifyTitleAnon")
+  );
+  const [body, setBody] = useState(t("home.score.share.notifyBody", { points: summary.points }));
+  const [state, setState] = useState({ status: "editing", sent: 0, token: null });
+
+  useEffect(() => {
+    let alive = true;
+    fetchShareAudience(audience)
+      .then((n) => alive && setNames(n))
+      .catch(() => alive && setNames([]));
+    return () => { alive = false; };
+  }, [audience]);
+
+  const heading = audience === "circle" ? t("home.score.share.circleTitle") : t("home.score.share.friendsTitle");
+  const cannotSend = state.status === "sending" || !title.trim() || !names || names.length === 0;
+
+  const send = async () => {
+    if (cannotSend) return;
+    setState((s) => ({ ...s, status: "sending" }));
+    try {
+      const { sent, token } = await shareScoreToAudience(audience, { ...summary, title, body });
+      setState({ status: "sent", sent, token });
+    } catch {
+      setState((s) => ({ ...s, status: "failed" }));
+    }
+  };
+
+  if (state.status === "sent") {
+    return (
+      <div role="status">
+        <StepHeading>{heading}</StepHeading>
+        <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 600, color: C.textMain, margin: "0 0 4px", lineHeight: 1.5 }}>
+          {t("share.sentTo", { names: namesLine(names, t) })}
+        </p>
+        <p style={{ fontSize: ts(16), color: C.textMuted, margin: 0, lineHeight: 1.5 }}>
+          {state.sent === 0 ? t("share.sentNone") : state.sent === 1 ? t("share.sentCountOne") : t("share.sentCount", { n: state.sent })}
+        </p>
+        <NoticePreview title={title} body={body} />
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {state.token && (
+            <Link to={"/app/s/" + state.token} style={ghostBtn(ts)}>
+              {t("share.openPage")}
+            </Link>
+          )}
+          <button type="button" onClick={onClose} style={primaryBtn(ts, false)}>
+            {t("share.done")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <StepHeading>{heading}</StepHeading>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>
+        {names === null
+          ? t("share.loadingNames")
+          : names.length === 0
+            ? t("share.nobodyYet")
+            : t("share.goesTo", { names: namesLine(names, t) })}
+      </p>
+      <label style={{ display: "block", fontSize: ts(16), fontWeight: 600, color: C.textMain, marginBottom: 10 }}>
+        {t("share.titleLabel")}
+        <input value={title} maxLength={140} onChange={(e) => setTitle(e.target.value)} style={fieldStyle(ts)} />
+      </label>
+      <label style={{ display: "block", fontSize: ts(16), fontWeight: 600, color: C.textMain, marginBottom: 14 }}>
+        {t("share.bodyLabel")}
+        <textarea value={body} rows={2} maxLength={500} onChange={(e) => setBody(e.target.value)} style={{ ...fieldStyle(ts), resize: "vertical" }} />
+      </label>
+      {state.status === "failed" && (
+        <p role="alert" style={{ fontSize: ts(16), color: C.brown, fontWeight: 600, margin: "0 0 10px" }}>
+          {t("home.score.share.shareFailed")}
+        </p>
+      )}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" onClick={send} disabled={cannotSend} style={primaryBtn(ts, cannotSend)}>
+          {state.status === "sending" ? t("share.sending") : t("share.sendCta")}
+        </button>
+        <button type="button" onClick={onBack} style={ghostBtn(ts)}>
+          {t("share.notNow")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LinkStep({ summary, firstName, onBack, onClose }) {
+  const { t, ts } = useI18n();
+  const [state, setState] = useState({ status: "preview", url: "", token: null, copied: false });
+
+  const make = async () => {
+    if (state.status === "making") return;
+    setState((s) => ({ ...s, status: "making" }));
+    try {
+      const token = await createScoreShareLink(summary);
+      setState({ status: "ready", url: sharedScoreUrl(token), token, copied: false });
+    } catch {
+      setState((s) => ({ ...s, status: "failed" }));
+    }
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(state.url);
+      setState((s) => ({ ...s, copied: true }));
+    } catch {
+      /* No clipboard here. The link is on screen, selectable, either way. */
+    }
+  };
+
+  return (
+    <div>
+      <StepHeading>{t("home.score.share.linkTitle")}</StepHeading>
+      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: 0, lineHeight: 1.5 }}>
+        {state.status === "ready" ? t("share.linkReady") : t("share.linkPreview")}
+      </p>
+      <ScoreLinkCard name={firstName} points={summary.points} logs={summary.logs} />
+      {state.status === "ready" ? (
+        <>
+          <p style={{ margin: "0 0 12px", fontSize: ts(16), color: C.textMain, wordBreak: "break-all", userSelect: "text" }}>{state.url}</p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={copy} style={primaryBtn(ts, false)}>
+              {state.copied ? t("share.copied") : t("share.copyCta")}
+            </button>
+            <Link to={"/app/s/" + state.token} style={ghostBtn(ts)}>
+              {t("share.openPage")}
+            </Link>
+            <button type="button" onClick={onClose} style={ghostBtn(ts)}>
+              {t("share.done")}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {state.status === "failed" && (
+            <p role="alert" style={{ fontSize: ts(16), color: C.brown, fontWeight: 600, margin: "0 0 10px" }}>
+              {t("home.score.share.shareFailed")}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={make} disabled={state.status === "making"} style={primaryBtn(ts, state.status === "making")}>
+              {state.status === "making" ? t("share.sending") : t("share.makeLinkCta")}
+            </button>
+            <button type="button" onClick={onBack} style={ghostBtn(ts)}>
+              {t("share.notNow")}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ShareSheet({ onClose, circleMembers, doneCount, points, total }) {
   const { t, ts, meta } = useI18n();
   const { profile } = useSession();
+  const navigate = useNavigate();
   const closeRef = useRef(null);
-  /* Per destination, not per sheet: sharing to the community says
-     nothing about whether a link was copied. */
-  const [done, setDone] = useState({});
-  const [busy, setBusy] = useState(null);
-  const [link, setLink] = useState("");
+  /* null = the four choices; "circle" | "friends" | "link" = that step. */
+  const [step, setStep] = useState(null);
 
-  /* Escape and back both live in the hook now. The listener that
-     was here answered any Escape on the page, including one meant
-     for a sheet on top of this one. */
   useBackToClose(true, onClose);
 
   useEffect(() => {
@@ -94,43 +350,21 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
   }, []);
 
   const circleEmpty = circleMembers.length === 0;
-
   const today = new Date().toISOString().slice(0, 10);
   const summary = { points, logs: doneCount, day: today };
+  const firstName = (profile?.full_name || "").split(" ")[0];
 
-  /* One press does the work once. A second press on a finished row is
-     ignored rather than repeating the claim — thirty presses used to
-     mean thirty identical confirmations of nothing. */
-  const once = async (key, work) => {
-    if (busy || done[key]) return;
-    setBusy(key);
-    try {
-      const line = await work();
-      setDone((d) => ({ ...d, [key]: true }));
-      if (line) onToast(line);
-    } catch {
-      onToast(t("home.score.share.shareFailed"));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const copyLink = () =>
-    once("link", async () => {
-      const token = await createScoreShareLink(summary);
-      const url = sharedScoreUrl(token);
-      setLink(url);
-      try {
-        await navigator.clipboard.writeText(url);
-        return t("home.score.share.toastLinkCopied");
-      } catch {
-        /* No clipboard (an insecure context, or a browser that refuses
-           without a gesture it recognises). The link is real either
-           way, so show it rather than claiming a copy that did not
-           happen. */
-        return t("home.score.share.toastLinkShown");
-      }
+  /* The community card reads points, done and total (0018). This path
+     sent only "logs", so the card it made had blanks where its numbers
+     belonged; the draft carries all of them. */
+  const toCommunity = () => {
+    onClose();
+    startShareDraft(navigate, {
+      type: "score",
+      payload: { points, done: doneCount, total, logs: doneCount, day: today },
+      body: t("share.scoreBody"),
     });
+  };
 
   return (
     <div
@@ -181,136 +415,62 @@ function ShareSheet({ onClose, onToast, circleMembers, doneCount, points }) {
               width: A11Y.minTapTargetPx,
               height: A11Y.minTapTargetPx,
               borderRadius: 14,
-              border: `2px solid ${C.warmGray}`,
+              border: "2px solid " + C.warmGray,
               background: C.white,
-              fontSize: ts(22),
-              fontWeight: 700,
               color: C.textMain,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               cursor: "pointer",
             }}
           >
-            ✕
+            <Icon name="close" size={22} />
           </button>
         </div>
 
-        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
-          {doneCount > 0
-            ? doneCount === 1
-              ? t("home.score.share.soFarOne", { points })
-              : t("home.score.share.soFarMany", { n: doneCount, points })
-            : t("home.score.share.nothingYet")}{" "}
-          {t("home.score.share.staysPrivate")}
-        </p>
+        {step === "circle" || step === "friends" ? (
+          <PeopleStep audience={step} summary={summary} firstName={firstName} onBack={() => setStep(null)} onClose={onClose} />
+        ) : step === "link" ? (
+          <LinkStep summary={summary} firstName={firstName} onBack={() => setStep(null)} onClose={onClose} />
+        ) : (
+          <>
+            <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
+              {doneCount > 0
+                ? doneCount === 1
+                  ? t("home.score.share.soFarOne", { points })
+                  : t("home.score.share.soFarMany", { n: doneCount, points })
+                : t("home.score.share.nothingYet")}{" "}
+              {t("home.score.share.staysPrivate")}
+            </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <ShareRow
-            icon="🏡"
-            title={t("home.score.share.circleTitle")}
-            sub={
-              circleEmpty
-                ? t("home.score.share.circleEmpty")
-                : t("home.score.share.circleSend", { n: circleMembers.length })
-            }
-            disabled={circleEmpty}
-            busy={busy === "circle"}
-            done={done.circle}
-            onClick={() => {
-              /* Nobody in the circle is not a failed share — it is a
-                 door, and it says where the door is. */
-              if (circleEmpty) {
-                onToast(t("home.score.share.toastCircleEmpty"));
-                return;
-              }
-              once("circle", async () => {
-                const first = (profile?.full_name || "").split(" ")[0];
-                const { sent } = await shareScoreWithPeople({
-                  ...summary,
-                  /* The notification is read by somebody else, so it
-                     carries words rather than being assembled from
-                     English in the data layer. */
-                  title: first
-                    ? t("home.score.share.notifyTitle", { name: first })
-                    : t("home.score.share.notifyTitleAnon"),
-                  body: t("home.score.share.notifyBody", { points }),
-                });
-                /* Nothing written means nobody was told, whatever the
-                   button hoped. */
-                if (sent === 0) {
-                  setDone((d) => ({ ...d, circle: false }));
-                  return t("home.score.share.toastPeopleNone");
-                }
-                return sent === 1
-                  ? t("home.score.share.toastPeopleSentOne")
-                  : t("home.score.share.toastCircleSentN", { n: sent });
-              });
-            }}
-          />
-          <ShareRow
-            icon="🤝"
-            title={t("home.score.share.friendsTitle")}
-            sub={t("home.score.share.friendsSub")}
-            busy={busy === "people"}
-            done={done.people}
-            onClick={() =>
-              once("people", async () => {
-                const first = (profile?.full_name || "").split(" ")[0];
-                const { sent } = await shareScoreWithPeople({
-                  ...summary,
-                  /* The notification is read by somebody else, so it
-                     carries words rather than being assembled from
-                     English in the data layer. */
-                  title: first
-                    ? t("home.score.share.notifyTitle", { name: first })
-                    : t("home.score.share.notifyTitleAnon"),
-                  body: t("home.score.share.notifyBody", { points }),
-                });
-                /* Told nobody is not "shared" — say so plainly and
-                   leave the row open. */
-                if (sent === 0) {
-                  setDone((d) => ({ ...d, people: false }));
-                  return t("home.score.share.toastPeopleNone");
-                }
-                return sent === 1
-                  ? t("home.score.share.toastPeopleSentOne")
-                  : t("home.score.share.toastPeopleSent", { n: sent });
-              })
-            }
-          />
-          <ShareRow
-            icon="🌳"
-            title={t("home.score.share.communityTitle")}
-            sub={t("home.score.share.communitySub")}
-            busy={busy === "community"}
-            done={done.community}
-            onClick={() =>
-              once("community", async () => {
-                await shareScoreToCommunity(profile.id, summary);
-                return t("home.score.share.toastCommunityDone");
-              })
-            }
-          />
-          <ShareRow
-            icon="🔗"
-            title={t("home.score.share.linkTitle")}
-            sub={t("home.score.share.linkSub")}
-            busy={busy === "link"}
-            done={done.link}
-            onClick={copyLink}
-          />
-        </div>
-
-        {link && (
-          <p
-            style={{
-              margin: "14px 0 0",
-              fontSize: ts(16),
-              color: C.textMuted,
-              wordBreak: "break-all",
-              userSelect: "text",
-            }}
-          >
-            {link}
-          </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <ShareRow
+                icon="people"
+                title={t("home.score.share.circleTitle")}
+                sub={circleEmpty ? t("home.score.share.circleEmpty") : t("home.score.share.circleSend", { n: circleMembers.length })}
+                disabled={circleEmpty}
+                onClick={() => setStep("circle")}
+              />
+              <ShareRow
+                icon="messages"
+                title={t("home.score.share.friendsTitle")}
+                sub={t("home.score.share.friendsSub")}
+                onClick={() => setStep("friends")}
+              />
+              <ShareRow
+                icon="globe"
+                title={t("home.score.share.communityTitle")}
+                sub={t("home.score.share.communitySub")}
+                onClick={toCommunity}
+              />
+              <ShareRow
+                icon="invite"
+                title={t("home.score.share.linkTitle")}
+                sub={t("home.score.share.linkSub")}
+                onClick={() => setStep("link")}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -459,6 +619,7 @@ export default function ScoreShare({
           circleMembers={circleMembers}
           doneCount={doneCount}
           points={points}
+          total={totalModules}
         />
       )}
 

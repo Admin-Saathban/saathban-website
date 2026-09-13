@@ -349,6 +349,28 @@ export async function personWarmth(profileId) {
 }
 
 /* Share your OWN moment with your people. Retry-proof server-side. */
+/* The same, with the words the person saw and edited (0120). Still
+   retry-proof: a second send for the same kind and ref returns 0. */
+export async function boastToPeopleWorded(kind, refKey, payload, title, body) {
+  const { data, error } = await supabase.rpc("boast_to_people_worded", {
+    p_kind: kind,
+    p_ref: refKey,
+    p_payload: payload || {},
+    p_title: title,
+    p_body: body || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/* Whether that first send already happened today, so the screen can say
+   so rather than offer a button that would do nothing. */
+export async function hasBoasted(kind, refKey) {
+  const { data, error } = await supabase.rpc("has_boasted", { p_kind: kind, p_ref: refKey });
+  if (error) throw error;
+  return !!data;
+}
+
 export async function boastToPeople(kind, refKey, payload = {}) {
   const { data, error } = await supabase.rpc("boast_to_people", {
     p_kind: kind,

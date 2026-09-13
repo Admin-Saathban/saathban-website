@@ -5,6 +5,7 @@
    server RPC. */
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
@@ -17,13 +18,17 @@ import {
   riddlePeople,
   riddleTouch,
   boastToPeople,
+  boastToPeopleWorded,
+  hasBoasted,
 } from "../../lib/games.js";
-import { createShare } from "../community/communityData.js";
+import { startShareDraft } from "../community/shareDraft.js";
+import { fetchShareAudience, namesLine } from "../../lib/shareAudience.js";
 import { GamesScreen, Card, BodyText, SectionLabel, PrimaryBtn, GhostBtn } from "./ui.jsx";
 
 export default function PuzzlePage() {
   const { t, ts, lang } = useI18n();
   const { profile } = useSession();
+  const navigate = useNavigate();
 
   const [puzzle, setPuzzle] = useState(null);
   const [attempts, setAttempts] = useState([]);
@@ -33,6 +38,7 @@ export default function PuzzlePage() {
   const [showHint, setShowHint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
+  const [tell, setTell] = useState(null);
   const [together, setTogether] = useState(null); // riddle_people() view
   const [gated, setGated] = useState(false); // ineligible (e.g. pending buddy)
 
@@ -109,30 +115,50 @@ export default function PuzzlePage() {
     setBusy(false);
   };
 
-  const boastRiddle = async () => {
-    setBusy(true);
+  /* ── TELLING YOUR PEOPLE SHOWS WHO, AND THE WORDS, FIRST ──
+     This sent a notification on the tap, in English words the server
+     wrote, and said "Told". Now it opens in place: the names it goes to,
+     the words they will read (editable, in the language being used),
+     Send, and then who it went to. (0120) */
+  const openTell = async () => {
+    const first = (profile?.full_name || "").split(" ")[0];
+    setTell({
+      names: null,
+      title: first ? t("share.riddleTitle", { name: first }) : t("share.riddleTitleAnon"),
+      body: t("share.riddleBody"),
+      status: "editing",
+      sent: 0,
+    });
     try {
-      await boastToPeople("riddle", today);
-      pushToast(t("games.puzzle.together.boastToast"));
+      const [names, already] = await Promise.all([fetchShareAudience("connections"), hasBoasted("riddle", today)]);
+      setTell((cur) => cur && { ...cur, names, status: already ? "already" : cur.status });
     } catch {
-      pushToast(t("games.actionError"), { tone: "error", key: "games" });
+      setTell((cur) => cur && { ...cur, names: [] });
     }
-    setBusy(false);
   };
 
-  const share = async () => {
-    setBusy(true);
+  const sendTell = async () => {
+    if (!tell || !tell.title.trim() || !tell.names || tell.names.length === 0) return;
+    setTell((cur) => ({ ...cur, status: "sending" }));
     try {
-      await createShare(profile.id, "puzzle_result", null, {
-        puzzle_date: today,
-        guesses: guessCount,
-      });
-      setShared(true);
-      pushToast(t("games.puzzle.shared"));
+      const n = await boastToPeopleWorded("riddle", today, {}, tell.title, tell.body);
+      setTell((cur) => ({ ...cur, status: "sent", sent: Number(n) || 0 }));
     } catch {
+      setTell((cur) => ({ ...cur, status: "editing" }));
       pushToast(t("games.actionError"), { tone: "error", key: "games" });
     }
-    setBusy(false);
+  };
+
+  /* ── SHARING THE RESULT GOES THROUGH THE COMPOSER ──
+     It posted on the tap and said "Shared". Now it opens the community
+     composer with the result card on it; the person presses Share there
+     and lands on the post. */
+  const share = () => {
+    startShareDraft(navigate, {
+      type: "puzzle_result",
+      payload: { puzzle_date: today, guesses: guessCount },
+      body: t("share.puzzleBody"),
+    });
   };
 
   const canShare = (profile.role === "saath_icon" || profile.is_org) && solved && !shared;
@@ -219,11 +245,58 @@ export default function PuzzlePage() {
               </PrimaryBtn>
             )}
             {solved && (together?.people?.length ?? 0) > 0 && (
-              <GhostBtn disabled={busy} onClick={boastRiddle}>
+              <GhostBtn disabled={busy || !!tell} onClick={openTell}>
                 📣 {t("games.puzzle.together.boastCta")}
               </GhostBtn>
             )}
           </div>
+          {tell && (
+            <div style={{ marginTop: 14, padding: 14, borderRadius: 14, border: "2px solid " + C.warmGray, background: C.white }}>
+              <p style={{ margin: "0 0 8px", fontSize: ts(19), fontWeight: 700, color: C.textMain }}>{t("share.tellHeading")}</p>
+              {tell.status === "already" ? (
+                <>
+                  <BodyText style={{ margin: "0 0 12px" }}>{t("share.alreadyTold")}</BodyText>
+                  <GhostBtn onClick={() => setTell(null)}>{t("share.done")}</GhostBtn>
+                </>
+              ) : tell.status === "sent" ? (
+                <div role="status">
+                  <BodyText style={{ margin: "0 0 6px", fontWeight: 600 }}>{t("share.sentTo", { names: namesLine(tell.names, t) })}</BodyText>
+                  <BodyText muted style={{ margin: "0 0 10px" }}>
+                    {tell.sent === 0 ? t("share.sentNone") : tell.sent === 1 ? t("share.sentCountOne") : t("share.sentCount", { n: tell.sent })}
+                  </BodyText>
+                  <div style={{ padding: "10px 12px", borderRadius: 12, background: C.ground, border: "1px solid " + C.warmGray, marginBottom: 12 }}>
+                    <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 700 }}>{tell.title}</p>
+                    {tell.body && <p style={{ margin: "4px 0 0", fontSize: ts(16), color: C.textMuted }}>{tell.body}</p>}
+                  </div>
+                  <GhostBtn onClick={() => setTell(null)}>{t("share.done")}</GhostBtn>
+                </div>
+              ) : (
+                <>
+                  <BodyText muted style={{ margin: "0 0 10px" }}>
+                    {tell.names === null
+                      ? t("share.loadingNames")
+                      : tell.names.length === 0
+                        ? t("share.nobodyYet")
+                        : t("share.goesTo", { names: namesLine(tell.names, t) })}
+                  </BodyText>
+                  <label style={{ display: "block", fontSize: ts(16), fontWeight: 600, marginBottom: 10 }}>
+                    {t("share.titleLabel")}
+                    <input value={tell.title} maxLength={140} onChange={(e) => setTell((cur) => ({ ...cur, title: e.target.value }))} style={{ marginTop: 6 }} />
+                  </label>
+                  <label style={{ display: "block", fontSize: ts(16), fontWeight: 600, marginBottom: 12 }}>
+                    {t("share.bodyLabel")}
+                    <textarea rows={2} value={tell.body} maxLength={500} onChange={(e) => setTell((cur) => ({ ...cur, body: e.target.value }))} style={{ marginTop: 6, width: "100%" }} />
+                  </label>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <PrimaryBtn disabled={tell.status === "sending" || !tell.title.trim() || !tell.names || tell.names.length === 0} onClick={sendTell}>
+                      {tell.status === "sending" ? t("share.sending") : t("share.sendCta")}
+                    </PrimaryBtn>
+                    <GhostBtn onClick={() => setTell(null)}>{t("share.notNow")}</GhostBtn>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </Card>
       )}
 

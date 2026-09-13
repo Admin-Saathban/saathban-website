@@ -339,7 +339,7 @@ function MedicationEditor({ value, onChange, meds }) {
    a meal or movement entry that carries no name (0119), so this holds
    for every build of the app, not only this one.
 
-   PORTIONS ARE A RECORD, NOT A PRESCRIPTION. 0 to 5, no targets, no
+   PORTIONS ARE A RECORD, NOT A PRESCRIPTION. 0 upwards with no ceiling, no targets, no
    totals, no colour that could read as pass or fail. Somebody who eats
    a lot of rice is never judged by their own log.
    ════════════════════════════════════════════════ */
@@ -361,7 +361,8 @@ function recordedName(rec, t, ns) {
 }
 
 const PORTION_KINDS = ["fibre", "protein", "carbs"];
-const PORTION_MAX = 5;
+/* No PORTION_MAX. There was one, at 5, and a ceiling on a count of what
+   somebody ate silently tells them their honest answer is out of range. */
 
 function portionsLine(a, t) {
   return PORTION_KINDS.filter((k) => a && a[k] != null)
@@ -503,14 +504,15 @@ function MovementEditor({ value, onChange, options, iconId, dateIso }) {
 
 /* A portion count that starts BLANK. Blank and 0 are different answers:
    "didn't say" is not "none". Down from blank is 0, down from 0 is blank
-   again, up stops at 5. Neutral ink — nothing here is good or bad. */
+   again, and up has no ceiling: a count is a record of what was eaten,
+   never a range it has to fit. Neutral ink — nothing reads as too much
+   or too little at any number. */
 function PortionCounter({ kind, value, onChange }) {
   const { t, ts } = useI18n();
   const label = t("home.log.portions." + kind);
   const blank = value == null;
-  const atMax = !blank && value >= PORTION_MAX;
   const down = () => onChange(blank ? 0 : value === 0 ? null : value - 1);
-  const up = () => onChange(blank ? 1 : Math.min(PORTION_MAX, value + 1));
+  const up = () => onChange(blank ? 1 : value + 1);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0" }}>
       <span style={{ flex: 1, minWidth: 0, fontSize: ts(A11Y.minBodyPx), fontWeight: 600, color: C.textMain }}>{label}</span>
@@ -518,11 +520,13 @@ function PortionCounter({ kind, value, onChange }) {
       <span
         role="status"
         aria-label={blank ? t("home.log.portionBlankAria", { what: label }) : t("home.log.portionAria", { what: label, n: value })}
-        style={{ minWidth: 44, textAlign: "center", fontSize: ts(28), fontWeight: 700, color: C.textMain }}
+        /* Wide enough that two digits do not push the buttons; tabular figures
+           so 9 to 10 does not shift the row. */
+        style={{ minWidth: 56, textAlign: "center", fontSize: ts(28), fontWeight: 700, color: C.textMain, fontVariantNumeric: "tabular-nums" }}
       >
         {blank ? "—" : value}
       </span>
-      <button type="button" onClick={up} disabled={atMax} aria-label={t("home.log.portionMore", { what: label })} style={{ ...counterBtn(ts), width: 52, height: 52, opacity: atMax ? 0.4 : 1 }}>+</button>
+      <button type="button" onClick={up} aria-label={t("home.log.portionMore", { what: label })} style={{ ...counterBtn(ts), width: 52, height: 52 }}>+</button>
     </div>
   );
 }

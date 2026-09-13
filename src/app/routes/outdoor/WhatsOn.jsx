@@ -316,8 +316,13 @@ export default function WhatsOn() {
           onClose={() => setAsking(false)}
           onStarted={async (created) => {
             setAsking(false);
+            /* Land ON the post in the feed: where it went, with its own
+               menu to delete it. The toast only said that it happened. */
+            if (created?.postId) {
+              navigate("/app/community", { state: { landOn: created.postId } });
+              return;
+            }
             await load();
-            /* §11 again: land on the thing that now exists. */
             pushToast(t("whatson.started", { what: created?.what || "" }), { tone: "success", key: "whatson" });
           }}
         />

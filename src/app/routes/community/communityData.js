@@ -377,7 +377,9 @@ export async function unblock(userId, targetId, kind) {
    time — the card renders from the snapshot (localized at view time),
    so it stays visible even when the referenced row isn't. */
 
-export async function createShare(userId, type, refId, payload, body = "") {
+/* opts.visibility — a share now comes through the composer, where the
+   person chooses who can see it, the same as any post. */
+export async function createShare(userId, type, refId, payload, body = "", opts = {}) {
   const { data, error } = await supabase
     .from("community_posts")
     .insert({
@@ -386,6 +388,7 @@ export async function createShare(userId, type, refId, payload, body = "") {
       post_type: type,
       ref_id: refId,
       payload,
+      ...(opts.visibility ? { visibility: opts.visibility } : {}),
     })
     .select("id")
     .single();

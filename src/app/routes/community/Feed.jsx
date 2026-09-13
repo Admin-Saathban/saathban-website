@@ -40,6 +40,7 @@ import {
   imageUrl,
   fetchPlacesLite,
   shareActivity,
+  createShare,
   joinActivity,
   fetchJoins,
   joinWalk,
@@ -151,7 +152,7 @@ function ReportForm({ onSend, onCancel }) {
 
 /* The typed share block inside a post card (migration 0018). Renders
    entirely from the payload snapshot, localized at view time. */
-function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
+export function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   const { t, ts, lang } = useI18n();
   const p = post.payload || {};
   /* THE LOCKED CARD LANGUAGE: a recessed surface and a hairline, not a
@@ -426,6 +427,44 @@ function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }) {
   }
 
   return null;
+}
+
+/* ── HOW AN ACTIVITY WILL LOOK, WHILE IT IS STILL BEING WRITTEN ──
+   The forms that start something ("Who's up for...?", Out & about, a
+   place's page) published on the button and said so in a toast. They
+   now show the real feed card as it is typed, drawn by ShareBlock from
+   the same payload the post will carry, and land on the post after. */
+function safeIso(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+export function ActivityPreview({ activity, placeName, when, note, limit, rsvp }) {
+  const { t, ts, lang } = useI18n();
+  const { profile } = useSession();
+  if (!(activity || "").trim()) return null;
+  const payload = {
+    activity: activity.trim(),
+    place_name: (placeName || "").trim() || null,
+    starts_at: safeIso(when),
+    note: (note || "").trim() || null,
+    limit: limit ? Number(limit) : null,
+    rsvp: !!rsvp,
+  };
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <p style={{ margin: "0 0 6px", fontSize: ts(16), fontWeight: 600, color: C.textMuted }}>{t("share.previewHint")}</p>
+      <ShareBlock
+        post={{ id: "preview", post_type: "activity", payload }}
+        isIcon={profile?.role === "saath_icon"}
+        own
+        dateLocale={lang === "ur" ? "ur-PK" : "en-GB"}
+        joinInfo={null}
+        onAction={() => {}}
+      />
+    </div>
+  );
 }
 
 function PostCard({
@@ -1216,6 +1255,38 @@ export default function Feed({ composer = true, embedded = false }) {
   const onHome = !useLocation().pathname.startsWith("/app/community");
   const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
 
+  /* ── A SHARE ARRIVES AS A DRAFT (shareDraft.js) ──
+     The composer opens with the real card and the words on it, and
+     nothing is published until the person presses Share there. A ref
+     mirrors the draft because closing after a successful share and
+     closing to back out both go through onClose, and only backing out
+     returns to where the share began.
+
+     landOn is the other half of the same promise from screens that
+     publish for themselves (Out & about): open the feed ON that post.
+
+     Router state is cleared once read, so a reload never reopens a
+     composer the person already closed. */
+  const routerLocation = useLocation();
+  const [draft, setDraft] = useState(null);
+  const draftRef = useRef(null);
+  useEffect(() => {
+    const st = routerLocation.state;
+    if (!st || (!st.shareDraft && !st.landOn)) return;
+    if (st.shareDraft && composer) {
+      draftRef.current = st.shareDraft;
+      setDraft(st.shareDraft);
+      setComposerStart(null);
+      setComposerOpen(true);
+    }
+    if (st.landOn) {
+      const landId = st.landOn;
+      load().then(() => setTimeout(() => fresh.mark(landId), 0));
+    }
+    navigate(routerLocation.pathname + routerLocation.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routerLocation.state]);
+
   const [access, setAccess] = useState(null); // null loading | true | false
   const [canWrite, setCanWrite] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -1371,7 +1442,7 @@ export default function Feed({ composer = true, embedded = false }) {
     if (!walkActivity.trim()) return;
     setError("");
     try {
-      await shareActivity(myId, {
+      const postId = await shareActivity(myId, {
         activity: walkActivity,
         placeText: walkPlaceText,
         placeId: walkPlaceId || null,
@@ -1388,8 +1459,9 @@ export default function Feed({ composer = true, embedded = false }) {
       setWalkNote("");
       setWalkLimit("");
       setWalkRsvp(false);
-      showToast(t("community.shares.activityShared"));
+      /* Lands on the post rather than saying "Shared" underneath it. */
       await load();
+      setTimeout(() => { if (postId) fresh.mark(postId); }, 0);
     } catch {
       setError(t("community.feed.postError"));
     }
@@ -1494,6 +1566,33 @@ export default function Feed({ composer = true, embedded = false }) {
      to the app later must not show a still-highlighted post. */
   const share = async (opts) => {
     const draftBody = (opts?.body || "").trim();
+    /* A CARD FROM A SHARE: the card is the post, the words are optional,
+       the person chose the visibility. It lands like any post — the feed
+       reloads, scrolls to it and marks it fresh — so the confirmation is
+       the post itself, with its own menu to delete it. */
+    if (opts?.attachment) {
+      if (posting) return false;
+      setPosting(true);
+      setError("");
+      try {
+        const a = opts.attachment;
+        const id = await createShare(myId, a.type, a.refId ?? null, a.payload || {}, draftBody, { visibility: opts.visibility });
+        draftRef.current = null;
+        setDraft(null);
+        await load();
+        setTimeout(() => { if (id) fresh.mark(id); }, 0);
+        return true;
+      } catch {
+        raiseToast(t("feedback.postFailed"), {
+          tone: "error",
+          actionLabel: t("feedback.retry"),
+          onAction: () => share(opts),
+        });
+        return false;
+      } finally {
+        setPosting(false);
+      }
+    }
     /* §7 — a voice post may carry no words at all. Refusing on an empty
        body would have made the recorder a decoration on a button that
        could never be pressed. */
@@ -1778,7 +1877,29 @@ export default function Feed({ composer = true, embedded = false }) {
         open={composer && composerOpen}
         startWith={composerStart}
         busy={posting}
-        onClose={() => setComposerOpen(false)}
+        attachment={draft}
+        initialBody={draft ? draft.body : ""}
+        renderAttachment={(a) => (
+          <ShareBlock
+            post={{ id: "draft", post_type: a.type, ref_id: a.refId, payload: a.payload }}
+            isIcon={isIcon}
+            own
+            dateLocale={dateLocale}
+            joinInfo={null}
+            onAction={() => {}}
+          />
+        )}
+        onClose={() => {
+          setComposerOpen(false);
+          /* Backing out of a share publishes nothing and goes back to
+             where the share began. After a successful share the ref is
+             already clear, so the person stays on the post. */
+          if (draftRef.current) {
+            draftRef.current = null;
+            setDraft(null);
+            navigate(-1);
+          }
+        }}
         onShare={share}
       />
 
@@ -2135,6 +2256,14 @@ export default function Feed({ composer = true, embedded = false }) {
                       </span>
                     </span>
                   </label>
+                  <ActivityPreview
+                    activity={walkActivity}
+                    placeName={walkPlaceText}
+                    when={walkWhen}
+                    note={walkNote}
+                    limit={walkLimit}
+                    rsvp={walkRsvp}
+                  />
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <PrimaryBtn type="submit" onClick={submitActivity} disabled={!walkActivity.trim()}>
                       {t("community.feed.composerCta")}

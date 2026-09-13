@@ -62,7 +62,7 @@ const check = (n, ok, note = "") => { if (!ok) fails++; console.log((ok ? "PASS"
 const login = async (email) => {
   const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: "SaathTest!2026" }),
+    body: JSON.stringify({ email, password: process.env.TEST_PASSWORD }),
   });
   return r.json();
 };

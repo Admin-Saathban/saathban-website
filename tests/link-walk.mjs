@@ -40,7 +40,7 @@ if (!_u || !_u.hostname || (_u.protocol === "http:" && _u.hostname === "localhos
   console.error("BASE_URL is not a usable URL: " + JSON.stringify(BASE));
   process.exit(2);
 }
-const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 const ROLE = process.env.ROLE || "icon";
 
 function envLocal(name) {

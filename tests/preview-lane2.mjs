@@ -2,7 +2,7 @@ import { chromium } from "playwright-core";
 
 const BASE = "https://app.saathban.com";
 const S = process.env.SCRATCH;
-const PW = "SaathTest!2026";
+const PW = process.env.TEST_PASSWORD;
 const EMAIL = "smoke-icon@saathban.dev";
 
 let failures = 0;

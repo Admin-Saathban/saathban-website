@@ -43,7 +43,7 @@ const raw = readFileSync("./.env.local", "utf8");
 const g = (n) => { const l = raw.split(/\r?\n/).find(x=>x.startsWith(n)); return l.slice(l.indexOf("=")+1).trim(); };
 const SUPA=g("VITE_SUPABASE_URL"), ANON=g("VITE_SUPABASE_ANON_KEY");
 const K=`sb-${new URL(SUPA).hostname.split(".")[0]}-auth-token`;
-const r=await fetch(`${SUPA}/auth/v1/token?grant_type=password`,{method:"POST",headers:{apikey:ANON,"Content-Type":"application/json"},body:JSON.stringify({email:"test-icon@saathban.dev",password:"SaathTest!2026"})});
+const r=await fetch(`${SUPA}/auth/v1/token?grant_type=password`,{method:"POST",headers:{apikey:ANON,"Content-Type":"application/json"},body:JSON.stringify({email:"test-icon@saathban.dev",password:process.env.TEST_PASSWORD})});
 const s=await r.json();
 const b=await chromium.launch({channel:"msedge",headless:true});
 const ctx=await b.newContext({viewport:{width:390,height:844}});

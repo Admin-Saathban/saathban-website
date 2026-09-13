@@ -22,7 +22,7 @@ const pick = (k) => {
 };
 const SUPA = pick("VITE_SUPABASE_URL");
 const ANON = pick("VITE_SUPABASE_ANON_KEY");
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 
 let failures = 0;
 const check = (name, ok, detail = "") => {

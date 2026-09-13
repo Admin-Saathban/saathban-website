@@ -55,7 +55,7 @@ const stamp = Date.now();
    than dead. */
 const REUSE = process.env.TEST_FRESH_EMAIL || null;
 const EMAIL = REUSE || `fresh-${stamp}@saathban.dev`;
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 
 /* Sign up for real, through the same endpoint the app uses — unless
    we were handed a confirmed account to reuse. */

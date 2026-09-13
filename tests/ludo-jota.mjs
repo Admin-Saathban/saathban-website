@@ -18,7 +18,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = raw.split(/\r?\n/).find((l) => l.startsWith(name));

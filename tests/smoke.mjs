@@ -12,7 +12,7 @@
      (channel "msedge" — no browser download needed)
    - .env.local with VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
      (or the same values in the environment)
-   - the four seeded test accounts (password SaathTest!2026):
+   - the four seeded test accounts (password $TEST_PASSWORD):
      test-icon / test-buddy / test-fam / test-admin @saathban.dev
    - the dedicated smoke pair smoke-icon / smoke-fam @saathban.dev
      (same password; in each other's circle). Every check that WRITES
@@ -87,7 +87,7 @@ const BASE = (() => {
   }
   return given;
 })();
-const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 
 function envLocal(name) {
   if (process.env[name]) return process.env[name].trim();

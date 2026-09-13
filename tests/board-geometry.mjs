@@ -238,7 +238,7 @@ check("no track square repeats", new Set(TRACK.map(key)).size === 52);
     await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: { apikey: ANON, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "smoke-icon@saathban.dev", password: "SaathTest!2026" }),
+      body: JSON.stringify({ email: "smoke-icon@saathban.dev", password: process.env.TEST_PASSWORD }),
     })
   ).json();
 

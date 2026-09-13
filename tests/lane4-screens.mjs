@@ -89,7 +89,7 @@ const b = await chromium.launch({ channel: "msedge", headless: true });
 const session = async (email) =>
   (await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: "SaathTest!2026" }),
+    body: JSON.stringify({ email, password: process.env.TEST_PASSWORD }),
   })).json();
 
 const open = async (email, lang) => {

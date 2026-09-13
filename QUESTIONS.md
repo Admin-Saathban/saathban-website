@@ -43,7 +43,7 @@ sign-in — and nothing follows an Icon to a second device.
 via `profiles.settings` in a later step.
 
 ## 2. Test-account password convention
-`test-*@saathban.dev` all use `SaathTest!2026`. Twice during the day a
+`test-*@saathban.dev` all use the shared test password (deliberately not written in the repo — ask the owner). Twice during the day a
 lane's testing changed test-icon's password and broke every other
 lane's tests until reset. **Recommend:** these four accounts are
 never used for password-reset testing; create a dedicated
@@ -115,7 +115,7 @@ Shipped mark-one / mark-all read. The table's RLS also allows self-delete, but n
 Before finding this file's #2, an earlier lane task of mine reset test-icon to a
 different password for a browser test (it had already churned via GoTrue's
 rehash-on-login). Per #2, the fix is a dedicated `test-reset@saathban.dev`; the
-four shared accounts should be restored to `SaathTest!2026` and left alone. I did
+four shared accounts should be restored to the shared test password (deliberately not written in the repo — ask the owner) and left alone. I did
 not re-reset it this session (the write is now permission-gated).
 
 ---

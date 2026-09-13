@@ -46,7 +46,7 @@ function envLocal(name) {
 }
 const SUPA = envLocal("VITE_SUPABASE_URL");
 const ANON = envLocal("VITE_SUPABASE_ANON_KEY");
-const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 const PLAYER = process.env.TEST_ACCOUNT_2 || "smoke-fam@saathban.dev";
 
 if (!SUPA || !ANON) {

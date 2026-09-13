@@ -2,7 +2,7 @@
    Community v1 suite — real accounts, real RLS (migration 0014).
 
    Run:  node tests/community.mjs
-   Uses the four seeded test accounts (password SaathTest!2026).
+   Uses the four seeded test accounts (password $TEST_PASSWORD).
    test-buddy's application is NOT active, which makes it the standing
    negative case for community access.
 
@@ -22,7 +22,7 @@
 import { readFileSync } from "node:fs";
 import { MONEY_PATTERN } from "../src/app/routes/community/communityCopy.js";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");

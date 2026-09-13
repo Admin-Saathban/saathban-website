@@ -2,7 +2,7 @@
    Community shares suite — migration 0018, real accounts, real RLS.
 
    Run:  node tests/community-shares.mjs
-   Fixtures: the seeded test-* accounts (password SaathTest!2026),
+   Fixtures: the seeded test-* accounts (password $TEST_PASSWORD),
    including test-icon2 (a second Icon, for the walk Join flow) and
    test-fam (in test-icon's circle → the Friends-tab connection case).
 
@@ -17,7 +17,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = raw.split(/\r?\n/).find((l) => l.startsWith(name));

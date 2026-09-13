@@ -2,7 +2,7 @@
    Community social suite — migration 0027, real accounts, real RLS.
 
    Run:  node tests/community-social.mjs
-   Fixtures: the seeded test-* accounts (password SaathTest!2026).
+   Fixtures: the seeded test-* accounts (password $TEST_PASSWORD).
 
    Covers: "Who's up for…?" activities (free-text + optional fields,
    limit-aware graceful joins, idempotency, own-post/past negatives,
@@ -16,7 +16,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = raw.split(/\r?\n/).find((l) => l.startsWith(name));

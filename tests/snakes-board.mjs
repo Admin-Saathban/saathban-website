@@ -43,7 +43,7 @@ function envLocal(name) {
 }
 const SUPA = envLocal("VITE_SUPABASE_URL");
 const ANON = envLocal("VITE_SUPABASE_ANON_KEY");
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 
 let failures = 0;
 const check = (name, ok, note = "") => {

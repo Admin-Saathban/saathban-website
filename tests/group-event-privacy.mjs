@@ -34,7 +34,7 @@ const check = (n, ok, note = "") => {
 const login = async (e) =>
   (await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: e, password: "SaathTest!2026" }),
+    body: JSON.stringify({ email: e, password: process.env.TEST_PASSWORD }),
   })).json();
 const H = (s) => ({ apikey: KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "application/json" });
 const rest = async (s, p, init = {}) => {

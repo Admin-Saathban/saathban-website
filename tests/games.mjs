@@ -3,7 +3,7 @@
 
    Run:  node tests/games.mjs
    Fixtures: the dedicated smoke-icon / smoke-fam pair (in each
-   others circle) plus test-buddy-pending; password SaathTest!2026.
+   others circle) plus test-buddy-pending; password $TEST_PASSWORD.
    Table-creating suites stay off the accounts retested by hand.
    House rules {turn_seconds: 2} make the 60s turn timer testable in
    seconds; Snakes & Ladders itself always finishes on an exact 100.
@@ -22,7 +22,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = raw.split(/\r?\n/).find((l) => l.startsWith(name));

@@ -56,7 +56,7 @@ async function login(email) {
   const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: { apikey: ANON, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: "SaathTest!2026" }),
+    body: JSON.stringify({ email, password: process.env.TEST_PASSWORD }),
   });
   const j = await r.json();
   if (!j.access_token) throw new Error(`login failed: ${email}`);

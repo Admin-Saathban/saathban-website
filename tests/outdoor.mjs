@@ -2,7 +2,7 @@
    Outdoor v1 suite — real accounts, real RLS (migration 0016).
 
    Run:  node tests/outdoor.mjs
-   Uses the seeded test accounts (password SaathTest!2026):
+   Uses the seeded test accounts (password $TEST_PASSWORD):
    - test-fam is in test-icon's circle → exercises "connections".
    - test-buddy's application is ACTIVE (the vetting lane approved
      it) and they are NOT in the circle → a community member who
@@ -16,7 +16,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 function envLocal(name) {
   const raw = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = raw.split(/\r?\n/).find((l) => l.startsWith(name));

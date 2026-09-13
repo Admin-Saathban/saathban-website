@@ -63,7 +63,7 @@ const check = (n, ok, note = "") => { if (!ok) fails++; console.log((ok ? "PASS"
 
 const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
   method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-  body: JSON.stringify({ email: "test-icon@saathban.dev", password: "SaathTest!2026" }),
+  body: JSON.stringify({ email: "test-icon@saathban.dev", password: process.env.TEST_PASSWORD }),
 });
 const session = await r.json();
 

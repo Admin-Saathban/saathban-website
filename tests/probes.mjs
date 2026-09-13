@@ -33,7 +33,7 @@ async function client() {
   const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");
   const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "test-icon@saathban.dev", password: "SaathTest!2026" }),
+    body: JSON.stringify({ email: "test-icon@saathban.dev", password: process.env.TEST_PASSWORD }),
   });
   const s = await r.json();
   if (!s?.access_token) throw new Error("probe cleanup could not sign in");
@@ -77,7 +77,7 @@ async function sweepNotifications(ids) {
       const SUPA = g("VITE_SUPABASE_URL"), ANON = g("VITE_SUPABASE_ANON_KEY");
       const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`, {
         method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: "SaathTest!2026" }),
+        body: JSON.stringify({ email, password: process.env.TEST_PASSWORD }),
       });
       const s = await r.json();
       if (!s?.access_token) continue;

@@ -29,7 +29,7 @@
 
 import { readFileSync } from "node:fs";
 
-const PASSWORD = process.env.TEST_PASSWORD || "SaathTest!2026";
+const PASSWORD = process.env.TEST_PASSWORD;
 const ACCOUNT = process.env.TEST_ACCOUNT || "smoke-icon@saathban.dev";
 
 function envLocal(name) {

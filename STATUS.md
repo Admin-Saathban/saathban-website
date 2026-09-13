@@ -14,7 +14,7 @@ Maintained by the overnight integration session. Last update:
 | test-buddy@saathban.dev | Application `4269a7c6…` status **active** (a community-lane suite activated it); several document requests incl. one uploaded response |
 | test-admin@saathban.dev | Support-level admin |
 
-Password for all four: `SaathTest!2026`. Circle invites, RSVPs and
+Password for all four: the shared test password (deliberately not written in the repo — ask the owner). Circle invites, RSVPs and
 older reminders were wiped this morning; everything above was
 re-seeded deliberately. Don't use these accounts for password-reset
 testing (QUESTIONS.md).
@@ -45,7 +45,7 @@ npm run smoke          # 17 checks against localhost
 BASE_URL=<preview url> npm run smoke   # against a deployment
 ```
 Test accounts: `test-{icon,buddy,fam,admin}@saathban.dev` /
-`SaathTest!2026` (see QUESTIONS.md #2 before touching passwords).
+the shared test password (deliberately not written in the repo — ask the owner) (see QUESTIONS.md #2 before touching passwords).
 
 ## Working / verified
 - All four role homes on real data (icon logs, admin review queue +
@@ -138,7 +138,7 @@ speaker.
 Everything below is dev fixture data in project `vmtbywzmqyzafbgquzjh`
 and must be purged (or the DB reset wholesale) before real accounts
 arrive. All four test accounts are on the convention password
-`SaathTest!2026` (re-verified 2026-08-29 by the smoke suite's real
+the shared test password (deliberately not written in the repo — ask the owner) (re-verified 2026-08-29 by the smoke suite's real
 password grants).
 
 | What | Where | Notes |

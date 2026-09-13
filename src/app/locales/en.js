@@ -531,6 +531,11 @@ const en = {
   },
 
   home: {
+    offline: {
+      lastKnown: "No connection just now — this is how things were when you were last online. Anything you log is kept on this phone and sent when the connection comes back.",
+      slow: "The connection is slow — showing what we had last while the rest arrives.",
+      back: "Back online — everything is up to date.",
+    },
     company: {
       one: "{name}'s logged today too.",
       two: "{a} and {b} have logged today too.",
@@ -3797,7 +3802,7 @@ const en = {
       sentEvening: "🔥 {n} · sent this evening",
       youSent: "🔥 {n} · sent",
       youNotYet: "🔥 {n} · not sent yet today",
-      notSent: "Hasn't sent today",
+      notSent: "Still to come",
       nudge: "Send a nudge",
       nudged: "Nudged today",
       month: "This month",

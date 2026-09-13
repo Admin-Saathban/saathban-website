@@ -29,7 +29,42 @@ export async function fetchNotifications() {
     .select("id, title, body, kind, link, read_at, created_at, created_by")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data || [];
+  const rows = data || [];
+  /* Who each one is from, by first name, so the off-switch can say
+     "Mute Amina" rather than "them" — and whether that person is muted
+     already, so the row offers the undo instead. */
+  const actorIds = [...new Set(rows.map((n) => n.created_by).filter(Boolean))];
+  if (!actorIds.length) return rows;
+  const user = await sessionUser();
+  const [{ data: people }, { data: mutes }] = await Promise.all([
+    supabase.from("safe_profiles").select("id, full_name").in("id", actorIds),
+    user
+      ? supabase.from("user_blocks").select("blocked_id").eq("blocker_id", user.id).eq("kind", "mute").in("blocked_id", actorIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const names = new Map((people || []).map((p) => [p.id, (p.full_name || "").split(" ")[0]]));
+  const muted = new Set((mutes || []).map((m) => m.blocked_id));
+  return rows.map((n) => ({
+    ...n,
+    actor_name: names.get(n.created_by) || "",
+    actor_muted: muted.has(n.created_by),
+    actor_self: !!user && n.created_by === user.id,
+  }));
+}
+
+/* The kinds a person Mute cannot silence — kept identical to
+   public.notification_kind_mutable (0144). They tell a person something
+   was done to their own account or days, or come from the Saathban team,
+   so the bell does not offer "Mute" on them: offering it would promise a
+   silence the database will not keep. */
+const NOT_MUTABLE = new Set([
+  "circle", "reminder", "proposal",
+  "broadcast", "general", "question_reply",
+  "document_request", "document_response", "milestone",
+]);
+
+export function canMutePersonOn(n) {
+  return !!n?.created_by && !n.actor_self && !NOT_MUTABLE.has(n.kind || "general");
 }
 
 export async function fetchUnreadCount() {
@@ -66,9 +101,12 @@ export async function markAllRead() {
     will stop by leaving."
 
    Neither of these is a new mechanism, deliberately. Muting a person
-   is the same `user_blocks` row with kind 'mute' that the community
-   feed already writes, so a person muted here is muted everywhere and
-   there is no second idea of "muted" to keep in step. Muting a kind
+   is the one Mute (0143–0145): the same `user_blocks` row with kind
+   'mute' that a post's menu and a chat's menu write. Nothing that
+   person does notifies you any more (0144 drops the row at the
+   database), their posts leave your feed, your chat with them stays
+   open, and they are never told. It is undone here, from the chat, or
+   from Messages → Menu → Blocked and muted. Muting a kind
    writes the same `profiles.settings->notify` override that
    NotifySettings edits, so the settings screen shows what was done
    here and can undo it — which is what "reversible from Settings"
@@ -80,6 +118,18 @@ export async function muteNotificationPerson(personId) {
     { blocker_id: user.id, blocked_id: personId, kind: "mute" },
     { onConflict: "blocker_id,blocked_id,kind", ignoreDuplicates: true }
   );
+  if (error) throw new Error(error.message);
+}
+
+export async function unmuteNotificationPerson(personId) {
+  const user = await sessionUser();
+  if (!user || !personId) return;
+  const { error } = await supabase
+    .from("user_blocks")
+    .delete()
+    .eq("blocker_id", user.id)
+    .eq("blocked_id", personId)
+    .eq("kind", "mute");
   if (error) throw new Error(error.message);
 }
 

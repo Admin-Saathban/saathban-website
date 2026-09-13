@@ -123,7 +123,7 @@ export default function ThreadMenu({ name, open, canReport, state, busy, onClose
         <div role="menu">
           {open && (
             <Item
-              label={t(state.muted ? "msg.thread.unmute" : "msg.thread.mute")}
+              label={t(state.muted ? "msg.thread.unmute" : "msg.thread.mute", { name })}
               sub={t(state.muted ? "msg.thread.unmuteSub" : "msg.thread.muteSub", { name })}
               onClick={onMute}
               disabled={busy}

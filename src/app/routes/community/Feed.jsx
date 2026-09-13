@@ -69,7 +69,6 @@ import {
   helpStatusOf,
   toggleSave,
   toggleFollow,
-  showLessFrom,
   copyLink,
   setVisibility as setPostVisibility,
   setRepliesOff,
@@ -1888,7 +1887,10 @@ export default function Feed({ composer = true, embedded = false }) {
         await load();
         showToast(kind === "mute" ? t("community.feed.mutedToast") : t("community.feed.blockedToast"), t("community.feed.undo"), async () => {
           await unblock(myId, target.author_id, kind);
-          setToast(null);
+          /* The toast closes itself when its action is tapped. This called
+             setToast, which does not exist in this component, so Undo threw
+             after the unmute and the feed never reloaded to bring the
+             person's posts back. */
           await load();
         });
       } else if (kind === "delete") {
@@ -2119,13 +2121,9 @@ export default function Feed({ composer = true, embedded = false }) {
               );
             },
             hide: async () => { const p = menuPost; setMenuPost(null); await hideOne(p); },
-            showLess: async () => {
-              const name = (menuAuthor?.full_name || "").split(" ")[0];
-              await showLessFrom(myId, menuPost.author_id);
-              setMenuPost(null);
-              await load();
-              showToast(t("feedback.showLessDone", { name }));
-            },
+            /* One Mute, for a person (0145) — the same write, toast and
+               Undo as every other Mute in the feed. */
+            mute: async () => { const p = menuPost; setMenuPost(null); await onAction("mute", p, ""); },
             report: async () => { const p = menuPost; setMenuPost(null); await onAction("report", p, ""); },
           }}
         />

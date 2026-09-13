@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STRINGS, KIND_ICON, relativeTime } from "./strings.js";
-import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, muteNotificationKind } from "./data.js";
+import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, unmuteNotificationPerson, muteNotificationKind, canMutePersonOn } from "./data.js";
 import Icon from "../../components/Icon.jsx";
 
 /* Quiet by design: these are not actions most people want most of
@@ -43,6 +43,9 @@ export default function NotificationsPage() {
      or the kind, but the acknowledgement belongs to the row they
      touched. */
   const [muted, setMuted] = useState({});
+  /* A person's Mute is about the PERSON, so every row from them agrees
+     at once: keyed by person id, overriding what the load said. */
+  const [personMuted, setPersonMuted] = useState({});
 
   const load = useCallback(async () => {
     try {
@@ -87,9 +90,22 @@ export default function NotificationsPage() {
      down. */
   const onMute = async (n, what) => {
     try {
-      if (what === "person") await muteNotificationPerson(n.created_by);
-      else await muteNotificationKind(n.kind);
-      setMuted((m) => ({ ...m, [n.id]: what }));
+      if (what === "person") {
+        await muteNotificationPerson(n.created_by);
+        setPersonMuted((m) => ({ ...m, [n.created_by]: true }));
+      } else {
+        await muteNotificationKind(n.kind);
+        setMuted((m) => ({ ...m, [n.id]: what }));
+      }
+    } catch {
+      setError(s.muteFailed);
+    }
+  };
+
+  const onUnmutePerson = async (n) => {
+    try {
+      await unmuteNotificationPerson(n.created_by);
+      setPersonMuted((m) => ({ ...m, [n.created_by]: false }));
     } catch {
       setError(s.muteFailed);
     }
@@ -209,19 +225,35 @@ export default function NotificationsPage() {
                       buttons. */}
                   {muted[n.id] ? (
                     <p style={{ fontSize: ts(15), color: C.textMuted, margin: "12px 0 0" }}>
-                      {muted[n.id] === "person" ? s.mutedPerson : s.mutedKind}
+                      {s.mutedKind}
                     </p>
                   ) : (
-                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
-                      {n.created_by && (
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+                      {canMutePersonOn(n) && ((personMuted[n.created_by] ?? n.actor_muted) ? (
+                        <>
+                          <p style={{ flexBasis: "100%", fontSize: ts(15), color: C.textMuted, margin: 0, lineHeight: 1.5 }}>
+                            {s.mutedPerson(n.actor_name || s.someone)}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => onUnmutePerson(n)}
+                            style={muteBtn(ts)}
+                          >
+                            {s.unmutePerson(n.actor_name || s.someone)}
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => onMute(n, "person")}
-                          style={muteBtn(ts)}
+                          style={{ ...muteBtn(ts), textAlign: "start" }}
                         >
-                          {s.mutePerson}
+                          {s.mutePerson(n.actor_name || s.someone)}
+                          <span style={{ display: "block", fontSize: ts(14), textDecoration: "none", lineHeight: 1.4 }}>
+                            {s.mutePersonSub}
+                          </span>
                         </button>
-                      )}
+                      ))}
                       {n.kind && (
                         <button
                           type="button"

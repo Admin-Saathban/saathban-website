@@ -112,7 +112,7 @@ async function buildChats(myId) {
   const ids = threads.map((t) => t.id);
   const otherIds = [...new Set(threads.map((t) => (t.requester_id === myId ? t.recipient_id : t.requester_id)))];
 
-  const [{ data: msgs }, { data: people }, { data: archived }, { data: muted }, { data: blocks }] = await Promise.all([
+  const [{ data: msgs }, { data: people }, { data: archived }, { data: blocks }] = await Promise.all([
     supabase
       .from("dm_messages")
       .select("id, request_id, sender_id, body, image_path, audio_path, audio_seconds, game_session_id, deleted_at, created_at, read_at")
@@ -123,18 +123,18 @@ async function buildChats(myId) {
       .select("id, full_name, avatar_url, city, show_presence, last_seen_at, read_receipts")
       .in("id", otherIds),
     supabase.from("dm_archived").select("request_id").eq("profile_id", myId),
-    /* 0135 — a muted chat stays in the list, marked in words. */
-    supabase.from("dm_muted").select("request_id").eq("profile_id", myId),
-    /* Somebody I blocked is not in Chats: blocking means we do not see
-       each other, and their row lives in Menu → Blocked and muted, where
-       it can be undone. */
-    supabase.from("user_blocks").select("blocked_id").eq("blocker_id", myId).eq("kind", "block"),
+    /* Both kinds in one read (0145 — Mute is one setting, for a person).
+       A muted person's chat stays in the list, marked in words. Somebody
+       I blocked is not in Chats: blocking means we do not see each other,
+       and their row lives in Menu → Blocked and muted, where it can be
+       undone. */
+    supabase.from("user_blocks").select("blocked_id, kind").eq("blocker_id", myId),
   ]);
 
   const byId = new Map((people || []).map((p) => [p.id, p]));
   const archivedSet = new Set((archived || []).map((a) => a.request_id));
-  const mutedSet = new Set((muted || []).map((a) => a.request_id));
-  const blockedSet = new Set((blocks || []).map((b) => b.blocked_id));
+  const mutedSet = new Set((blocks || []).filter((b) => b.kind === "mute").map((b) => b.blocked_id));
+  const blockedSet = new Set((blocks || []).filter((b) => b.kind === "block").map((b) => b.blocked_id));
 
   /* The newest message per thread, and whether anything in it is
      unread. Unread is a BOOLEAN here and stays one all the way to the
@@ -174,7 +174,7 @@ async function buildChats(myId) {
         likedByThem: m ? likedNewest.has(m.id) : false,
         unread: unread.has(t.id),
         archived: archivedSet.has(t.id),
-        muted: mutedSet.has(t.id),
+        muted: mutedSet.has(otherId),
         at: m?.created_at || t.created_at,
       };
     })
@@ -264,63 +264,66 @@ export async function archiveChat(myId, requestId, on) {
    One read for everything the menu needs to say about itself, so each
    row can offer the action or its undo — never both, never a guess. */
 export async function fetchThreadState(myId, otherId, requestId) {
-  const [{ data: blocks }, archived, muted] = await Promise.all([
+  const [{ data: blocks }, archived] = await Promise.all([
     supabase.from("user_blocks").select("kind").eq("blocker_id", myId).eq("blocked_id", otherId),
     requestId
       ? supabase.from("dm_archived").select("request_id").eq("profile_id", myId).eq("request_id", requestId).maybeSingle()
-      : Promise.resolve({ data: null }),
-    requestId
-      ? supabase.from("dm_muted").select("request_id").eq("profile_id", myId).eq("request_id", requestId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
   const kinds = new Set((blocks || []).map((b) => b.kind));
   return {
     blocked: kinds.has("block"),
-    /* The feed's "show less" (user_blocks 'mute'). It closes the thread
-       at the database (open_dm_with refuses), so the thread has to be
-       able to say so and offer the way back. */
-    hushed: kinds.has("mute"),
     archived: !!archived?.data,
-    muted: !!muted?.data,
+    /* The person's Mute (0145). The chat stays open and writable. */
+    muted: kinds.has("mute"),
   };
 }
 
-/* 0135 — Mute is per conversation: the bell stays quiet for this chat,
-   the chat itself stays exactly where it is. */
-export async function muteChat(myId, requestId, on) {
+/* ONE MUTE, FOR A PERSON (0143–0145). Whatever the door it is set from —
+   this thread's menu, a post's menu, the bell — Mute is the same
+   user_blocks row with kind 'mute':
+     · nothing they do notifies me (0144 drops the row at the database);
+     · their posts leave my feed (caller_hides, as "see less" always did);
+     · the chat stays open, readable and writable, marked "Muted";
+     · they are never told.
+   The conversation's dm_muted row is kept in step by the database, so the
+   badge and the chat list agree without a second write here. */
+export async function mutePerson(myId, otherId, on) {
+  if (!myId || !otherId) return;
   if (on) {
-    const { error } = await supabase.from("dm_muted").insert({ profile_id: myId, request_id: requestId });
-    if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
+    const { error } = await supabase
+      .from("user_blocks")
+      .upsert(
+        { blocker_id: myId, blocked_id: otherId, kind: "mute" },
+        { onConflict: "blocker_id,blocked_id,kind", ignoreDuplicates: true }
+      );
+    if (error) throw new Error(error.message);
   } else {
     const { error } = await supabase
-      .from("dm_muted")
+      .from("user_blocks")
       .delete()
-      .eq("profile_id", myId)
-      .eq("request_id", requestId);
+      .eq("blocker_id", myId)
+      .eq("blocked_id", otherId)
+      .eq("kind", "mute");
     if (error) throw new Error(error.message);
   }
 }
 
-export async function fetchMutedChats(myId) {
+/* The people I have muted — whether or not we have ever talked. */
+export async function fetchMutedPeople(myId) {
   const { data } = await supabase
-    .from("dm_muted")
-    .select("request_id, muted_at")
-    .eq("profile_id", myId);
+    .from("user_blocks")
+    .select("blocked_id, created_at")
+    .eq("blocker_id", myId)
+    .eq("kind", "mute");
   const rows = data || [];
   if (!rows.length) return [];
-  const { data: reqs } = await supabase
-    .from("dm_requests")
-    .select("id, requester_id, recipient_id")
-    .in("id", rows.map((r) => r.request_id));
-  const other = new Map((reqs || []).map((r) => [r.id, r.requester_id === myId ? r.recipient_id : r.requester_id]));
-  const ids = [...new Set([...other.values()])];
-  const { data: people } = ids.length
-    ? await supabase.from("safe_profiles").select("id, full_name, city").in("id", ids)
-    : { data: [] };
+  const { data: people } = await supabase
+    .from("safe_profiles")
+    .select("id, full_name, city")
+    .in("id", rows.map((r) => r.blocked_id));
   const byId = new Map((people || []).map((p) => [p.id, p]));
-  return rows
-    .filter((r) => other.has(r.request_id))
-    .map((r) => ({ requestId: r.request_id, otherId: other.get(r.request_id), person: byId.get(other.get(r.request_id)) || null }));
+  return rows.map((r) => ({ id: r.blocked_id, person: byId.get(r.blocked_id) || null, at: r.created_at }));
 }
 
 /* Reporting a whole conversation. Moderators have no read path into DM
@@ -510,14 +513,18 @@ async function readUnreadChats() {
     if (!user) return 0;
     const { data: reqs } = await supabase
       .from("dm_requests")
-      .select("id")
+      .select("id, requester_id, recipient_id")
       .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
       .eq("status", "accepted");
-    /* A muted chat does not raise the tab badge — the badge is an alert,
-       and muting is asking not to be alerted. Its dot on Chats stays. */
-    const { data: muted } = await supabase.from("dm_muted").select("request_id").eq("profile_id", user.id);
-    const quiet = new Set((muted || []).map((m) => m.request_id));
-    const ids = (reqs || []).map((r) => r.id).filter((id) => !quiet.has(id));
+    /* A muted person's chat does not raise the tab badge — the badge is
+       an alert, and muting is asking not to be alerted. Its dot on Chats
+       stays. */
+    const { data: muted } = await supabase
+      .from("user_blocks").select("blocked_id").eq("blocker_id", user.id).eq("kind", "mute");
+    const quiet = new Set((muted || []).map((m) => m.blocked_id));
+    const ids = (reqs || [])
+      .filter((r) => !quiet.has(r.requester_id === user.id ? r.recipient_id : r.requester_id))
+      .map((r) => r.id);
     if (!ids.length) return 0;
     /* Distinct threads, not rows: the count is conversations. */
     const { data: msgs } = await supabase

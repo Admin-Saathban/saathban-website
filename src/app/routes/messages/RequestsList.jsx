@@ -122,7 +122,8 @@ export default function RequestsList({ onCount }) {
       await blockOrMute(myId, r.senderId, "block");
       setBlockAsk(null);
       /* A blocked sender's request is hidden from me at the database
-         (caller_hides), so the card goes; the request is not declined. */
+         (caller_blocked, 0143), so the card goes; the request is not
+         declined. A MUTED sender's request stays: a mute is not a block. */
       setRows((cur) => {
         const next = (cur || []).filter((x) => x.id !== r.id);
         onCount?.(next.length);

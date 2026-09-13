@@ -6,11 +6,14 @@
 
    TWO WORDINGS THAT MATTER, and both are the spec's:
 
-   "SHOW LESS FROM {NAME}", with the sub-line "He won't know." Not
-   "Mute", not "Unfollow". The fear that the other person will find out
-   is what stops people using these controls at all, so the menu
-   answers it in the row rather than leaving it to be guessed. It is
-   reversible from Settings, which is what makes it safe to offer.
+   "MUTE {NAME}", with a sub-line that says what it does and ends "They
+   won't know." It used to read "Show less from {name}" and wrote a mute
+   that hid posts, closed the chat and silenced nothing — people believed
+   they had silenced someone and had not. It is now the one Mute (0145):
+   posts leave the feed, nothing they do notifies, the chat stays open.
+   The fear that the other person will find out is what stops people
+   using these controls at all, so the row answers it. It is reversible
+   from the toast's Undo and from Messages → Menu → Blocked and muted.
 
    NO BLOCK IN THIS MENU. Blocking a neighbour is a serious act and
    belongs on their profile, after a moment's thought — not one tap
@@ -211,9 +214,9 @@ export default function PostMenu({ post, mine, authorName, saved, following, onC
             {divider}
             <Item label={t("posts.menu.hide")} onClick={() => actions.hide()} />
             <Item
-              label={t("posts.menu.showLess", { name: authorName })}
-              sub={t("posts.menu.showLessSub")}
-              onClick={() => actions.showLess()}
+              label={t("posts.menu.mute", { name: authorName })}
+              sub={t("posts.menu.muteSub")}
+              onClick={() => actions.mute()}
             />
             <Item label={t("posts.menu.report")} onClick={() => actions.report()} />
             {/* No Block here, deliberately — it lives on their profile. */}

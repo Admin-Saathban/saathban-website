@@ -6,9 +6,12 @@
    to leave. It reuses the community lane's unblock so there is one
    definition of what blocked means.
 
-   MUTED CHATS LIVE HERE TOO. A mute is set from a conversation's menu
-   and undone from the same menu — but a person looking for "where did I
-   switch that off" comes to Menu, and this is the screen named for it.
+   MUTED PEOPLE LIVE HERE TOO. Mute is one setting, for a person (0145):
+   set from a thread's menu, a post's menu or the bell, it is the same
+   user_blocks 'mute' row, so everyone muted from any of those doors is
+   listed — whether or not there is a chat with them — and Unmute here
+   undoes all of it. A person looking for "where did I switch that off"
+   comes to Menu, and this is the screen named for it.
 
    The unblock call used to pass no kind, and unblock() filters on kind,
    so it matched no row: the button emptied the list on screen and left
@@ -20,7 +23,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import { unblock } from "../community/communityData.js";
-import { fetchBlockedPeople, fetchMutedChats, muteChat, refreshUnreadChats } from "./messagesData.js";
+import { fetchBlockedPeople, fetchMutedPeople, mutePerson, refreshUnreadChats } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
 
 function PersonRow({ person, actionLabel, busy, onAction }) {
@@ -65,7 +68,7 @@ export default function BlockedPeople() {
     if (!myId) return;
     const [b, m] = await Promise.all([
       fetchBlockedPeople(myId).catch(() => []),
-      fetchMutedChats(myId).catch(() => []),
+      fetchMutedPeople(myId).catch(() => []),
     ]);
     setRows(b);
     setMuted(m);
@@ -86,10 +89,10 @@ export default function BlockedPeople() {
   };
 
   const unmute = async (c) => {
-    setBusy(c.requestId);
+    setBusy("mute:" + c.id);
     try {
-      await muteChat(myId, c.requestId, false);
-      setMuted((cur) => (cur || []).filter((x) => x.requestId !== c.requestId));
+      await mutePerson(myId, c.id, false);
+      setMuted((cur) => (cur || []).filter((x) => x.id !== c.id));
       refreshUnreadChats();
       pushToast(t("msg.thread.unmutedToast", { name: (c.person?.full_name || "").split(" ")[0] }));
     } catch {
@@ -136,10 +139,10 @@ export default function BlockedPeople() {
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {muted.map((c) => (
               <PersonRow
-                key={c.requestId}
+                key={c.id}
                 person={c.person}
                 actionLabel={t("msg.blocked.unmute")}
-                busy={busy === c.requestId}
+                busy={busy === "mute:" + c.id}
                 onAction={() => unmute(c)}
               />
             ))}

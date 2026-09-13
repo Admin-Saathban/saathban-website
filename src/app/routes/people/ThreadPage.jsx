@@ -28,7 +28,7 @@ import {
   fetchLikes,
   toggleLike,
   fetchThreadState,
-  muteChat,
+  mutePerson,
   archiveChat,
   reportConversation,
   refreshUnreadChats,
@@ -116,7 +116,7 @@ export default function ThreadPage() {
   const [gameStatus, setGameStatus] = useState({});  // game session id -> status
   /* The thread menu (Messages rework): what has been done to this
      conversation by me, so each row offers the act or its undo. */
-  const [threadState, setThreadState] = useState({ blocked: false, hushed: false, archived: false, muted: false });
+  const [threadState, setThreadState] = useState({ blocked: false, archived: false, muted: false });
   const [menuOpen, setMenuOpen] = useState(false);
   const [ask, setAsk] = useState(null);              // "block" | "report" | null
   const [actBusy, setActBusy] = useState(false);
@@ -229,14 +229,15 @@ export default function ThreadPage() {
     if (!myId) return undefined;
     (async () => {
       try {
-        /* CLOSED BY ME, FIRST. A person I blocked (or chose to see less
-           from in the feed) cannot be opened at the database — open_dm_with
-           refuses — and the honest screen says so and offers the way back,
-           rather than an error line over an empty pane. */
+        /* CLOSED BY ME, FIRST. A person I blocked cannot be opened at the
+           database — open_dm_with refuses — and the honest screen says so
+           and offers the way back, rather than an error line over an empty
+           pane. A person I MUTED is not closed (0143): their chat opens
+           like any other, marked "Muted". */
         const [p, mine] = await Promise.all([fetchPerson(profileId), fetchThreadState(myId, profileId, null)]);
         if (cancelled) return;
         setPerson(p);
-        if (mine.blocked || mine.hushed) {
+        if (mine.blocked) {
           setThreadState(mine);
           setMessages([]);
           return;
@@ -429,8 +430,9 @@ export default function ThreadPage() {
 
   /* ── The thread's own menu (Messages rework) ──
      Each act says what it did, and each can be undone from where it was
-     done: Unmute and Bring back sit in the same menu; Unblock sits on the
-     closed thread and in Menu → Blocked and muted. */
+     done: Unmute and Bring back sit in the same menu (Unmute also in
+     Menu → Blocked and muted); Unblock sits on the closed thread and in
+     Menu → Blocked and muted. */
   const act = async (fn, okKey, vars) => {
     setActBusy(true);
     try {
@@ -444,11 +446,11 @@ export default function ThreadPage() {
       setActBusy(false);
     }
   };
+  /* The person's Mute (0145): one setting, whichever door it was set from. */
   const toggleMute = async () => {
     setMenuOpen(false);
-    if (!requestId) return;
     const on = !threadState.muted;
-    const ok = await act(() => muteChat(myId, requestId, on), on ? "msg.thread.mutedToast" : "msg.thread.unmutedToast", { name: first });
+    const ok = await act(() => mutePerson(myId, profileId, on), on ? "msg.thread.mutedToast" : "msg.thread.unmutedToast", { name: first });
     if (ok) {
       setThreadState((s) => ({ ...s, muted: on }));
       refreshUnreadChats();
@@ -477,10 +479,10 @@ export default function ThreadPage() {
     const ok = await act(() => reportConversation(myId, requestId, profileId, messages), "msg.thread.reportedToast");
     if (ok) setAsk(null);
   };
-  const liftBlock = async (kind) => {
-    const ok = await act(() => unblock(myId, profileId, kind), kind === "block" ? "msg.thread.unblockedToast" : null, { name: first });
+  const liftBlock = async () => {
+    const ok = await act(() => unblock(myId, profileId, "block"), "msg.thread.unblockedToast", { name: first });
     if (ok) {
-      setThreadState({ blocked: false, hushed: false, archived: false, muted: false });
+      setThreadState({ blocked: false, archived: false, muted: false });
       setMessages(null);
       openedRef.current = false;
       setReloadKey((k) => k + 1);
@@ -590,7 +592,7 @@ export default function ThreadPage() {
   const gameName = (k) => t(`people.thread.game_${k}`);
   const first = person?.full_name?.split(" ")[0] || "";
   const open = status === "accepted";
-  const closedByMe = threadState.blocked || threadState.hushed;
+  const closedByMe = threadState.blocked;
 
   return (
     /* FILLS ITS BOX rather than setting a minimum height. The Messages
@@ -785,11 +787,9 @@ export default function ThreadPage() {
 
       {closedByMe ? (
         <div style={{ padding: "12px 2px" }}>
-          <BodyText>
-            {t(threadState.blocked ? "msg.thread.blockedHere" : "msg.thread.hushedHere", { name: first })}
-          </BodyText>
-          <PrimaryBtn disabled={actBusy} onClick={() => liftBlock(threadState.blocked ? "block" : "mute")}>
-            {t(threadState.blocked ? "msg.thread.unblockHere" : "msg.thread.unhushHere", { name: first })}
+          <BodyText>{t("msg.thread.blockedHere", { name: first })}</BodyText>
+          <PrimaryBtn disabled={actBusy} onClick={liftBlock}>
+            {t("msg.thread.unblockHere", { name: first })}
           </PrimaryBtn>
         </div>
       ) : (<>

@@ -97,17 +97,6 @@ export async function toggleFollow(postId, myId, following) {
   return true;
 }
 
-/* §10.2 "Show less from {name}" — a mute, and the sub-line says "He
-   won't know", which is true: user_blocks with kind 'mute' hides
-   their rows from MY feed and tells them nothing. Reversible from
-   Settings, which is what makes it safe to offer. */
-export async function showLessFrom(myId, authorId) {
-  const { error } = await supabase
-    .from("user_blocks")
-    .insert({ blocker_id: myId, blocked_id: authorId, kind: "mute" });
-  if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
-}
-
 /* A link to the post. §6.5: for a HELP post this link shows the text
    and nothing else — no profile, no location, no way to reach the
    person except through the app. The link carries somebody's

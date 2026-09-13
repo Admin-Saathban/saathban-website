@@ -34,6 +34,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import supabase from "../../lib/supabase.js";
 import { MOODS, POINTS_PER_MODULE, isoDate, daysAgo } from "./homeMock.js";
+import { getIconPrefs } from "../../lib/iconPrefs.js";
 
 // The modules migration 0006 knows (public.log_module). Anything else
 // (tracker:<id> keys) is device-local.
@@ -46,6 +47,31 @@ export const DB_MODULES = [
 
 /* Does this tracker entry count as done? Mirrors isEntryDone in
    DailyLogCard, kept local so the store has no UI import. */
+/* ── A MEAL TICK TRAVELS WITH ITS NAME (0119) ──
+
+   The database now refuses a ticked food it cannot name, so a record can
+   never again point at a food that later vanishes. A write queued by an
+   OLDER build carries food ids alone; if one of those foods was since
+   taken off the server's list, that write would be refused — and this
+   queue retries a refused write forever and stops everything queued
+   behind it. This device still holds the list those ids came from, so
+   the names go in here, before the write is sent. */
+function withMealLabels(value, items) {
+  const ids = [...Object.values(value.entries || {}).flat(), ...(value.meals || [])];
+  if (!ids.length) return value;
+  const labels = { ...(value.labels || {}) };
+  let changed = false;
+  for (const id of ids) {
+    if (labels[id]) continue;
+    const item = (items || []).find((m) => m.id === id);
+    if (item && item.label) {
+      labels[id] = item.label;
+      changed = true;
+    }
+  }
+  return changed ? { ...value, labels } : value;
+}
+
 function trackerDone(v) {
   if (!v) return false;
   return !!v.done || (v.count || 0) > 0 || !!(v.note || "").trim();
@@ -128,6 +154,9 @@ export function useDailyLogs(iconId) {
     try {
       const queue = readJson(queueKey(iconId), {});
       for (const [opKey, op] of Object.entries(queue)) {
+        if (op.module === "diet" && op.value && typeof op.value === "object") {
+          op.value = withMealLabels(op.value, getIconPrefs(iconId).mealItems);
+        }
         const { error } = await supabase.from("daily_logs").upsert(
           {
             icon_id: iconId,
@@ -140,7 +169,10 @@ export function useDailyLogs(iconId) {
         );
         if (!error) {
           delete queue[opKey];
-        } else if (/last 48 hours/i.test(error.message || "")) {
+        } else if (/last 48 hours|must carry the name/i.test(error.message || "")) {
+          // A name refusal is as permanent as the 48-hour window: the
+          // device has no name to add, and retrying would hold up every
+          // log queued behind this one. The entry stays in the device cache.
           // Permanently outside the server window — retrying can never
           // succeed. The entry survives in the device cache.
           delete queue[opKey];

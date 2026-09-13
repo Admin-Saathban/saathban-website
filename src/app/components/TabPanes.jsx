@@ -63,6 +63,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "../lib/session.jsx";
 import { lazyScreen, whenIdle, ScreenArriving, ScreenLoadBoundary } from "../lib/lazyScreen.jsx";
+import { isOnline } from "../lib/offline.js";
 import { quietenShutter, revealBars, freezeShutter, thawShutter } from "./useShutter.js";
 import HomeRoutes from "../routes/home/HomeRoutes.jsx";
 
@@ -105,7 +106,9 @@ const PANES = [
 
 const preloadPane = (key) => {
   const p = PANES.find((x) => x.key === key);
-  return p && p.preload ? p.preload() : Promise.resolve(null);
+  /* Home has no separate chunk, so it is always "here". A pane whose
+     preload resolves to null did not arrive (offline, or a failed fetch). */
+  return p && p.preload ? p.preload() : Promise.resolve(true);
 };
 
 /* Longest match wins, so a deeper base is never shadowed by a shorter
@@ -172,8 +175,13 @@ export default function TabPanes() {
     let cancelled = false;
     const add = () => {
       if (cancelled) return;
-      Promise.all(want.map(preloadPane)).then(() => {
+      /* No connection: nothing to fetch, so nothing to pre-mount. Tried
+         again when the connection comes back (listener below). */
+      if (!isOnline()) return;
+      Promise.all(want.map(preloadPane)).then((got) => {
         if (cancelled) return;
+        const arrived = want.filter((k, i) => Boolean(got[i]));
+        if (!arrived.length) return;
         /* A LOCATION FIRST, OR THE PANE MOUNTS EMPTY AND NOTHING IS SAVED.
 
            Every pane renders <Routes location={the one it was last active
@@ -189,19 +197,22 @@ export default function TabPanes() {
            is standing. The line above — frozen.current[active] = location
            — overwrites this with the real thing the moment the person
            actually goes there. */
-        want.forEach((k) => {
+        arrived.forEach((k) => {
           if (!frozen.current[k]) {
             const base = PANES.find((p) => p.key === k).base;
             frozen.current[k] = { pathname: base, search: "", hash: "", state: null, key: "pre-" + k };
           }
         });
-        setVisited((v) => (want.every((k) => v.includes(k)) ? v : [...v, ...want.filter((k) => !v.includes(k))]));
+        setVisited((v) => (arrived.every((k) => v.includes(k)) ? v : [...v, ...arrived.filter((k) => !v.includes(k))]));
       });
     };
     const cancelIdle = whenIdle(add, 4000);
+    const onOnline = () => whenIdle(add, 4000);
+    window.addEventListener("online", onOnline);
     return () => {
       cancelled = true;
       cancelIdle();
+      window.removeEventListener("online", onOnline);
     };
   }, [active, visited]);
 
@@ -209,7 +220,14 @@ export default function TabPanes() {
      idle, so it never competes with the screen being opened. */
   useEffect(() => {
     if (!active) return undefined;
-    return whenIdle(() => PANES.forEach((p) => p.preload && p.preload()), 8000);
+    const run = () => { if (isOnline()) PANES.forEach((p) => p.preload && p.preload()); };
+    const cancel = whenIdle(run, 8000);
+    const onOnline = () => whenIdle(run, 8000);
+    window.addEventListener("online", onOnline);
+    return () => {
+      cancel();
+      window.removeEventListener("online", onOnline);
+    };
     // Once per app life is enough; preload is idempotent anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Boolean(active)]);

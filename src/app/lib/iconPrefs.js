@@ -34,7 +34,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import supabase from "./supabase.js";
-import { isOnline } from "./offline.js";
+import { isOnline, storedUserId } from "./offline.js";
 
 const LEGACY_KEY = "saathban.app.iconPrefs";
 const cacheKey = (iconId) => `saathban.app.logPrefs.${iconId}`;
@@ -127,6 +127,8 @@ function readJson(key) {
   }
 }
 function writeJson(key, value) {
+  /* Nobody signed in (or signed out a moment ago): keep nothing. */
+  if (!storedUserId()) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
@@ -203,6 +205,7 @@ function isDirty(iconId) {
 }
 function setDirty(iconId, on) {
   try {
+    if (on && !storedUserId()) return;
     if (on) window.localStorage.setItem(dirtyKey(iconId), "1");
     else window.localStorage.removeItem(dirtyKey(iconId));
   } catch {

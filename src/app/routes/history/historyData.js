@@ -12,7 +12,20 @@
 
 import supabase from "../../lib/supabase.js";
 
-export { fetchMyProgress, fetchBadgeDefinitions, fetchMyEarnedBadges } from "../../lib/points.js";
+export { fetchBadgeDefinitions, fetchMyEarnedBadges } from "../../lib/points.js";
+
+/* The first day anything was logged — "since 14 July" on the journey.
+   logged_days (0140) is own-rows-only and never loses a day. */
+export async function fetchFirstDay() {
+  const { data, error } = await supabase
+    .from("logged_days")
+    .select("day")
+    .order("day", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? data.day : null;
+}
 
 /* Every log row in one calendar month, oldest first. */
 export async function fetchMonthLogs(iconId, year, month /* 0-based */) {
@@ -123,21 +136,6 @@ export function presenceByDay(rows) {
     if (r.module === "rest_day" && r.payload?.on !== false) d.rest = true;
   }
   return out;
-}
-
-/* Points earned per month (a flat 10 per log, rest days included) and
-   the running total — participation only, never performance. */
-export function pointsByMonth(rows, months, perLog = 10) {
-  const acc = Object.fromEntries(months.map((m) => [m, 0]));
-  for (const r of rows) {
-    const k = monthKeyOf(r.log_date);
-    if (k in acc) acc[k] += perLog;
-  }
-  let running = 0;
-  return months.map((m) => {
-    running += acc[m];
-    return { month: m, earned: acc[m], total: running };
-  });
 }
 
 /* Per-module summary for one month: how many days it was logged, and

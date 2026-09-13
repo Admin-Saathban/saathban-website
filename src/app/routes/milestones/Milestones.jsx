@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════
-   Your milestones — the points → badges → celebrations loop
-   (SPEC.md, "Points, character, celebrations").
+   Your milestones — days with Saathban, badges and celebrations.
+   Nothing here is scored.
 
    On mount the screen calls the catch-up award RPC (idempotent; new
    logs and posts already award via DB triggers), then celebrates each
@@ -18,7 +18,7 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import useBackToClose from "../../components/useBackToClose.js";
 import {
-  fetchMyProgress,
+  fetchMyDays,
   fetchBadgeDefinitions,
   fetchMyEarnedBadges,
   awardMyBadges,
@@ -163,7 +163,7 @@ export default function Milestones() {
       try {
         await awardMyBadges().catch(() => []); // catch-up; triggers cover live events
         const [p, d, e, bp] = await Promise.all([
-          fetchMyProgress(),
+          fetchMyDays(),
           fetchBadgeDefinitions(),
           fetchMyEarnedBadges(),
           fetchMilestoneProgress().catch(() => ({})),
@@ -177,7 +177,7 @@ export default function Milestones() {
       } catch {
         if (!cancelled) {
           setError("milestones.loadError");
-          setProgress({ points: 0, presence_days: 0, current_streak: 0 });
+          setProgress({ days: 0 });
         }
       }
     })();
@@ -205,7 +205,7 @@ export default function Milestones() {
     }
   };
 
-  const days = progress?.presence_days ?? 0;
+  const days = progress?.days ?? 0;
   const arcPct = Math.min(100, Math.round((days / ARC_TARGET_DAYS) * 100));
   const celebrating = queue.length > 0 && defByKey[queue[0].badge_key];
 
@@ -241,28 +241,20 @@ export default function Milestones() {
         </BodyText>
       )}
 
-      {/* Points + streak */}
+      {/* Days with Saathban — the one headline number. */}
       <Card style={{ background: C.green, border: "none", color: C.cream }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <div style={{ textAlign: "center" }}>
             <span style={{ display: "block", fontSize: ts(48), fontWeight: 700, lineHeight: 1 }}>
-              {progress ? progress.points : "…"}
+              {progress ? progress.days : "…"}
             </span>
             <span style={{ display: "block", fontSize: ts(18), opacity: 0.9, marginTop: 4 }}>
-              {t("milestones.points.label")}
+              {t("milestones.days.label")}
             </span>
           </div>
           <div style={{ flex: "1 1 220px" }}>
-            <p style={{ fontSize: ts(18), lineHeight: 1.55, margin: "0 0 8px", fontWeight: 500 }}>
-              {t("milestones.points.line")}
-            </p>
-            <p style={{ fontSize: ts(18), lineHeight: 1.5, margin: 0, opacity: 0.9 }}>
-              {(progress?.current_streak ?? 0) === 0
-                ? t("milestones.streak.lineNone")
-                : (progress?.current_streak ?? 0) === 1
-                ? t("milestones.streak.lineOne")
-                : t("milestones.streak.lineMany", { n: progress?.current_streak ?? 0 })}{" "}
-              {t("milestones.streak.forgiveness")}
+            <p style={{ fontSize: ts(18), lineHeight: 1.55, margin: 0, fontWeight: 500 }}>
+              {t("milestones.days.line")}
             </p>
           </div>
         </div>

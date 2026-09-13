@@ -9,8 +9,7 @@
    verbatim (personal data is never translated).
 
    SPEC.md guardrails encoded here:
-   - Points reward participation, never performance. Every module
-     counts the same regardless of what was logged in it.
+   - Nothing is scored. Logging honestly is the whole of it.
    - Copy never says "elderly" or "user", never implies an audience.
    ════════════════════════════════════════════════ */
 
@@ -72,23 +71,9 @@ export const EXERCISE_MINUTES = ["10", "20", "30", "45+"];
 
 export const WATER_GOAL_GLASSES = 8;
 
-// ─── Participation points ───
-// Flat per-module credit: logging a heavy mood earns exactly what logging a
-// wonderful one does. Never scaled by content. No leaderboards, ever.
-export const POINTS_PER_MODULE = 10;
+// Past days come from Supabase daily_logs — see logStore.js.
 
-export const BADGES = [
-  { nameKey: "home.score.badges.firstLight", at: 50 },
-  { nameKey: "home.score.badges.morningStar", at: 250 },
-  { nameKey: "home.score.badges.neemTree", at: 500 },
-  { nameKey: "home.score.badges.monsoonSteady", at: 1000 },
-  { nameKey: "home.score.badges.mountainQuiet", at: 2000 },
-];
-
-// Past days and lifetime points come from Supabase daily_logs — see
-// logStore.js.
-
-// ─── Character tone matrix (SPEC.md, "Points, character, celebrations") ───
+// ─── Character tone matrix (SPEC.md, "character, celebrations") ───
 // Mood is asked first precisely so this can be mood-aware. Returns a
 // { key, vars } pair for t() — never a finished sentence, so the matrix
 // stays language-neutral.

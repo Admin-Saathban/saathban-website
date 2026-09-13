@@ -77,7 +77,10 @@ export default function SharedScore() {
     );
   }
 
-  const { name, points, logs, expires_at: expiresAt } = state.data;
+  /* A link minted before points were removed still carries a number of
+     points. It is not shown: the page says how much of the day was
+     logged, and nothing else. */
+  const { name, logs, expires_at: expiresAt } = state.data;
   const until = expiresAt
     ? new Date(expiresAt).toLocaleDateString(lang === "ur" ? "ur-PK" : "en-GB", {
         day: "numeric",
@@ -92,14 +95,7 @@ export default function SharedScore() {
           {name ? t("home.score.shared.titleNamed", { name }) : t("home.score.shared.title")}
         </h1>
 
-        <p style={{ fontSize: ts(48), fontWeight: 800, color: C.brown, margin: "18px 0 4px", lineHeight: 1 }}>
-          {points}
-        </p>
-        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: 0 }}>
-          {t("home.score.shared.points")}
-        </p>
-
-        <p style={{ fontSize: ts(19), color: C.textMain, margin: "22px 0 0", lineHeight: 1.6 }}>
+        <p style={{ fontSize: ts(19), color: C.textMain, margin: "18px 0 0", lineHeight: 1.6 }}>
           {logs === 1 ? t("home.score.shared.logsOne") : t("home.score.shared.logsMany", { n: logs })}
         </p>
 

@@ -29,6 +29,7 @@ import BoardThumb from "./BoardThumb.jsx";
 import OneTableGate from "./OneTableGate.jsx";
 import useBackToClose from "../../components/useBackToClose.js";
 import { isParkedGame, withoutParked } from "./parked.js";
+import { fetchMyDays } from "../../lib/points.js";
 
 function gameName(g, lang) {
   return lang === "ur" ? g.name_ur : g.name_en;
@@ -247,7 +248,9 @@ export default function GamesHome() {
      because of a limitation that no longer exists. */
   useBackToClose(codeOpen, () => setCodeOpen(false));
   useBackToClose(pastOpen, () => setPastOpen(false));
-  const [streak, setStreak] = useState(0);
+  /* Days the riddle was solved, all told (my_days, 0140). A cumulative
+     count with no continuity: a missed day never takes one away. */
+  const [riddleDays, setRiddleDays] = useState(0);
   /* §9: who is at each live table, keyed by session. */
   const [peopleAt, setPeopleAt] = useState(new Map());
   /* Tables this person walked away from (0114). Kept apart from
@@ -258,11 +261,12 @@ export default function GamesHome() {
     let alive = true;
     (async () => {
       try {
-        const [g, s, attempts, left] = await Promise.all([
+        const [g, s, attempts, left, myDays] = await Promise.all([
           fetchGames(),
           fetchMySessions(profile.id),
           fetchMyAttempts(profile.id),
           fetchLeftTables().catch(() => []),
+          fetchMyDays().catch(() => null),
         ]);
         if (!alive) return;
         setGames(g);
@@ -289,18 +293,7 @@ export default function GamesHome() {
         }
         const solved = attempts.filter((a) => a.solved_at);
         setSolvedCount(solved.length);
-        /* Consecutive solved days ending today (or yesterday, so the
-           streak survives until the day is actually missed). */
-        const days = new Set(solved.map((a) => a.puzzle_date));
-        let n = 0;
-        for (let i = 0; i < 400; i++) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          const key = d.toISOString().slice(0, 10);
-          if (days.has(key)) n += 1;
-          else if (i > 0) break;
-        }
-        setStreak(n);
+        setRiddleDays(Number(myDays?.riddle_days_solved) || 0);
         setSolvedToday(solved.some((a) => a.puzzle_date === puzzleToday()));
       } catch {
         if (alive) setLoadError(true);
@@ -754,7 +747,14 @@ export default function GamesHome() {
               {solvedToday ? (
                 <BodyText muted style={{ margin: 0 }}>
                   {t("games.home.puzzleDone")}
-                  {streak > 1 && <> · {t("games.home.puzzleStreak", { n: streak })}</>}
+                  {riddleDays > 0 && (
+                    <>
+                      {" · "}
+                      {riddleDays === 1
+                        ? t("games.home.puzzleDaysSolvedOne")
+                        : t("games.home.puzzleDaysSolved", { n: riddleDays })}
+                    </>
+                  )}
                 </BodyText>
               ) : (
                 <BodyText style={{ margin: 0, fontWeight: 600 }}>

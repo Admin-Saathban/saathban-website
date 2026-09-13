@@ -32,9 +32,43 @@ import {
   cachedChats,
   rememberChatsScroll,
   rememberedChatsScroll,
+  cachedStreakMail,
+  fetchStreakMail,
   WORLD,
 } from "./messagesData.js";
 import Avatar from "./Avatar.jsx";
+import Icon from "../../components/Icon.jsx";
+import { itemNoun, itemTitle, itemIcon, tn } from "../streaks/streaksData.js";
+import { ItemIcon } from "../streaks/ui.jsx";
+
+/* A received streak, as a row among the conversations (streaks mock,
+   screen 5). It opens the focused window — that one item, nothing else. */
+function StreakMailRow({ r, onOpen }) {
+  const { t, ts } = useI18n();
+  const first = (r.sender_name || "").split(" ")[0];
+  const noun = itemNoun(t, r.item_key, r.item_name);
+  return (
+    <li>
+      <Link
+        to={`/app/streak/${r.send_id}`}
+        onClick={onOpen}
+        className="sb-press"
+        data-streak-row={r.send_id}
+        style={{ display: "flex", alignItems: "center", gap: 14, minHeight: 68, padding: "10px 4px", textDecoration: "none", color: "inherit" }}
+      >
+        <Avatar person={{ full_name: r.sender_name, avatar_url: r.sender_avatar_url }} size={52} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: ts(18), fontWeight: 700, color: C.textMain, lineHeight: 1.35 }}>
+            {t("streaks.inbox.sent", { name: first, noun })}
+          </span>
+          <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: r.replied ? C.textMuted : C.green, fontWeight: r.replied ? 400 : 600, lineHeight: 1.4 }}>
+            {tn(t, r.replied ? "streaks.inbox.runReplied" : "streaks.inbox.runTap", r.run_count, { noun })}
+          </span>
+        </span>
+      </Link>
+    </li>
+  );
+}
 import SayHelloSheet from "./SayHelloSheet.jsx";
 
 export default function ChatsList() {
@@ -47,6 +81,7 @@ export default function ChatsList() {
      we HAVE looked, moments ago, and the rows should simply still be
      there. This is the whole of the instant back. */
   const [chats, setChats] = useState(() => cachedChats(myId));
+  const [mail, setMail] = useState(() => cachedStreakMail(myId));
   const [q, setQ] = useState("");
   const [hello, setHello] = useState(null);   // the person the sheet is for
   const [showDrifted, setShowDrifted] = useState(false);
@@ -63,6 +98,14 @@ export default function ChatsList() {
   }, [myId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!myId) return undefined;
+    let alive = true;
+    fetchStreakMail(myId)
+      .then((m) => alive && setMail(m))
+      .catch(() => alive && setMail((prev) => prev ?? { received: [], groups: [] }));
+    return () => { alive = false; };
+  }, [myId]);
 
   /* WHERE HE WAS STANDING.
 
@@ -112,11 +155,25 @@ export default function ChatsList() {
 
   const now = Date.now();
 
+  /* Received streaks sit among the conversations by time — newest first,
+     whichever kind it is. Search by name reaches them too. */
+  const received = mail?.received || [];
+  const groups = mail?.groups || [];
+  const items = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const rec = needle ? received.filter((r) => (r.sender_name || "").toLowerCase().includes(needle)) : received;
+    return [
+      ...shown.map((c) => ({ kind: "chat", at: c.at, c })),
+      ...rec.map((r) => ({ kind: "streak", at: r.created_at, r })),
+    ].sort((a, b) => new Date(b.at) - new Date(a.at));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, mail, q]);
+
   /* A search box over an empty list is furniture, and furniture is
      what made this screen read as a placeholder. It appears once there
      are conversations to search. Kept while typing, so a search that
      matches nothing does not delete the field mid-word. */
-  const searchable = open.length > 0 || q !== "";
+  const searchable = open.length > 0 || received.length > 0 || q !== "";
 
   return (
     <>
@@ -200,7 +257,7 @@ export default function ChatsList() {
 
       {chats === null ? (
         <p role="status" style={{ color: C.textMuted, fontSize: ts(A11Y.minBodyPx) }}>···</p>
-      ) : shown.length === 0 ? (
+      ) : items.length === 0 && (q || groups.length === 0) ? (
         /* A door, not a scoreboard (§4, PRODUCT_DECISIONS §0.6).
            PARITY.md records this empty state was fixed once already. */
         <div style={{ padding: "28px 8px", textAlign: "center" }}>
@@ -267,7 +324,9 @@ export default function ChatsList() {
         </div>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {shown.map((c) => {
+          {items.map((it) => {
+            if (it.kind === "streak") return <StreakMailRow key={"s-" + it.r.send_id} r={it.r} onOpen={leaving} />;
+            const c = it.c;
             const pv = previewOf(c, myId);
             const about = isAbout(c.person, now);
             return (
@@ -339,6 +398,43 @@ export default function ChatsList() {
             );
           })}
         </ul>
+      )}
+
+      {/* Streak groups — the person's own shared streaks: who is in
+          today, never a ranking. */}
+      {!q && groups.length > 0 && (
+        <section data-streak-groups="" style={{ marginTop: 18 }}>
+          <p style={{ fontSize: ts(15), letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 700, color: C.textMuted, margin: "0 0 8px" }}>
+            {t("streaks.inbox.groupsLabel")}
+          </p>
+          {groups.map((g) => {
+            const members = g.members || [];
+            const n = members.length;
+            const sent = members.filter((m) => m.sent_today).length;
+            const left = n - sent;
+            return (
+              <Link
+                key={g.streak_id}
+                to={`/app/streaks/${g.streak_id}`}
+                onClick={leaving}
+                className="sb-press"
+                data-streak-group-row={g.streak_id}
+                style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 64, padding: "12px 14px", marginBottom: 8, background: C.white, borderRadius: 16, textDecoration: "none", color: "inherit" }}
+              >
+                <ItemIcon name={itemIcon(g.item_key)} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: ts(18), fontWeight: 700, color: C.textMain }}>
+                    {t("streaks.inbox.groupTitle", { item: itemTitle(t, g.item_key, g.item_name), n })}
+                  </span>
+                  <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>
+                    {left === 0 ? t("streaks.inbox.groupAll") : sent === 0 ? t("streaks.inbox.groupNone") : t("streaks.inbox.groupLine", { sent, left })}
+                  </span>
+                </span>
+                <Icon name={meta.dir === "rtl" ? "chevronBack" : "chevron"} size={20} style={{ color: C.green }} />
+              </Link>
+            );
+          })}
+        </section>
       )}
 
       {hello && <SayHelloSheet person={hello} onClose={() => setHello(null)} />}

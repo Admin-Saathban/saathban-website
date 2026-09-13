@@ -24,6 +24,12 @@
 
    Never surveillance framing: no "compliance", no percentages, no
    missed-day counting. A quiet day is blank, not a gap to explain.
+
+   NO NUMBERS. The card used to count "{n} days in a row" on the phone
+   and show what each chip recorded ("8", "30m"). What family sees now is
+   whether the person logged today (person_logged_today, 0140) — and the
+   chips say which things are done, never the figures in them. A number
+   reaches family only when the person sends it themselves.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
@@ -32,6 +38,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
 import { MOOD_BY_VALUE } from "./famCopy.js";
 import { BodyText } from "./ui.jsx";
+import { personLoggedToday } from "../streaks/streaksData.js";
 
 const DAY_MS = 86400000;
 const isoOf = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -55,7 +62,7 @@ const MODULES = [
     } },
 ];
 
-function Chip({ icon, label, value, done, ts }) {
+function Chip({ icon, label, done, ts }) {
   return (
     <span
       style={{
@@ -74,7 +81,6 @@ function Chip({ icon, label, value, done, ts }) {
     >
       <span aria-hidden="true" style={{ fontSize: ts(18) }}>{icon}</span>
       <span>{label}</span>
-      {done && value && <span style={{ color: C.green, fontWeight: 800 }}>{value}</span>}
       {/* Done-ness is a word for a screen reader, never the tick alone. */}
       <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
         {done ? "✓" : ""}
@@ -87,6 +93,7 @@ export default function PersonCard({ view, permissions: p }) {
   const { t, ts, meta, lang } = useI18n();
   const [week, setWeek] = useState(null);
   const [nextReminder, setNextReminder] = useState(null);
+  const [loggedToday, setLoggedToday] = useState(null);
 
   const rows = view.todayRows || [];
   const iconId = view.iconId;
@@ -107,6 +114,15 @@ export default function PersonCard({ view, permissions: p }) {
     })();
     return () => { alive = false; };
   }, [iconId, p.seeDailyLogs]);
+
+  useEffect(() => {
+    if (!iconId) return undefined;
+    let alive = true;
+    personLoggedToday(iconId)
+      .then((v) => alive && setLoggedToday(v === true))
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [iconId]);
 
   useEffect(() => {
     if (!iconId || !p.manageReminders) return undefined;
@@ -154,19 +170,6 @@ export default function PersonCard({ view, permissions: p }) {
     return rows.some((r) => r.module === mod.key) || (week || []).some((r) => r.module === mod.key);
   });
 
-  /* Days in a row with anything logged, counted back from today —
-     warmly, and only when there is something to be warm about. */
-  const streak = (() => {
-    if (!week) return 0;
-    const days = new Set(week.map((r) => r.log_date));
-    let n = 0;
-    for (let i = 0; i < 7; i++) {
-      if (days.has(isoOf(new Date(Date.now() - i * DAY_MS)))) n += 1;
-      else if (i > 0) break;
-    }
-    return n;
-  })();
-
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * DAY_MS);
     const iso = isoOf(d);
@@ -200,11 +203,11 @@ export default function PersonCard({ view, permissions: p }) {
             </span>
             <span>
               <span style={{ display: "block", fontSize: ts(22), fontWeight: 800, color: C.textMain }}>
-                {mood ? t(mood.labelKey) : t("fam.card.quietSoFar")}
+                {mood ? t(mood.labelKey) : loggedToday ? t("fam.card.loggedToday") : t("fam.card.quietSoFar")}
               </span>
-              {streak > 1 && (
-                <span style={{ display: "block", fontSize: ts(16), color: C.green, fontWeight: 700 }}>
-                  {t("fam.card.streak", { n: streak })}
+              {mood && loggedToday && (
+                <span data-logged-today="" style={{ display: "block", fontSize: ts(16), color: C.green, fontWeight: 700 }}>
+                  {t("fam.card.loggedToday")}
                 </span>
               )}
             </span>
@@ -219,7 +222,6 @@ export default function PersonCard({ view, permissions: p }) {
                     key={mod.key}
                     icon={mod.icon}
                     label={t(`settings.dailyLog.modules.${mod.key}`)}
-                    value={row ? mod.value(row) : null}
                     done={Boolean(row)}
                     ts={ts}
                   />
@@ -227,6 +229,16 @@ export default function PersonCard({ view, permissions: p }) {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Without the daily-log grant, the one thing still said is whether
+          they logged today — a yes or a quiet line, never a number. */}
+      {!p.seeDailyLogs && loggedToday !== null && (
+        <div data-logged-today="" style={{ background: C.cream, borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+          <span style={{ display: "block", fontSize: ts(18), fontWeight: 700, color: loggedToday ? C.green : C.textMuted }}>
+            {loggedToday ? t("fam.card.loggedTodayNamed", { name: first }) : t("fam.card.quietSoFar")}
+          </span>
         </div>
       )}
 

@@ -88,7 +88,7 @@ export function rememberChatsScroll(y) { chatsScrollY = y; }
 export function rememberedChatsScroll() { return chatsScrollY; }
 /* Signing out must not leave one person's conversations in memory for
    whoever signs in next on the same phone. */
-export function forgetChatsCache() { chatsCache = null; chatsCacheFor = null; chatsScrollY = 0; }
+export function forgetChatsCache() { chatsCache = null; chatsCacheFor = null; chatsScrollY = 0; streakMailCache = null; streakMailFor = null; }
 
 export async function fetchChats(myId) {
   const rows = await buildChats(myId);
@@ -179,6 +179,52 @@ async function buildChats(myId) {
       };
     })
     .sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+/* ─── Received streaks (0140) ─────────────────────────────────────
+   A streak that arrives is a row among the conversations, not a
+   notification that scrolls away. One row per person per item — the
+   newest — so fourteen days of Mona's water are one row that says where
+   she is now. Beside them, the person's own shared streaks as groups.
+
+   Held at module scope for the same reason the chats are: coming back
+   from the focused window must not blank the list first. */
+let streakMailCache = null;
+let streakMailFor = null;
+
+export function cachedStreakMail(myId) {
+  return streakMailFor && myId && streakMailFor === myId ? streakMailCache : null;
+}
+
+export async function fetchStreakMail(myId) {
+  const [{ data: received, error: rErr }, { data: mine, error: mErr }] = await Promise.all([
+    supabase.rpc("received_streaks", { p_days: 14 }),
+    supabase.rpc("my_streaks"),
+  ]);
+  if (rErr && mErr) throw new Error(rErr.message);
+  const seen = new Set();
+  const rows = [];
+  for (const r of received || []) {
+    const k = r.sender_id + "|" + r.item_key;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    rows.push(r);
+  }
+  const shared = (mine || []).filter((s) => s.people_count > 0);
+  const groups = (
+    await Promise.all(
+      shared.map((s) =>
+        supabase
+          .rpc("streak_group", { p_streak: s.id })
+          .then(({ data }) => data)
+          .catch(() => null)
+      )
+    )
+  ).filter(Boolean);
+  const mail = { received: rows, groups };
+  streakMailCache = mail;
+  streakMailFor = myId;
+  return mail;
 }
 
 /* What kind of thing the last message was, as a locale key plus its

@@ -190,6 +190,36 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfile]);
 
+  /* THE PERSON'S OWN DAY. Since 0140 the server works out "today", the
+     48-hour log window and every streak from profiles.timezone. The phone
+     knows where it is; when that differs from what the profile says (a
+     first sign-in, a trip, a clock moved), the person's own row is
+     brought into step once per session. A name the database does not
+     recognise is dropped by its trigger, and this does not try again. */
+  const tzTried = useRef(null);
+  useEffect(() => {
+    const row = profileState.row;
+    if (!row) return;
+    let tz = null;
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch {
+      tz = null;
+    }
+    if (!tz || row.timezone === tz) return;
+    const attempt = row.id + "|" + tz;
+    if (tzTried.current === attempt) return;
+    tzTried.current = attempt;
+    supabase
+      .from("profiles")
+      .update({ timezone: tz })
+      .eq("id", row.id)
+      .then(({ error }) => {
+        if (error) return;
+        setProfileState((p) => (p.row && p.row.id === row.id ? { ...p, row: { ...p.row, timezone: tz } } : p));
+      });
+  }, [profileState.row]);
+
   // For screens that change the profile (finish forms, future
   // Settings) so guards see the new row without a reload.
   const refreshProfile = useCallback(async () => {

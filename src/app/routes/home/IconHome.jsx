@@ -1,19 +1,19 @@
 /* ════════════════════════════════════════════════
-   Saath-Icon home — /app/home (build step 9, UI on mock data).
+   Saath-Icon home — /app/home/log.
 
-   Layout follows SPEC.md top to bottom: calendar strip, greeting +
-   character, today's log card, today's score + sharing. The Outdoor,
-   Skills, Events and Community rows belong to their own build steps
-   and are not built here.
+   Top to bottom: calendar strip, greeting + character, today's log card
+   (each item carrying its streak control), and "Your days" — the one
+   headline number, days with Saathban, which never resets. Nothing here
+   is scored: the points card that stood below the log is gone, and so
+   are its "of 10" and the badge bar.
 
-   Logs read from and write to Supabase daily_logs (migration 0006)
-   through logStore.js for the signed-in Icon — offline-first, with a
-   localStorage queue that syncs on reconnect. State is per-day: today
-   and the two days behind it are editable (48-hour backfill window);
-   older days are settled. Module choices (iconPrefs) are the Icon’s daily_log_prefs row (0033).
+   Logs read from and write to Supabase daily_logs through logStore.js
+   for the signed-in Icon — offline-first, with a localStorage queue
+   that syncs on reconnect. Today and the two days behind it are
+   editable (48-hour backfill window); older days are settled.
    ════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import {
@@ -26,14 +26,13 @@ import {
 import CalendarStrip from "./CalendarStrip.jsx";
 import GreetingCharacter from "./GreetingCharacter.jsx";
 import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
-import ScoreShare from "./ScoreShare.jsx";
 import CompanyLine from "./CompanyLine.jsx";
 import { useIconPrefs } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
-import { useCircle } from "../circle/circleStore.js";
-import { useDailyLogs, DB_MODULES } from "./logStore.js";
+import { useDailyLogs } from "./logStore.js";
 import { pushToast } from "../../lib/feedback.jsx";
-import { fetchMyProgress, estimatePointsToday } from "../../lib/points.js";
+import YourDays from "../streaks/YourDays.jsx";
+import { refreshStreaks } from "../streaks/streaksData.js";
 
 // Weekday and month names come from Intl for the active language.
 const dateLocaleFor = (lang) => (lang === "ur" ? "ur-PK" : "en-GB");
@@ -61,56 +60,30 @@ export default function IconHome() {
   const { t, ts, lang, meta } = useI18n();
   const dateLocale = dateLocaleFor(lang);
   const { profile } = useSession();
-  /* The real circle, not the mock's empty array. The sheet's "send to
-     your circle" branch was unreachable while this was always [], so
-     the one share destination that looked honest was only honest by
-     accident. */
-  const circle = useCircle(profile?.id);
   // RequireAuth guarantees an Icon profile here; the fallback only
   // covers the first render of edge navigations.
   const iconId = profile?.id ?? null;
   const firstName = (profile?.full_name || MOCK_ICON.firstName).split(" ")[0];
 
-  const { logsByDate, writeEntry, status, pendingCount, lifetimePoints } =
-    useDailyLogs(iconId);
+  const { logsByDate, writeEntry, status, pendingCount, flushNow } = useDailyLogs(iconId);
   const [selectedOffset, setSelectedOffset] = useState(0);
 
   const prefs = useIconPrefs(iconId);
   const logFor = (offset) => logsByDate[isoDate(daysAgo(-offset))] || {};
   const todayLog = logFor(0);
   // Rest day lives in daily_logs since 0017 gave log_module a
-  // 'rest_day' value — resting IS participation (presence, points and
-  // streaks all count it server-side).
+  // 'rest_day' value — resting IS participation.
   const restToday = !!todayLog.rest_day?.on;
   const toggleRest = () =>
     writeEntry(isoDate(new Date()), "rest_day", { on: !restToday });
   const todayEntries = dayEntries(prefs, new Date());
   const doneToday = todayEntries.filter((e) => isEntryDone(e, todayLog)).length;
 
-  /* Today's figure comes from the server, which owns the rule (one
-     award per source, all trackers counting once, capped). The old
-     entries × 10 could read higher than the record would ever credit
-     — and a number that settles lower later costs trust in all of
-     them. The cap itself is never shown. */
-  const [progress, setProgress] = useState(null);
-  const refreshProgress = useCallback(() => {
-    fetchMyProgress().then(setProgress).catch(() => {});
-  }, []);
+  /* When the queue drains the server has the day's rows, so the runs,
+     today's values and the days with Saathban are asked for again. */
   useEffect(() => {
-    refreshProgress();
-  }, [refreshProgress]);
-  // When the queue drains, the server has the day's rows: ask again.
-  useEffect(() => {
-    if (pendingCount === 0) refreshProgress();
-  }, [pendingCount, refreshProgress]);
-
-  const pointsToday =
-    progress?.points_today ??
-    estimatePointsToday(todayEntries, todayLog, {
-      cap: progress?.daily_cap ?? 60,
-      isDone: isEntryDone,
-      durableModules: DB_MODULES,
-    });
+    if (iconId && pendingCount === 0 && status !== "loading") refreshStreaks();
+  }, [iconId, pendingCount, status]);
 
   // Something logged on a given day — server rows and local writes alike.
   const anyLoggedOn = (offset) => {
@@ -174,9 +147,9 @@ export default function IconHome() {
     };
     const was = isEntryDone(entry, logFor(selectedOffset));
     writeEntry(dateIso, moduleKey, value);
-    const now = isEntryDone(entry, { [moduleKey]: value });
+    const nowDone = isEntryDone(entry, { [moduleKey]: value });
     const stamp = `${dateIso}|${moduleKey}`;
-    if (!was && now && !announced.current.has(stamp)) {
+    if (!was && nowDone && !announced.current.has(stamp)) {
       announced.current.add(stamp);
       const name =
         entry.kind === "tracker"
@@ -267,6 +240,7 @@ export default function IconHome() {
             dayLabel={dayLabel}
             isToday={selectedOffset === 0}
             date={selectedDate}
+            flushLogs={flushNow}
           />
         </div>
 
@@ -288,23 +262,13 @@ export default function IconHome() {
         )}
 
         <div className="ih-card">
-          <ScoreShare
-            points={pointsToday}
-            doneCount={doneToday}
-            totalModules={todayEntries.length}
-            lifetimePoints={progress?.points ?? lifetimePoints ?? 0}
-            restDay={restToday}
-            onToggleRest={toggleRest}
-            editable
-            circleMembers={circle.members}
-          />
+          <YourDays restDay={restToday} onToggleRest={toggleRest} editable />
         </div>
 
         {/* §5's social third, and it goes LAST — never in the middle.
-            A line about other people in the middle of a log turns
-            logging into performing. It renders nothing at all for
-            somebody with nobody: §0.6, a section that would be empty
-            is absent, not an empty box announcing a gap. */}
+            It renders nothing at all for somebody with nobody: a section
+            that would be empty is absent, not an empty box announcing a
+            gap. */}
         <CompanyLine iconId={iconId} />
       </div>
       </main>

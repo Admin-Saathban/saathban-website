@@ -22,7 +22,7 @@
    shown with a ✓ mark as well as colour. */
 
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import Icon from "../../components/Icon.jsx";
@@ -37,6 +37,8 @@ import {
 import { useIconPrefs, trackerDueOn, addMealCategory, addMovementOption, listItemName } from "../../lib/iconPrefs.js";
 import { WATER_GOAL_ML, waterToDisplay, waterStepMl, waterMlOf } from "../../lib/units.js";
 import VoiceNote, { VoicePlayer } from "./VoiceNote.jsx";
+import { useMyStreaks, streakFor, itemValueFromLog } from "../streaks/streaksData.js";
+import { CreateStreakSheet, SendStreakSheet } from "../streaks/StreakSheets.jsx";
 export const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"];
 /* Drawn icons, matching the rest of the log (were emoji). */
 const SLOT_ICON = { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" };
@@ -275,23 +277,30 @@ function SleepEditor({ value, onChange }) {
 }
 
 /* An empty module is a door to Settings, never a dead end. */
-function SettingsDoor({ children }) {
+function SettingsDoor({ children, noLinks }) {
   const { t, ts } = useI18n();
   return (
     <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "8px 0 4px", lineHeight: 1.55 }}>
-      {children}{" "}
-      <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
-        {t("home.log.openSettings")}
-      </Link>
+      {children}
+      {/* The focused streak window shows ONE item and may not open a way
+          into anything else, so there the door is words only. */}
+      {!noLinks && (
+        <>
+          {" "}
+          <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>
+            {t("home.log.openSettings")}
+          </Link>
+        </>
+      )}
     </p>
   );
 }
 
-function MedicationEditor({ value, onChange, meds }) {
+function MedicationEditor({ value, onChange, meds, noLinks }) {
   const { t, ts } = useI18n();
   const taken = value.taken || [];
   const toggle = (id) => onChange({ ...value, taken: taken.includes(id) ? taken.filter((x) => x !== id) : [...taken, id] });
-  if (meds.length === 0) return <SettingsDoor>{t("home.log.medsEmpty")}</SettingsDoor>;
+  if (meds.length === 0) return <SettingsDoor noLinks={noLinks}>{t("home.log.medsEmpty")}</SettingsDoor>;
   return (
     <div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -718,6 +727,64 @@ const dietItemIds = (v) => {
   return v?.meals || [];
 };
 
+/* One entry by its key, built exactly as the card builds it — for the
+   focused streak window, which edits a single item and nothing else. */
+export function entryForKey(prefs, key) {
+  if (String(key).startsWith("tracker:")) {
+    const id = String(key).slice("tracker:".length);
+    const tr = (prefs.trackers || []).find((x) => x.id === id);
+    return tr ? { kind: "tracker", key, id, name: tr.name, icon: TRACKER_ICONS[tr.type] || "☑️", tracker: tr } : null;
+  }
+  const m = MODULES.find((x) => x.id === key);
+  if (!m) return null;
+  return { kind: "module", key, id: key, icon: m.icon, categories: key === "diet" ? prefs.mealCategories : undefined };
+}
+
+export function SingleItemEditor({ iconId, itemKey, value, onChange, dateIso }) {
+  const prefs = useIconPrefs(iconId);
+  const entry = entryForKey(prefs, itemKey);
+  if (!entry) return null;
+  return <EntryEditor entry={entry} prefs={prefs} iconId={iconId} dateIso={dateIso} value={value || {}} onChange={onChange} noLinks />;
+}
+
+/* ── THE STREAK CONTROL ON A ROW (streaks mock, screen 1) ──
+   A filled pill with the run when a streak exists, a dashed "+ streak"
+   when none does. Never created for anyone: the dashed pill only opens
+   the question. The pill is drawn small, as the mock has it, inside a
+   48px target. */
+function StreakControl({ streak, name, onPress }) {
+  const { t, ts } = useI18n();
+  const has = !!streak;
+  return (
+    <button
+      type="button"
+      data-streak-pill={has ? "on" : "new"}
+      onClick={onPress}
+      aria-label={has ? t("streaks.pillAria", { item: name, n: streak.run }) : t("streaks.pillNewAria", { item: name })}
+      style={{ minHeight: 48, minWidth: 48, paddingInline: "4px 12px", background: "transparent", border: "none", display: "inline-flex", alignItems: "center", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          borderRadius: 14,
+          padding: "5px 11px",
+          fontSize: ts(A11Y.minBodyPx),
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+          ...(has
+            ? { background: C.green, color: C.white, border: `1.5px solid ${C.green}` }
+            : { background: "transparent", color: C.green, border: `1.5px dashed ${C.green}` }),
+        }}
+      >
+        {has ? <>🔥 {streak.run}</> : t("streaks.pillNew")}
+      </span>
+    </button>
+  );
+}
+
 export function isEntryDone(entry, log) {
   const v = log[entry.key];
   if (!v) return false;
@@ -890,9 +957,14 @@ function EntryDetail({ entry, value, prefs }) {
 const LOG_SURFACE = "#E3EEF7";
 const LOG_EDGE = "#A9C7E0";
 
-export default function DailyLogCard({ iconId, log, onChange, editable, restDay, dayLabel, isToday, date }) {
+export default function DailyLogCard({ iconId, log, onChange, editable, restDay, dayLabel, isToday, date, flushLogs }) {
   const { t, ts, meta } = useI18n();
   const prefs = useIconPrefs(iconId);
+  const navigate = useNavigate();
+  /* Streaks are about today, so the controls appear on today's log only. */
+  const showStreaks = !!isToday && !!editable && !!iconId;
+  const { rows: streakRows } = useMyStreaks(showStreaks ? iconId : null);
+  const [streakSheet, setStreakSheet] = useState({ mode: null, entry: null });
   const entries = dayEntries(prefs, date);
   const moodDone = isModuleDone("mood", log);
   /* ── NOTHING CLOSES ITSELF WHEN YOU OPEN SOMETHING ELSE ──
@@ -965,8 +1037,8 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
      reappear every time an already-finished log is opened. And it
      leaves on its own after a few seconds rather than needing a tap.
 
-     POINTS ARE NOT MENTIONED HERE. Whatever the scoring turns out to
-     be, this moment is about the day being written down. */
+     THIS MOMENT IS ABOUT THE DAY BEING WRITTEN DOWN, and nothing is
+     counted or awarded for it. */
   const allDone = entries.length > 0 && entries.every((m) => isEntryDone(m, log));
   const wasDone = useRef(allDone);
   const [justFinished, setJustFinished] = useState(false);
@@ -994,6 +1066,24 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
     : "";
 
   const entryName = (entry) => (entry.kind === "module" ? t(`settings.dailyLog.modules.${entry.id}`) : entry.name);
+
+  const pressStreak = (entry) => {
+    const s = streakFor(streakRows, entry.key);
+    if (!s) return setStreakSheet({ mode: "create", entry });
+    /* A missed day is asked about before anything is sent — never settled
+       for the person, never skipped past. */
+    if (s.missed_day) return navigate(`/app/streaks/${s.id}/missed`);
+    return setStreakSheet({ mode: "send", entry });
+  };
+  const closeStreakSheet = () => setStreakSheet((s) => ({ mode: null, entry: s.entry }));
+  const logNow = (key) => {
+    closeStreakSheet();
+    setOpenIds((ids) => (ids.includes(key) ? ids : [...ids, key]));
+    window.setTimeout(() => {
+      const el = document.querySelector(`[data-entry="${key}"]`);
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 80);
+  };
 
   return (
     <section
@@ -1045,7 +1135,8 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
           const open = openIds.includes(mod.key);
           const summary = summaryFor(mod, log, prefs, t);
           return (
-            <div key={mod.key} style={{ border: `2px solid ${open ? C.greenMuted : done ? C.sage : C.warmGray}`, borderRadius: 16, overflow: "hidden" }}>
+            <div key={mod.key} data-entry={mod.key} style={{ border: `2px solid ${open ? C.greenMuted : done ? C.sage : C.warmGray}`, borderRadius: 16, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", background: done ? "#f4f7f1" : C.white }}>
               <button
                 type="button"
                 aria-expanded={open}
@@ -1057,7 +1148,7 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                   };
                   toggleOpen(mod.key);
                 }}
-                style={{ width: "100%", minHeight: 60, display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: done ? "#f4f7f1" : C.white, border: "none", fontFamily: "inherit", textAlign: "start", cursor: editable ? "pointer" : "default" }}
+                style={{ flex: 1, minWidth: 0, minHeight: 60, display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", paddingInlineEnd: showStreaks ? 4 : 16, background: "transparent", border: "none", fontFamily: "inherit", textAlign: "start", cursor: editable ? "pointer" : "default" }}
               >
                 <Icon name={mod.icon} size={24} style={{ color: C.green }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -1070,6 +1161,10 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
                   <span aria-hidden="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, fontWeight: 700 }}>{open ? "▲" : "▼"}</span>
                 )}
               </button>
+              {showStreaks && streakRows !== null && (
+                <StreakControl streak={streakFor(streakRows, mod.key)} name={entryName(mod)} onPress={() => pressStreak(mod)} />
+              )}
+              </div>
               {/* The day view reads as a record: whenever a row is
                   closed, what was written or spoken stays visible —
                   on today, on a backfill day, and on settled days. */}
@@ -1088,16 +1183,38 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
         {t("home.log.chooseHere")}{" "}
         <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>{t("home.log.fromSettings")}</Link>.
       </p>
+
+      {showStreaks && streakSheet.entry && (
+        <>
+          <CreateStreakSheet
+            open={streakSheet.mode === "create"}
+            onClose={closeStreakSheet}
+            entry={streakSheet.entry}
+            itemName={entryName(streakSheet.entry)}
+          />
+          {streakFor(streakRows, streakSheet.entry.key) && (
+            <SendStreakSheet
+              open={streakSheet.mode === "send"}
+              onClose={closeStreakSheet}
+              streak={streakFor(streakRows, streakSheet.entry.key)}
+              itemName={entryName(streakSheet.entry)}
+              localValue={itemValueFromLog(streakSheet.entry.key, log)}
+              flushLogs={flushLogs}
+              onLogNow={() => logNow(streakSheet.entry.key)}
+            />
+          )}
+        </>
+      )}
     </section>
   );
 }
 
-function EntryEditor({ entry, prefs, iconId, dateIso, value, onChange }) {
+function EntryEditor({ entry, prefs, iconId, dateIso, value, onChange, noLinks }) {
   if (entry.kind === "tracker") return <TrackerEditor tracker={entry.tracker} value={value} onChange={onChange} />;
   switch (entry.id) {
     case "mood": return <MoodEditor value={value} onChange={onChange} iconId={iconId} dateIso={dateIso} />;
     case "sleep": return <SleepEditor value={value} onChange={onChange} />;
-    case "medication": return <MedicationEditor value={value} onChange={onChange} meds={prefs.medications} />;
+    case "medication": return <MedicationEditor value={value} onChange={onChange} meds={prefs.medications} noLinks={noLinks} />;
     case "exercise": return <MovementEditor value={value} onChange={onChange} options={prefs.movementOptions} iconId={iconId} dateIso={dateIso} />;
     case "diet": return <MealEditor value={value} onChange={onChange} categories={prefs.mealCategories} iconId={iconId} />;
     case "water": return <WaterEditor value={value} onChange={onChange} unit={prefs.units?.water || "glasses"} />;

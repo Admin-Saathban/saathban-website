@@ -85,6 +85,12 @@ const SharedScore = lazyScreen(() => import("./routes/home/SharedScore.jsx"));
 const ClaimSeat = lazyScreen(() => import("./routes/games/ClaimSeat.jsx"));
 const HelloInvite = lazyScreen(() => import("./routes/people/HelloInvite.jsx"));
 
+/* ── Shared streaks (0140): the focused window a received streak opens
+   onto — where 'streak' notifications link — and a streak's group and
+   missed-day screens. Outside the tab panes, like a thread. ── */
+const StreakWindow = lazyScreen(() => import("./routes/streaks/StreakWindow.jsx"));
+const StreakGroupRoutes = lazyScreen(() => import("./routes/streaks/StreakGroupRoutes.jsx"));
+
 /* ── Reached from the header, the bar and More ── */
 /* A person's page and the chat thread under it. The Messages world opens
    into these, so they are fetched at idle with the rest of ONE_TAP_AWAY;
@@ -403,6 +409,24 @@ export default function AppRoot() {
               name and the score summary and nothing else, and answers
               null for missing, expired and revoked alike. */}
           <Route path="s/:token" element={<SharedScore />} />
+          {/* Any signed-in role: a Saath-Fam member receives and replies
+              to streaks too. Every RPC behind these checks the caller. */}
+          <Route
+            path="streak/:sendId"
+            element={
+              <RequireAuth>
+                <StreakWindow />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="streaks/*"
+            element={
+              <RequireAuth>
+                <StreakGroupRoutes />
+              </RequireAuth>
+            }
+          />
           {/* Saath-Icon home area: hub at /app/home, daily log at
               /app/home/log. Icons only; RLS stays the real security
               boundary, this guard is navigation. */}
@@ -441,9 +465,8 @@ export default function AppRoot() {
                 unverified note never reaches a place row (0065). */}
             <Route path="places" element={<PlaceAccess />} />
           </Route>
-          {/* Milestones (0017): Icons get points, badges and
-              celebrations; admins get the message desk on the same
-              path. */}
+          {/* Milestones (0017): Icons get badges and celebrations;
+              admins get the message desk on the same path. */}
           {/* Milestones is My Journey's now: badges, streaks and
               celebrations all live on one page rather than two that
               each show half of the same year. An Icon arriving here —

@@ -55,6 +55,7 @@ import SayHelloSheet from "../messages/SayHelloSheet.jsx";
 import { VoicePlayer } from "../people/VoiceNote.jsx";
 import { openDmWith } from "../people/peopleStore.js";
 import StickerPicker from "../../assets/stickers/StickerPicker.jsx";
+import { itemNoun, itemIcon, tn } from "../streaks/streaksData.js";
 import { Sticker, parseStickerRef, stickerRef } from "../../assets/stickers/stickers.jsx";
 import {
   colourOf,
@@ -190,14 +191,56 @@ export function ShareBlock({ post, isIcon, own, dateLocale, joinInfo, onAction }
     );
   }
 
+  /* An old 'score' post. Points are gone, so it reads as what it was:
+     a day logged. No number of points, no "of" anything. */
   if (post.post_type === "score") {
+    const n = Number(p.done ?? p.logs) || 0;
     return (
       <div style={box}>
-        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: n > 0 ? 4 : 0 }}>
           <Icon name="grow" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />{t("community.shares.scoreTitle")}
         </p>
-        <p style={line}>
-          {t("community.shares.scoreLine", { points: p.points, n: p.done, total: p.total })}
+        {n > 0 && <p style={line}>{tn(t, "community.shares.scoreLineN", n)}</p>}
+      </div>
+    );
+  }
+
+  /* Days with Saathban — the one headline number, shared on purpose. */
+  if (post.post_type === "days_total") {
+    const n = Number(p.days) || 0;
+    return (
+      <div style={box} data-card="days_total">
+        <p style={{ ...line, fontSize: ts(30), fontWeight: 800, color: C.green, lineHeight: 1.2 }}>{n}</p>
+        <p style={{ ...line, fontWeight: 700 }}>{tn(t, "streaks.feed.daysLine", n)}</p>
+        <p style={{ ...line, color: C.textMuted }}>{t("streaks.feed.daysSub")}</p>
+      </div>
+    );
+  }
+
+  /* A streak, shared with its count. The item's name comes from the
+     reader's language for a log module, verbatim for somebody's own
+     tracker. */
+  if (post.post_type === "streak") {
+    const run = Number(p.run) || 0;
+    const longest = Number(p.longest) || 0;
+    const noun = itemNoun(t, p.item_key, p.item_name);
+    return (
+      <div style={box} data-card="streak">
+        <p style={{ ...line, fontWeight: 700, color: C.green, marginBottom: 4 }}>
+          <Icon name={itemIcon(p.item_key)} size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+          {tn(t, "streaks.feed.streakLine", run, { noun })}
+        </p>
+        {longest > run && <p style={{ ...line, color: C.textMuted }}>{t("streaks.feed.streakLongest", { n: longest })}</p>}
+      </div>
+    );
+  }
+
+  if (post.post_type === "good_day") {
+    return (
+      <div style={box} data-card="good_day">
+        <p style={{ ...line, fontWeight: 700, color: C.green }}>
+          <Icon name="log" size={17} style={{ display: "inline", verticalAlign: "-3px", marginInlineEnd: 6 }} />
+          {t("streaks.feed.goodDay")}
         </p>
       </div>
     );

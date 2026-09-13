@@ -5,7 +5,7 @@
 
    Four parts on one gentle scroll:
      1. a month calendar of logged days — tap a day for its detail
-     2. presence: streak, days this month, rest days honoured
+     2. presence: days this month, rest days honoured
      3. the badge timeline, with any personal notes from Saathban
      4. trends (mood line, sleep bars) — the caller's own rows only,
         so nobody else can ever reach these, whatever is shared
@@ -23,10 +23,9 @@ import {
   moodByMonth,
   dailySeries,
   presenceByDay,
-  pointsByMonth,
   moduleSummary,
   monthKeyOf,
-  fetchMyProgress,
+  fetchFirstDay,
   fetchBadgeDefinitions,
   fetchMyEarnedBadges,
   byDate,
@@ -35,12 +34,12 @@ import {
 } from "./historyData.js";
 import { HistoryScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
 import JourneyAhead from "./JourneyAhead.jsx";
+import ShareThings from "../streaks/ShareThings.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import {
   MoodMonths,
   DailyBars,
   PresenceHeat,
-  PointsLine,
   ModuleSummaries,
 } from "./JourneyVisuals.jsx";
 
@@ -56,7 +55,7 @@ export default function JourneyPage() {
   const [ym, setYm] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const [logs, setLogs] = useState([]);
   const [selected, setSelected] = useState(null); // 'YYYY-MM-DD'
-  const [progress, setProgress] = useState(null);
+  const [firstDay, setFirstDay] = useState(null);
   const [badges, setBadges] = useState([]);
   const [defs, setDefs] = useState({});
   const [error, setError] = useState("");
@@ -86,10 +85,12 @@ export default function JourneyPage() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([fetchMyProgress(), fetchMyEarnedBadges(), fetchBadgeDefinitions()])
-      .then(([p, earned, defList]) => {
+    fetchFirstDay()
+      .then((d) => alive && setFirstDay(d))
+      .catch(() => {});
+    Promise.all([fetchMyEarnedBadges(), fetchBadgeDefinitions()])
+      .then(([earned, defList]) => {
         if (!alive) return;
-        setProgress(p);
         setBadges(earned);
         setDefs(Object.fromEntries(defList.map((d) => [d.key, d])));
       })
@@ -128,12 +129,16 @@ export default function JourneyPage() {
       </h1>
       <BodyText muted>{t("history.intro")}</BodyText>
 
+      {/* Mock screen 9 — the one headline number, each streak, and a good
+          day, each shareable through the composer. */}
+      <ShareThings />
+
       {/* §14 — a journey, not a dashboard. The header, what is close
           enough to be worth saying, and the months as chapters come
           FIRST; the calendar and the graphs are things to look into,
           not the headline. */}
       <JourneyAhead
-        progress={progress}
+        firstDay={firstDay}
         badges={badges}
         logRows={recent}
         onShare={(what, key) => {
@@ -277,21 +282,10 @@ export default function JourneyPage() {
       {/* ── 2. Presence ─────────────────────────────────────────── */}
       <SectionLabel>{t("history.presence.title")}</SectionLabel>
       <Card>
-        <p style={{ fontSize: ts(24), fontWeight: 800, color: C.green, margin: "0 0 6px" }}>
-          {progress == null
-            ? "…"
-            : progress.current_streak > 1
-              ? `🔥 ${t("history.presence.streak", { n: progress.current_streak })}`
-              : progress.current_streak === 1
-                ? `🌱 ${t("history.presence.streakOne")}`
-                : t("history.presence.streakNone")}
-        </p>
         <BodyText>
           {monthPresence === 1
             ? t("history.presence.monthOne")
             : t("history.presence.month", { n: monthPresence })}
-          {progress != null && <> · {t("history.presence.life", { n: progress.presence_days })}</>}
-          {progress != null && <> · {t("history.presence.points", { n: progress.points })}</>}
         </BodyText>
         {monthRest > 0 && (
           <BodyText style={{ fontWeight: 600 }}>
@@ -400,7 +394,6 @@ export default function JourneyPage() {
             dateLocale={dateLocale}
           />
           <PresenceHeat presence={presenceByDay(recent)} />
-          <PointsLine data={pointsByMonth(recent, recentMonthKeys(6))} dateLocale={dateLocale} />
           <ModuleSummaries
             summary={moduleSummary(recent, monthKeyOf(iso(ym.y, ym.m, 1)))}
             monthName={monthLabel}

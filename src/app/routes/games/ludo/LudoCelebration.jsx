@@ -10,9 +10,9 @@
    enlarged, because winning is a real thing that happened. Everybody
    else is here too, by name, under "also at the table" — NOT ranked
    second, third, fourth. §9 rules out ranks and leaderboards, and
-   CLAUDE.md is firmer still: points reward participation, never
-   performance. So the one line about points says exactly that, and
-   there is no number attached to any face.
+   CLAUDE.md is firmer still: participation, never performance. So the
+   one warm line is said about everybody at once, and there is no
+   number attached to any face. Nothing is awarded here.
 
    No coins, no gems, no "watch a video", no purchase of any kind
    (§9). The reference's interaction design is the model; its economy
@@ -284,9 +284,8 @@ export default function LudoCelebration({
         </Action>
       </div>
 
-      {/* Kept, as A2 asks, and no longer leading. The only thing said
-          about points, said about everybody at once: no number, no
-          rank, no comparison. */}
+      {/* Kept, as A2 asks, and no longer leading. Said about everybody
+          at once: no number, no rank, no comparison, nothing earned. */}
       <p style={{ margin: 0, fontSize: ts(A11Y.minBodyPx), color: C.textMuted, maxWidth: 420, lineHeight: 1.5 }}>
         {watching ? t("ludo.celebrate.overNote") : t("ludo.celebrate.warmth")}
       </p>

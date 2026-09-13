@@ -1,9 +1,8 @@
 /* ════════════════════════════════════════════════
    My journey — the longer view, drawn from the person's own logs.
 
-   Six auto-generated pictures: mood month by month, sleep, water,
-   a presence heat calendar, points over time, and this month's
-   modules in words. Every one is built from rows already fetched for
+   Five auto-generated pictures: mood month by month, sleep, water,
+   a presence heat calendar, and this month's modules in words. Every one is built from rows already fetched for
    this page (icon_id = the caller), so nothing here is reachable by
    anyone else, whatever is shared elsewhere.
 
@@ -247,54 +246,7 @@ export function PresenceHeat({ presence, weeks = 12 }) {
   );
 }
 
-/* ── 5. Points over time ───────────────────────────────────────── */
-export function PointsLine({ data, dateLocale }) {
-  const { t, ts } = useI18n();
-  const any = data.some((d) => d.earned > 0);
-  const H = 140;
-  const top = Math.max(1, ...data.map((d) => d.total));
-  const x = (i) => 34 + (i / Math.max(1, data.length - 1)) * (W - 68);
-  const y = (v) => 20 + (1 - v / top) * (H - 58);
-
-  return (
-    <Panel title={t("history.visuals.pointsTitle")}>
-      {!any ? (
-        <Empty>{t("history.visuals.pointsEmpty")}</Empty>
-      ) : (
-        <>
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            role="img"
-            aria-label={data.map((d) => `${monthLabel(d.month, dateLocale)}: ${d.total}`).join("; ")}
-            style={{ width: "100%", height: "auto", display: "block" }}
-          >
-            <polyline
-              points={data.map((d, i) => `${x(i)},${y(d.total)}`).join(" ")}
-              fill="none"
-              stroke={C.olive}
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {data.map((d, i) => (
-              <g key={d.month}>
-                <circle cx={x(i)} cy={y(d.total)} r="6" fill={C.olive} />
-                <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="15" fontWeight="700" fill={C.textMain}>
-                  {monthLabel(d.month, dateLocale)}
-                </text>
-              </g>
-            ))}
-          </svg>
-          <BodyText style={{ margin: "8px 0 0", fontWeight: 600 }}>
-            {t("history.visuals.pointsNote", { n: data[data.length - 1].total })}
-          </BodyText>
-        </>
-      )}
-    </Panel>
-  );
-}
-
-/* ── 6. This month's modules, in words ─────────────────────────── */
+/* ── 5. This month's modules, in words ─────────────────────────── */
 export function ModuleSummaries({ summary, monthName }) {
   const { t, ts } = useI18n();
   const label = (module) => {

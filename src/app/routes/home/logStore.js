@@ -12,20 +12,16 @@
    'online', and shortly after each write. Reload mid-outage and
    nothing is lost.
 
-   Custom trackers used to live only in the device cache, which meant
-   the home screen counted them for points the server would never
-   credit. Since 0039 the enum has a 'tracker' value: every tracker on
-   a day folds into ONE durable row (module='tracker'), so the day
-   earns one flat award however many trackers exist or how often they
-   are tapped. The unique (icon_id, log_date, module) key makes that a
-   database fact — a replayed offline queue cannot double it.
+   Custom trackers used to live only in the device cache. Since 0039
+   the enum has a 'tracker' value: every tracker on a day folds into ONE
+   durable row (module='tracker'). The unique (icon_id, log_date, module)
+   key makes that a database fact — a replayed offline queue cannot
+   double it.
 
-   Date-window notes (the DB trigger speaks server/UTC dates, the UI
-   speaks local dates):
-   - A log for local-today can be rejected as "future" when local
-     midnight has passed but UTC's hasn't (an Icon in Pakistan logging
-     between 00:00 and 05:00). That rejection self-heals — the op stays
-     queued and succeeds on a later flush.
+   Date-window notes: the log date written is the person's LOCAL date
+   (isoDate of the device clock), and since 0140 the server measures the
+   48-hour window from the person's own today (profiles.timezone, kept in
+   step with the device by lib/session.jsx).
    - A log at the far edge of the 48-hour window can become too old for
      the server while queued. That can never succeed, so the op is
      dropped from the queue; the entry stays in the device cache.
@@ -33,7 +29,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import supabase from "../../lib/supabase.js";
-import { MOODS, POINTS_PER_MODULE, isoDate, daysAgo } from "./homeMock.js";
+import { MOODS, isoDate, daysAgo } from "./homeMock.js";
 import { getIconPrefs } from "../../lib/iconPrefs.js";
 
 // The modules migration 0006 knows (public.log_module). Anything else
@@ -133,7 +129,6 @@ export function useDailyLogs(iconId) {
   const [pendingCount, setPendingCount] = useState(() =>
     iconId ? Object.keys(readJson(queueKey(iconId), {})).length : 0
   );
-  const [lifetimeRows, setLifetimeRows] = useState(null);
   const flushTimer = useRef(null);
   const flushing = useRef(false);
 
@@ -195,6 +190,17 @@ export function useDailyLogs(iconId) {
     flushTimer.current = setTimeout(flush, 700);
   }, [flush]);
 
+  /* Flush NOW and wait for it — for a streak send, which must reach the
+     server only after the value on screen has. Waits out a flush already
+     in flight, then runs one more so nothing queued behind it is missed. */
+  const flushNow = useCallback(async () => {
+    clearTimeout(flushTimer.current);
+    for (let i = 0; i < 50 && flushing.current; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    await flush();
+  }, [flush]);
+
   /* The one write path. key is a module id or "tracker:<id>". */
   const writeEntry = useCallback(
     (dateIso, key, value) => {
@@ -236,9 +242,9 @@ export function useDailyLogs(iconId) {
     [iconId, logsByDate, persistLogs, scheduleFlush]
   );
 
-  /* Initial read: last 7 days for the strip + a lifetime participation
-     count. Server rows win over the cache for the fetched range, except
-     where an unsynced queued write is newer. */
+  /* Initial read: the last 7 days for the strip. Server rows win over
+     the cache for the fetched range, except where an unsynced queued
+     write is newer. */
   useEffect(() => {
     if (!iconId) return;
     let alive = true;
@@ -246,19 +252,11 @@ export function useDailyLogs(iconId) {
     (async () => {
       try {
         const from = isoDate(daysAgo(6));
-        const [{ data: rows, error }, { count, error: countErr }] = await Promise.all([
-          supabase
-            .from("daily_logs")
-            .select("log_date, module, payload")
-            .eq("icon_id", iconId)
-            .gte("log_date", from),
-          // Strictly before today: ScoreShare adds today's points itself.
-          supabase
-            .from("daily_logs")
-            .select("id", { count: "exact", head: true })
-            .eq("icon_id", iconId)
-            .lt("log_date", isoDate(new Date())),
-        ]);
+        const { data: rows, error } = await supabase
+          .from("daily_logs")
+          .select("log_date, module, payload")
+          .eq("icon_id", iconId)
+          .gte("log_date", from);
         if (!alive) return;
         if (error) throw error;
 
@@ -273,7 +271,6 @@ export function useDailyLogs(iconId) {
           (merged[op.dateIso] ??= {})[op.module] = op.value;
         }
         persistLogs(merged);
-        if (!countErr && typeof count === "number") setLifetimeRows(count);
         setStatus("ready");
       } catch {
         if (alive) setStatus("local"); // cache-only until the next reconnect
@@ -299,7 +296,6 @@ export function useDailyLogs(iconId) {
     writeEntry,
     status,
     pendingCount,
-    // Participation only, flat per row — never scaled by content.
-    lifetimePoints: lifetimeRows == null ? null : lifetimeRows * POINTS_PER_MODULE,
+    flushNow,
   };
 }

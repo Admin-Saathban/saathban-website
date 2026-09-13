@@ -3,11 +3,10 @@
 
    Three pieces, in this order, above everything the page already had:
 
-     1. A SHORT HEADER — "47 days with Saathban · since 14 July ·
-        3 badges". A sentence about a life, not a scoreboard. There is
-        deliberately no points total here: §14 says never a points
-        total shouting, and the surest way to keep that promise is not
-        to render the number at all.
+     1. A SHORT HEADER — "since 14 July · 3 badges". A sentence about
+        a life, not a scoreboard. The days with Saathban are the one
+        headline number and are said once, above this, where they can be
+        shared (streaks/ShareThings.jsx) — never twice on one page.
 
      2. JUST AHEAD — only things genuinely close (justAhead.js holds
         the rule and its reasoning). If nothing is close, this whole
@@ -65,7 +64,7 @@ function ShareBit({ what, onShare }) {
   );
 }
 
-export default function JourneyAhead({ progress, badges = [], logRows = [], events = [], birthdays = [], course = null, onShare }) {
+export default function JourneyAhead({ firstDay = null, badges = [], logRows = [], events = [], birthdays = [], course = null, onShare }) {
   const { t, ts, lang, meta } = useI18n();
   const [openChapter, setOpenChapter] = useState(null);
 
@@ -73,26 +72,30 @@ export default function JourneyAhead({ progress, badges = [], logRows = [], even
   const chapterList = chapters(logRows, badges);
   const earnedCount = badges.filter((b) => b.earned_at).length;
 
-  const since = progress?.first_day
-    ? new Date(progress.first_day).toLocaleDateString(lang === "ur" ? "ur-PK" : "en-GB", {
-        day: "numeric",
-        month: "long",
-      })
+  const since = firstDay
+    ? (() => {
+        const [y, m, d] = String(firstDay).split("-").map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString(lang === "ur" ? "ur-PK" : "en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      })()
     : null;
+  const headerParts = [
+    since ? t("history.header.since", { date: since }) : null,
+    earnedCount ? t("history.header.badges", { n: earnedCount }) : null,
+  ].filter(Boolean);
 
   return (
     <>
       {/* ── 1. The header: a sentence about a life ── */}
       <Card style={{ marginBottom: 16 }}>
-        <BodyText style={{ margin: 0, fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
-          {[
-            progress?.presence_days ? t("history.header.days", { n: progress.presence_days }) : null,
-            since ? t("history.header.since", { date: since }) : null,
-            earnedCount ? t("history.header.badges", { n: earnedCount }) : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </BodyText>
+        {headerParts.length > 0 && (
+          <BodyText style={{ margin: 0, fontSize: ts(20), fontWeight: 700, color: C.textMain }}>
+            {headerParts.join(" · ")}
+          </BodyText>
+        )}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
           <ShareBit what="whole" onShare={onShare} />
         </div>

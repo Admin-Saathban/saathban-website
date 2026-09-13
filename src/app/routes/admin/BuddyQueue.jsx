@@ -3,28 +3,37 @@
 
    The full pipeline is visible as filter tabs with live counts:
    pending → interviewing → probation → active, plus the two exits
-   (suspended, rejected). Mock data only — see AdminLayout.jsx.
+   (suspended, rejected). Rows come from AdminLayout's outlet context.
 
    The queue view deliberately shows review-state columns (flags,
    reference calls, waiting time), not application content — reading an
-   application happens in the detail view, which is where routine-read
-   audit logging will hook in at the app level.
+   application happens in the detail view.
+
+   Two shapes. Full: a table across the page. Compact (BuddyDesk, beside
+   an open application on a wide screen): a list of names, the open one
+   marked, and the tab follows the open application's stage so it is
+   always in the list you are looking at.
    ════════════════════════════════════════════════ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n.jsx";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { PIPELINE, statusLabel } from "./data.js";
 import { StatusChip, FlagBadge, fmtDate } from "./ui.jsx";
 
 const TABS = [...PIPELINE, "suspended", "rejected"];
 
-export default function BuddyQueue() {
+export default function BuddyQueue({ compact = false, selectedId = null }) {
   const { t } = useI18n();
   const { applications, loading } = useOutletContext();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("pending");
+  const selectedStatus = selectedId ? applications.find((a) => a.id === selectedId)?.status : undefined;
+  const [tab, setTab] = useState(selectedStatus || "pending");
+
+  useEffect(() => {
+    if (selectedStatus) setTab(selectedStatus);
+  }, [selectedId, selectedStatus]);
 
   const counts = Object.fromEntries(
     TABS.map((st) => [st, applications.filter((a) => a.status === st).length])
@@ -33,20 +42,24 @@ export default function BuddyQueue() {
     .filter((a) => a.status === tab)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
+  const open = (id) => navigate(`/app/admin/buddies/${id}`);
+
   return (
     <div>
       <h1
         style={{
           fontFamily: APP_FONT,
-          fontSize: 32,
+          fontSize: compact ? 26 : 32,
           fontWeight: 700,
           color: C.green,
           margin: "0 0 6px",
         }}
       >{t("admin.buddyReview")}</h1>
-      <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
-        {t("admin.buddyIntro")}
-            </p>
+      {!compact && (
+        <p style={{ color: C.textMuted, margin: "0 0 24px", maxWidth: 720 }}>
+          {t("admin.buddyIntro")}
+        </p>
+      )}
 
       {/* ─── Pipeline tabs ─── */}
       <div
@@ -54,7 +67,7 @@ export default function BuddyQueue() {
           display: "flex",
           gap: 8,
           flexWrap: "wrap",
-          marginBottom: 22,
+          marginBottom: compact ? 14 : 22,
         }}
       >
         {TABS.map((st, i) => {
@@ -71,16 +84,16 @@ export default function BuddyQueue() {
                 alignItems: "center",
                 gap: 8,
                 minHeight: A11Y.minTapTargetPx,
-                padding: "0 18px",
+                padding: compact ? "0 12px" : "0 18px",
                 borderRadius: 10,
                 border: `2px solid ${selected ? C.green : C.warmGray}`,
                 background: selected ? C.green : C.white,
                 color: selected ? C.cream : isExit ? C.textMuted : C.textMain,
-                fontFamily: APP_FONT,
+                fontFamily: "inherit",
                 fontSize: 16,
                 fontWeight: 600,
                 cursor: "pointer",
-                marginLeft: i === PIPELINE.length ? 18 : 0,
+                marginInlineStart: !compact && i === PIPELINE.length ? 18 : 0,
               }}
             >
               {/* Non-colour marker for the selected tab (SPEC: never colour alone) */}
@@ -105,7 +118,6 @@ export default function BuddyQueue() {
         })}
       </div>
 
-      {/* ─── Queue table ─── */}
       {rows.length === 0 ? (
         <div
           aria-busy={loading}
@@ -113,7 +125,7 @@ export default function BuddyQueue() {
             background: C.white,
             border: `1px solid ${C.warmGray}`,
             borderRadius: 14,
-            padding: 40,
+            padding: compact ? 20 : 40,
             textAlign: "center",
             color: C.textMuted,
           }}
@@ -122,7 +134,50 @@ export default function BuddyQueue() {
             ? t("admin.queue.loading")
             : t("admin.queue.emptyTab", { status: statusLabel(tab, t) })}
         </div>
+      ) : compact ? (
+        /* ─── Compact list, beside an open application ─── */
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+          {rows.map((a) => {
+            const called = a.references.filter((r) => r.called_at).length;
+            const selected = a.id === selectedId;
+            return (
+              <li key={a.id}>
+                <Link
+                  to={`/app/admin/buddies/${a.id}`}
+                  aria-current={selected ? "page" : undefined}
+                  data-application-row={a.id}
+                  style={{
+                    display: "block",
+                    minHeight: A11Y.minTapTargetPx,
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: selected ? `2.5px solid ${C.green}` : `1px solid ${C.warmGray}`,
+                    borderInlineStart: `5px solid ${selected ? C.green : "transparent"}`,
+                    background: selected ? C.selected : C.white,
+                    color: C.textMain,
+                    textDecoration: "none",
+                  }}
+                >
+                  <strong style={{ display: "block", color: C.green, fontSize: 19 }}>
+                    {selected && <span aria-hidden="true">▸ </span>}
+                    {a.legal_name}
+                  </strong>
+                  <span style={{ display: "block", color: C.textMuted, fontSize: 16 }}>
+                    {a.city} · {fmtDate(a.created_at)}
+                  </span>
+                  <span style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 4, fontSize: 16 }}>
+                    <span style={{ fontWeight: 700, color: called >= 2 ? C.green : C.brown }}>
+                      {t("admin.app.refsCalled", { done: called, total: a.references.length || 2 })}
+                    </span>
+                    {a.reviewer_flags.length > 0 && <FlagBadge count={a.reviewer_flags.length} />}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
+        /* ─── Queue table ─── */
         <div
           style={{
             background: C.white,
@@ -152,7 +207,7 @@ export default function BuddyQueue() {
                   <th
                     key={h}
                     style={{
-                      textAlign: "left",
+                      textAlign: "start",
                       padding: "14px 18px",
                       fontSize: 14,
                       fontWeight: 700,
@@ -174,14 +229,16 @@ export default function BuddyQueue() {
                 return (
                   <tr
                     key={a.id}
-                    onClick={() => navigate(a.id)}
-                    onKeyDown={(e) => e.key === t("admin.queue.enter") && navigate(a.id)}
+                    onClick={() => open(a.id)}
+                    onKeyDown={(e) => e.key === "Enter" && open(a.id)}
                     tabIndex={0}
                     style={{ cursor: "pointer" }}
                     className="adm-row"
                   >
                     <td style={td}>
-                      <span style={{ fontWeight: 600 }}>{a.legal_name}</span>
+                      <Link to={`/app/admin/buddies/${a.id}`} style={{ fontWeight: 600, color: C.textMain }} onClick={(e) => e.stopPropagation()}>
+                        {a.legal_name}
+                      </Link>
                     </td>
                     <td style={td}>{a.city}</td>
                     <td style={td}>{a.languages.join(", ")}</td>
@@ -196,14 +253,14 @@ export default function BuddyQueue() {
                         {called} / {a.references.length || 2}
                       </span>
                       {called < 2 && (
-                        <span style={{ color: C.textMuted }}> — calls pending</span>
+                        <span style={{ color: C.textMuted }}> — {t("admin.queue.callsPending")}</span>
                       )}
                     </td>
                     <td style={td}>
                       {a.reviewer_flags.length > 0 ? (
                         <FlagBadge count={a.reviewer_flags.length} />
                       ) : (
-                        <span style={{ color: C.textMuted }}>none</span>
+                        <span style={{ color: C.textMuted }}>{t("admin.queue.noFlags")}</span>
                       )}
                     </td>
                     <td style={td}>

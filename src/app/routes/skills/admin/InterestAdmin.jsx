@@ -47,7 +47,7 @@ export default function InterestAdmin() {
               <li
                 key={skill}
                 data-interest={skill}
-                style={{ ...s.card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, margin: 0 }}
+                style={{ ...s.card, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 14, margin: 0 }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
                   <span aria-hidden="true" style={{ fontSize: ts(26) }}>{card.emoji}</span>

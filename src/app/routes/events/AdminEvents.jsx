@@ -174,14 +174,14 @@ export default function AdminEvents() {
   );
 
   return (
-    <>
+    <div style={{ maxWidth: 900 }} data-admin-gatherings>
       <h1
         style={{
           fontFamily: meta.fonts.heading,
           fontSize: ts(32),
           fontWeight: 700,
           color: C.green,
-          margin: "12px 0 8px",
+          margin: "0 0 8px",
         }}
       >
         {t("events.admin.title")}
@@ -223,7 +223,7 @@ export default function AdminEvents() {
                 📅 {ev.dateLabel}
                 {ev.timeLabel ? ` · ${ev.timeLabel}` : ""}
                 {ev.venue ? ` · ${ev.venue}` : ""}
-                {ev.capacity != null ? ` · ${ev.capacity} places` : ""}
+                {ev.capacity != null ? ` · ${t("admin.events.placesN", { n: ev.capacity })}` : ""}
               </BodyText>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <GhostBtn
@@ -377,6 +377,6 @@ export default function AdminEvents() {
           {t("events.admin.newCta")}
         </PrimaryBtn>
       )}
-    </>
+    </div>
   );
 }

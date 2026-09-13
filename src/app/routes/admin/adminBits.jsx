@@ -54,7 +54,10 @@ export function Chip({ kind = "neutral", children }) {
         border: `1px solid ${C.warmGray}`,
         fontSize: 15,
         fontWeight: 700,
-        whiteSpace: "nowrap",
+        /* Short chips stay on one line by themselves; a long one ("Hidden
+           by …, date") wraps instead of pushing a phone screen sideways. */
+        maxWidth: "100%",
+        overflowWrap: "anywhere",
       }}
     >
       {s.glyph}

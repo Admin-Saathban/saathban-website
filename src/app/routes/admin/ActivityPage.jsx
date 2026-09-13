@@ -40,7 +40,7 @@ export default function ActivityPage() {
   const st = data?.status || {};
 
   return (
-    <div style={{ maxWidth: 980 }}>
+    <div style={{ maxWidth: 1600 }}>
       <PageTitle title={t("admin.activity.title")} intro={t("admin.activity.intro")} />
       <Notice msg={msg} />
 

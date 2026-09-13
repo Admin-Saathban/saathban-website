@@ -120,9 +120,24 @@ function pathAllowedForRole(path, role) {
   return area ? area[1] === role : true;
 }
 
+/* The admin panel, and the older addresses of admin screens that now
+   redirect into it. */
+const ADMIN_PANEL_PATHS = ["/app/admin", "/app/skills/admin", "/app/events/manage", "/app/milestones"];
+
+export function isAdminPanelPath(path) {
+  const p = String(path || "").split(/[?#]/)[0];
+  return ADMIN_PANEL_PATHS.some((prefix) => p === prefix || p.startsWith(`${prefix}/`));
+}
+
 /* Where to go after a successful sign-in: back to the page that
    bounced the person here if their role may see it, else their
-   role's own home. Clears the stash either way. */
+   role's own home. Clears the stash either way.
+
+   AN ADMIN LANDS ON THE PANEL. Every level — super, support, moderator —
+   signs in to be at the desk, so a stashed ordinary page (someone
+   bounced from /app/community to the login screen) does not win over it.
+   The one stash that is honoured is a page inside the panel itself: an
+   admin sent a link to a report or an application should arrive on it. */
 export function consumePostLoginPath(role) {
   let from = null;
   try {
@@ -130,6 +145,9 @@ export function consumePostLoginPath(role) {
     sessionStorage.removeItem(FROM_KEY);
   } catch {
     /* ditto */
+  }
+  if (role === "admin") {
+    return from && isAdminPanelPath(from) && pathAllowedForRole(from, role) ? from : roleHomePath(role);
   }
   return pathAllowedForRole(from, role) ? from : roleHomePath(role);
 }

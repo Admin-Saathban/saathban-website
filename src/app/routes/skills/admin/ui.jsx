@@ -73,7 +73,7 @@ export function Bilingual({ label, hint, en, ur, onEn, onUr, multiline, disabled
     <fieldset style={{ border: "none", padding: 0, margin: "0 0 14px" }} data-field={name}>
       <legend style={s.label}>{label}</legend>
       {hint && <p style={s.muted}>{hint}</p>}
-      <div style={{ display: "grid", gap: 8 }}>
+      <div className="sb-bilingual" style={{ display: "grid", gap: 8 }}>
         <label style={{ display: "block" }}>
           <span style={{ ...s.muted, display: "block", margin: "0 0 2px", fontSize: 14 }}>{t("grow.admin.english")}</span>
           <Input dir="ltr" lang="en" value={en || ""} disabled={disabled} onChange={(e) => onEn(e.target.value)} data-lang="en" {...extra} />

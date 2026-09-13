@@ -100,7 +100,7 @@ export default function EventsRoutes() {
           <Route path="calendar" element={<Navigate to="/app/calendar" replace />} />
           <Route
             path="manage"
-            element={role === "admin" ? <AdminEvents /> : <Navigate to=".." replace />}
+            element={role === "admin" ? <Navigate to="/app/admin/gatherings" replace /> : <Navigate to=".." replace />}
           />
           <Route
             path="suggest"

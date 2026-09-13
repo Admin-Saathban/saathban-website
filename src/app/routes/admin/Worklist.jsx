@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   The admin front door — PRODUCT_DECISIONS §18.
+   The oldest-first worklist — PRODUCT_DECISIONS §18.
 
    "Opening admin shows what needs a human RIGHT NOW, in priority
    order: reports older than a few hours first, then Buddy
@@ -7,18 +7,16 @@
    flags, documents received. Each row is one tap into the thing.
    FILTERED BY WHAT YOU CAN ACT ON."
 
-   A dashboard of counts tells somebody that work exists. A worklist
-   tells them which piece to pick up, and that is the difference
-   between a screen that gets opened and one that gets closed.
+   Since 0176 the front screen (Dashboard) leads with the counts from
+   admin_dashboard; this list sits under it (beside it, on a wide screen)
+   and answers the other question — which one to pick up first.
 
    ── Filtered by what you can act on ──
 
    A moderator sees reports and nothing else — not because the other
    rows are hidden, but because the queries behind them return
    nothing to them (0053). The filter is therefore honest by
-   construction: this screen cannot show a moderator a Buddy
-   application even if it tries, because the database will not hand
-   one over.
+   construction.
 
    ── Priority is by AGE, not by kind ──
 
@@ -27,8 +25,8 @@
    above every application forever, and the oldest application would
    never be looked at.
 
-   §0.6 — nothing waiting means no empty queue rendered. An admin with
-   a clear desk should see that plainly, not a list of zeroes.
+   Embedded (the front screen): nothing waiting renders nothing — the
+   summary above has already said so in one sentence.
    ════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useState } from "react";
@@ -38,15 +36,14 @@ import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
 
 const HOURS = 3600000;
+const LIMIT = 20;
 
 /* Each source says how to read it, where it goes, and how urgent it
    becomes with age. Adding a queue means adding one entry here. */
 const SOURCES = [
   {
     key: "report",
-    to: "/app/admin/moderation",
-    /* Reports first, and older reports before newer ones: §18 names
-       "older than a few hours" as the top of the list. */
+    to: () => "/app/admin/moderation",
     urgentAfter: 3 * HOURS,
     load: async () => {
       const { data } = await supabase
@@ -54,27 +51,42 @@ const SOURCES = [
         .select("id, created_at")
         .eq("status", "open")
         .order("created_at")
-        .limit(20);
+        .limit(LIMIT);
       return data || [];
     },
   },
   {
     key: "application",
-    to: "/app/admin/buddies",
+    to: (it) => `/app/admin/buddies/${it.id}`,
     urgentAfter: 48 * HOURS,
     load: async () => {
       const { data } = await supabase
         .from("buddy_applications")
         .select("id, created_at")
-        .eq("status", "pending")
+        .in("status", ["pending", "interviewing"])
         .order("created_at")
-        .limit(20);
+        .limit(LIMIT);
       return data || [];
     },
   },
   {
+    key: "document",
+    to: (it) => `/app/admin/buddies/${it.application_id}`,
+    urgentAfter: 48 * HOURS,
+    load: async () => {
+      const { data } = await supabase
+        .from("buddy_document_requests")
+        .select("id, application_id, responded_at, created_at")
+        .eq("status", "awaiting")
+        .not("response_path", "is", null)
+        .order("responded_at")
+        .limit(LIMIT);
+      return (data || []).map((d) => ({ ...d, created_at: d.responded_at || d.created_at }));
+    },
+  },
+  {
     key: "question",
-    to: "/app/admin/questions",
+    to: () => "/app/admin/questions",
     urgentAfter: 24 * HOURS,
     load: async () => {
       const { data } = await supabase
@@ -82,14 +94,28 @@ const SOURCES = [
         .select("id, created_at")
         .eq("status", "open")
         .order("created_at")
-        .limit(20);
+        .limit(LIMIT);
+      return data || [];
+    },
+  },
+  {
+    key: "proposal",
+    to: () => "/app/admin/gatherings",
+    urgentAfter: 72 * HOURS,
+    load: async () => {
+      const { data } = await supabase
+        .from("event_proposals")
+        .select("id, created_at")
+        .eq("status", "pending")
+        .order("created_at")
+        .limit(LIMIT);
       return data || [];
     },
   },
 ];
 
-export default function Worklist() {
-  const { t, ts, lang, meta } = useI18n();
+export default function Worklist({ embedded = false }) {
+  const { t, ts, meta } = useI18n();
   const [rows, setRows] = useState(null);
 
   const load = useCallback(async () => {
@@ -102,7 +128,7 @@ export default function Worklist() {
         out.push({
           id: `${s.key}:${it.id}`,
           kind: s.key,
-          to: s.to,
+          to: s.to(it),
           at: new Date(it.created_at),
           urgent: Date.now() - new Date(it.created_at).getTime() > s.urgentAfter,
         });
@@ -125,28 +151,45 @@ export default function Worklist() {
     return t("admin.work.days", { n: Math.floor(h / 24) });
   };
 
+  if (embedded && rows !== null && rows.length === 0) return null;
+
   return (
-    <section>
-      <h1
-        style={{
-          fontFamily: meta.fonts.heading,
-          fontSize: ts(26),
-          fontWeight: 800,
-          color: C.brown,
-          lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
-          margin: "0 0 4px",
-        }}
-      >
-        {t("admin.work.title")}
-      </h1>
-      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 18px" }}>
-        {t("admin.work.intro")}
-      </p>
+    <section data-worklist>
+      {embedded ? (
+        <h2
+          style={{
+            fontSize: ts(21),
+            fontWeight: 800,
+            color: C.green,
+            lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.3,
+            margin: "0 0 10px",
+          }}
+        >
+          {t("admin.work.oldest")}
+        </h2>
+      ) : (
+        <>
+          <h1
+            style={{
+              fontFamily: meta.fonts.heading,
+              fontSize: ts(26),
+              fontWeight: 800,
+              color: C.brown,
+              lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
+              margin: "0 0 4px",
+            }}
+          >
+            {t("admin.work.title")}
+          </h1>
+          <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 18px" }}>
+            {t("admin.work.intro")}
+          </p>
+        </>
+      )}
 
       {rows === null && <p role="status" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>…</p>}
 
-      {/* A clear desk says so, warmly, and stops. */}
-      {rows !== null && rows.length === 0 && (
+      {!embedded && rows !== null && rows.length === 0 && (
         <p data-worklist="clear" style={{ fontSize: ts(20), fontWeight: 700, color: C.green, margin: 0 }}>
           {t("admin.work.clear")}
         </p>

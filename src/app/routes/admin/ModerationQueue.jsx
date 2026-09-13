@@ -165,10 +165,10 @@ export default function ModerationQueue() {
 
   const open = (reports || []).filter((r) => r.status === "open");
   const decided = (reports || []).filter((r) => r.status !== "open").slice(0, 20);
-  const nameOf = (id) => names[id] || "(account gone)";
+  const nameOf = (id) => names[id] || t("admin.mod.accountGone");
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div style={{ maxWidth: 1600 }}>
       <h1
         style={{
           fontFamily: APP_FONT,
@@ -196,7 +196,7 @@ export default function ModerationQueue() {
           title={t("admin.openReports")}
           aside={
             <span style={{ fontWeight: 700, color: open.length ? C.brown : C.green }}>
-              {reports === null ? "…" : `${open.length} waiting`}
+              {reports === null ? "…" : t("admin.mod.waitingN", { n: open.length })}
             </span>
           }
         >
@@ -205,7 +205,7 @@ export default function ModerationQueue() {
           ) : open.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
+            <div className="sb-adm-cards">
               {open.map((r) => {
                 const age = hoursAgo(r.created_at);
                 const overdue = age >= 24;
@@ -215,7 +215,7 @@ export default function ModerationQueue() {
                     key={r.id}
                     style={{
                       border: `1px solid ${C.warmGray}`,
-                      borderLeft: `4px solid ${overdue ? C.brown : C.olive}`,
+                      borderInlineStart: `4px solid ${overdue ? C.brown : C.olive}`,
                       borderRadius: 10,
                       padding: "16px 20px",
                     }}
@@ -302,9 +302,11 @@ export default function ModerationQueue() {
                         onChange={(e) =>
                           setResolutionDraft((d) => ({ ...d, [r.id]: e.target.value }))
                         }
+                        aria-label={t("admin.resolutionNote")}
                         style={{
-                          flex: 1,
-                          minWidth: 220,
+                          flex: "1 1 220px",
+                          minWidth: 0,
+                          maxWidth: "100%",
                           minHeight: A11Y.minTapTargetPx,
                           boxSizing: "border-box",
                           fontFamily: APP_FONT,
@@ -352,7 +354,7 @@ export default function ModerationQueue() {
                       fontWeight: 700,
                     }}
                   >
-                    {r.status === "resolved" ? "✓ resolved" : "— dismissed"}
+                    {r.status === "resolved" ? `✓ ${t("admin.mod.resolvedWord")}` : `— ${t("admin.mod.dismissedWord")}`}
                   </span>{" "}
                   <strong>{KIND_LABEL[r.target_kind] ? t(KIND_LABEL[r.target_kind]) : r.target_kind}</strong>
                   {r.reason && <> — {r.reason}</>}

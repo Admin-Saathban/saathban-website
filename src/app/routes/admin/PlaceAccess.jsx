@@ -133,6 +133,7 @@ export default function PlaceAccess() {
         <p role="alert" style={{ color: C.error, fontWeight: 700, fontSize: ts(A11Y.minBodyPx) }}>{error}</p>
       )}
 
+      <div className="sb-adm-cards" style={{ marginTop: 16 }}>
       {shown.map((p) => {
         const rows = notes[p.id] || [];
         const unchecked = rows.filter((r) => !r.verified);
@@ -247,6 +248,7 @@ export default function PlaceAccess() {
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }

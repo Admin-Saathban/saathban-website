@@ -59,19 +59,9 @@ import AppHeader from "./components/AppHeader.jsx";
 import { lazyScreen, whenIdle, ScreenArriving, ScreenLoadBoundary } from "./lib/lazyScreen.jsx";
 
 /* ── Role areas nobody else opens ── */
-const AdminLayout = lazyScreen(() => import("./routes/admin/AdminLayout.jsx"));
-const BuddyQueue = lazyScreen(() => import("./routes/admin/BuddyQueue.jsx"));
-const BuddyApplication = lazyScreen(() => import("./routes/admin/BuddyApplication.jsx"));
-const ModerationQueue = lazyScreen(() => import("./routes/admin/ModerationQueue.jsx"));
-const Worklist = lazyScreen(() => import("./routes/admin/Worklist.jsx"));
-const BroadcastsPage = lazyScreen(() => import("./routes/admin/BroadcastsPage.jsx"));
-const QuestionsQueue = lazyScreen(() => import("./routes/admin/QuestionsQueue.jsx"));
-const PlaceAccess = lazyScreen(() => import("./routes/admin/PlaceAccess.jsx"));
-const PeopleList = lazyScreen(() => import("./routes/admin/PeopleList.jsx"));
-const PersonPage = lazyScreen(() => import("./routes/admin/PersonPage.jsx"));
-const ActivityPage = lazyScreen(() => import("./routes/admin/ActivityPage.jsx"));
-const ContentPage = lazyScreen(() => import("./routes/admin/ContentPage.jsx"));
-const TestDataPage = lazyScreen(() => import("./routes/admin/TestDataPage.jsx"));
+/* The whole admin panel: its shell and every admin screen, with their
+   own route table (routes/admin/AdminRoutes.jsx). */
+const AdminRoutes = lazyScreen(() => import("./routes/admin/AdminRoutes.jsx"));
 const VettingForm = lazyScreen(() => import("./routes/vetting/VettingForm.jsx"));
 const BuddyHome = lazyScreen(() => import("./routes/buddy/BuddyHome.jsx"));
 const FamRoutes = lazyScreen(() => import("./routes/fam/FamRoutes.jsx"));
@@ -443,42 +433,22 @@ export default function AppRoot() {
               </RequireAuth>
             }
           />
-          {/* Admin (build step 8) — Buddy review queue first, then the
-              rest. UI on mock data until Supabase wiring lands. */}
+          {/* THE ADMIN PANEL. Every admin screen is inside it — people,
+              vetting, reports, questions, broadcasts, gatherings, Grow,
+              milestone messages, test data — under one navigation, with
+              the front screen at the index (admin_dashboard, 0176). The
+              screens that used to live elsewhere (/app/skills/admin,
+              /app/events/manage, the /app/milestones desk) redirect in.
+              Each screen's data is refused by the database to anyone
+              without the level; this guard is navigation. */}
           <Route
-            path="admin"
+            path="admin/*"
             element={
               <RequireAuth roles={["admin"]}>
-                <AdminLayout />
+                <AdminRoutes />
               </RequireAuth>
             }
-          >
-            {/* §18 — the front door is a worklist, not a section.
-                It also has to be: the index used to send everyone to
-                the vetting queue, which a MODERATOR cannot read at
-                all (0053), so their admin experience began with an
-                empty page. The worklist is filtered by what you can
-                act on, so it is correct for every level. */}
-            <Route index element={<Worklist />} />
-            <Route path="buddies" element={<BuddyQueue />} />
-            <Route path="buddies/:id" element={<BuddyApplication />} />
-            <Route path="questions" element={<QuestionsQueue />} />
-            <Route path="broadcasts" element={<BroadcastsPage />} />
-            <Route path="moderation" element={<ModerationQueue />} />
-            {/* OUT_AND_ABOUT_SPEC §4.1 — admin-seeded access notes.
-                The screen's real job is confirming guesses, since an
-                unverified note never reaches a place row (0065). */}
-            <Route path="places" element={<PlaceAccess />} />
-            {/* Running the app alone (0150–0154): every account, plain
-                activity numbers, recent content, and test-data cleanup.
-                Each screen calls definer functions that check the level
-                and write the audit log; a moderator is refused by them. */}
-            <Route path="people" element={<PeopleList />} />
-            <Route path="people/:id" element={<PersonPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="content" element={<ContentPage />} />
-            <Route path="test-data" element={<TestDataPage />} />
-          </Route>
+          />
           {/* Milestones (0017): Icons get badges and celebrations;
               admins get the message desk on the same path. */}
           {/* Milestones is My Journey's now: badges, streaks and

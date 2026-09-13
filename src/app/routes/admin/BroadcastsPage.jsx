@@ -115,8 +115,12 @@ export default function BroadcastsPage() {
             marginBottom: 18,
           }}
         >
-          ✓ “{sent.title}” delivered to {sent.count}{" "}
-          {sent.count === 1 ? "account" : "accounts"} — {sent.audience}
+          ✓{" "}
+          {t(sent.count === 1 ? "admin.broadcast.deliveredOne" : "admin.broadcast.deliveredMany", {
+            title: sent.title,
+            n: sent.count,
+            audience: sent.audience,
+          })}
         </p>
       )}
       {error && (

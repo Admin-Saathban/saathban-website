@@ -126,16 +126,19 @@ export default function BuddyApplication() {
   const advanceBlockedByCalls = next === "probation" && callsDone < 2;
 
   return (
-    <div style={{ maxWidth: 1180 }}>
-      {/* The body is two columns on a desk and one on a phone. Without
-          this, minmax(0, 1fr) let the reading column shrink to a
-          sliver behind the 360px sidebar — the page did not overflow,
-          it just hid the application it exists to show. The reviewer
-          confirming calls from a phone is the normal case, not the
-          edge one. */}
+    <div style={{ maxWidth: 1180, containerType: "inline-size", containerName: "buddyapp" }}>
+      {/* The body is two columns when the APPLICATION has the room and one
+          when it does not. A container query, not a media query: beside
+          the queue on a wide screen this view is narrower than the
+          window, and two columns there would squeeze the reading column
+          to a sliver — the page would not overflow, it would just hide
+          the application it exists to show. */}
       <style>{`
-        @media (max-width: 900px) {
+        @container buddyapp (max-width: 860px) {
           .sb-buddy-body { grid-template-columns: minmax(0, 1fr) !important; }
+        }
+        @container buddyapp (max-width: 520px) {
+          .sb-buddy-pairs { grid-template-columns: minmax(0, 1fr) !important; }
         }
       `}</style>
 
@@ -244,6 +247,7 @@ export default function BuddyApplication() {
 
           <Card title={t("admin.identity")}>
             <div
+              className="sb-buddy-pairs"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -271,6 +275,7 @@ export default function BuddyApplication() {
 
           <Card title={t("admin.profileAvailability")}>
             <div
+              className="sb-buddy-pairs"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -294,7 +299,7 @@ export default function BuddyApplication() {
           </Card>
 
           <Card title={t("admin.declarations")}>
-            <ul style={{ margin: 0, paddingLeft: 22, lineHeight: 2 }}>
+            <ul style={{ margin: 0, paddingInlineStart: 22, lineHeight: 2 }}>
               <li>
                 {t("admin.app.criminalRecord")}{" "}
                 <strong>
@@ -429,7 +434,7 @@ export default function BuddyApplication() {
                       <StatusChip status={p.status} />
                       <span style={{ color: C.textMuted, fontSize: 16 }}>
                         {t("admin.app.appliedShort", { when: fmtDate(p.created_at) })}
-                        {p.decided_at && <> · decided {fmtDate(p.decided_at)}</>}
+                        {p.decided_at && <> · {t("admin.app.decidedOn", { when: fmtDate(p.decided_at) })}</>}
                       </span>
                       {p.reviewer_flags.map((f) => (
                         <FlagBadge
@@ -570,8 +575,7 @@ export default function BuddyApplication() {
                     {t("admin.app.reject")}
                   </AdminBtn>
                   <p style={{ margin: 0, fontSize: 15, color: C.textMuted }}>
-                    A rejected applicant can reapply after 90 days. Permanent
-                    bars are a separate account block, not a rejection.
+                    {t("admin.app.reapplyNote")}
                   </p>
                 </>
               )}

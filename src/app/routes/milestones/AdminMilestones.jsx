@@ -21,7 +21,7 @@ import {
 import { Card, PrimaryBtn, GhostBtn, BodyText, inputStyle } from "./ui.jsx";
 
 export default function AdminMilestones() {
-  const { t, ts, meta } = useI18n();
+  const { t, ts, meta, lang } = useI18n();
   const k = (key) => t(`milestones.admin.${key}`);
 
   const [awards, setAwards] = useState(null);
@@ -66,14 +66,14 @@ export default function AdminMilestones() {
   };
 
   return (
-    <>
+    <div style={{ maxWidth: 900 }} data-admin-milestones>
       <h1
         style={{
           fontFamily: meta.fonts.heading,
           fontSize: ts(32),
           fontWeight: 700,
           color: C.green,
-          margin: "12px 0 8px",
+          margin: "0 0 8px",
         }}
       >
         {k("title")}
@@ -103,7 +103,7 @@ export default function AdminMilestones() {
                   <BodyText style={{ fontWeight: 700, margin: 0 }}>
                     {a.profile?.full_name || "—"}
                     <span style={{ fontWeight: 400, color: C.textMuted }}>
-                      {" "}· {b ? b.name_en : a.badge_key}
+                      {" "}· {b ? (lang === "ur" && b.name_ur) || b.name_en : a.badge_key}
                     </span>
                   </BodyText>
                   <BodyText muted style={{ margin: "2px 0 0", fontSize: ts(16) }}>
@@ -168,6 +168,6 @@ export default function AdminMilestones() {
           );
         })
       )}
-    </>
+    </div>
   );
 }

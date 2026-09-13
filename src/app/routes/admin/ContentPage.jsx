@@ -50,7 +50,7 @@ export default function ContentPage() {
   ];
 
   return (
-    <div style={{ maxWidth: 980 }}>
+    <div style={{ maxWidth: 1600 }}>
       <PageTitle title={t("admin.content.title")} intro={t("admin.content.intro")} />
       <p style={{ color: C.textMuted, fontSize: 16, margin: "-10px 0 16px" }}>
         {isSuper ? t("admin.content.removeWhoSuper") : t("admin.content.removeWhoSupport")}
@@ -91,7 +91,7 @@ export default function ContentPage() {
           {(data[tab] || []).length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.content.empty")}</p>
           ) : (
-            <div style={{ display: "grid", gap: 14 }}>
+            <div className="sb-adm-cards">
               {data[tab].map((item) =>
                 tab === "message_reports" ? (
                   <MessageReport key={item.id} r={item} isSuper={isSuper} onDone={load} onNotice={setMsg} />

@@ -75,7 +75,7 @@ export default function QuestionsQueue() {
   const answered = (questions || []).filter((q) => q.status === "answered");
 
   return (
-    <div style={{ maxWidth: 860 }}>
+    <div style={{ maxWidth: 1600 }}>
       <h1
         style={{
           fontFamily: APP_FONT,
@@ -110,7 +110,7 @@ export default function QuestionsQueue() {
           title={t("admin.waitingReply")}
           aside={
             <span style={{ fontWeight: 700, color: open.length ? C.brown : C.green }}>
-              {questions === null ? "…" : `${open.length} open`}
+              {questions === null ? "…" : t("admin.questionsQueue.openN", { n: open.length })}
             </span>
           }
         >
@@ -119,13 +119,13 @@ export default function QuestionsQueue() {
           ) : open.length === 0 ? (
             <p style={{ margin: 0, color: C.textMuted }}>{t("admin.queueClear")}</p>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
+            <div className="sb-adm-cards">
               {open.map((q) => (
                 <div
                   key={q.id}
                   style={{
                     border: `1px solid ${C.warmGray}`,
-                    borderLeft: `4px solid ${C.olive}`,
+                    borderInlineStart: `4px solid ${C.olive}`,
                     borderRadius: 10,
                     padding: "16px 20px",
                   }}
@@ -151,7 +151,8 @@ export default function QuestionsQueue() {
                   <div style={{ display: "grid", gap: 10 }}>
                     <textarea
                       rows={3}
-                      placeholder={`Reply to ${q.asker_name}…`}
+                      placeholder={t("admin.questionsQueue.replyTo", { name: q.asker_name })}
+                      aria-label={t("admin.questionsQueue.replyTo", { name: q.asker_name })}
                       value={drafts[q.id] || ""}
                       onChange={(e) =>
                         setDrafts((d) => ({ ...d, [q.id]: e.target.value }))

@@ -88,7 +88,8 @@ export function Card({ title, aside, children, style }) {
         background: C.white,
         border: `1px solid ${C.warmGray}`,
         borderRadius: 14,
-        padding: "22px 26px",
+        padding: "clamp(14px, 4vw, 22px) clamp(14px, 4.5vw, 26px)",
+        minWidth: 0,
         ...style,
       }}
     >

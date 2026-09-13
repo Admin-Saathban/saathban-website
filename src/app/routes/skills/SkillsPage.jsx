@@ -9,8 +9,12 @@
      3. the Pending drawer — a clickable arrow, CLOSED by default. Tapping
         turns the arrow down and reveals what is pending; with nothing
         pending the arrow still turns and nothing drops down
-     4. Courses and training — New courses, then Past courses
-     5. Not open yet — the three "Tell me when this opens" cards
+     4. Courses and training — ONE open section. Its entry here opens
+        /app/skills/courses, where New courses and Past courses are the
+        two halves of it (owner, 2026-09-13). No separate entry for new or
+        past courses anywhere, and never "coming soon": it has content.
+     5. Not open yet — "Tell me when this opens" for the two sections that
+        genuinely are not open: languages and earning
 
    ONE STATE, MANY PLACES. This page decides nothing. grow_page() (0164)
    computes the bar, Pending, New and Past from the same completion and
@@ -28,7 +32,7 @@ import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
 import { wantsLessMotion } from "../../components/motion.jsx";
-import { STRINGS, SKILLS } from "./strings.js";
+import { STRINGS, NOT_OPEN_SKILLS } from "./strings.js";
 import { fetchMyInterests, setInterest } from "./data.js";
 import { fetchGrowPage, dismissSurvey, pick } from "./growData.js";
 
@@ -352,75 +356,49 @@ function PendingDrawer({ items, s, interested, busySkill, onToggleInterest }) {
   );
 }
 
-/* ── 4. Courses and training ── */
-function CourseCard({ course, past }) {
-  const { t, ts, lang, meta } = useI18n();
-  const dateLocale = lang === "ur" ? "ur-PK" : "en-GB";
-  const badgeName = course.badge ? pick(course.badge, "name", lang) : "";
+/* ── 4. Courses and training: one entry, open ──
+   The count line is the section's state in words — how many are new and
+   how many are finished — so the entry never reads as a placeholder. */
+function CoursesEntry({ newCount, pastCount }) {
+  const { t, ts, meta } = useI18n();
+  const parts = [];
+  if (newCount > 0) parts.push(newCount === 1 ? t("grow.page.coursesNewOne") : t("grow.page.coursesNewMany", { n: newCount }));
+  if (pastCount > 0) parts.push(pastCount === 1 ? t("grow.page.coursesPastOne") : t("grow.page.coursesPastMany", { n: pastCount }));
   return (
-    <article
-      data-course={course.id}
-      data-course-slug={course.slug || ""}
-      data-course-state={past ? "past" : "new"}
-      style={{
-        background: C.white,
-        border: `${past ? 1 : 2}px solid ${past ? C.warmGray : C.green}`,
-        borderRadius: 18,
-        padding: "18px 20px",
-        marginBottom: 14,
-      }}
-    >
-      <p style={{ fontSize: ts(15), fontWeight: 700, color: C.textMuted, margin: "0 0 2px" }}>
-        {t(`grow.page.kind.${course.kind}`)}
-      </p>
-      <h4 style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), fontWeight: 700, color: C.green, margin: "0 0 6px", lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.3 }}>
-        {pick(course, "title", lang)}
-      </h4>
-      <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, lineHeight: 1.6, margin: "0 0 12px" }}>
-        {pick(course, "desc", lang)}
-      </p>
-
-      {past ? (
-        <>
-          {course.badge && (
-            <p data-earned-badge={course.badge.key} style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, color: C.green, margin: "0 0 4px" }}>
-              <span aria-hidden="true">{course.badge.emoji} </span>
-              {t("grow.page.badgeEarned", { badge: badgeName })}
-            </p>
-          )}
-          {course.completed_at && (
-            <p style={{ fontSize: ts(16), color: C.textMuted, margin: "0 0 12px" }}>
-              {t("grow.page.finishedOn", {
-                date: new Date(course.completed_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" }),
-              })}
-            </p>
-          )}
-          <Link
-            to={`/app/skills/course/${course.id}`}
-            style={{ ...pillLink, fontSize: ts(A11Y.minBodyPx), background: C.white, color: C.green, border: `2px solid ${C.green}` }}
-          >
-            {t("grow.page.review")}
-          </Link>
-        </>
-      ) : (
-        <>
-          {course.badge && (
-            <p data-badge={course.badge.key} style={{ fontSize: ts(16), color: C.textMuted, margin: "0 0 6px" }}>
-              <span aria-hidden="true">{course.badge.emoji} </span>
-              {t("grow.page.earns", { badge: badgeName })}
-            </p>
-          )}
-          {course.started && (
-            <p style={{ fontSize: ts(16), fontWeight: 600, color: C.textMain, margin: "0 0 12px" }}>
-              {t("grow.page.started")}
-            </p>
-          )}
-          <Link to={`/app/skills/course/${course.id}`} style={{ ...pillLink, fontSize: ts(A11Y.minBodyPx), marginTop: 4 }}>
-            {course.started ? t("grow.page.continue") : t("grow.page.open")}
-          </Link>
-        </>
-      )}
-    </article>
+    <section data-section="courses" style={{ marginBottom: 8 }}>
+      <Link
+        to="/app/skills/courses"
+        data-action="open-courses"
+        style={{
+          display: "block",
+          background: C.white,
+          border: `2px solid ${C.green}`,
+          borderRadius: 20,
+          padding: "20px 22px",
+          textDecoration: "none",
+          color: C.textMain,
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span aria-hidden="true" style={{ fontSize: ts(30) }}>📚</span>
+          <span style={{ flex: 1, fontFamily: meta.fonts.heading, fontSize: ts(24), fontWeight: 700, color: C.green }}>
+            {t("grow.page.courses")}
+          </span>
+          <span aria-hidden="true" style={{ fontSize: ts(24), color: C.green, fontWeight: 700 }}>
+            {meta.dir === "rtl" ? "‹" : "›"}
+          </span>
+        </span>
+        <span style={{ display: "block", fontSize: ts(A11Y.minBodyPx), lineHeight: 1.6, margin: "0 0 10px" }}>
+          {t("grow.page.coursesDesc")}
+        </span>
+        {parts.length > 0 && (
+          <span data-courses-count style={{ display: "block", fontSize: ts(16), fontWeight: 700, color: C.textMuted, margin: "0 0 12px" }}>
+            {parts.join(" · ")}
+          </span>
+        )}
+        <span style={{ ...pillLink, fontSize: ts(A11Y.minBodyPx) }}>{t("grow.page.open")}</span>
+      </Link>
+    </section>
   );
 }
 
@@ -504,14 +482,6 @@ export default function SkillsPage() {
     textTransform: meta.dir === "rtl" ? "none" : "uppercase",
     margin: "26px 0 10px",
   };
-  const subHeading = {
-    fontFamily: meta.fonts.heading,
-    fontSize: ts(20),
-    fontWeight: 700,
-    color: C.textMain,
-    margin: "16px 0 10px",
-  };
-  const emptyLine = { fontSize: ts(A11Y.minBodyPx), color: C.textMuted, lineHeight: 1.6, margin: "0 0 8px" };
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
@@ -560,7 +530,7 @@ export default function SkillsPage() {
           <>
             {/* 3 */}
             <PendingDrawer
-              items={grow.pending}
+              items={grow.pending.filter((i) => !(i.type === "skill" && i.skill === "courses"))}
               s={s}
               interested={interested}
               busySkill={busy}
@@ -568,25 +538,7 @@ export default function SkillsPage() {
             />
 
             {/* 4 */}
-            <section data-section="courses">
-              <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 700, color: C.green, margin: "8px 0 4px" }}>
-                {t("grow.page.courses")}
-              </h2>
-
-              <h3 style={subHeading} data-heading="new">{t("grow.page.newCourses")}</h3>
-              {grow.new_courses.length === 0 ? (
-                <p style={emptyLine}>{t("grow.page.newEmpty")}</p>
-              ) : (
-                grow.new_courses.map((c) => <CourseCard key={c.id} course={c} />)
-              )}
-
-              <h3 style={subHeading} data-heading="past">{t("grow.page.pastCourses")}</h3>
-              {grow.past_courses.length === 0 ? (
-                <p style={emptyLine}>{t("grow.page.pastEmpty")}</p>
-              ) : (
-                grow.past_courses.map((c) => <CourseCard key={c.id} course={c} past />)
-              )}
-            </section>
+            <CoursesEntry newCount={grow.new_courses.length} pastCount={grow.past_courses.length} />
           </>
         )}
 
@@ -595,7 +547,7 @@ export default function SkillsPage() {
         {interested === null ? (
           <p aria-busy="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>···</p>
         ) : (
-          SKILLS.map((skill) => (
+          NOT_OPEN_SKILLS.map((skill) => (
             <SkillCard
               key={skill}
               skill={skill}

@@ -13,10 +13,17 @@
 // migration.
 export const SKILLS = ["languages", "courses", "earning"];
 
+// The sections that are genuinely NOT open yet, and so the only ones
+// offered "Tell me when this opens" on Grow or as a Pending pointer.
+// Courses and training is open (it has the Saathban course), so it is
+// not here — owner, 2026-09-13; 0168 holds Pending to the same list.
+// SKILLS keeps "courses" for the interest counts already recorded.
+export const NOT_OPEN_SKILLS = ["languages", "earning"];
+
 export const STRINGS = {
   en: {
     title: "Grow with Saathban",
-    subtitle: "Learning, courses, and skills that can earn. Tell us which you'd like, and we'll build those first.",
+    subtitle: "Courses you can take now, and more on the way. Tell us which of the others you'd like, and we'll build those first.",
     /* The two things that are actually OPEN, above the three that are
        not. A page whose every card says "coming soon" teaches people
        to stop opening it. */
@@ -63,7 +70,7 @@ export const STRINGS = {
   ur: {
     // ⚠ Urdu draft — pending native review.
     title: "ساتھ‌بن کے ساتھ آگے بڑھیں",
-    subtitle: "سیکھنا، کورس، اور وہ ہنر جو کمائی دے سکیں۔ بتائیں کون سا پسند ہے، ہم وہی پہلے بنائیں گے۔",
+    subtitle: "کورس جو آپ ابھی کر سکتے ہیں، اور مزید آنے والا ہے۔ باقی میں سے جو پسند ہو بتائیں، ہم وہی پہلے بنائیں گے۔",
     openNow: "ابھی کھلا ہے",
     courseName: "ساتھ‌بن کا کورس",
     courseDesc: "ساتھ‌بن کیسے کام کرتا ہے، لوگوں کی حفاظت کیسے ہوتی ہے، اور اچھا ساتھ کیا ہے۔ دس منٹ، اور رُک جائیں تو یہ انتظار کرتا ہے۔",

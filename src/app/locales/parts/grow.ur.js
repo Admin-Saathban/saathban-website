@@ -13,6 +13,12 @@ export default {
       pastCourses: "مکمل کیے ہوئے کورس",
       newEmpty: "ابھی کوئی نیا کورس نہیں۔ نئے کورس یہیں نظر آئیں گے۔",
       pastEmpty: "جو کورس آپ مکمل کریں گے، وہ اپنے تمغے کے ساتھ یہاں رکھے جائیں گے۔",
+      coursesDesc: "مختصر کورس اور پروگرام جو آپ ابھی، اپنی رفتار سے کر سکتے ہیں۔ مکمل کریں تو اس کا تمغہ آپ کا۔",
+      coursesNewOne: "1 نیا کورس",
+      coursesNewMany: "{n} نئے کورس",
+      coursesPastOne: "1 مکمل",
+      coursesPastMany: "{n} مکمل",
+      backToGrow: "→ ساتھ‌بن کے ساتھ آگے بڑھیں",
       kind: {
         course: "کورس",
         programme: "پروگرام",

@@ -13,7 +13,7 @@ import { useState } from "react";
 import { APP_COLORS as C } from "../../../../shared/tokens.js";
 import { useI18n } from "../../../lib/i18n.jsx";
 import { pushToast } from "../../../lib/feedback.jsx";
-import { STRINGS, SKILLS } from "../strings.js";
+import { STRINGS, NOT_OPEN_SKILLS } from "../strings.js";
 import {
   adminPendingAdd,
   adminPendingRemove,
@@ -46,7 +46,7 @@ export default function PendingAdmin({ overview, reload }) {
       ? overview.courses.filter((c) => !pointed.course.has(c.id)).map((c) => ({ value: c.id, label: `${pick(c, "title", lang)} (${t(`grow.page.kind.${c.kind}`)} · ${t(`grow.admin.status.${c.status}`)})` }))
       : kind === "survey"
         ? overview.surveys.filter((x) => !pointed.survey.has(x.id)).map((x) => ({ value: x.id, label: `${pick(x, "title", lang)} (${t(`grow.admin.status.${x.status}`)})` }))
-        : SKILLS.filter((k) => !pointed.skill.has(k)).map((k) => ({ value: k, label: skillsText.cards[k].name }));
+        : NOT_OPEN_SKILLS.filter((k) => !pointed.skill.has(k)).map((k) => ({ value: k, label: skillsText.cards[k].name }));
 
   const run = async (fn, ok) => {
     setBusy(true);

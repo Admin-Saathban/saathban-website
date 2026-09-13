@@ -238,7 +238,7 @@ export default function CoursePage() {
               </>
             )}
             <div style={{ marginTop: 18 }}>
-              <button type="button" style={btn(false)} onClick={() => navigate("/app/skills")}>
+              <button type="button" style={btn(false)} onClick={() => navigate("/app/skills/courses")}>
                 {t("grow.course.leave")}
               </button>
             </div>
@@ -343,7 +343,7 @@ export default function CoursePage() {
               <button type="button" style={btn(true)} onClick={() => setView("map")}>
                 {t("grow.course.back")}
               </button>
-              <button type="button" style={btn(false)} onClick={() => navigate("/app/skills")}>
+              <button type="button" style={btn(false)} onClick={() => navigate("/app/skills/courses")}>
                 {t("grow.course.leave")}
               </button>
             </div>

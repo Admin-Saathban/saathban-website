@@ -15,6 +15,12 @@ export default {
       pastCourses: "Past courses",
       newEmpty: "Nothing new just now. New courses will appear here.",
       pastEmpty: "Courses you finish are kept here, with their badge.",
+      coursesDesc: "Short courses and programmes you can take now, at your own pace. Finish one and its badge is yours.",
+      coursesNewOne: "1 new course",
+      coursesNewMany: "{n} new courses",
+      coursesPastOne: "1 finished",
+      coursesPastMany: "{n} finished",
+      backToGrow: "← Grow with Saathban",
       kind: {
         course: "Course",
         programme: "Programme",

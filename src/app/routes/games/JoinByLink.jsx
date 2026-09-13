@@ -22,6 +22,7 @@ import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession, rememberPostLoginPath } from "../../lib/session.jsx";
 import supabase from "../../lib/supabase.js";
+import { fetchProfileCards } from "../../lib/profileCards.js";
 import { joinByCode } from "../../lib/games.js";
 import { pushToast } from "../../lib/feedback.jsx";
 import { GamesScreen, Card, BodyText, PrimaryBtn } from "./ui.jsx";
@@ -78,11 +79,7 @@ export default function JoinByLink() {
               .eq("id", r.session_id)
               .maybeSingle();
             if (s?.created_by) {
-              const { data: p } = await supabase
-                .from("safe_profiles")
-                .select("full_name")
-                .eq("id", s.created_by)
-                .maybeSingle();
+              const [p] = await fetchProfileCards([s.created_by]);
               host = (p?.full_name || "").split(" ")[0];
             }
           } catch {

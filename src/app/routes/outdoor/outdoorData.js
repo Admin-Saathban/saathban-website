@@ -6,6 +6,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { fetchProfileCards } from "../../lib/profileCards.js";
 // "Who's up for…" writes delegate to the community lane's own store so
 // there is exactly ONE authority for the activity payload shape
 // (0027/0028: payload.activity/place_id/place_name/starts_at/limit/rsvp;
@@ -102,12 +103,8 @@ export async function leaveCheckin(checkinId) {
 export async function fetchAuthors(ids) {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return {};
-  const { data, error } = await supabase
-    .from("safe_profiles")
-    .select("id, full_name")
-    .in("id", unique);
-  if (error) throw error;
-  return Object.fromEntries((data || []).map((p) => [p.id, p.full_name]));
+  const data = await fetchProfileCards(unique);
+  return Object.fromEntries(data.map((p) => [p.id, p.full_name]));
 }
 
 export async function fetchOutings(placeId) {

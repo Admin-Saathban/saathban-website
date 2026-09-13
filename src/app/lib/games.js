@@ -4,6 +4,7 @@
    chat. See GAMES_CONTRACT.md for the rails contract. */
 
 import { supabase } from "./supabase.js";
+import { fetchProfileCards, searchPeopleByName } from "./profileCards.js";
 
 /* The riddle day rolls over on the server's calendar (UTC), so the
    client must ask for the same date the server considers "today". */
@@ -110,7 +111,7 @@ export async function fetchTableHistory(profileId, { limit = 20, before = null }
   const people = [...new Set((seats ?? []).map((s) => s.profile_id).filter(Boolean))];
   let names = new Map();
   if (people.length) {
-    const { data: profiles } = await supabase.from("safe_profiles").select("id, full_name").in("id", people);
+    const profiles = await fetchProfileCards(people);
     names = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   }
 
@@ -179,10 +180,7 @@ export async function fetchSession(sessionId) {
   const ids = (seats ?? []).map((s) => s.profile_id).filter(Boolean);
   let names = {};
   if (ids.length) {
-    const { data: profiles } = await supabase
-      .from("safe_profiles")
-      .select("id, full_name")
-      .in("id", ids);
+    const profiles = await fetchProfileCards(ids);
     names = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name]));
   }
   return {
@@ -492,13 +490,12 @@ export async function fetchSessionInvites(sessionId) {
   return data ?? [];
 }
 
-/* Display names for a set of profile ids (safe view) → {id: name}. */
+/* Display names for a set of profile ids (name cards, 0123) → {id: name}. */
 export async function fetchNames(ids) {
   const unique = [...new Set(ids)].filter(Boolean);
   if (!unique.length) return {};
-  const { data, error } = await supabase.from("safe_profiles").select("id, full_name").in("id", unique);
-  if (error) throw error;
-  return Object.fromEntries((data ?? []).map((p) => [p.id, p.full_name]));
+  const data = await fetchProfileCards(unique);
+  return Object.fromEntries(data.map((p) => [p.id, p.full_name]));
 }
 
 export async function fetchMyInvites(profileId) {
@@ -514,15 +511,9 @@ export async function fetchMyInvites(profileId) {
 
 /* Name search for "ask someone by name" in the lobby. */
 export async function searchPeople(q, excludeIds = []) {
-  let query = supabase
-    .from("safe_profiles")
-    .select("id, full_name, role")
-    .ilike("full_name", `%${q}%`)
-    .limit(8);
-  if (excludeIds.length) query = query.not("id", "in", `(${excludeIds.join(",")})`);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data ?? [];
+  /* An explicit search (0123): three letters or more, start of a word. */
+  const found = await searchPeopleByName(q, { limit: Math.min(20, 8 + excludeIds.length) });
+  return found.filter((p) => !excludeIds.includes(p.id)).slice(0, 8);
 }
 
 // ── Chat + stickers ─────────────────────────────────────────────────
@@ -588,7 +579,7 @@ export async function guessPuzzle(date, guess) {
 
    The same shape fetchTableHistory returns for finished tables, for
    live ones, and in one round trip for all of them rather than one
-   per card. Names come through safe_profiles because RLS refuses one
+   per card. Names come through profile_cards (0123) because RLS refuses one
    person reading another's profiles row — an embed returns null,
    quietly, with a 200.
 
@@ -610,10 +601,7 @@ export async function fetchTablePeople(sessionIds, profileId) {
   const people = [...new Set((seats ?? []).map((s) => s.profile_id).filter(Boolean))];
   let names = new Map();
   if (people.length) {
-    const { data: profiles } = await supabase
-      .from("safe_profiles")
-      .select("id, full_name")
-      .in("id", people);
+    const profiles = await fetchProfileCards(people);
     names = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   }
 

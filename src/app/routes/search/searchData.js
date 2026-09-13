@@ -24,6 +24,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { searchPeopleByName } from "../../lib/profileCards.js";
 
 const LIMIT = 8;
 
@@ -38,13 +39,9 @@ function safeTerm(q) {
 export async function searchPeople(q) {
   const term = safeTerm(q);
   if (!term) return [];
-  const { data, error } = await supabase
-    .from("safe_profiles")
-    .select("id, full_name, city, role")
-    .or(`full_name.ilike."%${term}%",city.ilike."%${term}%"`)
-    .limit(LIMIT);
-  if (error) throw error;
-  return data || [];
+  /* An explicit search (0123): a name, three letters or more, start of
+     a word. Listing by city is gone. */
+  return searchPeopleByName(q, { limit: LIMIT });
 }
 
 export async function searchGroups(q) {

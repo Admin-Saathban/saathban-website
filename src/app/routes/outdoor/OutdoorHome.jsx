@@ -31,6 +31,7 @@ import { OutdoorScreen, Card, BodyText, SectionLabel } from "./ui.jsx";
 import AddPlace from "./AddPlace.jsx";
 import AccessChips from "./AccessChips.jsx";
 import Faces from "./Faces.jsx";
+import { fetchProfileCards } from "../../lib/profileCards.js";
 
 const cityKey = (profileId) => `saathban.app.outdoorCity.${profileId || "anon"}`;
 
@@ -82,10 +83,7 @@ export default function OutdoorHome() {
         try {
           const ids = [...new Set(live.map((ci) => ci.profile_id).filter(Boolean))];
           if (ids.length) {
-            const { data: profs } = await supabase
-              .from("safe_profiles")
-              .select("id, full_name, avatar_url")
-              .in("id", ids);
+            const profs = await fetchProfileCards(ids);
             const byId = Object.fromEntries((profs || []).map((x) => [x.id, x]));
             const grouped = {};
             for (const ci of live) {

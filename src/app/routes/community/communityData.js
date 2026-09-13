@@ -4,10 +4,13 @@
    RLS (migration 0014) is the boundary for all of it: these helpers
    never filter for permission themselves — a row the caller shouldn't
    see simply never arrives, and a write they may not make fails.
-   Author names come from safe_profiles (never the full profiles row).
+   Author names come from profile_cards (0123): name, photo, city and
+   role for people whose posts the caller can already see — never
+   presence, never the full profiles row.
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { fetchProfileCards, searchPeopleByName } from "../../lib/profileCards.js";
 
 const BUCKET = "community-images";
 
@@ -30,12 +33,8 @@ export async function canPostCommunity() {
 export async function fetchAuthors(ids) {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return {};
-  const { data, error } = await supabase
-    .from("safe_profiles")
-    .select("id, full_name, role, is_org, city, area")
-    .in("id", unique);
-  if (error) throw error;
-  return Object.fromEntries((data || []).map((p) => [p.id, p]));
+  const data = await fetchProfileCards(unique);
+  return Object.fromEntries(data.map((p) => [p.id, p]));
 }
 
 /* ─── Feed ─── */
@@ -518,16 +517,9 @@ export async function fetchJoins(postIds, userId) {
 /* ─── Friend connections (migration 0027) ─── */
 
 export async function searchIcons(q) {
-  const term = q.trim();
-  if (!term) return [];
-  const { data, error } = await supabase
-    .from("safe_profiles")
-    .select("id, full_name, city, role")
-    .eq("role", "saath_icon")
-    .or(`full_name.ilike.%${term}%,city.ilike.%${term}%`)
-    .limit(12);
-  if (error) throw error;
-  return data || [];
+  /* An explicit search (0123): a name, three letters or more. City is
+     no longer searchable — it listed everybody in a city. */
+  return searchPeopleByName(q, { role: "saath_icon", limit: 12 });
 }
 
 export async function sendFriendRequest(recipientId) {

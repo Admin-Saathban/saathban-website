@@ -11,6 +11,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { fetchPublicProfileRow } from "../../lib/profileCards.js";
 
 /* Warm sticker set — sent as the message body, rendered large. */
 export const STICKERS = [
@@ -37,7 +38,10 @@ export async function fetchPerson(profileId) {
     .eq("id", profileId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  if (data) return data;
+  /* Not somebody I'm related to (0124): the stranger view, which never
+     carries presence. */
+  return fetchPublicProfileRow(profileId);
 }
 
 /* The circle rows linking me and this person — RLS already scopes

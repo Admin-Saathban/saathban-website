@@ -19,6 +19,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../lib/supabase.js";
+import { fetchPublicProfileRow } from "../../lib/profileCards.js";
 
 export async function fetchMyProfile(id) {
   const { data, error } = await supabase
@@ -32,18 +33,12 @@ export async function fetchMyProfile(id) {
   return data;
 }
 
-/* What a stranger sees of somebody else — safe_profiles, never
-   profiles. §8 says the stranger view matters most and is least
+/* What a stranger sees of somebody else — public_profile (0123), never
+   profiles, never presence. §8 says the stranger view matters most and is least
    designed, so it gets a named function rather than being assembled
    ad hoc at each call site. */
 export async function fetchPublicProfile(id) {
-  const { data, error } = await supabase
-    .from("safe_profiles")
-    .select("id, role, full_name, avatar_url, city, area, languages, interests, about, about_prompt, is_org")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
+  return fetchPublicProfileRow(id);
 }
 
 export async function updateMyProfile(id, fields) {

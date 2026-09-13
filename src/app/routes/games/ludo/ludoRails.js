@@ -17,6 +17,7 @@
    ════════════════════════════════════════════════ */
 
 import supabase from "../../../lib/supabase.js";
+import { fetchProfileCards } from "../../../lib/profileCards.js";
 
 export const DEFAULT_RULES = {
   extra_roll_on_six: true,
@@ -168,11 +169,7 @@ export async function fetchSession(sessionId) {
   let faces = new Map();
   let samples = new Map();
   if (ids.length) {
-    const { data: profiles, error: pErr } = await supabase
-      .from("safe_profiles")
-      .select("id, full_name, avatar_url, avatar_sample")
-      .in("id", ids);
-    if (pErr) throw new Error(pErr.message);
+    const profiles = await fetchProfileCards(ids);
     names = new Map((profiles || []).map((p) => [p.id, p.full_name]));
     faces = new Map((profiles || []).map((p) => [p.id, p.avatar_url]));
     /* A drawn face somebody picked for themselves, if they did. */
@@ -355,10 +352,7 @@ export async function fetchSeatInvites(sessionId) {
   const ids = [...new Set(data.map((r) => r.invitee_id).filter(Boolean))];
   let names = new Map();
   if (ids.length) {
-    const { data: people } = await supabase
-      .from("safe_profiles")
-      .select("id, full_name")
-      .in("id", ids);
+    const people = await fetchProfileCards(ids);
     names = new Map((people || []).map((p) => [p.id, p.full_name]));
   }
   return data.map((r) => ({

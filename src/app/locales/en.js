@@ -3504,7 +3504,7 @@ const en = {
     parked: {
       badge: "Coming soon",
       tileHint: "Resting while we finish the rest of the app",
-      restingNote: "These games are resting for now — everything else on this page is open.",
+      restingNote: "These games are resting for now — the Daily Riddle is still open.",
     },
     create: {
       title: "Open a table",

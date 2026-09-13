@@ -322,10 +322,18 @@ export default function GamesHome() {
      they had asked a different question. The riddle keeps its own
      card further down, where a solo puzzle belongs. */
   const turnGames = games.filter((g) => g.kind === "turns" && (g.max_seats ?? 0) >= 2);
+  /* ── EVERY GAME ON THE SHELF IS RESTING ──
+     Owner, 2026-09-13: while the games are parked, NOTHING on this screen
+     does anything that leads to a game. Not the tiles, not "Have a code?"
+     (a code can only lead to a parked game), and not a table row — yours,
+     one you left, or a past one. Derived from parked.js and the registry,
+     so it lifts by itself the day a game comes back. The Daily Riddle is
+     not a game table (parked.js) and stays open. */
+  const gamesResting = turnGames.length > 0 && turnGames.every((g) => isParkedGame(g.key) || !g.enabled);
 
   const submitCode = async (e) => {
     e.preventDefault();
-    if (busy || code.replace(/\D/g, "").length < 6) return;
+    if (gamesResting || busy || code.replace(/\D/g, "").length < 6) return;
     // A code is another way to end up at a second table.
     const inTheWay = liveSessionOf(sessions);
     if (inTheWay) {
@@ -347,13 +355,14 @@ export default function GamesHome() {
     setBusy(false);
   };
 
-  const live = tables.filter((s) => s.status !== "finished" && s.status !== "cancelled");
+  const shownTables = gamesResting ? [] : tables;
+  const live = shownTables.filter((s) => s.status !== "finished" && s.status !== "cancelled");
   // ONE live table at a time: the first IS the active game. Any others
   // (seeded before this rule) sit quietly beneath it rather than
   // vanishing.
   const activeGame = live[0] ?? null;
   const otherLive = live.slice(1);
-  const past = tables.filter((s) => s.status === "finished" || s.status === "cancelled");
+  const past = shownTables.filter((s) => s.status === "finished" || s.status === "cancelled");
   const recent = past.slice(0, 3);
   const nextStep = (s) =>
     s.status === "lobby"
@@ -506,7 +515,7 @@ export default function GamesHome() {
              back, and only while the chair is still the bot's —
              somebody may have taken it, and then the honest answer
              is that the table is no longer his to walk into. ── */}
-      {leftTables.length > 0 && (
+      {!gamesResting && leftTables.length > 0 && (
         <>
           <SectionLabel>{t("games.home.leftTitle")}</SectionLabel>
           {leftTables.map((row) => (
@@ -782,6 +791,52 @@ export default function GamesHome() {
 
       {/* Join by code — prominent, large digits, LTR-pinned so the
           six digits read the same under Urdu. */}
+      {gamesResting ? (
+        /* PARKED LIKE THE TILES: dimmed, the same "Coming soon" badge, a
+           disabled button so a screen reader still hears what it is, and
+           no way through — no form opens. */
+        <button
+          type="button"
+          disabled
+          aria-disabled
+          data-parked="code"
+          style={{
+            display: "block",
+            width: "100%",
+            minHeight: 88,
+            padding: "16px 18px",
+            marginBottom: 10,
+            background: C.white,
+            border: `2px solid ${C.warmGray}`,
+            borderRadius: 18,
+            fontFamily: "inherit",
+            textAlign: "start",
+            cursor: "default",
+            opacity: 0.62,
+          }}
+        >
+          <span style={{ display: "block", fontSize: ts(21), fontWeight: 800, color: C.textMain }}>
+            🔢 {t("games.code.cta")}
+          </span>
+          <span
+            style={{
+              display: "inline-block",
+              marginTop: 6,
+              background: C.greenMuted,
+              color: C.cream,
+              borderRadius: 50,
+              padding: "4px 12px",
+              fontSize: ts(15),
+              fontWeight: 700,
+            }}
+          >
+            {t("games.parked.badge")}
+          </span>
+          <span style={{ display: "block", marginTop: 4, fontSize: ts(16), color: C.textMuted }}>
+            {t("games.parked.tileHint")}
+          </span>
+        </button>
+      ) : (
       <Card>
         {!codeOpen ? (
           <GhostBtn onClick={() => setCodeOpen(true)} aria-expanded={false}>
@@ -836,6 +891,7 @@ export default function GamesHome() {
           </form>
         )}
       </Card>
+      )}
 
       {past.length > 0 && (
         <>

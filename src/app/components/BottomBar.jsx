@@ -120,7 +120,22 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
      button is what stops More drifting into looking like a different
      kind of control from the four beside it. */
   const itemStyle = (isActive) => ({
-    flex: "0 1 auto",
+    /* ── FIVE EQUAL COLUMNS ──
+
+       These were sized to their words and spread with space-evenly, which
+       makes the GAPS BETWEEN BOXES equal and the gaps between the icons
+       anything but. "Out & about" is 85px of label and "Home" is 41, so at
+       390px the icon centres sat 83, 81, 64 and 77px apart — Home and
+       Groups visibly huddled, which is exactly what the owner saw.
+
+       Equal columns put every icon centre the same distance apart. The
+       reason this file moved away from equal shares was ellipsis: an 85px
+       label in a 72px share was cut to "Out & abo…". That is answered at
+       the label now, not by uneven columns — the label is allowed to be
+       wider than its column and overhang into the slack beside it, which
+       its short neighbours always leave. Measured for overlap at 320, 360,
+       390 and 412px in both languages. */
+    flex: "1 1 0",
     minWidth: 0,
     /* 5, not 9. The chip is wider than the bare icon it replaced,
        and at 9 the five items came to 374px which, with the 8px of
@@ -133,7 +148,7 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
        forbids outright, and it is the exact failure the note on the
        label below was written about. The chip made the bar tighter and
        I did not re-measure it after. */
-    paddingInline: 5,
+    paddingInline: 0,
     minHeight: A11Y.minTapTargetPx,
     display: "flex",
     flexDirection: "column",
@@ -202,11 +217,22 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
              and the icon plus the accessible name carry the meaning
              either way — this is the one place §3 already allowed to
              sit under the body floor for exactly this reason. */
-          fontSize: 15,
+          /* 15px from 390px wide and up — every phone the owner and most
+             people carry — easing to 13px on the narrowest screens.
+
+             Five equal columns at 320px are 62px each and "Out & about"
+             is 85px at 15px: measured, it ran 3px into "Games". The label
+             may overhang its column but must never touch a neighbour, and
+             no amount of overhang fixes a word wider than the room either
+             side of it. Tied to the WIDTH of the screen, not to the reader's
+             text-size setting, for the reason the note above gives: the bar
+             is the one strip where a larger setting would cost the labels. */
+          fontSize: "clamp(13px, 3.85vw, 15px)",
           lineHeight: 2.45,
-          maxWidth: "100%",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
+          /* Wider than the column when it needs to be, never cut. See the
+             equal-columns note on itemStyle. */
+          maxWidth: "none",
+          overflow: "visible",
           whiteSpace: "nowrap",
           fontWeight: "inherit",
           color: "inherit",
@@ -230,8 +256,8 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
         zIndex: 60,
         display: "flex",
         alignItems: "stretch",
-        justifyContent: "space-evenly",
-        gap: 2,
+        justifyContent: "space-between",
+        gap: 0,
         /* THE BAR OWNS THE BOTTOM INSET, and through the named property
            so it can be inspected and overridden in a check. Inside the
            element, so it travels with the shutter. */

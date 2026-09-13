@@ -129,6 +129,9 @@ export default function Drawer({ id, open, onClose, from = "bottom", labelledBy,
         aria-labelledby={labelledBy}
         tabIndex={-1}
         className={growClass}
+        /* Which button it grows from. WideLayout reads it to line the
+           panel up under that button at tablet widths and up. */
+        data-sb-drawer={from}
         style={{
           position: "fixed",
           zIndex: 71,

@@ -328,6 +328,9 @@ export function ToastHost() {
     <>
       <div
         aria-live="polite"
+        /* WideLayout lifts the stack above the dock at tablet widths and
+           up. An attribute only: nothing about a phone changes. */
+        data-sb-toasts=""
         style={{
           position: "fixed",
           insetInlineStart: 0,

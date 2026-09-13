@@ -149,8 +149,40 @@ export function revealBars() {
   revealers.forEach((fn) => fn());
 }
 
+/* ── AT LAPTOP WIDTHS THE BARS STAY PUT ──
+
+   The shutter exists to give a phone its screen back. From 1024px wide
+   there is no screen to win: the header is a strip across a monitor and
+   the bar is a dock under the column, and a bar sliding away every time a
+   mouse wheel turns is only chrome moving. So above that width the hook
+   answers "not hidden" — which also keeps the shell's bottom reservation
+   in place, because AppShellBar releases it only while this says hidden.
+
+   A width, never a device check. Below 1024px this is false and the hook
+   behaves exactly as it always has. */
+const DESK_QUERY = "(min-width: 1024px)";
+function deskWideNow() {
+  try {
+    return window.matchMedia(DESK_QUERY).matches;
+  } catch {
+    return false;
+  }
+}
+
 export default function useShutter(scrollerRef) {
   const [hidden, setHidden] = useState(false);
+  const [deskWide, setDeskWide] = useState(deskWideNow);
+  useEffect(() => {
+    let mq = null;
+    try {
+      mq = window.matchMedia(DESK_QUERY);
+    } catch {
+      return undefined;
+    }
+    const onChange = () => setDeskWide(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
   const lastY = useRef(0);
   const anchor = useRef(0);
 
@@ -307,5 +339,5 @@ export default function useShutter(scrollerRef) {
     };
   }, [hidden, scrollerRef]);
 
-  return hidden;
+  return hidden && !deskWide;
 }

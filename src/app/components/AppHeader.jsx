@@ -194,6 +194,17 @@ export default function AppHeader() {
     pathname !== home &&
     !(profile.role === "admin" && pathname.startsWith("/app/admin"));
 
+  /* THE WAY INTO THE ADMIN PANEL, for the one role that has one.
+
+     An admin who has stepped into the app — Settings, their profile, a
+     person's page — had no way back to the panel but the address bar.
+     A word rather than an icon: a glyph in a corner is a rebus, and this
+     is a door somebody has to find while not looking for it. Absent
+     inside /app/admin, where it would point at the page you are on, and
+     never rendered for any other role. */
+  const showAdminLink =
+    Boolean(profile) && profile.role === "admin" && !pathname.startsWith("/app/admin");
+
   /* Mounted once by the shell, so it answers this itself. Below the
      hooks, never above them: a hook behind a condition is a hook that
      changes count between renders, which is the bug I shipped into the
@@ -250,6 +261,27 @@ export default function AppHeader() {
         transition: "transform 180ms ease-out",
       }}
     >
+      {/* Keyboard focus on the dark chrome, and the admin link's second
+          row on a narrow screen. A style element lays nothing out; the
+          ring matches keyboard focus only, so no tap ever draws it. */}
+      <style>{`
+        header.sb-header a:focus-visible,
+        header.sb-header button:focus-visible {
+          outline: 3px solid ${C.navActive};
+          outline-offset: 1px;
+          border-radius: 12px;
+        }
+        @media (hover: hover) {
+          .sb-admin-link:hover { background: rgba(255, 255, 255, 0.08); }
+        }
+        /* border-box: its own row is 100% wide INCLUDING the pill's border
+           and padding. Measured content-box at 360px it ran 32px past the
+           edge of the screen. */
+        .sb-admin-link { box-sizing: border-box; }
+        @media (max-width: 559px) {
+          .sb-admin-link { order: 99; flex: 1 0 100%; margin: 2px 0 4px !important; }
+        }
+      `}</style>
       <div
         style={{
           maxWidth: 960,
@@ -257,6 +289,8 @@ export default function AppHeader() {
           display: "flex",
           alignItems: "center",
           gap: 4,
+          /* Only an admin's header may wrap, for the link's own row. */
+          flexWrap: showAdminLink ? "wrap" : undefined,
         }}
       >
         {/* Top-left: the person. Opens from the left (MOTION §1). */}
@@ -317,6 +351,34 @@ export default function AppHeader() {
         >
           <Logo height={30} variant="light" />
         </Link>
+
+        {/* Admins only, outside the panel. Beside the icons from 560px
+            wide; on a narrower screen it takes a second row of its own
+            (the style block above) rather than squeezing the wordmark. */}
+        {showAdminLink && (
+          <Link
+            to="/app/admin"
+            className="sb-admin-link"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: A11Y.minTapTargetPx,
+              padding: "0 14px",
+              marginInline: 4,
+              borderRadius: 50,
+              border: `2px solid ${C.navActive}`,
+              color: C.navInk,
+              fontSize: 16,
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {t("layout.adminPanel")}
+          </Link>
+        )}
 
         {/* RULED ORDER: avatar · logo · search · bell · more.
 

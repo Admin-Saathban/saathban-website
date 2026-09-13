@@ -24,7 +24,7 @@
    ════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { barItems } from "./navItems.js";
@@ -112,7 +112,44 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
      readers day. It is also the same boolean the Chats list shows, so
      the badge and the list cannot disagree. */
   const unread = useUnreadChats();
+  const navigate = useNavigate();
   if (items.length < 2) return null; // §0.6: nothing to navigate, no bar
+
+  /* ── THE TABS BY KEYBOARD ──
+
+     A swipe moves one tab left or right; with a keyboard the same move
+     is an arrow key WHILE FOCUS IS IN THE BAR. Only there, so an arrow
+     key never leaves a text box, a slider or a scrolling list — the bar
+     is the one place an arrow has nothing else to do. The first Tab on
+     any screen reaches the bar through "Go to the tabs" (WideLayout).
+
+     Left and right follow what you SEE: in Urdu the bar is mirrored, so
+     the right arrow goes to the tab on the right, which is the previous
+     one in the list. Home and End go to the ends. It stops at the ends
+     rather than wrapping, as a swipe does.
+
+     Moving is going: the tab changes as focus moves, which is what the
+     swipe does and what a tab bar does. The panes are kept alive, so
+     arrowing across does not refetch anything already visited. */
+  const onBarKey = (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    const bar = barRef.current;
+    if (!bar) return;
+    const links = Array.from(bar.querySelectorAll("a[href]"));
+    const at = links.indexOf(document.activeElement);
+    if (at < 0) return;
+    e.preventDefault();
+    const rtl = getComputedStyle(bar).direction === "rtl";
+    let to = at;
+    if (e.key === "Home") to = 0;
+    else if (e.key === "End") to = links.length - 1;
+    else to = at + ((e.key === "ArrowRight") !== rtl ? 1 : -1);
+    if (to < 0 || to >= links.length || to === at) return;
+    links[to].focus();
+    const dest = items[to]?.to;
+    if (dest && window.location.pathname !== dest) navigate(dest);
+  };
 
   /* Every item is shaped the same whether it navigates or opens a
      drawer — the pill, the icon, the label and the tap target must
@@ -192,6 +229,9 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
         onDark
       />
       <span
+        /* WideLayout raises this to 16px from 1024px wide, where the dock
+           has the room; below that the clamp here is untouched. */
+        className="sb-bar-label"
         style={{
           /* THE BAR LABEL STOPS GROWING AT 1.2x, AND ONLY HERE.
 
@@ -248,6 +288,7 @@ export default function BottomBar({ role, buddyActive = true, shuttered = false 
       aria-label={t("hub.navLabel")}
       ref={barRef}
       data-sb-bar=""
+      onKeyDown={onBarKey}
       style={{
         position: "fixed",
         insetInlineStart: 0,

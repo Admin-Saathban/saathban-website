@@ -19,7 +19,7 @@ export function Screen({ children, backTo, backLabel, width = 680 }) {
         padding: "24px 16px 64px",
       }}
     >
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         {backTo && (
           <Link
             to={backTo}

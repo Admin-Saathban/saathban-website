@@ -41,6 +41,7 @@ import useShutter from "./useShutter.js";
 import useTabSwipe from "./useTabSwipe.js";
 import { useDrawer } from "./Drawer.jsx";
 import { MotionStyles } from "./motion.jsx";
+import WideStyles, { SkipToTabs } from "./WideLayout.jsx";
 import pinSafeArea from "./safeArea.js";
 
 const HIDDEN_PREFIXES = ["/app/auth", "/app/admin", "/app/g/", "/app/join/"];
@@ -192,6 +193,10 @@ export default function AppShellBar() {
          component would let a lane adopt half of it, which is how
          five different transitions happened in the first place. */}
       <MotionStyles />
+      {/* The app at width, and the keyboard's way to the tabs. Both are
+         inert on a phone — see WideLayout. */}
+      <WideStyles />
+      <SkipToTabs />
       <BottomBar
         shuttered={shuttered}
         role={role}

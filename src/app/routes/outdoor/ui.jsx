@@ -50,7 +50,8 @@ export function OutdoorScreen({ children, backTo, backLabel, width = 640 }) {
         }
         .sb-outdoor ::placeholder { color: ${C.textMuted}; opacity: 0.8; }
       `}</style>
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      {/* sb-col: widens with the type step at laptop widths (WideLayout). */}
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         {backTo && (
           <Link
             to={backTo}

@@ -24,7 +24,7 @@ function Screen({ children }) {
         padding: "20px 16px 64px",
       }}
     >
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>{children}</div>
+      <div className="sb-col" style={{ maxWidth: 640, margin: "0 auto", "--sb-col": "640px" }}>{children}</div>
     </main>
   );
 }

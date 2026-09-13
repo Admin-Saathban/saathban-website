@@ -390,7 +390,12 @@ export default function MessagesWorld() {
       )}
 
       {/* The world's own header: out, its name, and the pencil (§3). */}
+      {/* data-sb-world-row: from tablet width up WideLayout pads this row in
+          to the column's edges, so "Messages" and "New chat" sit over the
+          list rather than at the two ends of a monitor. The jet still runs
+          edge to edge. */}
       <header
+        data-sb-world-row=""
         style={{
           display: "flex",
           alignItems: "center",
@@ -522,6 +527,7 @@ export default function MessagesWorld() {
       <nav
         aria-label={t("msg.title")}
         ref={worldNavRef}
+        data-sb-world-row=""
         style={{
           display: "flex",
           borderBottom: `1px solid ${C.navEdge}`,
@@ -588,9 +594,10 @@ export default function MessagesWorld() {
           : { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}
       >
         <div
+          className="sb-col"
           style={inThread
-            ? { width: "100%", maxWidth: 640, margin: "0 auto", padding: "8px 12px", boxSizing: "border-box", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
-            : { maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px" }}
+            ? { width: "100%", maxWidth: 640, margin: "0 auto", padding: "8px 12px", boxSizing: "border-box", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", "--sb-col": "640px" }
+            : { maxWidth: 640, margin: "0 auto", padding: "12px 14px 20px", "--sb-col": "640px" }}
         >
           <Routes>
             <Route index element={<ChatsList />} />

@@ -114,7 +114,7 @@ export default function IconHub() {
           padding: "20px 16px 56px",
         }}
       >
-        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", "--sb-col": "600px" }}>
           {/* ── §4 item 2: THE COMPOSER, ABOVE THE LOG ──
 
               Content first, which is the point of the redesign. It sat

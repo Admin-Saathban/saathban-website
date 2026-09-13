@@ -178,7 +178,7 @@ export default function IconHome() {
       >
       <style>{css}</style>
 
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px" }}>
+      <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 56px", "--sb-col": "600px" }}>
         <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 10px", fontWeight: 500 }}>
           {now.toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
         </p>

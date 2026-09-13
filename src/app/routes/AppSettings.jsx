@@ -191,7 +191,7 @@ export default function AppSettings() {
         padding: "24px 16px 64px",
       }}
     >
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: 640, margin: "0 auto", "--sb-col": "640px" }}>
         {/* Back affordance comes from AppHeader now (its own back link
             was removed to avoid two identical links). */}
         <h1

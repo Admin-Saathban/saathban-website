@@ -59,7 +59,8 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640, embe
         }
         .sb-community ::placeholder { color: ${C.textMuted}; opacity: 0.8; }
       `}</style>
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      {/* sb-col: widens with the type step at laptop widths (WideLayout). */}
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         {backTo && (
           <Link
             to={backTo}
@@ -213,6 +214,8 @@ export function Toast({ text, actionLabel, onAction }) {
   return (
     <div
       role="status"
+      /* Lifted above the dock at tablet widths and up (WideLayout). */
+      data-sb-lift=""
       style={{
         position: "fixed",
         insetInlineStart: "50%",

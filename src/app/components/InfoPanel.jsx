@@ -62,11 +62,18 @@ export default function InfoPanel({ open, title, body, onClose }) {
     const bye = () => {
       if (armed) closeRef.current?.();
     };
+    /* Escape is the keyboard's "any tap anywhere else". Without it the
+       only keyboard way out was tabbing to the cross. */
+    const onKey = (e) => {
+      if (e.key === "Escape") closeRef.current?.();
+    };
     document.addEventListener("pointerdown", bye, true);
     document.addEventListener("scroll", bye, true);
     window.addEventListener("scroll", bye, { passive: true });
+    document.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(arm);
+      document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", bye, true);
       document.removeEventListener("scroll", bye, true);
       window.removeEventListener("scroll", bye);
@@ -91,6 +98,12 @@ export default function InfoPanel({ open, title, body, onClose }) {
       onPointerLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
       onTouchEnd={() => setPaused(false)}
+      /* Keyboard focus inside it is the same "I am still reading" as a
+         finger resting on it or a pointer hovering. */
+      onFocus={() => setPaused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setPaused(false);
+      }}
       style={{
         position: "relative",
         display: "flex",

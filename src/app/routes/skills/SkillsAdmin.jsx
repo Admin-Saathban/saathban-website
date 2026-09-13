@@ -1,110 +1,120 @@
 /* ════════════════════════════════════════════════
-   Skills — admin interest counts. A simple page showing how many
-   people asked to be told when each skill opens. Aggregates only,
-   from the skill_interest_counts() RPC (admin-only at the database;
-   non-admins get zero rows).
+   Grow admin — /app/skills/admin ("Courses, surveys & Pending").
 
-   Gated in two places: this component redirects a non-admin, and the
-   route should be registered behind RequireAuth roles={["admin"]}
-   (SKILLS_WIRING.md). RLS/RPC is the real boundary — the guard is
-   navigation.
+   Tabs: Courses · Pending · Surveys · Results (super admins) · Interest.
+   The tab and whatever is open inside it live in the query string, so a
+   link to one survey's people or results can be shared between staff.
+
+   THE DATABASE IS THE BOUNDARY. Every read and write here is a database
+   function that refuses a non-admin (support or super; moderators are
+   refused, §18) and audits the change (0165); results are super-admin
+   only and every read is audited (0166). This component's own guard is
+   navigation: a non-admin is sent back to Grow instead of being shown a
+   screen that would only be refused.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { STRINGS, SKILLS } from "./strings.js";
-import { fetchCounts } from "./data.js";
+import { adminOverview } from "./growData.js";
+import { Notice, errorMessage } from "./admin/ui.jsx";
+import CoursesAdmin from "./admin/CoursesAdmin.jsx";
+import PendingAdmin from "./admin/PendingAdmin.jsx";
+import SurveysAdmin from "./admin/SurveysAdmin.jsx";
+import ResultsAdmin from "./admin/ResultsAdmin.jsx";
+import InterestAdmin from "./admin/InterestAdmin.jsx";
 
 export default function SkillsAdmin() {
-  const { lang, ts, meta } = useI18n();
-  const s = STRINGS[lang] || STRINGS.en;
-  const a = s.admin;
+  const { t, ts, meta } = useI18n();
   const { profile } = useSession();
-
-  const [counts, setCounts] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const [overview, setOverview] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const c = await fetchCounts();
-        if (alive) setCounts(c);
-      } catch {
-        if (alive) setError(a.loadError);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [a.loadError]);
+  const isAdmin = profile?.role === "admin" && profile?.admin_level !== "moderator";
+  const isSuper = isAdmin && profile?.admin_level === "super";
 
-  // Defence in depth: a non-admin should never be routed here, but if they
-  // are, don't render the page (the RPC would return nothing anyway).
-  if (profile && profile.role !== "admin") {
-    return <Navigate to="/app/skills" replace />;
-  }
+  const reload = useCallback(async () => {
+    try {
+      setOverview(await adminOverview());
+      setError("");
+    } catch (e) {
+      setError(errorMessage(e, t));
+      setOverview((o) => o || { courses: [], surveys: [], pending: [], badges: [] });
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (isAdmin) reload();
+  }, [isAdmin, reload]);
+
+  if (profile && !isAdmin) return <Navigate to="/app/skills" replace />;
+
+  const tabs = ["courses", "pending", "surveys", ...(isSuper ? ["results"] : []), "interest"];
+  const wanted = params.get("tab") || "courses";
+  const tab = tabs.includes(wanted) ? wanted : "courses";
+  const props = { overview, reload, params, setParams, isSuper };
 
   return (
-    <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
-      <div style={{ maxWidth: 620, margin: "0 auto" }}>
-        <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 6px" }}>
-          {a.title}
+    <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, fontFamily: meta.fonts.body, padding: "16px 16px 80px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }} data-grow-admin>
+        <Link
+          to="/app/admin"
+          style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.green, fontWeight: 700, fontSize: ts(17), textDecoration: "none" }}
+        >
+          {meta.dir === "rtl" ? "→" : "←"} {t("grow.admin.backToDesk")}
+        </Link>
+        <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(28), fontWeight: 700, color: C.green, margin: "4px 0 4px" }}>
+          {t("grow.admin.title")}
         </h1>
-        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 22px", lineHeight: 1.6 }}>
-          {a.subtitle}
-        </p>
+        <p style={{ fontSize: ts(17), color: C.textMuted, lineHeight: 1.5, margin: "0 0 14px" }}>{t("grow.admin.subtitle")}</p>
 
-        {error && (
-          <p role="alert" style={{ fontSize: ts(A11Y.minBodyPx), color: C.error, fontWeight: 600 }}>{error}</p>
-        )}
+        <nav
+          aria-label={t("grow.admin.title")}
+          style={{ display: "flex", gap: 8, overflowX: "auto", padding: "4px 0 12px", marginBottom: 8, borderBottom: `1px solid ${C.warmGray}` }}
+        >
+          {tabs.map((k) => (
+            <button
+              key={k}
+              type="button"
+              data-tab={k}
+              aria-current={tab === k ? "page" : undefined}
+              onClick={() => setParams({ tab: k })}
+              style={{
+                flex: "0 0 auto",
+                minHeight: A11Y.minTapTargetPx,
+                padding: "0 16px",
+                borderRadius: 50,
+                border: `2px solid ${tab === k ? C.green : C.warmGray}`,
+                background: tab === k ? C.green : C.white,
+                color: tab === k ? C.white : C.textMain,
+                fontFamily: "inherit",
+                fontSize: ts(17),
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t(`grow.admin.tabs.${k}`)}
+            </button>
+          ))}
+        </nav>
 
-        {counts === null ? (
+        {error && <Notice tone="error">{error}</Notice>}
+
+        {tab === "interest" ? (
+          <InterestAdmin />
+        ) : overview === null ? (
           <p aria-busy="true" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}>···</p>
+        ) : tab === "courses" ? (
+          <CoursesAdmin {...props} />
+        ) : tab === "pending" ? (
+          <PendingAdmin {...props} />
+        ) : tab === "surveys" ? (
+          <SurveysAdmin {...props} />
         ) : (
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-            {SKILLS.map((skill) => {
-              const card = s.cards[skill];
-              const n = counts[skill] || 0;
-              return (
-                <li
-                  key={skill}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 14,
-                    background: C.white,
-                    border: `1px solid ${C.warmGray}`,
-                    borderRadius: 16,
-                    padding: "16px 20px",
-                  }}
-                >
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-                    <span aria-hidden="true" style={{ fontSize: ts(26) }}>{card.emoji}</span>
-                    <span style={{ fontSize: ts(20), fontWeight: 700 }}>{card.name}</span>
-                  </span>
-                  <span
-                    style={{
-                      fontSize: ts(A11Y.minBodyPx),
-                      fontWeight: 700,
-                      color: n > 0 ? C.green : C.textMuted,
-                      background: n > 0 ? "#e8f0e6" : C.cream,
-                      border: `1px solid ${n > 0 ? C.sage : C.warmGray}`,
-                      borderRadius: 50,
-                      padding: "6px 16px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {a.countLabel(n)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <ResultsAdmin {...props} />
         )}
       </div>
     </main>

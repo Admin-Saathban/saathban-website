@@ -89,6 +89,10 @@ const KIND_FAMILY = {
   first_post: "moment",
   first_outing: "moment",
   return_after_absence: "moment",
+  /* A finished course or programme (0160) — the badge the admin attached. */
+  course_saathban: "credential",
+  course_complete: "credential",
+  programme_complete: "credential",
 };
 
 export function familyOfKind(triggerKind) {

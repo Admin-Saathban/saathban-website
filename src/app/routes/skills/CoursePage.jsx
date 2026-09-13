@@ -1,104 +1,116 @@
 /* ════════════════════════════════════════════════
-   The Saathban course — PRODUCT_DECISIONS §16.
+   A course or programme — /app/skills/course/:id (and /app/skills/course,
+   which is the Saathban course). PRODUCT_DECISIONS §16.
 
-   Modules → a quiz after each → a final exam → a credential badge.
-   Ten to twenty minutes, and it RESUMES where you left off, because
-   a course a person cannot put down is a course they do not start.
+   Modules → a check question after each (optional) → an exam
+   (optional) → the badge the admin attached to this course.
+
+   THE CONTENT AND THE CREDENTIAL ARE THE DATABASE'S. The course arrives
+   from course_for_me() (0161) in both languages and WITHOUT its correct
+   answers; each module answer and the exam are checked by the server,
+   which also decides completion and awards the badge. This screen never
+   writes progress itself.
 
    "You may skip straight to the exam — but skipping earns nothing."
-   Both halves are real here: the exam is genuinely reachable from the
-   first screen, and the badge is refused by the server (0062) unless
-   the modules are done. The screen never pretends the skip is barred;
-   it tells the truth about what it earns.
+   Both halves stay true: the exam is reachable from the first screen,
+   and completion (and so the badge) waits until every module is done.
 
-   The badge is purely a credential (§16). Nothing in the app reads it
-   as permission, and the copy never implies it unlocks anything.
+   Completing it here is the same completion Pending and Past read, so
+   whichever door the person came through, the course leaves Pending and
+   New and appears in Past.
+
+   The badge is purely a credential (§16). Nothing in the copy implies it
+   unlocks anything.
    ════════════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { useSession } from "../../lib/session.jsx";
 import { pushToast } from "../../lib/feedback.jsx";
-import supabase from "../../lib/supabase.js";
-
-/* Three modules, each with one question. Kept short on purpose: §16
-   budgets the whole course at 10-20 minutes including the exam. */
-export const MODULES = [
-  { key: "what_saathban_is", quiz: ["company", "a_hospital", "a_shop"], answer: "company" },
-  { key: "keeping_people_safe", quiz: ["never_money", "always_money", "sometimes"], answer: "never_money" },
-  { key: "being_good_company", quiz: ["listen", "advise", "correct"], answer: "listen" },
-];
-const EXAM = [
-  { key: "exam_money", options: ["refuse_and_report", "send_once", "ask_family"], answer: "refuse_and_report" },
-  { key: "exam_quiet", options: ["check_in_warmly", "ignore", "tell_everyone"], answer: "check_in_warmly" },
-];
+import { fetchCourse, answerModule, submitExam, pick, word } from "./growData.js";
 
 export default function CoursePage() {
-  const { t, ts, meta } = useI18n();
-  const { profile } = useSession();
+  const { id } = useParams();
+  const ref = id || "saathban-course";
+  const { t, ts, meta, lang } = useI18n();
   const navigate = useNavigate();
 
-  const [done, setDone] = useState([]);
-  const [badgeAt, setBadgeAt] = useState(null);
+  const [course, setCourse] = useState(undefined); // undefined = loading, null = not open to them
   const [view, setView] = useState("map"); // map | module | exam | result
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState(null);
   const [examAnswers, setExamAnswers] = useState({});
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(null); // { kind, badge }
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    supabase
-      .from("course_progress")
-      .select("modules_done, badge_at")
-      .eq("profile_id", profile.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!alive || !data) return;
-        setDone(data.modules_done || []);
-        setBadgeAt(data.badge_at || null);
-      });
-    return () => { alive = false; };
-  }, [profile.id]);
+  const load = useCallback(async () => {
+    try {
+      const c = await fetchCourse(ref);
+      setCourse(c || null);
+      return c || null;
+    } catch {
+      setCourse(null);
+      return null;
+    }
+  }, [ref]);
 
-  const save = async (patch) => {
-    await supabase.from("course_progress").upsert(
-      { profile_id: profile.id, updated_at: new Date().toISOString(), ...patch },
-      { onConflict: "profile_id" }
-    );
-  };
+  useEffect(() => {
+    setCourse(undefined);
+    setView("map");
+    load();
+  }, [load]);
+
+  const done = course?.progress?.modules_done || [];
+  const completed = !!course?.progress?.completed_at;
+  const modules = course?.modules || [];
+  const exam = course?.exam || [];
+  const badgeName = course?.badge ? pick(course.badge, "name", lang) : "";
 
   const finishModule = async () => {
-    const m = MODULES[idx];
-    if (picked !== m.answer) {
+    const m = modules[idx];
+    setBusy(true);
+    let ok = false;
+    try {
+      ok = await answerModule(course.id, m.key, m.question ? picked : null);
+    } catch {
+      setBusy(false);
+      pushToast(t("grow.course.saveFailed"), { tone: "error", key: "course" });
+      return;
+    }
+    setBusy(false);
+    if (!ok) {
       pushToast(t("grow.course.tryAgain"), { tone: "info", key: "course" });
       return;
     }
-    const next = [...new Set([...done, m.key])];
-    setDone(next);
     setPicked(null);
-    await save({ modules_done: next });
-    setView("map");
-  };
-
-  const submitExam = async () => {
-    setBusy(true);
-    const passed = EXAM.every((q) => examAnswers[q.key] === q.answer);
-    if (!passed) {
-      setBusy(false);
-      setResult("failed");
+    const wasComplete = completed;
+    const fresh = await load();
+    if (!wasComplete && fresh?.progress?.completed_at) {
+      setResult({ kind: "completed", badge: fresh.badge });
       setView("result");
       return;
     }
-    await save({ exam_passed_at: new Date().toISOString() });
-    /* The server decides the credential, not this screen. */
-    const { data: awarded } = await supabase.rpc("course_award", { p_modules: done });
+    setView("map");
+  };
+
+  const sendExam = async () => {
+    setBusy(true);
+    let out;
+    try {
+      out = await submitExam(course.id, examAnswers);
+    } catch {
+      setBusy(false);
+      pushToast(t("grow.course.saveFailed"), { tone: "error", key: "course" });
+      return;
+    }
     setBusy(false);
-    setResult(awarded ? "badge" : "passed_but_skipped");
-    if (awarded) setBadgeAt(new Date().toISOString());
+    const wasComplete = completed;
+    await load();
+    if (!out?.passed) setResult({ kind: "failed" });
+    else if (out.completed && !wasComplete) setResult({ kind: "completed", badge: out.badge });
+    else if (out.completed) setResult({ kind: "again" });
+    else setResult({ kind: "passed_but_skipped" });
     setView("result");
   };
 
@@ -134,81 +146,141 @@ export default function CoursePage() {
     cursor: "pointer",
   });
 
+  const lh = meta.dir === "rtl" ? meta.lineHeight : 1.25;
+
+  if (course === undefined) {
+    return <main aria-busy="true" style={{ minHeight: "100vh", background: C.bg }} />;
+  }
+
+  if (course === null) {
+    return (
+      <main style={{ minHeight: "100vh", background: C.bg, fontFamily: meta.fonts.body, padding: "20px 16px 60px" }}>
+        <section data-stage="not-open" style={{ maxWidth: 560, margin: "0 auto" }}>
+          <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 800, color: C.green, lineHeight: lh, margin: "0 0 12px" }}>
+            {t("grow.course.notOpenTitle")}
+          </h1>
+          <p style={{ fontSize: ts(20), color: C.textMain, lineHeight: 1.6, margin: "0 0 20px" }}>{t("grow.course.notOpenBody")}</p>
+          <button type="button" style={btn(true)} onClick={() => navigate("/app/skills")}>
+            {t("grow.survey.back")}
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: C.bg, fontFamily: meta.fonts.body, padding: "20px 16px 60px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <h1
-          style={{
-            fontFamily: meta.fonts.heading,
-            fontSize: ts(26),
-            fontWeight: 800,
-            color: C.brown,
-            lineHeight: meta.dir === "rtl" ? meta.lineHeight : 1.25,
-            margin: "0 0 6px",
-          }}
-        >
-          {t("grow.course.title")}
+      <div style={{ maxWidth: 560, margin: "0 auto" }} data-course-page={course.id} data-course-slug={course.slug || ""}>
+        <p style={{ fontSize: ts(15), fontWeight: 700, color: C.textMuted, margin: "0 0 2px" }}>
+          {t(`grow.page.kind.${course.kind}`)}
+        </p>
+        <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 800, color: C.brown, lineHeight: lh, margin: "0 0 6px" }}>
+          {pick(course, "title", lang)}
         </h1>
-        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "0 0 20px" }}>
-          {t("grow.course.intro")}
+        <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, lineHeight: 1.6, margin: "0 0 20px" }}>
+          {pick(course, "desc", lang)}
         </p>
 
         {view === "map" && (
           <section data-stage="map">
-            {badgeAt && (
+            {completed && (
               <p data-badge="held" style={{ fontSize: ts(20), fontWeight: 700, color: C.green, margin: "0 0 16px" }}>
-                🏅 {t("grow.course.held")}
+                {course.badge ? (
+                  <>
+                    <span aria-hidden="true">{course.badge.emoji} </span>
+                    {t("grow.course.heldBadge", { badge: badgeName })}
+                  </>
+                ) : (
+                  <>✓ {t("grow.course.heldPlain")}</>
+                )}
               </p>
             )}
-            {MODULES.map((m, i) => {
+            {!completed && course.badge && (
+              <p style={{ fontSize: ts(16), color: C.textMuted, margin: "0 0 14px" }}>
+                <span aria-hidden="true">{course.badge.emoji} </span>
+                {t("grow.page.earns", { badge: badgeName })}
+              </p>
+            )}
+            {modules.map((m, i) => {
               const finished = done.includes(m.key);
               return (
                 <button
                   key={m.key}
                   type="button"
                   data-module={m.key}
-                  onClick={() => { setIdx(i); setPicked(null); setView("module"); }}
+                  data-done={finished ? "yes" : "no"}
+                  onClick={() => {
+                    setIdx(i);
+                    setPicked(null);
+                    setView("module");
+                  }}
                   style={option(false)}
                 >
                   <span aria-hidden="true" style={{ color: C.green, width: 20 }}>{finished ? "✓" : "○"}</span>
-                  <span style={{ flex: 1 }}>{t(`grow.course.module.${m.key}`)}</span>
+                  <span style={{ flex: 1 }}>{pick(m, "title", lang)}</span>
+                  {finished && <span style={{ fontSize: ts(15), color: C.textMuted }}>{t("grow.course.moduleDone")}</span>}
                 </button>
               );
             })}
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-              <button type="button" style={btn(true)} data-action="exam" onClick={() => setView("exam")}>
-                {t("grow.course.toExam")}
+            {exam.length > 0 && (
+              <>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+                  <button type="button" style={btn(true)} data-action="exam" onClick={() => setView("exam")}>
+                    {t("grow.course.toExam")}
+                  </button>
+                </div>
+                {modules.length > 0 && (
+                  <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, lineHeight: 1.6, margin: "12px 0 0" }}>
+                    {t("grow.course.skipNote")}
+                  </p>
+                )}
+              </>
+            )}
+            <div style={{ marginTop: 18 }}>
+              <button type="button" style={btn(false)} onClick={() => navigate("/app/skills")}>
+                {t("grow.course.leave")}
               </button>
             </div>
-            {/* The skip is honest about what it earns — §16 says
-                skipping is allowed, not that it is free. */}
-            <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "12px 0 0" }}>
-              {t("grow.course.skipNote")}
-            </p>
           </section>
         )}
 
-        {view === "module" && (
+        {view === "module" && modules[idx] && (
           <section data-stage="module">
             <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), color: C.green, margin: "0 0 10px" }}>
-              {t(`grow.course.module.${MODULES[idx].key}`)}
+              {pick(modules[idx], "title", lang)}
             </h2>
-            <p style={{ fontSize: ts(20), lineHeight: 1.6, color: C.textMain, margin: "0 0 18px" }}>
-              {t(`grow.course.body.${MODULES[idx].key}`)}
+            <p style={{ fontSize: ts(20), lineHeight: 1.6, color: C.textMain, margin: "0 0 18px", whiteSpace: "pre-line" }}>
+              {pick(modules[idx], "body", lang)}
             </p>
-            <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, margin: "0 0 10px" }}>
-              {t(`grow.course.q.${MODULES[idx].key}`)}
-            </p>
-            {MODULES[idx].quiz.map((opt) => (
-              <button key={opt} type="button" onClick={() => setPicked(opt)} aria-pressed={picked === opt} style={option(picked === opt)}>
-                <span aria-hidden="true" style={{ color: C.green, width: 18 }}>{picked === opt ? "✓" : ""}</span>
-                {t(`grow.course.opt.${opt}`)}
-              </button>
-            ))}
+            {modules[idx].question ? (
+              <>
+                <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, margin: "0 0 10px" }}>
+                  {word(modules[idx].question, lang)}
+                </p>
+                {(modules[idx].question.options || []).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setPicked(opt.key)}
+                    aria-pressed={picked === opt.key}
+                    style={option(picked === opt.key)}
+                  >
+                    <span aria-hidden="true" style={{ color: C.green, width: 18 }}>{picked === opt.key ? "✓" : ""}</span>
+                    {word(opt, lang)}
+                  </button>
+                ))}
+              </>
+            ) : null}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-              <button type="button" style={btn(true)} disabled={!picked} onClick={finishModule}>
-                {t("grow.course.check")}
+              <button
+                type="button"
+                style={btn(true)}
+                data-action="check"
+                disabled={busy || (modules[idx].question && !picked)}
+                onClick={finishModule}
+              >
+                {busy ? "…" : modules[idx].question ? t("grow.course.check") : t("grow.course.markRead")}
               </button>
               <button type="button" style={btn(false)} onClick={() => setView("map")}>
                 {t("grow.course.back")}
@@ -222,29 +294,27 @@ export default function CoursePage() {
             <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(22), color: C.green, margin: "0 0 14px" }}>
               {t("grow.course.examTitle")}
             </h2>
-            {EXAM.map((q) => (
+            {exam.map((q) => (
               <div key={q.key} style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, margin: "0 0 10px" }}>
-                  {t(`grow.course.q.${q.key}`)}
-                </p>
-                {q.options.map((opt) => (
+                <p style={{ fontSize: ts(A11Y.minBodyPx), fontWeight: 700, margin: "0 0 10px" }}>{word(q, lang)}</p>
+                {(q.options || []).map((opt) => (
                   <button
-                    key={opt}
+                    key={opt.key}
                     type="button"
-                    onClick={() => setExamAnswers((c) => ({ ...c, [q.key]: opt }))}
-                    aria-pressed={examAnswers[q.key] === opt}
-                    style={option(examAnswers[q.key] === opt)}
+                    onClick={() => setExamAnswers((cur) => ({ ...cur, [q.key]: opt.key }))}
+                    aria-pressed={examAnswers[q.key] === opt.key}
+                    style={option(examAnswers[q.key] === opt.key)}
                   >
                     <span aria-hidden="true" style={{ color: C.green, width: 18 }}>
-                      {examAnswers[q.key] === opt ? "✓" : ""}
+                      {examAnswers[q.key] === opt.key ? "✓" : ""}
                     </span>
-                    {t(`grow.course.opt.${opt}`)}
+                    {word(opt, lang)}
                   </button>
                 ))}
               </div>
             ))}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="button" style={btn(true)} disabled={busy} onClick={submitExam}>
+              <button type="button" style={btn(true)} data-action="submit-exam" disabled={busy} onClick={sendExam}>
                 {busy ? "…" : t("grow.course.submitExam")}
               </button>
               <button type="button" style={btn(false)} onClick={() => setView("map")}>
@@ -254,14 +324,21 @@ export default function CoursePage() {
           </section>
         )}
 
-        {view === "result" && (
-          <section data-stage="result" data-result={result}>
+        {view === "result" && result && (
+          <section data-stage="result" data-result={result.kind}>
             <h2 style={{ fontFamily: meta.fonts.heading, fontSize: ts(24), color: C.green, margin: "0 0 12px" }}>
-              {t(`grow.course.result.${result}Title`)}
+              {t(`grow.course.result.${result.kind}Title`)}
             </h2>
             <p style={{ fontSize: ts(20), lineHeight: 1.6, color: C.textMain, margin: "0 0 20px" }}>
-              {t(`grow.course.result.${result}Body`)}
+              {result.kind === "completed"
+                ? result.badge
+                  ? t("grow.course.result.completedBody", { badge: pick(result.badge, "name", lang) })
+                  : t("grow.course.result.completedPlainBody")
+                : t(`grow.course.result.${result.kind}Body`)}
             </p>
+            {result.kind === "completed" && result.badge && (
+              <p aria-hidden="true" style={{ fontSize: 48, margin: "0 0 16px" }}>{result.badge.emoji}</p>
+            )}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button type="button" style={btn(true)} onClick={() => setView("map")}>
                 {t("grow.course.back")}

@@ -1,38 +1,38 @@
 /* ════════════════════════════════════════════════
-   Skills route table — the single entry point for this folder.
+   Grow with Saathban — the route table for this folder.
 
-   NOT registered in AppRoot.jsx; SKILLS_WIRING.md holds the one-line
-   registration. The /admin subroute additionally needs an admin guard
-   at the registration site (see the wiring note) — SkillsAdmin also
-   self-guards, and the counts RPC is admin-only at the database.
+   Registered once in AppRoot.jsx as skills/* behind RequireAuth.
+
+     /app/skills               the Grow page
+     /app/skills/course        the Saathban course
+     /app/skills/course/:id    any course or programme
+     /app/skills/survey        "Help Saathban's research"
+     /app/skills/survey/:id    any published survey
+     /app/skills/admin/*       courses, Pending, surveys, results, interest
+
+   WHO MAY SEE WHAT IS DECIDED BY THE DATABASE, not by these routes. A
+   course or survey not meant for this account (the research survey is
+   Icons only, §16) comes back from the server as nothing, and the screen
+   returns to Grow. The admin screen self-guards for navigation, and every
+   admin function refuses a non-admin at the database (0165, 0166).
    ════════════════════════════════════════════════ */
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useSession } from "../../lib/session.jsx";
 import SkillsPage from "./SkillsPage.jsx";
 import CoursePage from "./CoursePage.jsx";
 import SurveyPage from "./SurveyPage.jsx";
 import SkillsAdmin from "./SkillsAdmin.jsx";
 
 export default function SkillsRoutes() {
-  /* §16 — the survey is Icons only (no Fam version). The route says
-     so, and the database says so too: survey_responses is written by
-     its owner and read by nobody but them and a super admin. */
-  const { profile } = useSession();
   return (
-    <>
-      <Routes>
-        <Route index element={<SkillsPage />} />
-        {/* §16 — the course is open to Icons, Fam and Buddies. */}
-        <Route path="course" element={<CoursePage />} />
-        {/* The survey is Icons only (§16: no Fam version). */}
-        <Route
-          path="survey"
-          element={profile?.role === "saath_icon" ? <SurveyPage /> : <Navigate to="/app/skills" replace />}
-        />
-        <Route path="admin" element={<SkillsAdmin />} />
-        <Route path="*" element={<Navigate to="/app/skills" replace />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route index element={<SkillsPage />} />
+      <Route path="course" element={<CoursePage />} />
+      <Route path="course/:id" element={<CoursePage />} />
+      <Route path="survey" element={<SurveyPage />} />
+      <Route path="survey/:id" element={<SurveyPage />} />
+      <Route path="admin/*" element={<SkillsAdmin />} />
+      <Route path="*" element={<Navigate to="/app/skills" replace />} />
+    </Routes>
   );
 }

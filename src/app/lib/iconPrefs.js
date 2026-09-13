@@ -34,9 +34,15 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import supabase from "./supabase.js";
+import { isOnline } from "./offline.js";
 
 const LEGACY_KEY = "saathban.app.iconPrefs";
 const cacheKey = (iconId) => `saathban.app.logPrefs.${iconId}`;
+/* Set while a change made on this phone has not reached the server —
+   through a reload, too, so a change made offline is sent up when the
+   connection returns instead of being overwritten by the server's
+   older row. Under the same prefix, so sign-out clears it. */
+const dirtyKey = (iconId) => `saathban.app.logPrefs.dirty.${iconId}`;
 
 export const OPTIONAL_MODULES = ["sleep", "medication", "exercise", "diet", "water"];
 export const TRACKER_TYPES = ["yesno", "count", "note"];
@@ -188,20 +194,45 @@ function setLocal(iconId, prefs, status) {
   emit();
 }
 
+function isDirty(iconId) {
+  try {
+    return window.localStorage.getItem(dirtyKey(iconId)) === "1";
+  } catch {
+    return false;
+  }
+}
+function setDirty(iconId, on) {
+  try {
+    if (on) window.localStorage.setItem(dirtyKey(iconId), "1");
+    else window.localStorage.removeItem(dirtyKey(iconId));
+  } catch {
+    /* storage unavailable — then there is no kept copy to protect either */
+  }
+}
+
+/* true when the row reached the server. */
 async function pushToServer(iconId) {
   const p = byIcon[iconId];
-  if (!p || !iconId) return;
-  const { data, error } = await supabase
-    .from("daily_log_prefs")
-    .upsert(prefsToRow(iconId, p), { onConflict: "profile_id" })
-    .select("configured_by, configured_at")
-    .maybeSingle();
-  if (!error && data) {
-    // The trigger decides the "set up by" stamp; mirror it locally.
-    const cur = byIcon[iconId];
-    if (cur && (cur.configuredBy !== data.configured_by || cur.configuredAt !== data.configured_at)) {
-      setLocal(iconId, { ...cur, configuredBy: data.configured_by, configuredAt: data.configured_at }, "ready");
+  if (!p || !iconId) return false;
+  try {
+    const { data, error } = await supabase
+      .from("daily_log_prefs")
+      .upsert(prefsToRow(iconId, p), { onConflict: "profile_id" })
+      .select("configured_by, configured_at")
+      .maybeSingle();
+    if (error) return false;
+    // Only if nothing newer was changed while this was on its way.
+    if (byIcon[iconId] === p) setDirty(iconId, false);
+    if (data) {
+      // The trigger decides the "set up by" stamp; mirror it locally.
+      const cur = byIcon[iconId];
+      if (cur && (cur.configuredBy !== data.configured_by || cur.configuredAt !== data.configured_at)) {
+        setLocal(iconId, { ...cur, configuredBy: data.configured_by, configuredAt: data.configured_at }, "ready");
+      }
     }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -214,6 +245,7 @@ function update(iconId, patch) {
   if (!iconId) return;
   const cur = byIcon[iconId] || normalize(readJson(cacheKey(iconId)));
   setLocal(iconId, normalize({ ...cur, ...patch }));
+  setDirty(iconId, true);
   scheduleFlush(iconId);
 }
 
@@ -228,6 +260,17 @@ export async function loadIconPrefs(iconId, { isOwn = false } = {}) {
     emit();
   }
   try {
+    // No network: the kept copy is already on screen; nothing to wait for.
+    if (!isOnline()) throw new Error("offline");
+    /* A change made on this phone that never reached the server goes UP
+       first. Reading the server row now would put back the older
+       choices over what the person had just changed. */
+    if (isDirty(iconId)) {
+      if (!(await pushToServer(iconId))) throw new Error("not sent");
+      statusByIcon = { ...statusByIcon, [iconId]: "ready" };
+      emit();
+      return;
+    }
     const { data, error } = await supabase
       .from("daily_log_prefs")
       .select("*")
@@ -278,10 +321,35 @@ export function getIconPrefsStatus(iconId) {
 
 /* The hook: prefs for one Icon (own or, for a permitted Fam member,
    theirs). Loads on first use. */
+/* The kept copy for the FIRST frame, before loadIconPrefs has adopted it
+   into the store — otherwise Home's log row paints the defaults ("1 of
+   3") for a frame and then jumps to the person's own list. Memoised so
+   useSyncExternalStore sees the same object on every read. */
+const firstPaint = new Map();
+function firstPaintPrefs(iconId) {
+  if (!iconId) return DEFAULTS;
+  if (!firstPaint.has(iconId)) {
+    const cached = readJson(cacheKey(iconId));
+    firstPaint.set(iconId, cached ? normalize(cached) : DEFAULTS);
+  }
+  return firstPaint.get(iconId);
+}
+
+/* Back online: anything that loaded from the phone's copy asks the
+   server again, and a change made offline after a load goes up. */
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    for (const id of Object.keys(statusByIcon)) {
+      if (statusByIcon[id] !== "ready") loadIconPrefs(id);
+      else if (isDirty(id)) pushToServer(id);
+    }
+  });
+}
+
 export function useIconPrefs(iconId, { isOwn = true } = {}) {
   const snapshot = useSyncExternalStore(
     subscribe,
-    () => byIcon[iconId] || DEFAULTS,
+    () => byIcon[iconId] || firstPaintPrefs(iconId),
     () => DEFAULTS
   );
   useEffect(() => {

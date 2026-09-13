@@ -266,8 +266,15 @@ self.addEventListener("fetch", (event) => {
      page from the previous deploy keep loading its own pieces. New
      copies go into this build's cache. */
   if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/icons/")) {
+    /* ignoreVary, because the copies are stored under a PLAIN request
+       (precache, SB_CACHE_URLS) while the page asks for its module
+       scripts in CORS mode, carrying an Origin header. A server that
+       answers with "Vary: Origin" (vite preview does, measured) makes
+       those two different requests to the cache, so nothing matched
+       and every script failed offline — a blank page with a full cache
+       behind it. A hashed file is the same bytes whoever asks. */
     event.respondWith(
-      caches.match(request).then(
+      caches.match(request, { ignoreVary: true }).then(
         (hit) =>
           hit ||
           fetch(request).then((response) => {

@@ -27,12 +27,13 @@ import CalendarStrip from "./CalendarStrip.jsx";
 import GreetingCharacter from "./GreetingCharacter.jsx";
 import DailyLogCard, { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import CompanyLine from "./CompanyLine.jsx";
-import { useIconPrefs } from "../../lib/iconPrefs.js";
+import { useIconPrefs, useIconPrefsStatus } from "../../lib/iconPrefs.js";
 import { useSession } from "../../lib/session.jsx";
 import { useDailyLogs } from "./logStore.js";
 import { pushToast } from "../../lib/feedback.jsx";
 import YourDays from "../streaks/YourDays.jsx";
-import { refreshStreaks } from "../streaks/streaksData.js";
+import { refreshStreaks, useMyStreaks } from "../streaks/streaksData.js";
+import ConnectionLine from "./ConnectionLine.jsx";
 
 // Weekday and month names come from Intl for the active language.
 const dateLocaleFor = (lang) => (lang === "ur" ? "ur-PK" : "en-GB");
@@ -59,7 +60,7 @@ const css = `
 export default function IconHome() {
   const { t, ts, lang, meta } = useI18n();
   const dateLocale = dateLocaleFor(lang);
-  const { profile } = useSession();
+  const { profile, profileFresh, profileRefreshFailed } = useSession();
   // RequireAuth guarantees an Icon profile here; the fallback only
   // covers the first render of edge navigations.
   const iconId = profile?.id ?? null;
@@ -69,6 +70,10 @@ export default function IconHome() {
   const [selectedOffset, setSelectedOffset] = useState(0);
 
   const prefs = useIconPrefs(iconId);
+  const prefsStatus = useIconPrefsStatus(iconId);
+  const { fresh: streaksFresh, failed: streaksFailed } = useMyStreaks(iconId);
+  const fresh = profileFresh && prefsStatus === "ready" && status === "ready" && streaksFresh;
+  const failed = profileRefreshFailed || prefsStatus === "local" || status === "local" || streaksFailed;
   const logFor = (offset) => logsByDate[isoDate(daysAgo(-offset))] || {};
   const todayLog = logFor(0);
   // Rest day lives in daily_logs since 0017 gave log_module a
@@ -246,7 +251,10 @@ export default function IconHome() {
 
         {/* Sync standing — only speaks when something is still on its way.
             A fact about the device, never a worry about the person. */}
-        {(pendingCount > 0 || status === "local") && (
+        {/* Only while something is actually waiting to be sent: "no
+            connection" on its own is the ConnectionLine's to say, and
+            saying it twice is noise. */}
+        {pendingCount > 0 && (
           <p
             role="status"
             style={{
@@ -270,6 +278,10 @@ export default function IconHome() {
             that would be empty is absent, not an empty box announcing a
             gap. */}
         <CompanyLine iconId={iconId} />
+
+        {/* Fixed above the bar, with its spacer here at the very end,
+            so it never moves anything above it. */}
+        <ConnectionLine fresh={fresh} failed={failed} />
       </div>
       </main>
     </>

@@ -19,6 +19,30 @@
    role lives. When the Saath-Fam and Saath-Buddy dashboards land,
    point their roles at the real routes here and delete the Welcome
    placeholder.
+
+   ─── OPENING WITH NO NETWORK ───
+
+   Home used to wait on the profile fetch, which is a network round
+   trip, so an Icon on patchy data opened the app to a blank ground.
+   Now the provider starts from what the phone already holds:
+
+   - THE SESSION ON THE DEVICE (lib/offline.js readStoredSession). With
+     an expired access token and no network, supabase-js retries a
+     refresh for up to thirty seconds and then answers null — but it
+     leaves the session in storage, because it has not been refused.
+     So null with a stored session is "unreachable", not "signed out",
+     and the stored session stands. Only SIGNED_OUT (pressing Sign out,
+     or the server actually refusing the refresh token — the client
+     removes the stored session before it says so) ends it.
+
+   - THE LAST PROFILE ROW, cached per person under
+     saathban.app.profile.<id>. It paints the first frame; the fresh row
+     replaces it when it lands. A refresh that fails keeps the cached
+     row on screen (profileRefreshFailed) instead of the retry screen.
+
+   A definitive "no profile row" is only believed from a query made
+   with a LIVE session: an expired token sends the anon key, row
+   security returns nothing, and that nothing is not absence.
    ════════════════════════════════════════════════ */
 
 import {
@@ -33,6 +57,15 @@ import {
 import { Navigate, useLocation } from "react-router-dom";
 import { APP_COLORS as C } from "../../shared/tokens.js";
 import supabase from "./supabase.js";
+import { useI18n } from "./i18n.jsx";
+import {
+  PROFILE_CACHE_PREFIX,
+  isOnline,
+  readStoredSession,
+  readUserCache,
+  removeUserCache,
+  writeUserCache,
+} from "./offline.js";
 
 export function roleHomePath(role) {
   switch (role) {
@@ -103,68 +136,147 @@ export function consumePostLoginPath(role) {
 
 const AuthContext = createContext(null);
 
+function cachedProfileFor(uid) {
+  const row = readUserCache(PROFILE_CACHE_PREFIX, uid)?.data;
+  return row && row.id === uid ? row : null;
+}
+
+/* What the first frame can know without asking anybody. */
+function bootState() {
+  const stored = readStoredSession();
+  if (!stored) {
+    return { session: undefined, profile: { status: "loading", row: null, fresh: false, failed: false } };
+  }
+  const row = cachedProfileFor(stored.user.id);
+  return {
+    session: stored,
+    profile: row
+      ? { status: "ready", row, fresh: false, failed: false }
+      : { status: "loading", row: null, fresh: false, failed: false },
+  };
+}
+
+/* null from the client while the session is still on the phone means
+   the client could not reach the server, not that it was refused. */
+function resolveSession(event, sess) {
+  if (sess) return sess;
+  if (event === "SIGNED_OUT") return null;
+  return readStoredSession();
+}
+
 export function AuthProvider({ children }) {
+  const [boot] = useState(bootState);
   // undefined = still resolving; null = definitively absent.
-  const [session, setSession] = useState(undefined);
+  const [session, setSession] = useState(boot.session);
   /* The profile is a STATUS, not a nullable row — a failed fetch must
      never be mistaken for "this account has no profile" (that mistake
      used to greet existing accounts with the signup role-picker):
        loading — a fetch is in flight (or none started yet)
-       ready   — the row is here
+       ready   — the row is here (fresh: from the server this page life;
+                 otherwise the copy this phone kept)
        absent  — the authed query definitively returned no row
-       error   — the fetch failed; retry, never conclude absence */
-  const [profileState, setProfileState] = useState({ status: "loading", row: null });
+       error   — the fetch failed and there is no copy; retry, never
+                 conclude absence */
+  const [profileState, setProfileState] = useState(boot.profile);
   // Skip profile refetches on token refreshes for the same person.
   const profileUserRef = useRef(null);
+  const freshRef = useRef(false);
+  freshRef.current = profileState.fresh;
+  const loadingRef = useRef(false);
 
   const loadGeneration = useRef(0);
 
   const loadProfile = useCallback(async (sess, { force = false } = {}) => {
     if (!sess) {
       profileUserRef.current = null;
-      setProfileState({ status: "absent", row: null });
+      setProfileState({ status: "absent", row: null, fresh: false, failed: false });
       return;
     }
     // One load per signed-in person: auth events (INITIAL_SESSION,
     // SIGNED_IN, token refreshes) must not restart a finished — or
     // in-flight — load. Manual retry passes force.
     if (!force && profileUserRef.current === sess.user.id) return;
-    profileUserRef.current = sess.user.id;
+    const uid = sess.user.id;
+    profileUserRef.current = uid;
     const generation = ++loadGeneration.current;
     const stale = () => generation !== loadGeneration.current;
-    setProfileState((p) => (p.status === "ready" ? p : { status: "loading", row: null }));
-    // Errors and timeouts get retried with backoff before surfacing;
-    // a clean empty is re-read once in case of a transient blip.
-    const delaysMs = [0, 400, 1200];
-    let lastError = null;
-    for (const delay of delaysMs) {
-      if (delay) await new Promise((r) => setTimeout(r, delay));
-      if (stale()) return;
-      try {
-        // A hung request must surface as an error promptly, not hold
-        // the resolving screen for the browser's own network timeout.
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", sess.user.id)
-          .abortSignal(AbortSignal.timeout(4000))
-          .maybeSingle();
-        if (error) throw error;
-        lastError = null;
-        if (data) {
-          if (!stale()) setProfileState({ status: "ready", row: data });
-          return;
+    /* Keep what is on screen for THIS person; a different person never
+       inherits it, and gets their own copy or the loading state. */
+    setProfileState((p) => {
+      if (p.row && p.row.id === uid) return { ...p, failed: false };
+      const row = cachedProfileFor(uid);
+      return row
+        ? { status: "ready", row, fresh: false, failed: false }
+        : { status: "loading", row: null, fresh: false, failed: false };
+    });
+    /* The four-second abort exists so a hung request does not hold the
+       resolving screen. With the phone's copy already on screen nothing
+       is being held, and on a genuinely slow connection four seconds is
+       less than one request takes — so the copy gets a longer wait and
+       the line says "slow" rather than "no connection". */
+    const timeoutMs = cachedProfileFor(uid) ? 15000 : 4000;
+    loadingRef.current = true;
+    try {
+      // Errors and timeouts get retried with backoff before surfacing;
+      // a clean empty is re-read once in case of a transient blip.
+      const delaysMs = [0, 400, 1200];
+      let lastError = null;
+      for (const delay of delaysMs) {
+        if (delay) await new Promise((r) => setTimeout(r, delay));
+        if (stale()) return;
+        // No network at all: nothing to wait for. The 'online' listener
+        // below tries again the moment there is.
+        if (!isOnline()) {
+          lastError = new Error("offline");
+          break;
         }
-      } catch (e) {
-        lastError = e;
+        try {
+          // A hung request must surface as an error promptly, not hold
+          // the resolving screen for the browser's own network timeout.
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", uid)
+            .abortSignal(AbortSignal.timeout(timeoutMs))
+            .maybeSingle();
+          if (error) throw error;
+          lastError = null;
+          if (data) {
+            writeUserCache(PROFILE_CACHE_PREFIX, uid, data);
+            if (!stale()) setProfileState({ status: "ready", row: data, fresh: true, failed: false });
+            return;
+          }
+        } catch (e) {
+          lastError = e;
+        }
       }
+      if (stale()) return;
+      if (!lastError) {
+        /* Empty twice. Believed only if the client holds a live session —
+           with an expired token the query went out as anon and row
+           security answered for a stranger. */
+        let live = null;
+        try {
+          live = (await supabase.auth.getSession()).data?.session ?? null;
+        } catch {
+          live = null;
+        }
+        if (stale()) return;
+        if (!live || live.user?.id !== uid) lastError = new Error("no live session");
+      }
+      if (lastError) {
+        setProfileState((p) =>
+          p.row && p.row.id === uid
+            ? { ...p, failed: true }
+            : { status: "error", row: null, fresh: false, failed: true }
+        );
+      } else {
+        removeUserCache(PROFILE_CACHE_PREFIX, uid);
+        setProfileState({ status: "absent", row: null, fresh: false, failed: false });
+      }
+    } finally {
+      if (!stale()) loadingRef.current = false;
     }
-    if (stale()) return;
-    setProfileState(
-      lastError
-        ? { status: "error", row: null }
-        : { status: "absent", row: null }
-    );
   }, []);
 
   useEffect(() => {
@@ -172,21 +284,40 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
-      setSession(data.session ?? null);
-      loadProfile(data.session);
+      const next = resolveSession(null, data.session);
+      setSession(next ?? null);
+      loadProfile(next);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, sess) => {
+    } = supabase.auth.onAuthStateChange((event, sess) => {
       if (!alive) return;
-      setSession(sess ?? null);
-      loadProfile(sess);
+      const next = resolveSession(event, sess);
+      setSession(next ?? null);
+      /* A session that has just become usable again (a refresh that
+         finally went through after the connection came back) is the
+         moment to fetch a profile that has so far only come from the
+         phone's copy. */
+      const revived =
+        sess && (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") &&
+        profileUserRef.current === sess.user.id && !freshRef.current && !loadingRef.current;
+      loadProfile(next, { force: Boolean(revived) });
     });
+
+    /* Back online with a profile that never arrived fresh: ask again,
+       without anybody having to press anything. */
+    const onOnline = () => {
+      if (freshRef.current || loadingRef.current) return;
+      const stored = readStoredSession();
+      if (stored) loadProfile(stored, { force: true });
+    };
+    window.addEventListener("online", onOnline);
 
     return () => {
       alive = false;
       subscription.unsubscribe();
+      window.removeEventListener("online", onOnline);
     };
   }, [loadProfile]);
 
@@ -195,11 +326,14 @@ export function AuthProvider({ children }) {
      knows where it is; when that differs from what the profile says (a
      first sign-in, a trip, a clock moved), the person's own row is
      brought into step once per session. A name the database does not
-     recognise is dropped by its trigger, and this does not try again. */
+     recognise is dropped by its trigger, and this does not try again.
+     Only against a row fresh from the server: the phone's copy may be
+     out of date, and an update sent while offline would simply fail and
+     use up the one attempt. */
   const tzTried = useRef(null);
   useEffect(() => {
     const row = profileState.row;
-    if (!row) return;
+    if (!row || !profileState.fresh) return;
     let tz = null;
     try {
       tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
@@ -216,9 +350,14 @@ export function AuthProvider({ children }) {
       .eq("id", row.id)
       .then(({ error }) => {
         if (error) return;
-        setProfileState((p) => (p.row && p.row.id === row.id ? { ...p, row: { ...p.row, timezone: tz } } : p));
+        setProfileState((p) => {
+          if (!p.row || p.row.id !== row.id) return p;
+          const next = { ...p.row, timezone: tz };
+          writeUserCache(PROFILE_CACHE_PREFIX, row.id, next);
+          return { ...p, row: next };
+        });
       });
-  }, [profileState.row]);
+  }, [profileState.row, profileState.fresh]);
 
   // For screens that change the profile (finish forms, future
   // Settings) so guards see the new row without a reload.
@@ -226,7 +365,7 @@ export function AuthProvider({ children }) {
     const {
       data: { session: sess },
     } = await supabase.auth.getSession();
-    await loadProfile(sess, { force: true });
+    await loadProfile(resolveSession(null, sess), { force: true });
   }, [loadProfile]);
 
   const value = useMemo(
@@ -234,6 +373,12 @@ export function AuthProvider({ children }) {
       session: session ?? null,
       profile: profileState.row,
       profileStatus: profileState.status,
+      /* true once the row on screen came from the server in this page
+         life; false while it is the copy this phone kept. */
+      profileFresh: profileState.fresh,
+      /* the last attempt to refresh the row failed (offline, or nothing
+         answering) — the kept copy is still what is shown */
+      profileRefreshFailed: profileState.failed,
       loading:
         session === undefined ||
         (Boolean(session) && profileState.status === "loading"),
@@ -276,11 +421,15 @@ function ResolvingSession() {
 }
 
 /* Signed in, but the profile fetch keeps failing (offline, flaky
-   network). Never the signup picker — the account may well exist.
+   network) and this phone has no copy of it yet — a first open with no
+   connection. Never the signup picker — the account may well exist.
+   In the person's language (the provider only renders once it has
+   arrived), and it tries again by itself when the connection returns.
    onRetryOverride lets screens with their own retry path (Complete)
    reuse this exact state. */
 export function AccountLoadError({ onRetryOverride }) {
   const { refreshProfile } = useSession();
+  const { t, ts } = useI18n();
   const retry = onRetryOverride || refreshProfile;
   const [busy, setBusy] = useState(false);
   return (
@@ -298,12 +447,8 @@ export function AccountLoadError({ onRetryOverride }) {
     >
       <div style={{ maxWidth: 460 }}>
         <p aria-hidden="true" style={{ fontSize: 40, margin: "0 0 10px" }}>🌦️</p>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: C.green, margin: "0 0 10px" }}>
-          Loading your account…
-        </h1>
-        <p style={{ fontSize: 18, lineHeight: 1.6, color: C.textMuted, margin: "0 0 22px" }}>
-          The connection is being slow. Your account is safe — give it another
-          try in a moment.
+        <p role="status" style={{ fontSize: ts(20), lineHeight: 1.6, color: C.textMain, margin: "0 0 22px" }}>
+          {t("common.loadError")}
         </p>
         <button
           type="button"
@@ -323,13 +468,14 @@ export function AccountLoadError({ onRetryOverride }) {
             border: "none",
             background: C.green,
             color: C.cream,
-            fontSize: 18,
+            fontSize: ts(18),
             fontWeight: 600,
+            fontFamily: "inherit",
             cursor: busy ? "default" : "pointer",
             opacity: busy ? 0.6 : 1,
           }}
         >
-          {busy ? "Trying…" : "Try again"}
+          {busy ? "…" : t("feedback.retry")}
         </button>
       </div>
     </main>

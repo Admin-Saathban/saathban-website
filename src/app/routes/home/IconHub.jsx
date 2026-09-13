@@ -37,8 +37,9 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { useSession } from "../../lib/session.jsx";
-import { useIconPrefs } from "../../lib/iconPrefs.js";
+import { useIconPrefs, useIconPrefsStatus } from "../../lib/iconPrefs.js";
 import { useDailyLogs } from "./logStore.js";
+import ConnectionLine from "./ConnectionLine.jsx";
 import { dayEntries, isEntryDone } from "./DailyLogCard.jsx";
 import { greetingKeyForHour, isoDate } from "./homeMock.js";
 import Icon from "../../components/Icon.jsx";
@@ -54,12 +55,18 @@ import { PostComposer } from "../community/Composer.jsx";
 
 export default function IconHub() {
   const { t, ts, meta } = useI18n();
-  const { profile } = useSession();
+  const { profile, profileFresh, profileRefreshFailed } = useSession();
   const iconId = profile?.id ?? null;
   const firstName = (profile?.full_name || "").split(" ")[0];
 
   const prefs = useIconPrefs(profile?.id);
-  const { logsByDate } = useDailyLogs(iconId);
+  const prefsStatus = useIconPrefsStatus(profile?.id);
+  const { logsByDate, status: logStatus } = useDailyLogs(iconId);
+  /* What the connection line reads: everything this screen draws from
+     the network has answered, or one part could not. The feed keeps its
+     own copy and is not counted — it replaces itself when it lands. */
+  const fresh = profileFresh && prefsStatus === "ready" && logStatus === "ready";
+  const failed = profileRefreshFailed || prefsStatus === "local" || logStatus === "local";
   const todayLog = logsByDate[isoDate(new Date())] || {};
   const entries = dayEntries(prefs, new Date());
   const done = entries.filter((e) => isEntryDone(e, todayLog)).length;
@@ -203,6 +210,10 @@ export default function IconHub() {
               labels, automatic widening. A thinner second copy is what
               made them two screens in the first place. */}
           <Feed composer={false} embedded />
+
+          {/* Fixed above the bar, with its spacer here at the very end,
+              so it never moves anything above it. */}
+          <ConnectionLine fresh={fresh} failed={failed} />
         </div>
       </main>
     </>

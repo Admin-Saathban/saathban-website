@@ -26,16 +26,37 @@ export const supabaseConfigError = missing.length
    under one of these prefixes followed by the person's id. The id in
    the key is what stops one person's copy being shown to another; this
    list is what makes signing out take every copy with it, so a shared
-   phone does not keep somebody's feed after they have left. */
-export const SIGNED_IN_CACHE_PREFIXES = ["saathban.app.homeFeed."];
+   phone does not keep somebody's feed after they have left.
+
+   What Home paints from with no network (lib/offline.js): the profile
+   row, the runs and days, today's company line, the log preferences,
+   and the daily logs with their unsent queue. The queue goes too: it
+   holds the same private notes as the log cache, and a phone handed to
+   somebody else must not keep them. A log not yet sent when its writer
+   signs out is therefore not sent — privacy over convenience. */
+export const SIGNED_IN_CACHE_PREFIXES = [
+  "saathban.app.homeFeed.",
+  "saathban.app.profile.",
+  "saathban.app.streaks.",
+  "saathban.app.company.",
+  "saathban.app.logPrefs.",
+  "saathban.app.iconPrefs",
+  "saathban.app.dailyLogs.",
+  "saathban.app.dailyLogQueue.",
+];
 
 function forgetSignedInCaches() {
   try {
     const ls = window.localStorage;
-    for (let i = ls.length - 1; i >= 0; i -= 1) {
+    /* Collected first, removed after. key(i) has no stable order once
+       the store is mutated — measured in Edge, removing while indexing
+       skipped one of eight signed-in copies and it survived sign-out. */
+    const doomed = [];
+    for (let i = 0; i < ls.length; i += 1) {
       const k = ls.key(i);
-      if (k && SIGNED_IN_CACHE_PREFIXES.some((p) => k.startsWith(p))) ls.removeItem(k);
+      if (k && SIGNED_IN_CACHE_PREFIXES.some((p) => k.startsWith(p))) doomed.push(k);
     }
+    doomed.forEach((k) => ls.removeItem(k));
   } catch {
     /* storage unavailable — then nothing was stored either */
   }

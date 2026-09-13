@@ -31,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import supabase from "../../lib/supabase.js";
 import { MOODS, isoDate, daysAgo } from "./homeMock.js";
 import { getIconPrefs } from "../../lib/iconPrefs.js";
+import { isOnline } from "../../lib/offline.js";
 
 // The modules migration 0006 knows (public.log_module). Anything else
 // (tracker:<id> keys) is device-local.
@@ -242,54 +243,87 @@ export function useDailyLogs(iconId) {
     [iconId, logsByDate, persistLogs, scheduleFlush]
   );
 
-  /* Initial read: the last 7 days for the strip. Server rows win over
+  /* The server read: the last 7 days for the strip. Server rows win over
      the cache for the fetched range, except where an unsynced queued
-     write is newer. */
+     write is newer. Run on arrival AND again when the connection comes
+     back, so Home catches up with the day rather than staying on the
+     copy it opened with. With no network at all it does not start:
+     the cache is on screen already, and a request that can only fail
+     would just hold the status at "loading" while it does. */
+  const readGen = useRef(0);
+  const readServer = useCallback(async () => {
+    if (!iconId) return;
+    const gen = ++readGen.current;
+    if (!isOnline()) {
+      setStatus("local");
+      return;
+    }
+    try {
+      const from = isoDate(daysAgo(6));
+      const { data: rows, error } = await supabase
+        .from("daily_logs")
+        .select("log_date, module, payload")
+        .eq("icon_id", iconId)
+        .gte("log_date", from);
+      if (gen !== readGen.current) return;
+      if (error) throw error;
+
+      const server = rowsToLogs(rows || []);
+      const cached = readJson(cacheKey(iconId), {});
+      const queue = readJson(queueKey(iconId), {});
+      const merged = { ...cached };
+      for (const [date, dayLogs] of Object.entries(server)) {
+        merged[date] = { ...(cached[date] || {}), ...dayLogs };
+      }
+      for (const op of Object.values(queue)) {
+        (merged[op.dateIso] ??= {})[op.module] = op.value;
+      }
+      persistLogs(merged);
+      setStatus("ready");
+    } catch {
+      if (gen === readGen.current) setStatus("local"); // cache-only until the next reconnect
+    }
+  }, [iconId, persistLogs]);
+
   useEffect(() => {
     if (!iconId) return;
-    let alive = true;
 
     (async () => {
-      try {
-        const from = isoDate(daysAgo(6));
-        const { data: rows, error } = await supabase
-          .from("daily_logs")
-          .select("log_date, module, payload")
-          .eq("icon_id", iconId)
-          .gte("log_date", from);
-        if (!alive) return;
-        if (error) throw error;
-
-        const server = rowsToLogs(rows || []);
-        const cached = readJson(cacheKey(iconId), {});
-        const queue = readJson(queueKey(iconId), {});
-        const merged = { ...cached };
-        for (const [date, dayLogs] of Object.entries(server)) {
-          merged[date] = { ...(cached[date] || {}), ...dayLogs };
-        }
-        for (const op of Object.values(queue)) {
-          (merged[op.dateIso] ??= {})[op.module] = op.value;
-        }
-        persistLogs(merged);
-        setStatus("ready");
-      } catch {
-        if (alive) setStatus("local"); // cache-only until the next reconnect
-      }
+      await readServer();
       flush();
     })();
 
+    /* Back online: send what was kept first, then read the day again. */
     const onOnline = () => {
       setStatus((s) => (s === "local" ? "loading" : s));
-      flush();
+      flush().then(readServer);
     };
     window.addEventListener("online", onOnline);
     return () => {
-      alive = false;
+      readGen.current += 1;
       window.removeEventListener("online", onOnline);
       clearTimeout(flushTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iconId]);
+
+  /* KEEP TRYING WHILE SOMETHING IS WAITING. The 'online' event is not
+     the only way a connection comes back — a phone that never lost its
+     interface (lie-fi), or a session whose refresh only succeeds a
+     minute after reconnecting, never fires it, and the queue would sit
+     until the next write or reload. Every fifteen seconds while logs are
+     unsent or the day could not be read, try again; an empty queue
+     costs one localStorage read. */
+  useEffect(() => {
+    if (!iconId || (pendingCount === 0 && status !== "local")) return undefined;
+    const id = setInterval(() => {
+      if (!isOnline()) return;
+      flush().then(() => {
+        if (status === "local") readServer();
+      });
+    }, 15000);
+    return () => clearInterval(id);
+  }, [iconId, pendingCount, status, flush, readServer]);
 
   return {
     logsByDate,

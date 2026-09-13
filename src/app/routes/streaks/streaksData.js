@@ -17,6 +17,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import supabase from "../../lib/supabase.js";
 import { fetchMyDays } from "../../lib/points.js";
 import { waterMlOf } from "../../lib/units.js";
+import { STREAKS_CACHE_PREFIX, readUserCache, writeUserCache } from "../../lib/offline.js";
 
 /* ─── Which items can carry a number, and sensible starting ranges ───
    Water is in GLASSES (the server divides the stored ml by 250), sleep
@@ -128,29 +129,66 @@ export function valueCounts(streakLike, value) {
 
 /* ─── The store: my_streaks() + my_days() ─── */
 
-let state = { rows: null, days: null, forId: null, version: 0 };
+/* OFFLINE: the last full answer is kept on this phone for the person it
+   was fetched for (saathban.app.streaks.<id>, lib/offline.js) and is
+   what the pills and "Your days" paint first. fresh says the store holds
+   a server answer from this page life; failed says the last ask did not
+   get one. A copy from an EARLIER DAY keeps its runs and its count of
+   days but not its facts about today — yesterday's "sent today" is not
+   today's. */
+
+let state = { rows: null, days: null, forId: null, fresh: false, failed: false, version: 0 };
 const subs = new Set();
 let inflight = null;
+const KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+const EMPTY = Object.freeze({ rows: null, days: null, fresh: false, failed: false });
 
 function emit(patch) {
   state = { ...state, ...patch, version: state.version + 1 };
   subs.forEach((fn) => fn());
 }
 
+function sameLocalDay(a, b) {
+  const x = new Date(a);
+  const y = new Date(b);
+  return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
+}
+
+function keptFor(profileId) {
+  const c = readUserCache(STREAKS_CACHE_PREFIX, profileId, { maxAgeMs: KEEP_MS });
+  if (!c || !c.data) return null;
+  let rows = Array.isArray(c.data.rows) ? c.data.rows : null;
+  let days = c.data.days && typeof c.data.days === "object" ? c.data.days : null;
+  if (!sameLocalDay(c.at, Date.now())) {
+    rows = rows && rows.map((r) => ({ ...r, today_ok: false, today_value: null, sent_today: 0, received_today: 0 }));
+    days = days && { ...days, logged_today: false };
+  }
+  return { rows, days };
+}
+
 export function refreshStreaks() {
   if (inflight) return inflight;
+  const forId = state.forId;
   inflight = (async () => {
     try {
       const [{ data, error }, days] = await Promise.all([
         supabase.rpc("my_streaks"),
         fetchMyDays().catch(() => null),
       ]);
+      // A different person signed in while this was on its way.
+      if (forId && state.forId !== forId) return;
       const patch = {};
       if (!error) patch.rows = data || [];
       if (days) patch.days = days;
+      patch.fresh = !error && !!days;
+      patch.failed = !patch.fresh;
       emit(patch);
+      if (patch.fresh && forId) {
+        writeUserCache(STREAKS_CACHE_PREFIX, forId, { rows: patch.rows, days: patch.days });
+      }
     } catch {
       /* the card keeps what it had; a streak is never worth an error here */
+      if (!forId || state.forId === forId) emit({ failed: true });
     } finally {
       inflight = null;
     }
@@ -164,6 +202,11 @@ function subscribe(fn) {
 }
 const snapshot = () => state;
 
+/* The kept copy for the very first frame, before the effect below has
+   adopted it into the store. Memoised so the same object comes back on
+   every render until then. */
+const firstPaint = new Map();
+
 /* Reads the store for this person, fetching on first use and whenever
    the signed-in person changes (a different account never inherits it). */
 export function useMyStreaks(profileId) {
@@ -171,14 +214,29 @@ export function useMyStreaks(profileId) {
   useEffect(() => {
     if (!profileId) return;
     if (state.forId !== profileId) {
-      state = { rows: null, days: null, forId: profileId, version: state.version + 1 };
+      const kept = keptFor(profileId);
+      firstPaint.delete(profileId);
+      state = {
+        rows: kept?.rows ?? null,
+        days: kept?.days ?? null,
+        forId: profileId,
+        fresh: false,
+        failed: false,
+        version: state.version + 1,
+      };
       subs.forEach((fn) => fn());
       refreshStreaks();
-    } else if (state.rows === null) {
+    } else if (state.rows === null || !state.fresh) {
       refreshStreaks();
     }
   }, [profileId]);
-  return snap.forId === profileId ? snap : { rows: null, days: null };
+  if (!profileId) return EMPTY;
+  if (snap.forId === profileId) return snap;
+  if (!firstPaint.has(profileId)) {
+    const kept = keptFor(profileId);
+    firstPaint.set(profileId, kept ? { ...EMPTY, ...kept } : EMPTY);
+  }
+  return firstPaint.get(profileId);
 }
 
 export function streakFor(rows, itemKey) {

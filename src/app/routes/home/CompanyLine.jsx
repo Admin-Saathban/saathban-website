@@ -24,12 +24,19 @@
    would be empty is ABSENT. Their own thread — the character, the
    record, the quiet line about their week — is the whole screen, and
    it is complete on its own.
+
+   OFFLINE: the last answer is kept on this phone for the person who
+   asked (saathban.app.company.<id>, first names only) and shown only on
+   the same day it was fetched — yesterday's company is not today's.
+   Cleared on sign-out with every other signed-in copy.
    ════════════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
+import { COMPANY_CACHE_PREFIX, readUserCache, writeUserCache } from "../../lib/offline.js";
+import { isoDate } from "./homeMock.js";
 
 export async function fetchCircleLoggedToday() {
   const { data, error } = await supabase.rpc("circle_logged_today");
@@ -43,19 +50,33 @@ function firstName(name) {
   return String(name || "").trim().split(/\s+/)[0] || "";
 }
 
+function keptForToday(iconId) {
+  if (!iconId) return null;
+  const c = readUserCache(COMPANY_CACHE_PREFIX, iconId)?.data;
+  return c && c.date === isoDate(new Date()) && Array.isArray(c.people) ? c.people : null;
+}
+
 export default function CompanyLine({ iconId }) {
   const { t, ts } = useI18n();
-  const [people, setPeople] = useState(null); // null = not answered yet
+  // null = not answered yet
+  const [people, setPeople] = useState(() => keptForToday(iconId));
 
   useEffect(() => {
     if (!iconId) return undefined;
     let alive = true;
     fetchCircleLoggedToday()
-      .then((rows) => alive && setPeople(rows))
-      /* A failed probe shows nothing at all. The line is a grace note;
-         an error message where a kindness should be is worse than
+      .then((rows) => {
+        writeUserCache(COMPANY_CACHE_PREFIX, iconId, {
+          date: isoDate(new Date()),
+          people: rows.map((r) => ({ full_name: firstName(r.full_name) })),
+        });
+        if (alive) setPeople(rows);
+      })
+      /* A failed probe shows nothing at all — or, offline, what this
+         phone already knew about today. The line is a grace note; an
+         error message where a kindness should be is worse than
          silence. */
-      .catch(() => alive && setPeople([]));
+      .catch(() => alive && setPeople((p) => p ?? []));
     return () => {
       alive = false;
     };
@@ -64,6 +85,7 @@ export default function CompanyLine({ iconId }) {
   if (!people || people.length === 0) return null;
 
   const names = people.map((p) => firstName(p.full_name)).filter(Boolean);
+  if (names.length === 0) return null;
   const text =
     names.length === 1
       ? t("home.company.one", { name: names[0] })

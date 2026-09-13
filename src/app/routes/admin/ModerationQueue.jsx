@@ -30,8 +30,13 @@ const KIND_LABEL = {
   park_board: "admin.mod.surface.park_board",
   group: "admin.mod.surface.group",
   group_post: "admin.mod.surface.group_post",
+  dm_request: "admin.mod.surface.dm_request",
+  dm_conversation: "admin.mod.surface.dm_conversation",
 };
 
+/* Kinds that can be hidden where they live. Hiding goes through
+   moderate_content (0125), which writes the audit entry; no table is
+   written directly any more. */
 const HIDE_TABLE = {
   post: "community_posts",
   comment: "post_comments",
@@ -70,6 +75,8 @@ export default function ModerationQueue() {
   const [names, setNames] = useState({});
   const [resolutionDraft, setResolutionDraft] = useState({}); // id -> text
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [confirmSuspend, setConfirmSuspend] = useState(null); // report id
 
   const load = useCallback(async () => {
     try {
@@ -109,14 +116,16 @@ export default function ModerationQueue() {
      park-board messages hide the same way as posts and comments). */
   const hideContent = async (report) => {
     setError("");
-    const table = HIDE_TABLE[report.target_kind];
-    if (!table) return;
+    if (!HIDE_TABLE[report.target_kind]) return;
     try {
-      const me = { user: await sessionUser() };
-      const { error: err } = await supabase
-        .from(table)
-        .update({ hidden_at: new Date().toISOString(), hidden_by: me?.user?.id || null })
-        .eq("id", report.target_id);
+      const reason = (resolutionDraft[report.id] || "").trim() || t("admin.mod.hiddenNote");
+      const { error: err } = await supabase.rpc("moderate_content", {
+        p_kind: report.target_kind,
+        p_id: report.target_id,
+        p_hide: true,
+        p_reason: reason,
+        p_report: report.id,
+      });
       if (err) throw err;
       setResolutionDraft((d) => ({
         ...d,
@@ -125,6 +134,33 @@ export default function ModerationQueue() {
     } catch {
       setError(t("admin.mod.hideFailed"));
     }
+  };
+
+  /* Pausing the account behind a report: moderator_suspend (0125) — a
+     reason is required and kept on the record with who did it and when;
+     only a super-admin can pause a staff account. Two presses, never one. */
+  const suspendAuthor = async (report) => {
+    setError("");
+    setNotice("");
+    const reason = (resolutionDraft[report.id] || "").trim();
+    if (reason.length < 5) {
+      setError(t("admin.mod.suspendNeedsReason"));
+      return;
+    }
+    if (confirmSuspend !== report.id) {
+      setConfirmSuspend(report.id);
+      return;
+    }
+    setConfirmSuspend(null);
+    const { error: err } = await supabase.rpc("moderator_suspend", {
+      p_profile: report.target_author_id,
+      p_reason: reason,
+    });
+    if (err) {
+      setError(/super-admin/i.test(err.message || "") ? t("admin.mod.suspendAdminRefused") : t("admin.mod.suspendFailed"));
+      return;
+    }
+    setNotice(t("admin.mod.suspended", { name: nameOf(report.target_author_id) }));
   };
 
   const open = (reports || []).filter((r) => r.status === "open");
@@ -146,6 +182,9 @@ export default function ModerationQueue() {
         {t("admin.moderationIntro")}
             </p>
 
+      {notice && (
+        <p role="status" style={{ color: C.green, fontWeight: 700 }}>{notice}</p>
+      )}
       {error && (
         <p role="alert" style={{ color: C.brown, fontWeight: 700 }}>
           <Icon name="warn" size={17} style={{ verticalAlign: "-3px", marginInlineEnd: 6, color: MEANING.warning }} />{error}
@@ -279,6 +318,13 @@ export default function ModerationQueue() {
                       {canHide && (
                         <AdminBtn kind="ghost" onClick={() => hideContent(r)}>{t("admin.hideContent")}</AdminBtn>
                       )}
+                      {r.target_author_id && (
+                        <AdminBtn kind="ghost" onClick={() => suspendAuthor(r)}>
+                          {confirmSuspend === r.id
+                            ? t("admin.mod.suspendConfirm", { name: nameOf(r.target_author_id) })
+                            : t("admin.mod.suspendAuthor")}
+                        </AdminBtn>
+                      )}
                       <AdminBtn
                         kind="primary"
                         disabled={!(resolutionDraft[r.id] || "").trim()}
@@ -308,7 +354,7 @@ export default function ModerationQueue() {
                   >
                     {r.status === "resolved" ? "✓ resolved" : "— dismissed"}
                   </span>{" "}
-                  <strong>{KIND_LABEL[r.target_kind] || r.target_kind}</strong>
+                  <strong>{KIND_LABEL[r.target_kind] ? t(KIND_LABEL[r.target_kind]) : r.target_kind}</strong>
                   {r.reason && <> — {r.reason}</>}
                   <div style={{ color: C.textMuted, fontSize: 15 }}>
                     {r.resolution_note || ""}

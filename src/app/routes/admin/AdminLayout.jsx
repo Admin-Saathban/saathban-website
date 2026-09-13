@@ -27,8 +27,12 @@ export default function AdminLayout() {
   const admin = {
     id: profile.id,
     name: profile.full_name,
-    level: profile.admin_level, // 'support' | 'super'
+    level: profile.admin_level, // 'moderator' | 'support' | 'super'
   };
+  /* A moderator moderates (0125) and nothing else: Buddy vetting,
+     questions and broadcasts are refused to them at the database, so the
+     desk does not offer them and does not fetch them. */
+  const isModerator = admin.level === "moderator";
 
   const [applications, setApplications] = useState(null); // null = loading
   const [loadError, setLoadError] = useState(null);
@@ -38,8 +42,12 @@ export default function AdminLayout() {
   const reload = useCallback(async () => {
     try {
       setLoadError(null);
-      setApplications(await api.fetchApplications());
-      setOpenQuestions(await api.openQuestionsCount());
+      if (!isModerator) {
+        setApplications(await api.fetchApplications());
+        setOpenQuestions(await api.openQuestionsCount());
+      } else {
+        setApplications([]);
+      }
       const { count } = await supabase
         .from("community_reports")
         .select("id", { count: "exact", head: true })
@@ -97,15 +105,17 @@ export default function AdminLayout() {
     ["pending", "interviewing"].includes(a.status)
   ).length;
 
-  const navItems = [
-    { to: "buddies", label: t("admin.buddyReview"), count: openBuddyCount },
-    { to: "questions", label: t("admin.questions"), count: openQuestions },
-    { to: "broadcasts", label: t("admin.broadcasts"), count: 0 },
-    { to: "moderation", label: t("admin.moderation"), count: openReportCount },
-    // The milestone-message desk lives outside the admin shell
-    // (shared route with the Icon view — 0017).
-    { to: "/app/milestones", label: t("admin.navMilestones"), count: 0 },
-  ];
+  const navItems = isModerator
+    ? [{ to: "moderation", label: t("admin.moderation"), count: openReportCount }]
+    : [
+        { to: "buddies", label: t("admin.buddyReview"), count: openBuddyCount },
+        { to: "questions", label: t("admin.questions"), count: openQuestions },
+        { to: "broadcasts", label: t("admin.broadcasts"), count: 0 },
+        { to: "moderation", label: t("admin.moderation"), count: openReportCount },
+        // The milestone-message desk lives outside the admin shell
+        // (shared route with the Icon view — 0017).
+        { to: "/app/milestones", label: t("admin.navMilestones"), count: 0 },
+      ];
 
   return (
     <>

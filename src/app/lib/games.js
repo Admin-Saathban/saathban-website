@@ -167,11 +167,9 @@ export async function fetchGamesTogether(myId, theirId) {
 export async function fetchSession(sessionId) {
   const [{ data: session, error: e1 }, { data: seats, error: e2 }] = await Promise.all([
     supabase.from("game_sessions").select(SESSION_COLS).eq("id", sessionId).maybeSingle(),
-    supabase
-      .from("game_seats")
-      .select("seat_no, profile_id, is_bot, presence, missed_turns, score")
-      .eq("session_id", sessionId)
-      .order("seat_no"),
+    /* Seats through game_table_seats (0126): presence is null for anyone
+       who has hidden their presence, and last_seen_at is never sent. */
+    supabase.rpc("game_table_seats", { p_session: sessionId }),
   ]);
   if (e1) throw e1;
   if (e2) throw e2;

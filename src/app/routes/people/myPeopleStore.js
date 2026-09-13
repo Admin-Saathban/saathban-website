@@ -46,17 +46,17 @@ export async function fetchPersonPresence(profileId) {
       .maybeSingle()
       .then(({ data }) => data)
       .catch(() => null),
+    /* person_in_game (0126): only if they show their presence and I may
+       view that table. Somebody who hid their presence is never "in a game". */
     supabase
-      .from("game_seats")
-      .select("session_id, session:game_sessions(status, game_key)")
-      .eq("profile_id", profileId)
+      .rpc("person_in_game", { p_profile: profileId })
       .then(({ data }) => data || [])
       .catch(() => []),
   ]);
-  const live = (seats || []).find((s) => s.session?.status === "active");
+  const live = (seats || [])[0];
   return {
     checkinPlace: checkin?.place?.name || null,
-    inGame: live ? { sessionId: live.session_id, gameKey: live.session.game_key } : null,
+    inGame: live ? { sessionId: live.session_id, gameKey: live.game_key } : null,
   };
 }
 

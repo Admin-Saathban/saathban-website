@@ -144,11 +144,8 @@ export async function undoMove(sessionId) {
 export async function fetchSession(sessionId) {
   const [{ data: session, error: sErr }, { data: seats, error: tErr }] = await Promise.all([
     supabase.from("game_sessions").select("*").eq("id", sessionId).maybeSingle(),
-    supabase
-      .from("game_seats")
-      .select("seat_no, profile_id, is_bot, presence")
-      .eq("session_id", sessionId)
-      .order("seat_no"),
+    /* Masked presence (0126): hidden presence reads as null here. */
+    supabase.rpc("game_table_seats", { p_session: sessionId }),
   ]);
   if (sErr) throw new Error(sErr.message);
   if (tErr) throw new Error(tErr.message);

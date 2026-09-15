@@ -68,14 +68,11 @@ export function attentionItems(d, t) {
   if (n(d.proposals_pending) > 0) {
     out.push({ key: "proposals", to: "/app/admin/gatherings", title: plural(t, "admin.front.proposals", n(d.proposals_pending)) });
   }
-  if (n(d.access_notes_unchecked) > 0) {
-    out.push({
-      key: "notes",
-      to: "/app/admin/places",
-      title: plural(t, "admin.front.notes", n(d.access_notes_unchecked)),
-      detail: t("admin.front.notesDetail"),
-    });
-  }
+  /* Unchecked access notes are not listed here (0177). They are real
+     work but nobody is waiting on them — a guess is withheld from every
+     place until someone looks — and counting them meant this screen
+     could never say "nothing waiting". They live in their own list, the
+     Access notes screen, which says how many are unchecked. */
   return out;
 }
 

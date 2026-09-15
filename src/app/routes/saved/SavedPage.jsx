@@ -23,7 +23,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
-import { roleHomePath, useSession } from "../../lib/session.jsx";
+import { useSession } from "../../lib/session.jsx";
+/* appHomePath, not roleHomePath: an admin reading Saved is in the app,
+   and "home" for them is the app's centre tab, not the admin panel. */
+import { appHomePath } from "../../components/navItems.js";
 import { arrivalClass } from "../../components/motion.jsx";
 
 export default function SavedPage() {
@@ -43,7 +46,7 @@ export default function SavedPage() {
           padding: "16px 16px 80px",
         }}
       >
-        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", "--sb-col": "600px" }}>
           <h1
             style={{
               fontFamily: meta.fonts.heading,
@@ -64,7 +67,7 @@ export default function SavedPage() {
           </p>
 
           <Link
-            to={profile ? roleHomePath(profile.role) : "/app"}
+            to={profile ? appHomePath(profile.role) : "/app"}
             style={{
               display: "inline-flex",
               alignItems: "center",

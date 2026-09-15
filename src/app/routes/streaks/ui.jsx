@@ -238,7 +238,7 @@ export function StreakScreen({ title, onBack, backLabel, children }) {
   const { ts, meta } = useI18n();
   return (
     <main style={{ minHeight: "100vh", background: C.ground, color: C.textMain, padding: "14px 16px 96px", boxSizing: "border-box" }}>
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", "--sb-col": "600px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
           <button
             type="button"

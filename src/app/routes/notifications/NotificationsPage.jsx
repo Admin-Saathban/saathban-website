@@ -113,7 +113,7 @@ export default function NotificationsPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.textMain, padding: "20px 16px 64px" }}>
-      <div style={{ maxWidth: 620, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: 620, margin: "0 auto", "--sb-col": "620px" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 6px" }}>
             {s.title}

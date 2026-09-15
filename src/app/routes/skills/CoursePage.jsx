@@ -155,7 +155,7 @@ export default function CoursePage() {
   if (course === null) {
     return (
       <main style={{ minHeight: "100vh", background: C.bg, fontFamily: meta.fonts.body, padding: "20px 16px 60px" }}>
-        <section data-stage="not-open" style={{ maxWidth: 560, margin: "0 auto" }}>
+        <section data-stage="not-open" className="sb-col" style={{ maxWidth: 560, margin: "0 auto", "--sb-col": "560px" }}>
           <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(26), fontWeight: 800, color: C.green, lineHeight: lh, margin: "0 0 12px" }}>
             {t("grow.course.notOpenTitle")}
           </h1>
@@ -170,7 +170,7 @@ export default function CoursePage() {
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, fontFamily: meta.fonts.body, padding: "20px 16px 60px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }} data-course-page={course.id} data-course-slug={course.slug || ""}>
+      <div className="sb-col" style={{ maxWidth: 560, margin: "0 auto", "--sb-col": "560px" }} data-course-page={course.id} data-course-slug={course.slug || ""}>
         <p style={{ fontSize: ts(15), fontWeight: 700, color: C.textMuted, margin: "0 0 2px" }}>
           {t(`grow.page.kind.${course.kind}`)}
         </p>

@@ -50,7 +50,7 @@ export function FamScreen({ children, backTo, backLabel, width = 680 }) {
         .sb-fam ::placeholder { color: ${C.textMuted}; opacity: 0.8; }
       `}</style>
 
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         <header style={{ marginBottom: 24 }}>
           <a href="/app" style={{ display: "inline-block" }}>
             <Logo height={30} />

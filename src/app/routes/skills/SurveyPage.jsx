@@ -242,7 +242,7 @@ export default function SurveyPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, fontFamily: meta.fonts.body, padding: "20px 16px 60px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }} data-survey-page={survey?.id || ""}>
+      <div className="sb-col" style={{ maxWidth: 560, margin: "0 auto", "--sb-col": "560px" }} data-survey-page={survey?.id || ""}>
         {stage === "checking" && <div aria-busy="true" style={{ minHeight: 240 }} />}
 
         {stage === "answered" && (

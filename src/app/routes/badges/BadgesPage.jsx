@@ -150,7 +150,7 @@ export default function BadgesPage() {
           padding: "16px 16px 80px",
         }}
       >
-        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", "--sb-col": "600px" }}>
           <h1
             style={{
               fontFamily: meta.fonts.heading,

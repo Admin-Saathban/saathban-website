@@ -16,7 +16,7 @@ export function Screen({ children, width = 680 }) {
         padding: "24px 16px 64px",
       }}
     >
-      <div style={{ maxWidth: width, margin: "0 auto" }}>{children}</div>
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>{children}</div>
     </main>
   );
 }

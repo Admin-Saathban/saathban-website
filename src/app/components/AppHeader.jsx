@@ -27,6 +27,7 @@ import Logo from "./Logo.jsx";
 import HeaderAvatar from "./HeaderAvatar.jsx";
 import { IconChip } from "./Icon.jsx";
 import { MORE_DRAWER_ID } from "./MoreDrawer.jsx";
+import { appHomePath } from "./navItems.js";
 import SearchButton from "./SearchButton.jsx";
 import NotificationsDrawer, { NOTIFICATIONS_DRAWER_ID } from "./NotificationsDrawer.jsx";
 import { useDrawer } from "./Drawer.jsx";
@@ -38,7 +39,8 @@ import { NO_HEADER } from "./headerRoutes.js";
    It is mounted ONCE by the shell now, so it has to answer this for
    itself exactly as the bottom bar does — the same shape as
    AppShellBar's own list, kept beside it rather than shared, because
-   the two disagree on purpose: admin keeps its header and has no bar.
+   the two disagree on purpose: the admin panel keeps this header and
+   has no bar.
 
    The Messages world is here because it draws its own header. Two
    headers stacked is what lifting this into the shell would otherwise
@@ -186,7 +188,12 @@ export default function AppHeader() {
        one reads the DOM, so it has to list what changes the DOM. */
   }, [shuttered, pathname, profile]);
 
-  const home = profile ? roleHomePath(profile.role) : "/app";
+  /* Inside the panel an admin's home is the panel; anywhere else in the
+     app it is the app's centre tab (appHomePath), so the wordmark and the
+     back arrow never send an admin out of the app they are using. Every
+     other role: roleHomePath, as before. */
+  const inPanel = Boolean(profile) && profile.role === "admin" && pathname.startsWith("/app/admin");
+  const home = !profile ? "/app" : inPanel ? roleHomePath(profile.role) : appHomePath(profile.role);
   /* A way back on every inner page, except the admin shell, which has
      its own sidebar. */
   const showBack =
@@ -232,7 +239,9 @@ export default function AppHeader() {
     <>
     <header
       ref={hdrRef}
-      className="sb-header"
+      /* sb-hdr-back: the wordmark shares the row with a back arrow, which
+         is what makes it too narrow up to ~400px (the style block below). */
+      className={showBack ? "sb-header sb-hdr-back" : "sb-header"}
       style={{
         position: "sticky",
         top: 0,
@@ -281,8 +290,82 @@ export default function AppHeader() {
         @media (max-width: 559px) {
           .sb-admin-link { order: 99; flex: 1 0 100%; margin: 2px 0 4px !important; }
         }
+        /* ── WHERE THE WORDMARK DID NOT FIT ──
+
+           The wordmark is 154px of type (23px, tracked 0.16em). Measured
+           on the build before this rule, it spilled out of its slot into
+           both neighbours:
+
+           - every header under 360px: at 320 the slot is 108px on Home
+             and 68px on a screen with a back arrow — 16px over the
+             avatar's picture (the "S"), 13-33px under the search chip
+             (the "N"). Some of the oldest phones in Pakistan are 320px.
+           - a header WITH A BACK ARROW from 360px up to about 398px, where
+             the slot finally reaches 154px: at 360 and 390 it covered the
+             back arrow and ran under the search chip. Home-type headers
+             (no back arrow) fit from 360px, so they are not touched there.
+
+           The ranges: under 360 for everyone; 360-419 only with a back
+           arrow (sb-hdr-back), 20px of margin past the last overlap.
+
+           Every tap target keeps its size. The room comes from the
+           spacing around them — the header's side padding 10 -> 4, the
+           4px gaps between items and the 2px between the icons to 0, and
+           the browser's default 6px button padding on search and the
+           bell, which made those two 46 wide against More's 44.
+
+           Then the wordmark is fitted to the slot that is left, by
+           CONTAINER QUERIES on the slot itself: where 154px of type still
+           fits (a slot of 158px or more) it is exactly the usual 23px at
+           0.16em; where it does not, the tracking eases to 0.10em and the
+           size follows the slot (inner screen at 320: about 15px; at 360:
+           about 21.6px), never above 23. Outside the two ranges the slot is
+           not a container, so none of this can match.
+
+           The vw lines inside the media blocks are the fallback for
+           browsers older than container queries: sized for a screen with
+           a back arrow, whose slot is 100vw - 220px once the spacing
+           above is taken out. */
+        @media (max-width: 359px) {
+          header.sb-header { padding-inline: 4px !important; }
+          .sb-hdr-row, .sb-hdr-icons { gap: 0 !important; }
+          .sb-hdr-icons > button { padding: 0 !important; }
+          .sb-hdr-mark { container-type: inline-size; }
+          .sb-hdr-mark > [role="img"] {
+            letter-spacing: 0.1em !important;
+            text-indent: 0.1em !important;
+            font-size: clamp(12px, calc((100vw - 226px) / 6.2), 23px) !important;
+          }
+        }
+        @media (min-width: 360px) and (max-width: 419px) {
+          header.sb-header.sb-hdr-back { padding-inline: 4px !important; }
+          .sb-hdr-back .sb-hdr-row, .sb-hdr-back .sb-hdr-icons { gap: 0 !important; }
+          .sb-hdr-back .sb-hdr-icons > button { padding: 0 !important; }
+          .sb-hdr-back .sb-hdr-mark { container-type: inline-size; }
+          .sb-hdr-back .sb-hdr-mark > [role="img"] {
+            letter-spacing: 0.1em !important;
+            text-indent: 0.1em !important;
+            font-size: clamp(12px, calc((100vw - 226px) / 6.2), 23px) !important;
+          }
+        }
+        /* header.sb-header in front so these outrank the fallbacks above. */
+        @container (min-width: 158px) {
+          header.sb-header .sb-hdr-mark > [role="img"] {
+            letter-spacing: 0.16em !important;
+            text-indent: 0.16em !important;
+            font-size: 23px !important;
+          }
+        }
+        @container (max-width: 157.9px) {
+          header.sb-header .sb-hdr-mark > [role="img"] {
+            letter-spacing: 0.1em !important;
+            text-indent: 0.1em !important;
+            font-size: clamp(12px, calc((100cqi - 6px) / 6.2), 23px) !important;
+          }
+        }
       `}</style>
       <div
+        className="sb-hdr-row"
         style={{
           maxWidth: 960,
           margin: "0 auto",
@@ -335,6 +418,7 @@ export default function AppHeader() {
         <Link
           to={home}
           aria-label="Saathban"
+          className="sb-hdr-mark"
           style={{
             /* The wordmark is TYPE now, and this anchor was decorating
                it — a thin underline straight through the mark, which the
@@ -388,7 +472,7 @@ export default function AppHeader() {
             belongs. What is left in this corner is the two things
             that act ON the screen you are already looking at (find
             something, see what happened) plus the menu. */}
-        <nav style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+        <nav className="sb-hdr-icons" style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
           <SearchButton />
           <NotificationsBell />
           {/* MORE, TOP-RIGHT (§6). The drawer grows from THIS corner

@@ -415,7 +415,7 @@ export default function CirclePage() {
   return (
     <main style={{ minHeight: "100vh", background: C.ground, color: C.textMain, padding: "20px 16px 64px" }}>
       {welcomeName && <WelcomeSheet name={welcomeName} onClose={() => setWelcomeName(null)} />}
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: 640, margin: "0 auto", "--sb-col": "640px" }}>
         <h1 style={{ fontFamily: meta.fonts.heading, fontSize: ts(32), fontWeight: 700, color: C.green, margin: "4px 0 8px" }}>
           {t("circle.title")}
         </h1>

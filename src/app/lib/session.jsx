@@ -503,16 +503,18 @@ export function AccountLoadError({ onRetryOverride }) {
 export function RequireAuth({ roles, children }) {
   const { session, profile, profileStatus, loading } = useSession();
   const location = useLocation();
+  /* ONE state object per address, not one per render. <Navigate> navigates
+     in an effect keyed on `state`, so a fresh `{ from }` every render made
+     any guard that stays mounted (a kept tab pane, found on the deployed
+     build) navigate on every render: /app/auth/login 200-300 times a
+     second. TabPanes no longer renders hidden panes signed out; this keeps
+     every other long-lived guard from ever doing the same. */
+  const from = location.pathname + location.search;
+  const loginState = useMemo(() => ({ from }), [from]);
 
   if (loading) return <ResolvingSession />;
   if (!session) {
-    return (
-      <Navigate
-        to="/app/auth/login"
-        replace
-        state={{ from: location.pathname + location.search }}
-      />
-    );
+    return <Navigate to="/app/auth/login" replace state={loginState} />;
   }
   // A fetch failure is NOT absence: hold the door with a retry state.
   if (profileStatus === "error") return <AccountLoadError />;

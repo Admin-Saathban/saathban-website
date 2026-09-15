@@ -65,7 +65,7 @@ export default function MorePage() {
           padding: `16px 14px calc(var(--sb-bar-h, ${BAR_HEIGHT}px) + 24px)`,
         }}
       >
-        <div style={{ maxWidth: 620, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 620, margin: "0 auto", "--sb-col": "620px" }}>
           <h1
             style={{
               fontSize: ts(28),

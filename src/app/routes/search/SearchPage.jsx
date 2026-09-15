@@ -374,7 +374,7 @@ export default function SearchPage() {
           padding: "12px 0 80px",
         }}
       >
-        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", "--sb-col": "600px" }}>
           <label htmlFor="sb-search" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
             {t("search.title")}
           </label>

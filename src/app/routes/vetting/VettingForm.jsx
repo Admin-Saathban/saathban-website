@@ -306,7 +306,7 @@ function VettingFormInner() {
     return (
       <main className="vt-root" style={pageStyle}>
         <style>{css}</style>
-        <div style={columnStyle}>
+        <div className="sb-col" style={columnStyle}>
           <p role="status" style={{ fontSize: 19, color: C.textMuted, marginTop: 48, textAlign: "center" }}>
             {t("vetting.form.oneMoment")}
           </p>
@@ -319,7 +319,7 @@ function VettingFormInner() {
     return (
       <main className="vt-root" style={pageStyle}>
         <style>{css}</style>
-        <div style={columnStyle}>
+        <div className="sb-col" style={columnStyle}>
           <ApplicationStatus application={application} justSubmitted={justSubmitted} />
         </div>
       </main>
@@ -330,7 +330,7 @@ function VettingFormInner() {
     return (
       <main className="vt-root" style={pageStyle}>
         <style>{css}</style>
-        <div style={columnStyle}>
+        <div className="sb-col" style={columnStyle}>
           <KindErrorScreen
             code={refusal.code}
             daysLeft={refusal.daysLeft || 0}
@@ -345,7 +345,7 @@ function VettingFormInner() {
   return (
     <main className="vt-root" style={pageStyle}>
       <style>{css}</style>
-      <div style={columnStyle}>
+      <div className="sb-col" style={columnStyle}>
         <header style={{ margin: "8px 0 20px" }}>
           <h1 style={{ ...h1Style, fontFamily: meta.fonts.heading }}>
             {t("vetting.form.title")}
@@ -504,6 +504,7 @@ const pageStyle = {
 
 const columnStyle = {
   maxWidth: 640,
+  "--sb-col": "640px",
   margin: "0 auto",
   padding: "24px 16px 64px",
 };

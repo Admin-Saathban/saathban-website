@@ -61,7 +61,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { RequireAuth } from "../lib/session.jsx";
+import { RequireAuth, useSession } from "../lib/session.jsx";
 import { lazyScreen, whenIdle, ScreenArriving, ScreenLoadBoundary } from "../lib/lazyScreen.jsx";
 import { isOnline } from "../lib/offline.js";
 import { quietenShutter, revealBars, freezeShutter, thawShutter } from "./useShutter.js";
@@ -94,7 +94,12 @@ const PANES = [
     el: () => <RequireAuth><GamesRoutes /></RequireAuth> },
   { key: "outdoor", base: "/app/outdoor", path: "outdoor/*", preload: OutdoorRoutes.preload,
     el: () => <RequireAuth><OutdoorRoutes /></RequireAuth> },
-  { key: "home", base: "/app/home", path: "home/*", preload: null,
+  /* `roles`: who may have this pane PRE-MOUNTED as a neighbour. Home is
+     Icon-only, and a hidden Home pane mounted for anyone else renders
+     RequireAuth's redirect — which navigates the whole app. For an admin
+     standing on Out & about or Groups that yanked them into the panel at
+     the first idle moment. */
+  { key: "home", base: "/app/home", path: "home/*", preload: null, roles: ["saath_icon"],
     el: () => <RequireAuth roles={["saath_icon"]}><HomeRoutes /></RequireAuth> },
   { key: "groups", base: "/app/groups", path: "groups/*", preload: GroupsRoutes.preload,
     el: () => <RequireAuth><GroupsRoutes /></RequireAuth> },
@@ -132,6 +137,29 @@ export function paneFor(pathname) {
 export default function TabPanes() {
   const location = useLocation();
   const active = paneFor(location.pathname);
+  const { session, profile, loading } = useSession();
+  const role = profile?.role;
+  /* ── A HIDDEN PANE NEVER REDIRECTS ──
+
+     Found on the deployed build: signed out, open /app/community and the
+     tab froze — /app/auth/login was navigated to 200-300 times a second
+     and the email field never appeared.
+
+     The cause is this file plus RequireAuth. The active pane's RequireAuth
+     redirects to login once, correctly. The Community pane then stays
+     MOUNTED as a hidden pane still rendering its frozen /app/community, so
+     its RequireAuth renders <Navigate to=login state={{ from }}> again.
+     React Router's Navigate navigates in an effect keyed on `state`, and
+     `{ from }` is a new object on every render — so every render
+     navigates, every navigation re-renders the panes, and round it goes.
+
+     So a pane that is not the one on screen is rendered only for someone
+     signed in, and only if their role may open it. The pane on screen
+     still renders whatever its guard says — that is the single redirect
+     that should happen. */
+  const signedIn = Boolean(session && profile);
+  const mayHold = (p) =>
+    p.key === active || (signedIn && (!p.roles || p.roles.includes(role)));
 
   /* Insertion order is visit order; a pane never leaves once added. */
   const [visited, setVisited] = useState(() => (active ? [active] : []));
@@ -166,10 +194,14 @@ export default function TabPanes() {
      CODE FIRST, THEN THE MOUNT. A neighbour's chunk is fetched before it
      is added, so what mounts is already here and nothing suspends. */
   useEffect(() => {
-    if (!active) return undefined;
+    /* Nobody signed in: nothing to pre-mount, and a pre-mounted pane would
+       only be a guard waiting to redirect. */
+    if (!active || !signedIn) return undefined;
     const here = PANES.findIndex((p) => p.key === active);
     if (here < 0) return undefined;
-    const want = [PANES[here - 1], PANES[here + 1]].filter(Boolean).map((p) => p.key);
+    const want = [PANES[here - 1], PANES[here + 1]]
+      .filter((p) => p && (!p.roles || p.roles.includes(role)))
+      .map((p) => p.key);
     if (want.every((k) => visited.includes(k))) return undefined;
 
     let cancelled = false;
@@ -214,7 +246,21 @@ export default function TabPanes() {
       cancelIdle();
       window.removeEventListener("online", onOnline);
     };
-  }, [active, visited]);
+  }, [active, visited, role, signedIn]);
+
+  /* SIGNED OUT FOR REAL (not merely resolving): forget the kept tabs, where
+     they were frozen and how far they were scrolled. The next person to
+     sign in on this phone starts from their own first screen, not from
+     the previous person's panes coming back into view. */
+  useEffect(() => {
+    if (loading || session) return;
+    setVisited((v) => {
+      const keep = active ? [active] : [];
+      return v.length === keep.length && v.every((k, i) => k === keep[i]) ? v : keep;
+    });
+    for (const k of Object.keys(frozen.current)) if (k !== active) delete frozen.current[k];
+    scrolls.current = {};
+  }, [loading, session, active]);
 
   /* The two tabs further away: code only, never a mount. Later and at
      idle, so it never competes with the screen being opened. */
@@ -352,7 +398,7 @@ export default function TabPanes() {
 
   return (
     <>
-      {PANES.filter((p) => visited.includes(p.key)).map((p) => (
+      {PANES.filter((p) => visited.includes(p.key) && mayHold(p)).map((p) => (
         <div
           key={p.key}
           data-sb-pane={p.key}

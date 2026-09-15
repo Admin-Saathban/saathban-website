@@ -204,7 +204,7 @@ export default function CalendarPage() {
           padding: "18px 16px 60px",
         }}
       >
-        <div style={{ maxWidth: 620, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 620, margin: "0 auto", "--sb-col": "620px" }}>
           <h1
             style={{
               fontFamily: meta.fonts.heading,

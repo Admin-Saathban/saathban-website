@@ -116,7 +116,7 @@ export default function NotifySettings() {
   );
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
+    <div className="sb-col" style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px", "--sb-col": "600px" }}>
       <h1
         style={{
           fontFamily: meta.fonts.heading,

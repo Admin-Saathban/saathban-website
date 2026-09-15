@@ -25,6 +25,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { APP_COLORS as C, APP_FONT, A11Y } from "../../../shared/tokens.js";
 import { useSession } from "../../lib/session.jsx";
+import { useI18n } from "../../lib/i18n.jsx";
 import supabase from "../../lib/supabase.js";
 import {
   fetchOwnApplications,
@@ -50,6 +51,10 @@ const card = {
 };
 
 export default function BuddyHome() {
+  /* ts() for the headings, as every other screen: the reader's text size
+     and the laptop/desk type step (WideLayout) both reach them. At the
+     default size on a phone ts(30) is exactly the 30px it was. */
+  const { ts } = useI18n();
   const { profile } = useSession();
   const firstName = (profile?.full_name || "").split(" ")[0];
 
@@ -123,11 +128,11 @@ export default function BuddyHome() {
           padding: "20px 16px 56px",
         }}
       >
-        <div style={{ maxWidth: 620, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 620, margin: "0 auto", "--sb-col": "620px" }}>
           <h1
             style={{
               fontFamily: APP_FONT,
-              fontSize: 30,
+              fontSize: ts(30),
               fontWeight: 700,
               color: C.green,
               margin: "6px 0 20px",
@@ -147,7 +152,7 @@ export default function BuddyHome() {
             <p style={{ color: C.textMuted }} role="status">Loading…</p>
           ) : application === null ? (
             <section style={card}>
-              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: ts(22), color: C.brown, margin: "0 0 8px" }}>
                 {cooldown > 0 ? "About your application" : "Your volunteer application"}
               </h2>
               <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: "0 0 16px" }}>
@@ -175,7 +180,7 @@ export default function BuddyHome() {
             </section>
           ) : status === "suspended" ? (
             <section style={card}>
-              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: ts(22), color: C.brown, margin: "0 0 8px" }}>
                 Your volunteering is paused
               </h2>
               <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: 0 }}>
@@ -186,7 +191,7 @@ export default function BuddyHome() {
           ) : (
             <>
               <section style={{ ...card, borderColor: status === "active" ? C.green : C.warmGray }}>
-                <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.green, margin: "0 0 8px" }}>
+                <h2 style={{ fontFamily: APP_FONT, fontSize: ts(22), color: C.green, margin: "0 0 8px" }}>
                   {status === "active" ? "You're an active Saath-Buddy" : "Your application"}
                 </h2>
                 <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, margin: 0 }}>
@@ -204,7 +209,7 @@ export default function BuddyHome() {
 
               {status === "active" && (
                 <section style={card}>
-                  <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+                  <h2 style={{ fontFamily: APP_FONT, fontSize: ts(22), color: C.brown, margin: "0 0 8px" }}>
                     Your Saath-Icons
                   </h2>
                   <p style={{ fontSize: A11Y.minBodyPx, lineHeight: 1.6, color: C.textMuted, margin: 0 }}>
@@ -220,7 +225,7 @@ export default function BuddyHome() {
           {/* ── Documents channel ── */}
           {showDocuments && (
             <section style={card}>
-              <h2 style={{ fontFamily: APP_FONT, fontSize: 22, color: C.brown, margin: "0 0 8px" }}>
+              <h2 style={{ fontFamily: APP_FONT, fontSize: ts(22), color: C.brown, margin: "0 0 8px" }}>
                 Documents
               </h2>
               <p style={{ fontSize: 16, color: C.textMuted, margin: "0 0 14px", lineHeight: 1.6 }}>

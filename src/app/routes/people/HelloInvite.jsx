@@ -79,7 +79,7 @@ export default function HelloInvite() {
   if (state === "working") {
     return (
       <main style={{ minHeight: "100vh", background: C.bg, padding: "40px 16px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <div className="sb-col" style={{ maxWidth: 560, margin: "0 auto", "--sb-col": "560px" }}>
           <BodyText muted role="status" style={{ fontSize: ts(A11Y.minBodyPx) }}>
             {t("people.hello.working")}
           </BodyText>
@@ -99,7 +99,7 @@ export default function HelloInvite() {
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, padding: "40px 16px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: 560, margin: "0 auto", "--sb-col": "560px" }}>
         <h1
           style={{
             fontFamily: meta.fonts.heading,

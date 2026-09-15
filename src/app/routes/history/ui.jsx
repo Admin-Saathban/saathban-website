@@ -25,7 +25,7 @@ export function HistoryScreen({ children, backTo, backLabel, width = 640 }) {
           outline-offset: 2px;
         }
       `}</style>
-      <div style={{ maxWidth: width, margin: "0 auto" }}>
+      <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         {backTo && (
           <Link
             to={backTo}

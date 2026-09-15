@@ -19,7 +19,7 @@
    at arm's length. A filled shape is a different KIND of thing, which
    is the only difference that reads without being taught.
 
-   Not rendered for admins, on the auth screens, or over a game — see
+   Not rendered inside the admin panel, on the auth screens, or over a game — see
    AppShellBar below for exactly where it appears and why.
    ════════════════════════════════════════════════ */
 

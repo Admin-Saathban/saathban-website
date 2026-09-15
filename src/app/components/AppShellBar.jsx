@@ -11,8 +11,10 @@
 
    - Signed out, and anywhere under /app/auth. There is nowhere to
      navigate to and the bar would be an invitation into a wall.
-   - Admins. §18 gives them a worklist, not a daily life in the app;
-     Home/Community/Games/People is not their screen.
+   - The admin panel, /app/admin, which has its own navigation. An
+     admin ELSEWHERE in the app gets the bar like everyone else (the
+     owner's ruling, 2026-09-13): the same five tabs with the community
+     feed in the centre — see navItems.js.
    - The ludo play screen. It is a fixed 100dvh viewport that sizes the
      board into exactly the space left over, and a bar laid over it
      would cover the bottom seat plate, or shrink the board to make

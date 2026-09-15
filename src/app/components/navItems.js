@@ -29,8 +29,29 @@ import { roleHomePath } from "../lib/session.jsx";
    the single largest reason the app read as a prototype: every one is
    drawn by whoever made the font, so five of them side by side share
    no stroke weight and no palette. */
+/* ── WHERE "HOME" IS INSIDE THE APP ──
+
+   The same as roleHomePath for every role but one. An admin's
+   roleHomePath is the panel, and that stays where they LAND
+   (consumePostLoginPath is untouched). But an admin in the app is a
+   person with one extra link to the panel, and the app's centre tab, the
+   wordmark and a screen's "back to home" must lead somewhere inside the
+   app. /app/home is Icon-only, so it would bounce them.
+
+   The community feed, because that is where the panel's own "Go to the
+   app" already lands (APP_LANDING_FOR_ADMIN in routes/admin/AdminLayout.jsx
+   — not imported, so the app shell never pulls the panel's code into the
+   first download; keep the two equal). */
+export const ADMIN_APP_HOME = "/app/community";
+
+export function appHomePath(role) {
+  return role === "admin" ? ADMIN_APP_HOME : roleHomePath(role);
+}
+
 export function barItems(role, { buddyActive = true } = {}) {
-  const home = { to: roleHomePath(role), key: "hub.home", icon: "home", end: true };
+  const home = { to: appHomePath(role), key: "hub.home", icon: "home", end: true };
+  const outdoor = { to: "/app/outdoor", key: "hub.outdoor", icon: "outdoor" };
+  const groups = { to: "/app/groups", key: "hub.groupsShort", icon: "groups" };
   const games = { to: "/app/games", key: "hub.games", icon: "games" };
 /* More is no longer a destination — NAVIGATION_SPEC §6 makes it a
    drawer. It keeps a `to` so /app/more still resolves for a
@@ -59,13 +80,16 @@ export function barItems(role, { buddyActive = true } = {}) {
   const messages = { to: "/app/community/messages", key: "hub.messages", icon: "messages", tone: "blue" };
 
   if (role === "saath_icon") {
-    return [
-      games,
-      { to: "/app/outdoor", key: "hub.outdoor", icon: "outdoor" },
-      home,
-      { to: "/app/groups", key: "hub.groupsShort", icon: "groups" },
-      messages,
-    ];
+    return [games, outdoor, home, groups, messages];
+  }
+
+  /* AN ADMIN IN THE APP GETS THE WHOLE BAR, in the same order, with the
+     community feed in the centre (appHomePath above). The owner uses
+     Saathban as a person too; header-only navigation was a worse app than
+     everyone else gets. The bar is still absent inside /app/admin, which
+     has its own navigation (AppShellBar's HIDDEN_PREFIXES). */
+  if (role === "admin") {
+    return [games, outdoor, home, groups, messages];
   }
 
   /* Fewer tabs, same rule: Home keeps the centre and the ruled
@@ -88,7 +112,7 @@ export function barItems(role, { buddyActive = true } = {}) {
     return buddyActive ? [games, home, messages] : [home];
   }
 
-  /* Admins have a worklist, not a daily life in the app (§18). */
+  /* No role yet (signed out, profile loading): nothing to navigate. */
   return [];
 }
 

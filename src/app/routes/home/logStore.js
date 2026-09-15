@@ -120,6 +120,96 @@ function rowsToLogs(rows) {
   return byDate;
 }
 
+/* ── THE QUEUE, OUTSIDE THE HOOK ──
+
+   Signing out has to send what is waiting before it ends the session,
+   and it is pressed from the More drawer or the admin panel, where Home
+   (and so this hook) may not be mounted at all. So sending the queue is
+   a module function, and the hook calls the same one: one sender, one
+   in-flight promise per person, and a sign-out that asks while Home is
+   already sending waits for that send rather than starting a second. */
+
+const QUEUE_PREFIX = "saathban.app.dailyLogQueue.";
+const inflight = {}; // iconId -> promise of the count left unsent
+
+export function queuedLogCount(iconId) {
+  return iconId ? Object.keys(readJson(queueKey(iconId), {})).length : 0;
+}
+
+/* Every queued entry on this phone, whoever wrote it. */
+export function allQueuedLogCount() {
+  let n = 0;
+  try {
+    const ls = window.localStorage;
+    for (let i = 0; i < ls.length; i += 1) {
+      const k = ls.key(i);
+      if (k && k.startsWith(QUEUE_PREFIX)) n += Object.keys(readJson(k, {})).length;
+    }
+  } catch {
+    /* storage unavailable — then nothing is queued either */
+  }
+  return n;
+}
+
+export function logFlushInFlight(iconId) {
+  return inflight[iconId] || null;
+}
+
+/* Push every queued op to daily_logs. Ops are keyed by (date, module),
+   so rapid edits coalesce into one upsert — last write wins. Resolves to
+   how many entries are still waiting. */
+export function flushLogQueue(iconId) {
+  if (!iconId) return Promise.resolve(0);
+  if (inflight[iconId]) return inflight[iconId];
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return Promise.resolve(queuedLogCount(iconId));
+  }
+  const p = (async () => {
+    const queue = readJson(queueKey(iconId), {});
+    for (const [opKey, op] of Object.entries(queue)) {
+      if (op.module === "diet" && op.value && typeof op.value === "object") {
+        op.value = withMealLabels(op.value, getIconPrefs(iconId).mealItems);
+      }
+      let error = null;
+      try {
+        ({ error } = await supabase.from("daily_logs").upsert(
+          {
+            icon_id: iconId,
+            log_date: op.dateIso,
+            module: op.module,
+            payload: op.value,
+            mood_value: op.module === "mood" ? moodValueFor(op.value) : null,
+          },
+          { onConflict: "icon_id,log_date,module" }
+        ));
+      } catch (e) {
+        error = e || new Error("send failed");
+      }
+      if (!error) {
+        delete queue[opKey];
+      } else if (/last 48 hours|must carry the name/i.test(error.message || "")) {
+        // A name refusal is as permanent as the 48-hour window: the
+        // device has no name to add, and retrying would hold up every
+        // log queued behind this one. The entry stays in the device cache.
+        // Permanently outside the server window — retrying can never
+        // succeed. The entry survives in the device cache.
+        delete queue[opKey];
+      } else {
+        // "future" (local midnight ahead of UTC — self-heals), network,
+        // RLS hiccup: keep the op and try again on the next flush.
+        break;
+      }
+    }
+    writeJson(queueKey(iconId), queue);
+    return Object.keys(queue).length;
+  })();
+  inflight[iconId] = p;
+  p.finally(() => {
+    if (inflight[iconId] === p) delete inflight[iconId];
+  }).catch(() => {});
+  return p;
+}
+
 export function useDailyLogs(iconId) {
   const [logsByDate, setLogsByDate] = useState(() =>
     iconId ? readJson(cacheKey(iconId), {}) : {}
@@ -131,7 +221,6 @@ export function useDailyLogs(iconId) {
     iconId ? Object.keys(readJson(queueKey(iconId), {})).length : 0
   );
   const flushTimer = useRef(null);
-  const flushing = useRef(false);
 
   const persistLogs = useCallback(
     (next) => {
@@ -141,48 +230,11 @@ export function useDailyLogs(iconId) {
     [iconId]
   );
 
-  /* Push every queued op to daily_logs. Ops are keyed by (date, module),
-     so rapid edits coalesce into one upsert — last write wins. */
+  /* The module sender above; the hook only mirrors the count it leaves. */
   const flush = useCallback(async () => {
-    if (!iconId || flushing.current) return;
-    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-    flushing.current = true;
-    try {
-      const queue = readJson(queueKey(iconId), {});
-      for (const [opKey, op] of Object.entries(queue)) {
-        if (op.module === "diet" && op.value && typeof op.value === "object") {
-          op.value = withMealLabels(op.value, getIconPrefs(iconId).mealItems);
-        }
-        const { error } = await supabase.from("daily_logs").upsert(
-          {
-            icon_id: iconId,
-            log_date: op.dateIso,
-            module: op.module,
-            payload: op.value,
-            mood_value: op.module === "mood" ? moodValueFor(op.value) : null,
-          },
-          { onConflict: "icon_id,log_date,module" }
-        );
-        if (!error) {
-          delete queue[opKey];
-        } else if (/last 48 hours|must carry the name/i.test(error.message || "")) {
-          // A name refusal is as permanent as the 48-hour window: the
-          // device has no name to add, and retrying would hold up every
-          // log queued behind this one. The entry stays in the device cache.
-          // Permanently outside the server window — retrying can never
-          // succeed. The entry survives in the device cache.
-          delete queue[opKey];
-        } else {
-          // "future" (local midnight ahead of UTC — self-heals), network,
-          // RLS hiccup: keep the op and try again on the next flush.
-          break;
-        }
-      }
-      writeJson(queueKey(iconId), queue);
-      setPendingCount(Object.keys(queue).length);
-    } finally {
-      flushing.current = false;
-    }
+    if (!iconId) return;
+    const left = await flushLogQueue(iconId);
+    setPendingCount(left);
   }, [iconId]);
 
   const scheduleFlush = useCallback(() => {
@@ -196,11 +248,10 @@ export function useDailyLogs(iconId) {
      in flight, then runs one more so nothing queued behind it is missed. */
   const flushNow = useCallback(async () => {
     clearTimeout(flushTimer.current);
-    for (let i = 0; i < 50 && flushing.current; i++) {
-      await new Promise((r) => setTimeout(r, 100));
-    }
+    const running = logFlushInFlight(iconId);
+    if (running) await running.catch(() => {});
     await flush();
-  }, [flush]);
+  }, [flush, iconId]);
 
   /* The one write path. key is a module id or "tracker:<id>". */
   const writeEntry = useCallback(

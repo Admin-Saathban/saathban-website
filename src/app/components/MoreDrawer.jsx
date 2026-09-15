@@ -33,6 +33,7 @@ import { moreGroups } from "./navItems.js";
 import { openFullScreen } from "./motion.jsx";
 import { countToday } from "./moreCount.js";
 import Icon from "./Icon.jsx";
+import { useSignOut } from "../lib/signOut.jsx";
 
 export const MORE_DRAWER_ID = "more";
 
@@ -46,6 +47,7 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
   const { profile } = useSession();
   const navigate = useNavigate();
   const [today, setToday] = useState(null);
+  const signOut = useSignOut();
 
   /* Counted when the drawer opens, not on every render of the bar.
      This is two queries, and the bar is mounted on every screen in the
@@ -171,6 +173,58 @@ export default function MoreDrawer({ open, onClose, role, buddyActive }) {
           );
         })}
       </ul>
+
+      {/* THE WAY OUT OF THE ACCOUNT. Last, below a rule, and not a row
+          like the others: no chevron, because it opens no screen; ink
+          rather than the rows' colour; and the words say "of Saathban"
+          with a line under them about the email, so it cannot be read
+          as "close the app". The question it asks, and everything it
+          clears, is lib/signOut.jsx. */}
+      <div style={{ borderTop: `2px solid ${C.warmGray}`, margin: "10px 6px 0", paddingTop: 10 }}>
+        <button
+          type="button"
+          onClick={signOut.begin}
+          data-sb-signout-row
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            minHeight: A11Y.minTapTargetPx + 8,
+            padding: "10px 6px",
+            borderRadius: 14,
+            border: "none",
+            background: "transparent",
+            color: C.brown,
+            fontFamily: "inherit",
+            fontSize: ts(A11Y.minBodyPx),
+            fontWeight: 700,
+            textAlign: "start",
+            cursor: "pointer",
+          }}
+        >
+          <Icon
+            name="leave"
+            size={22}
+            style={{ color: C.brown, flex: "0 0 auto", transform: meta.dir === "rtl" ? "scaleX(-1)" : undefined }}
+          />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", lineHeight: meta.lineHeight }}>{t("layout.signOut.row")}</span>
+            <span
+              style={{
+                display: "block",
+                fontSize: ts(15),
+                fontWeight: 500,
+                color: C.textMuted,
+                lineHeight: meta.lineHeight,
+              }}
+            >
+              {t("layout.signOut.rowHint")}
+            </span>
+          </span>
+        </button>
+      </div>
+      {signOut.element}
 
       {/* WHAT IS ACTUALLY RUNNING ON THIS PHONE.
 

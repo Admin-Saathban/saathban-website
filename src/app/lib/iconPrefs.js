@@ -315,6 +315,42 @@ export async function loadIconPrefs(iconId, { isOwn = false } = {}) {
   }
 }
 
+/* ── BEFORE SIGNING OUT (lib/signOut.jsx) ──
+   Log settings changed on this phone that never reached the server are
+   sent first, from the phone's copy when this page life has not loaded
+   them. Resolves to how many people's settings are still unsent. */
+function dirtyIds() {
+  const ids = [];
+  try {
+    const ls = window.localStorage;
+    const prefix = dirtyKey("");
+    for (let i = 0; i < ls.length; i += 1) {
+      const k = ls.key(i);
+      if (k && k.startsWith(prefix) && ls.getItem(k) === "1") ids.push(k.slice(prefix.length));
+    }
+  } catch {
+    /* storage unavailable — nothing kept, nothing waiting */
+  }
+  return ids;
+}
+
+export function unsentPrefsCount() {
+  return dirtyIds().length;
+}
+
+export async function sendUnsentPrefs() {
+  if (!isOnline()) return unsentPrefsCount();
+  for (const id of dirtyIds()) {
+    if (!byIcon[id]) {
+      const cached = readJson(cacheKey(id));
+      if (!cached) continue;
+      byIcon = { ...byIcon, [id]: normalize(cached) };
+    }
+    await pushToServer(id);
+  }
+  return unsentPrefsCount();
+}
+
 export function getIconPrefs(iconId) {
   return byIcon[iconId] || DEFAULTS;
 }

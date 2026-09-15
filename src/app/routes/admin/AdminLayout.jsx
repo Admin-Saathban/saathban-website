@@ -38,6 +38,7 @@ import useBackToClose from "../../components/useBackToClose.js";
 import useMedia, { SIDE_NAV_QUERY } from "./useMedia.js";
 import { STAFF, ALL_LEVELS, SUPER, levelOf } from "./levels.js";
 import * as api from "./api.js";
+import AdminSignOut from "./AdminSignOut.jsx";
 
 /* Where "Go to the app" lands. An admin has no Icon home; the community
    feed is the part of the app everyone shares and the part an admin
@@ -60,6 +61,9 @@ const NAV = [
       { to: "/app/admin/moderation", label: "admin.nav.reports", levels: ALL_LEVELS, count: (d) => d?.reports?.open },
       { to: "/app/admin/content", label: "admin.nav.content", levels: STAFF },
       { to: "/app/admin/questions", label: "admin.nav.questions", levels: STAFF, count: (d) => d?.questions_open },
+      /* One screen, two honest names: the database shows a super-admin every entry and anyone else only their own (0179, 0180). */
+      { to: "/app/admin/audit", label: "admin.nav.audit", levels: SUPER },
+      { to: "/app/admin/audit", label: "admin.nav.myActions", levels: ["moderator", "support"] },
     ],
   },
   {
@@ -226,6 +230,7 @@ function AdminNav({ level, dashboard, onNavigate, idPrefix }) {
         <span>{t("admin.shell.goToApp")}</span>
         <span aria-hidden="true">{meta.dir === "rtl" ? "←" : "→"}</span>
       </NavLink>
+      <AdminSignOut />
     </nav>
   );
 }

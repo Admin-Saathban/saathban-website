@@ -31,6 +31,7 @@ import { useI18n } from "../lib/i18n.jsx";
 import { useSession } from "../lib/session.jsx";
 import supabase from "../lib/supabase.js";
 import InfoPanel from "../components/InfoPanel.jsx";
+import { useSignOut } from "../lib/signOut.jsx";
 
 const PROFILE_VISIBILITY = ["members", "connections"];
 const CHECKIN_VISIBILITY = ["circle", "connections", "nobody"];
@@ -90,6 +91,7 @@ export default function AccountSettings() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [deleteInfo, setDeleteInfo] = useState(false);
+  const signOut = useSignOut();
 
   const settings = profile?.settings || {};
   const profileVis = settings.profile_visibility || "members";
@@ -267,16 +269,16 @@ export default function AccountSettings() {
       </Row>
 
       <Row>
+        {/* The same routine and question as the More drawer's row. */}
         <button
           type="button"
-          onClick={async () => {
-            try { await supabase.auth.signOut(); } catch { /* already out */ }
-            window.location.assign("/app/auth");
-          }}
+          onClick={signOut.begin}
+          data-sb-signout-settings
           style={{ ...btn(false), width: "100%", marginTop: 0 }}
         >
-          {t("auth.welcome.signOut")}
+          {t("layout.signOut.row")}
         </button>
+        {signOut.element}
         <p style={hint}>{t("settings.account.deleteHint")}</p>
         <button
           type="button"

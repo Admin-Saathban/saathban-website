@@ -32,8 +32,14 @@ export const supabaseConfigError = missing.length
    row, the runs and days, today's company line, the log preferences,
    and the daily logs with their unsent queue. The queue goes too: it
    holds the same private notes as the log cache, and a phone handed to
-   somebody else must not keep them. A log not yet sent when its writer
-   signs out is therefore not sent — privacy over convenience. */
+   somebody else must not keep them.
+
+   PRESSING Sign out goes through lib/signOut.jsx, which sends the queue
+   first when online, asks once when something still cannot be sent, and
+   then forgets far more than this list (every key but the phone's own
+   language, text size and sound level). This list is what goes when the
+   SERVER ends the session — a refused refresh token — where nobody can
+   be asked. */
 export const SIGNED_IN_CACHE_PREFIXES = [
   "saathban.app.homeFeed.",
   "saathban.app.profile.",

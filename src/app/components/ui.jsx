@@ -8,11 +8,10 @@
    carry words + role="alert").
    ════════════════════════════════════════════════ */
 
-import { useNavigate } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../shared/tokens.js";
 import { useI18n } from "../lib/i18n.jsx";
 import { LOCALES } from "../locales/index.js";
-import supabase from "../lib/supabase.js";
+import { signOutOfThisDevice } from "../lib/signOut.jsx";
 import Logo from "./Logo.jsx";
 
 /* Page shell for the auth screens: warm background, logo, language
@@ -239,19 +238,12 @@ export function ErrorText({ children }) {
 }
 
 /* SPEC.md, Signup flow: "Every onboarding screen carries a visible
-   'this isn't me' exit." Signs out (harmless when signed out) and
-   returns to the role choice. */
+   'this isn't me' exit." Signs out through the one routine
+   (lib/signOut.jsx — harmless when signed out; nothing is queued before
+   a profile exists, so no question) and returns to the role choice. */
 export function NotMeExit() {
-  const navigate = useNavigate();
   const { t } = useI18n();
-  const exit = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      /* no session to clear — fine */
-    }
-    navigate("/app/auth");
-  };
+  const exit = () => signOutOfThisDevice({ to: "/app/auth" });
   return (
     <div style={{ textAlign: "center", marginTop: 28 }}>
       <LinkButton onClick={exit} style={{ color: C.textMuted }}>

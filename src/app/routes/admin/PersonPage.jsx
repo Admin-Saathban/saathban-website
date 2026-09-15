@@ -105,6 +105,16 @@ export default function PersonPage() {
         <StatusChips person={person} />
       </div>
       <p style={{ color: C.textMuted, fontSize: 15, margin: "-8px 0 18px" }}>{t("admin.people.viewAudited")}</p>
+      {/* Super-admin only: support admins read only their own entries (0179). */}
+      {isSuper && (
+        <Link
+          to={`/app/admin/audit?person=${id}`}
+          data-person-audit-link
+          style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.green, fontWeight: 700, margin: "-12px 0 14px" }}
+        >
+          {t("admin.people.auditLink")}
+        </Link>
+      )}
 
       <div style={{ display: "grid", gap: 18 }}>
         <Card title={t("admin.people.profile")}>

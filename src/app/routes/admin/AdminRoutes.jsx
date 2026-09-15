@@ -36,6 +36,7 @@ const PlaceAccess = lazyScreen(() => import("./PlaceAccess.jsx"));
 const ActivityPage = lazyScreen(() => import("./ActivityPage.jsx"));
 const ContentPage = lazyScreen(() => import("./ContentPage.jsx"));
 const TestDataPage = lazyScreen(() => import("./TestDataPage.jsx"));
+const AuditLog = lazyScreen(() => import("./AuditLog.jsx"));
 const SkillsAdmin = lazyScreen(() => import("../skills/SkillsAdmin.jsx"));
 const AdminEvents = lazyScreen(() => import("../events/AdminEvents.jsx"));
 const AdminMilestones = lazyScreen(() => import("../milestones/AdminMilestones.jsx"));
@@ -56,6 +57,8 @@ export default function AdminRoutes() {
         <Route index element={<Dashboard />} />
 
         <Route path="moderation" element={<ModerationQueue />} />
+        {/* Every level: the database decides what each one reads (0179, 0180). */}
+        <Route path="audit" element={<AuditLog />} />
 
         <Route path="people" element={staff(<PeopleDesk />)}>
           <Route path=":id" element={<PersonPage />} />

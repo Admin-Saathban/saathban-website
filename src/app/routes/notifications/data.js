@@ -61,10 +61,20 @@ const NOT_MUTABLE = new Set([
   "circle", "reminder", "proposal",
   "broadcast", "general", "question_reply",
   "document_request", "document_response", "milestone",
+  "break_glass", // 0186
 ]);
 
 export function canMutePersonOn(n) {
   return !!n?.created_by && !n.actor_self && !NOT_MUTABLE.has(n.kind || "general");
+}
+
+/* A break-glass notice (0186–0187) tells a person that Saathban read
+   their daily logs. No switch silences it — settings->notify is not
+   read for it — so the bell does not offer "mute this kind" on it. */
+const KIND_NEVER_MUTED = new Set(["break_glass"]);
+
+export function canMuteKindOn(n) {
+  return !!n?.kind && !KIND_NEVER_MUTED.has(n.kind);
 }
 
 export async function fetchUnreadCount() {

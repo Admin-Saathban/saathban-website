@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { STRINGS, KIND_ICON, relativeTime } from "./strings.js";
-import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, unmuteNotificationPerson, muteNotificationKind, canMutePersonOn } from "./data.js";
+import { fetchNotifications, markRead, markAllRead, announceRead, muteNotificationPerson, unmuteNotificationPerson, muteNotificationKind, canMutePersonOn, canMuteKindOn } from "./data.js";
 import Icon from "../../components/Icon.jsx";
 
 /* Quiet by design: these are not actions most people want most of
@@ -205,7 +205,10 @@ export default function NotificationsPage() {
                     </div>
                   )}
                   {n.body && (
-                    <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "8px 0 0", lineHeight: 1.6 }}>{n.body}</p>
+                    /* dir="auto": a notice the database wrote in the person's
+                       language (break-glass, 0187) reads in its own direction
+                       even if the app is shown in the other language. */
+                    <p dir="auto" style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMain, margin: "8px 0 0", lineHeight: 1.6 }}>{n.body}</p>
                   )}
                   {/* ── OUT_AND_ABOUT_SPEC §6.1 ──
                       "Inline in the notification: mute this person and
@@ -254,7 +257,7 @@ export default function NotificationsPage() {
                           </span>
                         </button>
                       ))}
-                      {n.kind && (
+                      {canMuteKindOn(n) && (
                         <button
                           type="button"
                           onClick={() => onMute(n, "kind")}

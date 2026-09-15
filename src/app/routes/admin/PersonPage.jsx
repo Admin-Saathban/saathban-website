@@ -149,6 +149,20 @@ export default function PersonPage() {
 
         {person.has_profile && <EverydayActions person={person} isSelf={isSelf} onChanged={load} />}
         {isSuper && person.has_profile && <RoleCard person={person} isSelf={isSelf} onChanged={load} />}
+        {/* Break-glass (0187): super-admin, a Saath-Icon, never yourself.
+            The page it opens explains, asks why, and tells the person. */}
+        {isSuper && person.has_profile && person.role === "saath_icon" && !isSelf && (
+          <Card title={t("admin.breakGlass.entryTitle")} style={{ borderColor: C.brown }}>
+            <p style={{ marginTop: 0 }}>{t("admin.breakGlass.entryBody", { name: person.full_name || t("admin.people.unnamed") })}</p>
+            <Link
+              to={`/app/admin/break-glass/${id}`}
+              data-person-break-glass
+              style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.brown, fontWeight: 700 }}
+            >
+              {t("admin.breakGlass.entryLink", { name: person.full_name || t("admin.people.unnamed") })}
+            </Link>
+          </Card>
+        )}
         {isSuper ? (
           <DeleteCard person={person} isSelf={isSelf} onDeleted={setDeleted} />
         ) : (

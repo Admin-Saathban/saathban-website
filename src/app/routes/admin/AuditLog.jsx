@@ -43,7 +43,7 @@ const PAGE = 30;
    A name missing here still shows, as "recorded as …". */
 export const AUDIT_KINDS = [
   ["looking", ["admin_view_person", "admin_list_people", "admin_preview_deletion", "admin_view_content", "admin_view_test_data", "grow_survey_people_read", "survey_results_read", "survey_results_exported"]],
-  ["breakGlass", ["break_glass_read_logs"]],
+  ["breakGlass", ["break_glass_read_logs", "break_glass_form_opened"]],
   ["accounts", ["pause_account", "unpause_account", "change_role", "mark_test", "unmark_test", "send_signin_link", "delete_account", "delete_test_account", "remove_test_accounts", "files_removed"]],
   ["reports", ["moderation_decision", "content_hidden", "content_unhidden", "content_removed"]],
   ["vetting", ["buddy_status_change", "document_request"]],
@@ -178,6 +178,15 @@ function useWords() {
         break;
       case "welfare_outreach_recorded":
         if (["spoke", "no_answer", "not_needed"].includes(d.outcome)) key = `welfare_outreach_recorded_${d.outcome}`;
+        break;
+      case "break_glass_read_logs":
+        /* 0187 records the window; 0006-era entries (never written in
+           practice) keep the plain sentence. */
+        if (d.window_from) {
+          key = d.window_from === d.window_to ? "break_glass_read_logs_day" : "break_glass_read_logs_window";
+          vars.from = fmtDay(d.window_from);
+          vars.to = fmtDay(d.window_to);
+        }
         break;
       case "audit_log_opened":
         if (d.profile_id) key = "audit_log_opened_person";
@@ -669,7 +678,10 @@ function factsOf(w, row, detail = row.detail, depth = 0) {
   const { t, has } = w;
   const s = row.subject || {};
   const out = [];
-  const labelOf = (k) => (has(`admin.audit.key.${k}`) ? t(`admin.audit.key.${k}`) : k.replace(/_/g, " "));
+  const labelOf = (k) => {
+    if (k === "rows" && row.action === "break_glass_read_logs") return t("admin.audit.key.log_rows");
+    return has(`admin.audit.key.${k}`) ? t(`admin.audit.key.${k}`) : k.replace(/_/g, " ");
+  };
   const yesNo = (b) => t(b ? "admin.audit.yes" : "admin.audit.no");
 
   for (const [k, v] of Object.entries(detail || {})) {
@@ -698,6 +710,8 @@ function factsOf(w, row, detail = row.detail, depth = 0) {
       if (row.action === "grow_survey_reoffered") value = has(`admin.audit.reoffer.${v}`) ? t(`admin.audit.reoffer.${v}`) : String(v);
       else value = w.statusWord(row.action, v);
     } else if (k === "mode") value = has(`admin.audit.mode.${v}`) ? t(`admin.audit.mode.${v}`) : String(v);
+    else if (k === "reason_type") value = has(`admin.breakGlass.reasonType.${v}`) ? t(`admin.breakGlass.reasonType.${v}`) : String(v);
+    else if (k === "told_in") value = t(v === "ur" ? "admin.breakGlass.langUr" : "admin.breakGlass.langEn");
     else if (k === "outcome") value = has(`welfare.admin.outcome.${v}`) ? t(`welfare.admin.outcome.${v}`) : String(v);
     else if (k === "audience" && Array.isArray(v)) value = v.length ? v.map((r) => ROLE_DISPLAY[r] || r).join(", ") : t("admin.audit.everyone");
     else if (k === "fields" && Array.isArray(v)) value = v.map((f) => String(f).replace(/_/g, " ")).join(", ");

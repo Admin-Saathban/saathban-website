@@ -11,7 +11,8 @@
    how to reach them through routes the admin level can already see
    (email for support and super; phone for super only). Never a mood,
    a note the person wrote, or any other log. Reading those stays
-   break-glass (0006), and this screen has no way into it.
+   break-glass (0187): a super-admin sees a link to that separate
+   screen, which asks why, reads a short window, and tells the person.
 
    Support and super-admins. A moderator is kept out by the route guard
    and refused by the database.
@@ -329,6 +330,18 @@ function PersonDetail({ row, name, wide, phoneVisible, onClose, onRecorded, onGo
             >
               {t("welfare.admin.f.openPerson")}
             </Link>
+            {admin?.level === "super" && (
+              <span style={{ display: "block", marginTop: 4 }}>
+                <Link
+                  to={`/app/admin/break-glass/${row.icon_id}?from=welfare`}
+                  data-welfare-break-glass
+                  style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.brown, fontWeight: 700 }}
+                >
+                  {t("admin.breakGlass.welfareLink")}
+                </Link>
+                <span style={{ display: "block", color: C.textMuted, fontSize: 15 }}>{t("admin.breakGlass.welfareNote")}</span>
+              </span>
+            )}
           </Fact>
           <Fact label={t("welfare.admin.f.last")}>
             {last ? (

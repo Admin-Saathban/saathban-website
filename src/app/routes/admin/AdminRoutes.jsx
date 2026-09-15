@@ -22,7 +22,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
 import { lazyScreen } from "../../lib/lazyScreen.jsx";
 import AdminLayout from "./AdminLayout.jsx";
-import { STAFF, levelOf } from "./levels.js";
+import { STAFF, SUPER, levelOf } from "./levels.js";
 
 const Dashboard = lazyScreen(() => import("./Dashboard.jsx"));
 const PeopleDesk = lazyScreen(() => import("./PeopleDesk.jsx"));
@@ -38,6 +38,7 @@ const ContentPage = lazyScreen(() => import("./ContentPage.jsx"));
 const TestDataPage = lazyScreen(() => import("./TestDataPage.jsx"));
 const AuditLog = lazyScreen(() => import("./AuditLog.jsx"));
 const WelfarePage = lazyScreen(() => import("./WelfarePage.jsx"));
+const BreakGlassPage = lazyScreen(() => import("./BreakGlassPage.jsx"));
 const SkillsAdmin = lazyScreen(() => import("../skills/SkillsAdmin.jsx"));
 const AdminEvents = lazyScreen(() => import("../events/AdminEvents.jsx"));
 const AdminMilestones = lazyScreen(() => import("../milestones/AdminMilestones.jsx"));
@@ -68,6 +69,16 @@ export default function AdminRoutes() {
           <Route path=":id" element={<BuddyApplication />} />
         </Route>
         <Route path="welfare" element={staff(<WelfarePage />)} />
+        {/* Break-glass (0187): super-admin only, not in the navigation —
+            reached from a person's page and from a welfare check-in. */}
+        <Route
+          path="break-glass/:personId"
+          element={
+            <ForLevels levels={SUPER}>
+              <BreakGlassPage />
+            </ForLevels>
+          }
+        />
         <Route path="activity" element={staff(<ActivityPage />)} />
         <Route path="test-data" element={staff(<TestDataPage />)} />
         <Route path="content" element={staff(<ContentPage />)} />

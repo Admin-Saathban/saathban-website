@@ -5,5 +5,6 @@ import streaks from "./streaks.en.js";
 import messages from "./messages.en.js";
 import media from "./media.en.js";
 import layout from "./layout.en.js";
+import welfare from "./welfare.en.js";
 
-export default [admin, grow, streaks, messages, media, layout];
+export default [admin, grow, streaks, messages, media, layout, welfare];

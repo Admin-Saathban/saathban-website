@@ -49,6 +49,7 @@ export const AUDIT_KINDS = [
   ["vetting", ["buddy_status_change", "document_request"]],
   ["reach", ["admin_contact", "admin_broadcast", "question_reply", "milestone_message"]],
   ["grow", ["grow_course_created", "grow_course_updated", "grow_course_published", "grow_course_unpublished", "grow_survey_created", "grow_survey_updated", "grow_survey_published", "grow_survey_unpublished", "grow_survey_reoffered", "grow_pending_added", "grow_pending_updated", "grow_pending_removed", "grow_pending_reordered"]],
+  ["welfare", ["welfare_list_opened", "welfare_outreach_recorded"]],
   ["auditLog", ["audit_log_opened", "audit_log_person_viewed"]],
 ];
 
@@ -171,6 +172,12 @@ function useWords() {
       case "grow_pending_updated":
       case "grow_pending_removed":
         vars.thing = <strong>{s.course_en ? course : s.survey_en ? survey : d.skill || t("admin.audit.anItem")}</strong>;
+        break;
+      case "welfare_list_opened":
+        vars.rows = d.rows ?? 0;
+        break;
+      case "welfare_outreach_recorded":
+        if (["spoke", "no_answer", "not_needed"].includes(d.outcome)) key = `welfare_outreach_recorded_${d.outcome}`;
         break;
       case "audit_log_opened":
         if (d.profile_id) key = "audit_log_opened_person";
@@ -691,6 +698,7 @@ function factsOf(w, row, detail = row.detail, depth = 0) {
       if (row.action === "grow_survey_reoffered") value = has(`admin.audit.reoffer.${v}`) ? t(`admin.audit.reoffer.${v}`) : String(v);
       else value = w.statusWord(row.action, v);
     } else if (k === "mode") value = has(`admin.audit.mode.${v}`) ? t(`admin.audit.mode.${v}`) : String(v);
+    else if (k === "outcome") value = has(`welfare.admin.outcome.${v}`) ? t(`welfare.admin.outcome.${v}`) : String(v);
     else if (k === "audience" && Array.isArray(v)) value = v.length ? v.map((r) => ROLE_DISPLAY[r] || r).join(", ") : t("admin.audit.everyone");
     else if (k === "fields" && Array.isArray(v)) value = v.map((f) => String(f).replace(/_/g, " ")).join(", ");
     else if (Array.isArray(v)) value = t("admin.audit.itemsN", { n: v.length });

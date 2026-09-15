@@ -99,6 +99,18 @@ const SOURCES = [
     },
   },
   {
+    /* One row for everyone flagged, dated by the oldest flag. The
+       worklist never names who: that is the audited list's (0184). */
+    key: "welfare",
+    to: () => "/app/admin/welfare",
+    urgentAfter: 48 * HOURS,
+    load: async () => {
+      const { data } = await supabase.rpc("admin_dashboard");
+      const w = data?.welfare;
+      return w && Number(w.flagged) > 0 && w.oldest_raised ? [{ id: "all", created_at: w.oldest_raised }] : [];
+    },
+  },
+  {
     key: "proposal",
     to: () => "/app/admin/gatherings",
     urgentAfter: 72 * HOURS,

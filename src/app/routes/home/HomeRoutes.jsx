@@ -14,6 +14,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import IconHub from "./IconHub.jsx";
 import IconHome from "./IconHome.jsx";
 import FirstRun from "../onboarding/FirstRun.jsx";
+import WelfareNotice from "../onboarding/WelfareNotice.jsx";
 import { useSession } from "../../lib/session.jsx";
 
 export default function HomeRoutes() {
@@ -31,12 +32,23 @@ export default function HomeRoutes() {
      that gap is a person tapping "Skip for now" and watching the same
      screen sit there. */
   const [justOnboarded, setJustOnboarded] = useState(false);
+  /* The welfare notice (0182) — told once, before mood logging carries
+     on. FirstRun shows it after the first mood tap; an Icon who
+     onboarded before it existed meets it here, in front of Home and the
+     daily log alike. The local flag hands over without waiting for the
+     profile to be fetched again, as justOnboarded does. */
+  const [noticeSeen, setNoticeSeen] = useState(false);
   /* Nothing renders until the profile has actually answered: "not
      loaded yet" and "already onboarded" are different states, and
      treating them alike shows the wrong screen for a beat. */
   if (profileStatus === "loading") return null;
   if (profile && !profile.settings?.onboarded_at && !justOnboarded) {
-    return <FirstRun profile={profile} onDone={() => setJustOnboarded(true)} />;
+    return (
+      <FirstRun profile={profile} onDone={() => setJustOnboarded(true)} onNoticeSeen={() => setNoticeSeen(true)} />
+    );
+  }
+  if (profile && !profile.welfare_notice_seen_at && !noticeSeen) {
+    return <WelfareNotice onDone={() => setNoticeSeen(true)} />;
   }
 
   return (

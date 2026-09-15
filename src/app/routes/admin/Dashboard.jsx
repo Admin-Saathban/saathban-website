@@ -65,6 +65,16 @@ export function attentionItems(d, t) {
   if (n(d.questions_open) > 0) {
     out.push({ key: "questions", to: "/app/admin/questions", title: plural(t, "admin.front.questions", n(d.questions_open)) });
   }
+  /* §18: quiet-day welfare flags. A count only — the names are behind
+     the audited list (0184). */
+  if (n(d.welfare?.flagged) > 0) {
+    out.push({
+      key: "welfare",
+      to: "/app/admin/welfare",
+      title: plural(t, "welfare.admin.front.people", n(d.welfare.flagged)),
+      detail: t("welfare.admin.front.detail"),
+    });
+  }
   if (n(d.proposals_pending) > 0) {
     out.push({ key: "proposals", to: "/app/admin/gatherings", title: plural(t, "admin.front.proposals", n(d.proposals_pending)) });
   }

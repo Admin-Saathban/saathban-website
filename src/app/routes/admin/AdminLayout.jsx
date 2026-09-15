@@ -71,6 +71,8 @@ const NAV = [
     label: "admin.nav.sectionPeople",
     items: [
       { to: "/app/admin/people", label: "admin.nav.people", levels: STAFF },
+      /* Low-mood runs (0183–0185). Support and super; audited on opening. */
+      { to: "/app/admin/welfare", label: "welfare.admin.nav", levels: STAFF, count: (d) => d?.welfare?.flagged },
       {
         to: "/app/admin/buddies",
         label: "admin.nav.buddies",
@@ -115,6 +117,7 @@ export function attentionTotal(d) {
     Number(d.applications?.interviewing || 0) +
     Number(d.documents_to_review || 0) +
     Number(d.questions_open || 0) +
+    Number(d.welfare?.flagged || 0) +
     Number(d.proposals_pending || 0)
   );
 }

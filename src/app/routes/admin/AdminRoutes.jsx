@@ -37,6 +37,7 @@ const ActivityPage = lazyScreen(() => import("./ActivityPage.jsx"));
 const ContentPage = lazyScreen(() => import("./ContentPage.jsx"));
 const TestDataPage = lazyScreen(() => import("./TestDataPage.jsx"));
 const AuditLog = lazyScreen(() => import("./AuditLog.jsx"));
+const WelfarePage = lazyScreen(() => import("./WelfarePage.jsx"));
 const SkillsAdmin = lazyScreen(() => import("../skills/SkillsAdmin.jsx"));
 const AdminEvents = lazyScreen(() => import("../events/AdminEvents.jsx"));
 const AdminMilestones = lazyScreen(() => import("../milestones/AdminMilestones.jsx"));
@@ -66,6 +67,7 @@ export default function AdminRoutes() {
         <Route path="buddies" element={staff(<BuddyDesk />)}>
           <Route path=":id" element={<BuddyApplication />} />
         </Route>
+        <Route path="welfare" element={staff(<WelfarePage />)} />
         <Route path="activity" element={staff(<ActivityPage />)} />
         <Route path="test-data" element={staff(<TestDataPage />)} />
         <Route path="content" element={staff(<ContentPage />)} />

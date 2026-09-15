@@ -41,6 +41,7 @@ import { MOODS, isoDate, greetingKeyForHour } from "../home/homeMock.js";
 import { useDailyLogs } from "../home/logStore.js";
 import { useIconPrefs, toggleModule } from "../../lib/iconPrefs.js";
 import supabase from "../../lib/supabase.js";
+import WelfareNotice from "./WelfareNotice.jsx";
 
 /* §5's defaults, named here so screen two shows the same three on and
    the same three off that the log itself will use. */
@@ -139,7 +140,7 @@ function BigButton({ onClick, children, primary = true, disabled }) {
   );
 }
 
-export default function FirstRun({ profile, onDone }) {
+export default function FirstRun({ profile, onDone, onNoticeSeen }) {
   const { t, ts, lang, setLang } = useI18n();
   /* The chooser shows a real sample in each language, and only the
      active one is otherwise downloaded (locales/index.js), so both are
@@ -342,7 +343,23 @@ export default function FirstRun({ profile, onDone }) {
     );
   }
 
+  /* THE WELFARE NOTICE — straight after the first mood, because this is
+     where mood logging is introduced. CLAUDE.md: consecutive low-mood
+     days quietly flag staff, disclosed plainly at onboarding. It is
+     told, not asked (no opt-out is implied by the spec), and nobody is
+     flagged until it has been acknowledged (0182, 0183). */
   if (step === 2) {
+    return (
+      <WelfareNotice
+        onDone={() => {
+          onNoticeSeen?.();
+          setStep(3);
+        }}
+      />
+    );
+  }
+
+  if (step === 3) {
     const enabled = new Set(prefs?.enabledModules || ON_AT_START);
     const row = (id, on) => (
       <li
@@ -375,7 +392,7 @@ export default function FirstRun({ profile, onDone }) {
           {ON_AT_START.map((id) => row(id, enabled.has(id) || ON_AT_START.includes(id)))}
           {SHOWN_BUT_OFF.map((id) => row(id, enabled.has(id)))}
         </ul>
-        <BigButton onClick={() => setStep(3)}>{t("onboarding.modules.cta")}</BigButton>
+        <BigButton onClick={() => setStep(4)}>{t("onboarding.modules.cta")}</BigButton>
       </Screen>
     );
   }

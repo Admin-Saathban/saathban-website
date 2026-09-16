@@ -50,6 +50,12 @@ export function CommunityScreen({ children, backTo, backLabel, width = 640, embe
           padding: 10px 14px;
         }
         .sb-community textarea { resize: vertical; }
+        /* A select had no floor at all: 19px tall in the walk sheet. */
+        .sb-community select {
+          min-height: ${A11Y.minTapTargetPx}px;
+          font-size: calc(${A11Y.minBodyPx}px * var(--sb-text-scale, 1));
+          font-family: inherit;
+        }
         .sb-community input:focus-visible,
         .sb-community textarea:focus-visible,
         .sb-community button:focus-visible,

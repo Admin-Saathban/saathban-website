@@ -338,6 +338,27 @@ export function LanguageProvider({ children }) {
           }
         }
       `}</style>
+      {/* ── .sb-hit48: A 48px HIT AREA WITHOUT A 48px LOOK ──
+
+          For a control whose drawn size is deliberately under the 48px
+          floor (a game pill, a cross in a corner). An invisible layer
+          grows the hit box to 48 in each dimension that is short and
+          does nothing in a dimension that is already 48 or more — the
+          min() keeps the offset at zero there. The element becomes the
+          containing block unless it is already positioned (an inline
+          position:absolute wins over the class). Check the neighbours:
+          the layer must not reach over another control. */}
+      <style>{`
+        .sb-appshell .sb-hit48 { position: relative; }
+        .sb-appshell .sb-hit48::after {
+          content: "";
+          position: absolute;
+          top: min(0px, calc((100% - 48px) / 2));
+          bottom: min(0px, calc((100% - 48px) / 2));
+          left: min(0px, calc((100% - 48px) / 2));
+          right: min(0px, calc((100% - 48px) / 2));
+        }
+      `}</style>
       {/* ── THE SAFE AREAS, NAMED ──
 
           env() cannot be read back or overridden, which makes anything

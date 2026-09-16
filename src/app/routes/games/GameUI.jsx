@@ -98,13 +98,17 @@ export function GamePill({ children, onClick, disabled, style = {}, ...rest }) {
       disabled={disabled}
       {...press}
       {...rest}
+      /* sb-hit48 (lib/i18n.jsx): the hit area is 48 tall even though
+         the pill is drawn at 36. */
+      className={["sb-hit48", rest.className].filter(Boolean).join(" ")}
       style={{
         ...NO_SELECT,
-        /* UNDER 40px. The app's floor is 48 and this is a deliberate
-           exception inside a game: Emoji and Chat are conveniences
+        /* DRAWN UNDER 40px, HIT AT 48. Emoji and Chat are conveniences
            beside the board, not the actions of the screen, and at 52
-           they were taking height from the one thing that matters.
-           The tap area stays comfortable because the pill is wide. */
+           they were taking height from the one thing that matters —
+           so the LOOK stays 36 and the invisible hit layer brings the
+           target to the app's 48px floor (2026-09-15: "raise everything
+           to 48"). */
         minHeight: 36,
         padding: "6px 16px",
         borderRadius: 18,
@@ -201,6 +205,8 @@ export function SheetHandle({ onClose, label, up = false }) {
       type="button"
       aria-label={label}
       onClick={onClose}
+      /* Drawn 24 tall so the sheet does not move; hit 48 (lib/i18n.jsx). */
+      className="sb-hit48"
       onPointerDown={(e) => {
         from.current = e.clientY;
         e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -250,6 +256,9 @@ export function SheetClose({ onClose, label }) {
       type="button"
       onClick={onClose}
       aria-label={label}
+      /* Drawn 40, hit 48: the layer reaches 4px past each edge, and the
+         12px inset from the corner leaves it inside the sheet. */
+      className="sb-hit48"
       style={{
         position: "absolute",
         top: 12,

@@ -118,7 +118,7 @@ export default function RequestsPage() {
       )}
 
       <div style={{ marginTop: 18 }}>
-        <Link to="/app/people" style={{ color: C.brown, fontWeight: 600, fontSize: ts(A11Y.minBodyPx) }}>
+        <Link to="/app/people" style={{ color: C.brown, fontWeight: 600, fontSize: ts(A11Y.minBodyPx), display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx }}>
           {t("people.requests.backToPeople")}
         </Link>
       </div>

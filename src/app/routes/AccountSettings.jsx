@@ -274,7 +274,10 @@ export default function AccountSettings() {
           type="button"
           onClick={signOut.begin}
           data-sb-signout-settings
-          style={{ ...btn(false), width: "100%", marginTop: 0 }}
+          /* position:relative: in Urdu the hint paragraph's box starts 2px
+             inside this button, and without it a tap on that strip landed on
+             the paragraph. Nothing moves. */
+          style={{ ...btn(false), width: "100%", marginTop: 0, position: "relative" }}
         >
           {t("layout.signOut.row")}
         </button>

@@ -52,7 +52,7 @@ export function FamScreen({ children, backTo, backLabel, width = 680 }) {
 
       <div className="sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         <header style={{ marginBottom: 24 }}>
-          <a href="/app" style={{ display: "inline-block" }}>
+          <a href="/app" style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx }}>
             <Logo height={30} />
           </a>
         </header>

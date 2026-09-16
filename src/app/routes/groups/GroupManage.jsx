@@ -238,7 +238,7 @@ export default function GroupManage() {
               onClick={() => act(() => setGroupCover(id, `preset:${k}`), "cover")}
               aria-label={t(`groups.type.${k}.name`)}
               style={{
-                width: 52, height: 40, borderRadius: 10, cursor: "pointer",
+                width: 52, height: 48, borderRadius: 10, cursor: "pointer",
                 border: group.cover === `preset:${k}` ? `3px solid ${C.green}` : `2px solid ${C.warmGray}`,
                 background: "none", padding: 0,
                 display: "inline-flex", alignItems: "center", justifyContent: "center",

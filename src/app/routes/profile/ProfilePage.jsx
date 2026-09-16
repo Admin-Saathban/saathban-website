@@ -203,6 +203,9 @@ export default function ProfilePage() {
                     border: `2px solid ${C.green}`, background: C.white, color: C.green,
                     fontSize: ts(A11Y.minBodyPx), fontWeight: 700, fontFamily: "inherit",
                     cursor: photoBusy ? "default" : "pointer",
+                    /* In Urdu the hint below starts 2px inside this button
+                       and took those taps; relative puts the button on top. */
+                    position: "relative",
                   }}
                 >
                   {photoBusy ? t("profile.photoBusy") : avatar ? t("profile.photoChange") : t("profile.photoAdd")}

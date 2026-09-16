@@ -126,6 +126,10 @@ function NoteArea({ value, onChange, placeholder, ariaLabel }) {
 const counterBtn = (ts) => ({
   width: 64,
   height: 64,
+  /* A flex row may shrink a fixed width; never below the tap floor. */
+  minWidth: A11Y.minTapTargetPx,
+  minHeight: A11Y.minTapTargetPx,
+  flexShrink: 1,
   borderRadius: 20,
   border: `2px solid ${C.green}`,
   background: C.white,
@@ -695,9 +699,12 @@ function WaterEditor({ value, onChange, unit }) {
   const shown = waterToDisplay(ml, unit);
   const goal = waterToDisplay(WATER_GOAL_ML, unit);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+    /* At 320 the 64px buttons were squeezed to 34-38 wide. They keep a
+       48px floor now (counterBtn), and the room comes from the spacing
+       and the number's column, which ease only below ~390px. */
+    <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, calc(10vw - 21px), 18px)" }}>
       <button type="button" onClick={() => set(ml - step)} aria-label={t("home.log.waterFewer")} style={counterBtn(ts)}>−</button>
-      <div style={{ textAlign: "center", minWidth: 120 }} role="status">
+      <div style={{ textAlign: "center", minWidth: "min(120px, calc(100vw - 222px))" }} role="status">
         <span style={{ display: "block", fontSize: ts(34), fontWeight: 700, color: C.green }}>
           {shown} <span style={{ fontSize: ts(20) }}>{t(`home.log.units.${unit}`)}</span>
         </span>
@@ -1181,7 +1188,8 @@ export default function DailyLogCard({ iconId, log, onChange, editable, restDay,
 
       <p style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted, margin: "16px 0 0", lineHeight: 1.5 }}>
         {t("home.log.chooseHere")}{" "}
-        <Link to="/app/settings" style={{ color: C.green, fontWeight: 600 }}>{t("home.log.fromSettings")}</Link>.
+        {/* In its sentence, 48px tall — the login screen's treatment. */}
+        <Link to="/app/settings" style={{ color: C.green, fontWeight: 600, display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, verticalAlign: "middle" }}>{t("home.log.fromSettings")}</Link>.
       </p>
 
       {showStreaks && streakSheet.entry && (

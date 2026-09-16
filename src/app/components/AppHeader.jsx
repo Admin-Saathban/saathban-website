@@ -326,18 +326,31 @@ export default function AppHeader() {
            browsers older than container queries: sized for a screen with
            a back arrow, whose slot is 100vw - 220px once the spacing
            above is taken out. */
+        /* ── 48px TARGETS (2026-09-15) ──
+
+           The five controls grew from 44 (back: 36) to 48, which takes
+           28px more of a 320px row with a back arrow: the slot left for
+           the wordmark is 100vw - 248px, 72px at 320. So:
+           - the tight spacing now covers Home-type headers up to 386px
+             too (at 48 they stop fitting 154px of type below ~387),
+             and headers with a back arrow up to 429px (measured: at 420
+             with normal spacing the type ran 0.8px into the search box);
+           - a third container tier under 100px eases the tracking to
+             0.06em and lets the size reach 11px, which fits 72px.
+           The wordmark is a label that repeats the home tab, and the
+           controls around it are what a shaking hand has to hit. */
         @media (max-width: 359px) {
           header.sb-header { padding-inline: 4px !important; }
           .sb-hdr-row, .sb-hdr-icons { gap: 0 !important; }
           .sb-hdr-icons > button { padding: 0 !important; }
           .sb-hdr-mark { container-type: inline-size; }
           .sb-hdr-mark > [role="img"] {
-            letter-spacing: 0.1em !important;
-            text-indent: 0.1em !important;
-            font-size: clamp(12px, calc((100vw - 226px) / 6.2), 23px) !important;
+            letter-spacing: 0.06em !important;
+            text-indent: 0.06em !important;
+            font-size: clamp(11px, calc((100vw - 252px) / 5.8), 23px) !important;
           }
         }
-        @media (min-width: 360px) and (max-width: 419px) {
+        @media (min-width: 360px) and (max-width: 429px) {
           header.sb-header.sb-hdr-back { padding-inline: 4px !important; }
           .sb-hdr-back .sb-hdr-row, .sb-hdr-back .sb-hdr-icons { gap: 0 !important; }
           .sb-hdr-back .sb-hdr-icons > button { padding: 0 !important; }
@@ -345,8 +358,14 @@ export default function AppHeader() {
           .sb-hdr-back .sb-hdr-mark > [role="img"] {
             letter-spacing: 0.1em !important;
             text-indent: 0.1em !important;
-            font-size: clamp(12px, calc((100vw - 226px) / 6.2), 23px) !important;
+            font-size: clamp(12px, calc((100vw - 254px) / 6.2), 23px) !important;
           }
+        }
+        @media (min-width: 360px) and (max-width: 386px) {
+          header.sb-header { padding-inline: 4px !important; }
+          .sb-hdr-row, .sb-hdr-icons { gap: 0 !important; }
+          .sb-hdr-icons > button { padding: 0 !important; }
+          .sb-hdr-mark { container-type: inline-size; }
         }
         /* header.sb-header in front so these outrank the fallbacks above. */
         @container (min-width: 158px) {
@@ -356,11 +375,18 @@ export default function AppHeader() {
             font-size: 23px !important;
           }
         }
-        @container (max-width: 157.9px) {
+        @container (min-width: 100px) and (max-width: 157.9px) {
           header.sb-header .sb-hdr-mark > [role="img"] {
             letter-spacing: 0.1em !important;
             text-indent: 0.1em !important;
             font-size: clamp(12px, calc((100cqi - 6px) / 6.2), 23px) !important;
+          }
+        }
+        @container (max-width: 99.9px) {
+          header.sb-header .sb-hdr-mark > [role="img"] {
+            letter-spacing: 0.06em !important;
+            text-indent: 0.06em !important;
+            font-size: clamp(11px, calc((100cqi - 4px) / 5.8), 23px) !important;
           }
         }
       `}</style>
@@ -389,7 +415,7 @@ export default function AppHeader() {
               alignItems: "center",
               justifyContent: "center",
               minHeight: A11Y.minTapTargetPx,
-              minWidth: 36,
+              minWidth: A11Y.minTapTargetPx,
               border: "none",
               background: "none",
               /* C.navInk, NOT C.textMain. Measured on the new chrome:

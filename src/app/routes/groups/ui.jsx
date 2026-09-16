@@ -16,7 +16,7 @@ export function Screen({ children, backTo, backLabel, width = 680 }) {
         .sb-groups :focus-visible { outline:3px solid ${C.greenMuted}; outline-offset:2px; }`}</style>
       <div className="sb-groups sb-col" style={{ maxWidth: width, margin: "0 auto", "--sb-col": `${width}px` }}>
         {backTo && (
-          <Link to={backTo} style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, fontSize: ts(A11Y.minBodyPx), color: C.brown, textDecoration: "none", fontWeight: 600 }}>
+          <Link to={backTo} style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, minWidth: A11Y.minTapTargetPx, fontSize: ts(A11Y.minBodyPx), color: C.brown, textDecoration: "none", fontWeight: 600 }}>
             <span aria-hidden="true" style={{ marginInlineEnd: 8 }}>{meta.dir === "rtl" ? "→" : "←"}</span>
             {backLabel}
           </Link>

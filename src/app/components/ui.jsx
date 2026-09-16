@@ -67,7 +67,10 @@ export function AuthScreen({ children, width = 620, showHeader = true }) {
             marginBottom: 28,
           }}
         >
-          <a href="https://saathban.com" style={{ display: "block", flexShrink: 0 }}>
+          <a
+            href="https://saathban.com"
+            style={{ display: "flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, flexShrink: 0 }}
+          >
             <Logo height={34} />
           </a>
 

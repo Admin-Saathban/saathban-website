@@ -149,7 +149,9 @@ export default function CoursesPage() {
         <Link
           to="/app/skills"
           data-action="back-to-grow"
-          style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.green, fontWeight: 700, fontSize: ts(A11Y.minBodyPx), textDecoration: "none" }}
+          /* position:relative: in Urdu the h1 below starts 3px inside this
+             link, and a tap on that strip landed on the heading. */
+          style={{ display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, color: C.green, fontWeight: 700, fontSize: ts(A11Y.minBodyPx), textDecoration: "none", position: "relative" }}
         >
           {t("grow.page.backToGrow")}
         </Link>

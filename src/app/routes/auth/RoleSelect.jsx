@@ -160,7 +160,19 @@ export default function RoleSelect() {
       {!finish && (
         <p style={{ textAlign: "center", fontSize: ts(A11Y.minBodyPx), marginTop: 32 }}>
           {t("auth.roleSelect.haveAccount")}{" "}
-          <Link to="login" style={{ color: C.brown, fontWeight: 600 }}>
+          {/* Stays in its sentence, 48px tall by padding — the same
+              treatment as "Get started" on the login screen. */}
+          <Link
+            to="login"
+            style={{
+              color: C.brown,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: A11Y.minTapTargetPx,
+              paddingInline: 6,
+            }}
+          >
             {t("auth.roleSelect.signIn")}
           </Link>
         </p>
@@ -169,7 +181,14 @@ export default function RoleSelect() {
       <p style={{ textAlign: "center", marginTop: 8 }}>
         <a
           href="https://saathban.com"
-          style={{ fontSize: ts(A11Y.minBodyPx), color: C.textMuted }}
+          style={{
+            fontSize: ts(A11Y.minBodyPx),
+            color: C.textMuted,
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: A11Y.minTapTargetPx,
+            paddingInline: 12,
+          }}
         >
           {t("auth.roleSelect.backToSite")}
         </a>

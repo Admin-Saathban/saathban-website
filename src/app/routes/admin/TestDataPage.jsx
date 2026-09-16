@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import { APP_COLORS as C } from "../../../shared/tokens.js";
+import { APP_COLORS as C, A11Y } from "../../../shared/tokens.js";
 import { useI18n } from "../../lib/i18n.jsx";
 import { Card, AdminBtn, fmtDate } from "./ui.jsx";
 import { PageTitle, Notice, TextField, useRoleLabel, FootprintList } from "./adminBits.jsx";
@@ -85,7 +85,7 @@ export default function TestDataPage() {
                   return (
                     <li key={a.id} style={{ border: `1px solid ${C.warmGray}`, borderRadius: 10, padding: "12px 16px" }}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", alignItems: "baseline" }}>
-                        <Link to={`/app/admin/people/${a.id}`} style={{ color: C.green, fontWeight: 700, fontSize: 19 }}>
+                        <Link to={`/app/admin/people/${a.id}`} style={{ color: C.green, fontWeight: 700, fontSize: 19, display: "inline-flex", alignItems: "center", minHeight: A11Y.minTapTargetPx, position: "relative" }}>
                           {a.full_name || t("admin.people.unnamed")}
                         </Link>
                         <span style={{ color: C.textMuted, overflowWrap: "anywhere" }}>{a.email}</span>

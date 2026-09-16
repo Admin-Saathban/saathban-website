@@ -430,7 +430,16 @@ export const CHIP = {
   radius:    14,
 };
 
+/* THE TAP FLOOR IS 48, AS CLAUDE.md HAS ALWAYS SAID.
+
+   It was 44 (Apple's floor) while CLAUDE.md said 48, and the app was
+   built to the token rather than the rule. For hands that shake, 4px is
+   the difference between tapping and missing. Only the app reads this
+   object — src/App.jsx has no A11Y import — so raising it moves nothing
+   on the marketing site. A control smaller than this on screen grows
+   its HIT AREA (padding, min size, or a hit-slop pseudo-element) before
+   it grows its look. */
 export const A11Y = {
   minBodyPx: 16,
-  minTapTargetPx: 44,
+  minTapTargetPx: 48,
 };
